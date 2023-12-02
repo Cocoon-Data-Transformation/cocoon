@@ -30,3 +30,6 @@ For HIPPA complaiance
 Report Error
 Please provide some sample data (a few rows would be sufficient) to reproduce the error.
 
+About Author:
+
+I'm Zachary Huang, PhD at columbia university, specializing in databases. My past works are in my web page: http://www.columbia.edu/~zh2408/
