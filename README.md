@@ -4,6 +4,18 @@
 
 # Overview
 
+Open-source project.
+
+Documentation
+
+Cleaning
+
+Transformation
+
+Standardizer
+
+
+
 Which models do cocoon use?
 
 We use the best model in the market.
@@ -33,3 +45,11 @@ Please provide some sample data (a few rows would be sufficient) to reproduce th
 About Author:
 
 I'm Zachary Huang, PhD at columbia university, specializing in databases. My past works are in my web page: http://www.columbia.edu/~zh2408/
+
+Can I spread the repo?
+
+Feature request:
+
+https://github.com/Cocoon-Data-Transformation/cocoon/issues/1
+
+or directly email me if you are willing to share your use case and data samples. I will prioritize on that.
