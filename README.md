@@ -4,6 +4,13 @@
 
 # Overview
 
+Which models do cocoon use?
+
+We use the best model in the market.
+Currently, GPT-4-turbo has both high performance and cheap.
+
+We also use embedding. ada-002 for now.
+
 How to get OpenAI API key for GPT-4?
 You need to register an account (with an email)
 You need to bind a phone. This allows you to generate API key.
