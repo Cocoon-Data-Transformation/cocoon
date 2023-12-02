@@ -26,3 +26,7 @@ OpenAI API is not HIPPA complaint. It is recommended to take a sample and first 
 For HIPPA complaiance
 1) OPENAI Enterprise
 2) Apply for Azure Openai service (easier)
+
+Report Error
+Please provide some sample data (a few rows would be sufficient) to reproduce the error.
+
