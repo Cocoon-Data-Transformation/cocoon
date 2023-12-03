@@ -3,17 +3,23 @@
 </div>
 
 # Overview
+Cocoon is an open-source project aims to free analysts from tedious data transformations with LLM
 
-Open-source project.
+Data Documentation
 
-Documentation
+Automatical understand data and detect errors
 
-Cleaning
+Data Cleaning
 
-Transformation
+Build pipelines to clean data
 
-Standardizer
+Data Transformation
 
+Transform data to target schema
+
+Standardization
+
+Generate report to help you standardize values
 
 
 Which models do cocoon use?
