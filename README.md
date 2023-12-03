@@ -5,6 +5,15 @@
 # Overview
 Cocoon is an open-source project aims to free analysts from tedious data transformations with LLM
 
+How to start?
+
+We provide demo codes at google collab.
+
+To use cocoon, you need:
+1. OpenAI account with API key
+2. Your data
+3. Internet
+
 Data Documentation
 
 Automatical understand data and detect errors
