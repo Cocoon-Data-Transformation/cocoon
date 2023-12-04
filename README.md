@@ -19,7 +19,7 @@
 1. Test Cocoon with some of your data samples
 2. Give us your feedback to make it better
    
-You can contact me through [email (zh2408@columbia.edu)](mailto:zh2408@columbia.edu)
+You can contact me through email: [zh2408@columbia.edu](mailto:zh2408@columbia.edu)
 
 ## What Cocoon Offers:
 
