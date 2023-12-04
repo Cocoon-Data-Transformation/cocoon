@@ -3,12 +3,32 @@
 </div>
 
 ## Overview
-😎 **Cocoon**: An open-source Python project streamlining data transformations using LLM. Provide your OpenAI API Key and dataset, and let Cocoon automate documentation, cleaning, standardization, and transformation.
+😎 **Cocoon**: Open-source Python tool for easy data transformation with LLM. Just input your dataset and OpenAI API Key, and Cocoon will handle the rest, automating documentation, cleaning, standardization, and transformation.
 
-### Document
-Automatically generates detailed documentation of your data. View the [Example Document](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ) yourself!
+🚀 [Try Cocoon with a demo](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
 
-![Documentation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png)
+## What Cocoon Offers:
+1. 📄 **Documentation**: Semi-automatically documents data, identifies tables, and flags data errors. [View Example](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ).
+   
+   <div style="box-shadow: 5px 5px 10px #888888;">
+    <img src="https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png" alt="Documentation Screenshot"/>
+  </div>
+
+2. 🧹 **Cleaning**: Detects and corrects data errors. [Under Development]
+   
+<img src="https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/cleaning_screenshot.png" alt="Cleaning Screenshot" style="box-shadow: 10px 10px 5px grey;">
+
+
+3. 🌐 **Standardization**: Maps text to standardized vocabularies. [Under Development]
+   
+   ![Standardization Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/stand_screenshot.png)
+
+4. 🔁 **Transformation**: Seamlessly transforms tables into target data schemas.
+   
+   ![Transformation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/tran_screenshot.png)
+
+5. ❓ **FAQ**
+
 
 
 Example page: http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/standardization_report.html?token=GHSAT0AAAAAACGPOG736LMIAMI6SLEGYM6WZLNISUQ
