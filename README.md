@@ -19,7 +19,7 @@
 1. Test Cocoon with some of your data samples
 2. Give us your feedback to make it better
    
-You can contact me through [email](zh2408@columbia.edu)
+You can contact me through [email](mailto:zh2408@columbia.edu)
 
 ## What Cocoon Offers:
 
@@ -129,7 +129,7 @@ Cocoon is a Python project that processes your data locally.
 <details>
 <summary><strong>📬 How can I send a Feature Request?</strong></summary><br>
 
-1. 💌 Feel free to [email me](zh2408@columbia.edu) directly if you're willing to share your use case and data samples. I'll give priority to these requests.
+1. 💌 Feel free to [email me](mailto:zh2408@columbia.edu) directly if you're willing to share your use case and data samples. I'll give priority to these requests.
 2. 📝 Post your feature request at [Cocoon GitHub Issues](https://github.com/Cocoon-Data-Transformation/cocoon/issues/1).
 
 <hr></details>
@@ -137,7 +137,7 @@ Cocoon is a Python project that processes your data locally.
 <details>
 <summary><strong>🐛 How to report errors and bugs?</strong></summary><br>
 
-🐛 Please open an issue on our GitHub, or directly [email me](zh2408@columbia.edu). 
+🐛 Please open an issue on our GitHub, or directly [email me](mailto:zh2408@columbia.edu). 
 
 ❤️ If possible, include a few sample data rows to help me identify and fix the error more efficiently.
 
