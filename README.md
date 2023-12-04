@@ -5,12 +5,14 @@
 ## Overview
 😎 **Cocoon** is an Open-source Python tool for easy data transformation with Large Language Models (LLMs). 
 
-To start using Cocoon, you need:
+To start using Cocoon, you only need:
 
-1. Your dataset.
+1. Your dataset (e.g., as a csv).
 2. OpenAI API Key. See [FAQ on OpenAI API Key](#openai-api-key)
    
-🚀 Try out Cocoon using this demo page for the Common Data Model transformation [Google Collab](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
+🚀 Try out Cocoon using the following demo notebooks on Google Collab (you need a Google account)
+1. [Common Data Model transformation](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
+2. [Standardize Procedure Vocabularies](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/standardization_demo.ipynb)
 
 
 ## What Cocoon Offers:
@@ -46,7 +48,7 @@ Cocoon automates documentation, cleaning, standardization, and transformation.
 <br>
 😎 Maps text to standardized vocabularies. 
 
-🤓 View the [Example Standardization Report](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ) yourself!
+🤓 View the [Example Standardization Report](http://htmlpreview.github.io/?https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/files/standardization_report.html) yourself!
 
    ![Standardization Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/stand_screenshot.png)
 
@@ -109,7 +111,7 @@ Cocoon is a Python project that processes your data locally.
 
 🌐 Cocoon only shares a sample of data externally for OpenAI API calls.
 
-🚫 Keep in mind, the OpenAI API is not HIPAA compliant. We recommend using anonymized or privatized data for trials.
+🚫 Keep in mind the OpenAI API is not HIPAA compliant. We recommend using anonymized or privatized data sample for trials.
 
 🛡️ For HIPAA compliance, consider these options:
 1) 🏥 **Azure OpenAI Service**: Apply at [HIPAA Compliance on Azure](https://learn.microsoft.com/en-us/answers/questions/1245418/hipaa-compliance). This process may take a few weeks.
@@ -120,7 +122,7 @@ Cocoon is a Python project that processes your data locally.
 <details>
 <summary><strong>📬 How can I send a Feature Request?</strong></summary><br>
 
-1. 💌 Feel free to email me directly if you're willing to share your use case and data samples. I'll give priority to these requests.
+1. 💌 Feel free to [email me](zh2408@columbia.edu) directly if you're willing to share your use case and data samples. I'll give priority to these requests.
 2. 📝 Post your feature request at [Cocoon GitHub Issues](https://github.com/Cocoon-Data-Transformation/cocoon/issues/1).
 
 <hr></details>
@@ -128,7 +130,7 @@ Cocoon is a Python project that processes your data locally.
 <details>
 <summary><strong>🐛 How to report errors and bugs?</strong></summary><br>
 
-🐛 Please open an issue on our GitHub. 
+🐛 Please open an issue on our GitHub, or directly [email me](zh2408@columbia.edu). 
 
 ❤️ If possible, include a few sample data rows to help me identify and fix the error more efficiently.
 
