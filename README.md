@@ -6,7 +6,7 @@
 😎 **Cocoon**: An open-source Python project streamlining data transformations using LLM. Provide your OpenAI API Key and dataset, and let Cocoon automate documentation, cleaning, standardization, and transformation.
 
 ### Document
-Automatically generates detailed documentation of your data. View the [Example Document](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG72I5YBKI4TRY6DOGNYZLNIAYQ) yourself!
+Automatically generates detailed documentation of your data. View the [Example Document](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ) yourself!
 
 ![Documentation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png)
 
