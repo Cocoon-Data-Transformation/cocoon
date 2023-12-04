@@ -10,10 +10,8 @@ Automatically generates detailed documentation of your data. View the [Example D
 
 ![Documentation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png)
 
-Example document Preview:  
-http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG72I5YBKI4TRY6DOGNYZLNIAYQ
 
-Example page: http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/standardization_report.html?token=GHSAT0AAAAAACGPOG73ZQVENZCC2W7SLEMOZLNH55Q
+Example page: http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/standardization_report.html?token=GHSAT0AAAAAACGPOG736LMIAMI6SLEGYM6WZLNISUQ
 
 How to start?
 
