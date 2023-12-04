@@ -1,9 +1,19 @@
 <div align="center">
-  <img src="./images/cocoon_logo.png" alt="Cocoon Logo" width="400"  />
+  <img src="./images/cocoon_logo.png" alt="Cocoon Logo" width="400"/>
 </div>
 
-# Overview
-Cocoon is an open-source project aims to free analysts from tedious data transformations with LLM
+## Overview
+😎 **Cocoon**: An open-source Python project streamlining data transformations using LLM. Provide your OpenAI API Key and dataset, and let Cocoon automate documentation, cleaning, standardization, and transformation.
+
+### Document
+Automatically generates detailed documentation of your data. View the [Example Document](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG72I5YBKI4TRY6DOGNYZLNIAYQ) yourself!
+
+![Documentation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png)
+
+Example document Preview:  
+http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG72I5YBKI4TRY6DOGNYZLNIAYQ
+
+Example page: http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/standardization_report.html?token=GHSAT0AAAAAACGPOG73ZQVENZCC2W7SLEMOZLNH55Q
 
 How to start?
 
