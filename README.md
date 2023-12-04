@@ -8,24 +8,35 @@
 🚀 [Try Cocoon with a demo](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
 
 ## What Cocoon Offers:
-1. 📄 **Documentation**: Semi-automatically documents data, identifies tables, and flags data errors. [View Example](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ).
-   
-   <div style="box-shadow: 5px 5px 10px #888888;">
-    <img src="https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png" alt="Documentation Screenshot"/>
-  </div>
 
-2. 🧹 **Cleaning**: Detects and corrects data errors. [Under Development]
-   
-<img src="https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/cleaning_screenshot.png" alt="Cleaning Screenshot" style="box-shadow: 10px 10px 5px grey;">
+### 📄 Documentation
 
+😎 Semi-automatically documents data, identifies tables, and flags data errors. 
 
-3. 🌐 **Standardization**: Maps text to standardized vocabularies. [Under Development]
+View the [Example Document](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ) yourself!
    
+   ![Documentation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png)
+
+### 🧹 Cleaning
+😎 Corrects data errors detected during documentation 
+   
+   <kbd>![Cleaning Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/cleaning_screenshot.png)</kbd>
+
+🚧
+
+### 🌐 Standardization
+
+😎 Maps text to standardized vocabularies. 
+
    ![Standardization Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/stand_screenshot.png)
 
-4. 🔁 **Transformation**: Seamlessly transforms tables into target data schemas.
+🚧
+
+### 🔁 Transformation
+
+😎 Automaticte tables into target data schemas. It helps you map the concept and write codes
    
-   ![Transformation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/tran_screenshot.png)
+<kbd> ![Transformation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/tran_screenshot.png)</kbd>
 
 5. ❓ **FAQ**
 
