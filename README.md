@@ -68,3 +68,8 @@ Feature request:
 https://github.com/Cocoon-Data-Transformation/cocoon/issues/1
 
 or directly email me if you are willing to share your use case and data samples. I will prioritize on that.
+
+
+not for perf
+
+sql?
