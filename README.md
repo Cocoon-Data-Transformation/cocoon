@@ -5,7 +5,8 @@
 ## Overview
 😎 **Cocoon** is an Open-source Python tool for easy data transformation with Large Language Models (LLMs). 
 
-To start using Cocoon, you only need:
+
+😃 To start using Cocoon, you only need:
 
 1. Your dataset (e.g., as a csv).
 2. OpenAI API Key. See [FAQ on OpenAI API Key](#openai-api-key)
@@ -14,6 +15,11 @@ To start using Cocoon, you only need:
 1. [Common Data Model transformation](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
 2. [Standardize Procedure Vocabularies](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/standardization_demo.ipynb)
 
+😊 We're looking for closer collaboration to:
+1. Test Cocoon with some of your data samples
+2. Give us your feedback to make it better
+   
+You can contact me through [email](zh2408@columbia.edu)
 
 ## What Cocoon Offers:
 
