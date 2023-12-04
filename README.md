@@ -100,7 +100,8 @@ Please see the answers below:
 <details>
 <summary><strong>💰 What is the cost of using Cocoon?</strong></summary><br>
 
-💰 Depends on the data. Usually, the whole process costs 10 - 50 cents.
+💰 Depends on the data. Usually, the whole process costs 10 - 50 cents per data.
+
 
 <hr></details>
 
