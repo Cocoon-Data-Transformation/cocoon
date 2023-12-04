@@ -76,12 +76,11 @@ To use Cocoon, you need:
 - 🚀 we use ada-002 for embedding
 
 </details>
-<a id="openai-api-key"></a> <!-- Hidden anchor -->
+
 <details>
 <summary><strong>🔑 How can I get an OpenAI API key for GPT-4?</strong></summary>
-  
   <br>
-
+<a id="openai-api-key"></a> <!-- Hidden anchor -->
 **Using OpenAI:**
 1. 📧 Create an account with your email at [OpenAI Login](https://platform.openai.com/login?launch).
 2. 🔑 Generate an API key (phone binding required) at [API Keys](https://platform.openai.com/api-keys).
