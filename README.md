@@ -3,112 +3,157 @@
 </div>
 
 ## Overview
-😎 **Cocoon**: Open-source Python tool for easy data transformation with LLM. Just input your dataset and OpenAI API Key, and Cocoon will handle the rest, automating documentation, cleaning, standardization, and transformation.
+😎 **Cocoon**: Open-source Python tool for easy data transformation with Large Language Models (LLMs). 
 
-🚀 [Try Cocoon with a demo](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
+To use Cocoon, you need:
+
+1. 📁 Your dataset
+2. 🔑 OpenAI API Key. [FAQ on OpenAI API Key](#openai-api-key)
+
+😀 and Cocoon will handle the rest, automating documentation, cleaning, standardization, and transformation.
+   
+🚀 Try out Cocoon using this demo page for the Common Data Model transformation [Google Collab](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
+
 
 ## What Cocoon Offers:
 
-### 📄 Documentation
-
+<details>
+<summary><strong>📄 Documentation</strong></summary>
+<br>
 😎 Semi-automatically documents data, identifies tables, and flags data errors. 
 
-View the [Example Document](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ) yourself!
+🤓 View the [Example Table Documentation](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ) yourself!
    
    ![Documentation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png)
 
-### 🧹 Cleaning
+</details>
+
+<details>
+  
+<summary><strong>🧹 Cleaning</strong></summary>
+<br>
 😎 Corrects data errors detected during documentation 
    
    <kbd>![Cleaning Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/cleaning_screenshot.png)</kbd>
 
-🚧
+🚧 Cleaning is under development. Currently only support remove abnormal values. More options will come soon.
 
-### 🌐 Standardization
+</details>
 
+<details>
+  
+<summary><strong>🌐 Standardization</strong></summary>
+<br>
 😎 Maps text to standardized vocabularies. 
+
+🤓 View the [Example Standardization Report](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ) yourself!
 
    ![Standardization Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/stand_screenshot.png)
 
-🚧
+🚧 Standardization is under development. Currently support Athena Procedure vocabularies
 
-### 🔁 Transformation
 
-😎 Automaticte tables into target data schemas. It helps you map the concept and write codes
+
+</details>
+
+<details>
+<summary><strong>🔁 Transformation</strong></summary>
+<br>
+😎 Automatically transform your table into target data schemas.
    
 <kbd> ![Transformation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/tran_screenshot.png)</kbd>
 
-5. ❓ **FAQ**
+</details>
+
+
+## FAQ 
+
+<details>
+<summary><strong>🌐 Which models does Cocoon use?</strong></summary><br>
+
+⚙️ We always choose the top-performing models available. As of December 4, 2023:
+- 🚀 we use GPT-4-turbo for chat completion
+- 🚀 we use ada-002 for embedding
+
+</details>
+<a id="openai-api-key"></a> <!-- Hidden anchor -->
+<details>
+<summary><strong>🔑 How can I get an OpenAI API key for GPT-4?</strong></summary>
+  
+  <br>
+
+**Using OpenAI:**
+1. 📧 Create an account with your email at [OpenAI Login](https://platform.openai.com/login?launch).
+2. 🔑 Generate an API key (phone binding required) at [API Keys](https://platform.openai.com/api-keys).
+3. 💳 For GPT-4 access, add billing and purchase a minimum of $5 credit (OpenAI gives $5 free credit) at [Billing Overview](https://platform.openai.com/account/billing/overview).
+
+**Using Azure:**
+👉 Apply for Azure OpenAI Service at [Azure Blog](https://azure.microsoft.com/en-us/blog/introducing-gpt4-in-azure-openai-service/). The application process takes weeks.
+
+🔗 Verify your API key setup at [Test OpenAI Notebook](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/test_openai.ipynb).
+
+</details>
+
+<details>
+<summary><strong>💰 What is the cost of using Cocoon?</strong></summary><br>
+
+💰 Depends on the data. Usually, the whole process costs 10 - 50 cents.
+
+</details>
+
+<details>
+<summary><strong>🔒 How does Cocoon handle Data Privacy?</strong></summary><br>
+
+Cocoon is a Python project that processes your data locally.
+
+🌐 Cocoon only shares a sample of data externally for OpenAI API calls.
+
+🚫 Keep in mind, the OpenAI API is not HIPAA compliant. We recommend using anonymized or privatized data for trials.
+
+🛡️ For HIPAA compliance, consider these options:
+1) 🏥 **Azure OpenAI Service**: Apply at [HIPAA Compliance on Azure](https://learn.microsoft.com/en-us/answers/questions/1245418/hipaa-compliance). This process may take a few weeks.
+2) 🏢 **OPENAI Enterprise**: Specifically for enterprise use, apply at [OPENAI Enterprise](https://openai.com/enterprise). The application process might take longer.
+
+</details>
+
+<details>
+<summary><strong>📬 How can I send a Feature Request?</strong></summary><br>
+
+1. 💌 Feel free to email me directly if you're willing to share your use case and data samples. I'll give priority to these requests.
+2. 📝 Post your feature request at [Cocoon GitHub Issues](https://github.com/Cocoon-Data-Transformation/cocoon/issues/1).
+
+</details>
+
+<details>
+<summary><strong>🐛 How to report errors and bugs?</strong></summary><br>
+
+🐛 Please open an issue on our GitHub. 
+
+❤️ If possible, include a few sample data rows to help me identify and fix the error more efficiently.
+
+</details>
+
+<details>
+<summary><strong>💡 Is Cocoon optimized for performance? Does it support R and SQL?</strong></summary><br>
+
+😅 Currently, Cocoon is not performance-optimized and supports only Python. 
+
+😊 If there is a demand, let me know through a feature request.
+
+</details>
+
+<details>
+<summary><strong>👤 About the Author</strong></summary><br>
+
+😊 I am Zachary Huang, a PhD from Columbia University. 
+
+💾 I specialize in databases. 
+   
+🤓 I'm passionate about LLM and developing Cocoon as a side project. 
+   
+🚀 Learn more about my past work on [my webpage](http://www.columbia.edu/~zh2408/).
+
+</details>
 
 
 
-Example page: http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/standardization_report.html?token=GHSAT0AAAAAACGPOG736LMIAMI6SLEGYM6WZLNISUQ
-
-How to start?
-
-We provide demo codes at google collab.
-
-To use cocoon, you need:
-1. OpenAI account with API key
-2. Your data
-3. Internet
-
-Data Documentation
-
-Automatical understand data and detect errors
-
-Data Cleaning
-
-Build pipelines to clean data
-
-Data Transformation
-
-Transform data to target schema
-
-Standardization
-
-Generate report to help you standardize values
-
-
-Which models do cocoon use?
-
-We use the best model in the market.
-Currently, GPT-4-turbo has both high performance and cheap.
-
-We also use embedding. ada-002 for now.
-
-How to get OpenAI API key for GPT-4?
-You need to register an account (with an email)
-You need to bind a phone. This allows you to generate API key.
-OpenAI gives you $5 free credit. But you need to add a billing and purchase $1 credit for GPT-4 access.
-
-How much costs?
-10 ~ 50 cents for most data
-
-Data Privacy.
-
-OpenAI API is not HIPPA complaint. It is recommended to take a sample and first privatize to see the effect.
-
-For HIPPA complaiance
-1) OPENAI Enterprise
-2) Apply for Azure Openai service (easier)
-
-Report Error
-Please provide some sample data (a few rows would be sufficient) to reproduce the error.
-
-About Author:
-
-I'm Zachary Huang, PhD at columbia university, specializing in databases. My past works are in my web page: http://www.columbia.edu/~zh2408/
-
-Can I spread the repo?
-
-Feature request:
-
-https://github.com/Cocoon-Data-Transformation/cocoon/issues/1
-
-or directly email me if you are willing to share your use case and data samples. I will prioritize on that.
-
-
-not for perf
-
-sql?
