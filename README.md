@@ -10,7 +10,7 @@ To start using Cocoon, you only need:
 1. Your dataset (e.g., as a csv).
 2. OpenAI API Key. See [FAQ on OpenAI API Key](#openai-api-key)
    
-🚀 Try out Cocoon using the following demo notebooks on Google Collab (you need a Google account)
+🚀 Try out Cocoon using the following demo notebooks in your browser (Google account needed)
 1. [Common Data Model transformation](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
 2. [Standardize Procedure Vocabularies](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/standardization_demo.ipynb)
 
