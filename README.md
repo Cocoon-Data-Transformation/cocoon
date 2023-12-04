@@ -11,8 +11,8 @@ To start using Cocoon, you only need:
 2. OpenAI API Key. See [FAQ on OpenAI API Key](#openai-api-key)
    
 🚀 Try out Cocoon using the following demo notebooks in your browser (Google account needed)
-1. [Common Data Model transformation](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
-2. [Standardize Procedure Vocabularies](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/standardization_demo.ipynb)
+1. [Common Data Model transformation](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/demo_ohdsi.ipynb)
+2. [Standardize Procedure Vocabularies](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/standardization_demo.ipynb)
 
 
 ## What Cocoon Offers:
@@ -93,7 +93,7 @@ Please see the answers below:
 **Using Azure:**
 👉 Apply for Azure OpenAI Service at [Azure Blog](https://azure.microsoft.com/en-us/blog/introducing-gpt4-in-azure-openai-service/). The application process takes weeks.
 
-🔗 Verify your API key setup at [Test OpenAI Notebook](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/demo/test_openai.ipynb).
+🔗 Verify your API key setup at [Test OpenAI Notebook](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/test_openai.ipynb).
 
 <hr></details>
 
