@@ -52,7 +52,7 @@ Cocoon automates documentation, cleaning, standardization, and transformation.
   
 <summary><strong> Standardization</strong></summary>
 <br>
-😎 Maps text to standardized vocabularies. 
+😎 Use text embedding and LLM to map text descriptions to standardized vocabularies. 
 
 🤓 View the [Example Standardization Report](http://htmlpreview.github.io/?https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/files/standardization_report.html) yourself!
 
