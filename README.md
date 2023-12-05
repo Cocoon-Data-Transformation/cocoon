@@ -86,13 +86,13 @@ Please see the answers below:
 - 🚀 we use ada-002 for embedding
 
 <hr></details>
-<a id="openai-api-key"></a> <!-- Hidden anchor -->
+<a id="OpenAI-api-key"></a> <!-- Hidden anchor -->
 <details>
 <summary><strong>🔑 How can I get an OpenAI API key for GPT-4?</strong></summary>
   <br>
 
 **Using OpenAI:**
-1. 📧 Create an account with your email at [OpenAI Login](https://platform.openai.com/login?launch).
+1. 📧 Create an account with your email at [OpenAI Login](https://platform.OpenAI.com/login?launch).
 2. 🔑 Generate an API key (phone binding required) at [API Keys](https://platform.openai.com/api-keys).
 3. 💳 For GPT-4 access, add billing and purchase a minimum of $5 credit (OpenAI gives $5 free credit) at [Billing Overview](https://platform.openai.com/account/billing/overview).
 
@@ -116,13 +116,13 @@ Please see the answers below:
 
 Cocoon is a Python project that processes your data locally.
 
-🌐 Cocoon only shares a sample of data externally for OpenAI API calls.
+🌐 Cocoon shares a sample of data externally for OpenAI API calls.
 
-🚫 Keep in mind the OpenAI API is not HIPAA compliant. We recommend using anonymized or privatized data sample for trials.
+🚫 However, OpenAI API is not HIPAA compliant. We recommend using anonymized or privatized data sample for trials.
 
 🛡️ For HIPAA compliance, consider these options:
-1) 🏥 **Azure OpenAI Service**: Apply at [HIPAA Compliance on Azure](https://learn.microsoft.com/en-us/answers/questions/1245418/hipaa-compliance). This process may take a few weeks.
-2) 🏢 **OPENAI Enterprise**: Specifically for enterprise use, apply at [OPENAI Enterprise](https://openai.com/enterprise). The application process might take longer.
+1) 🏥 **Azure OpenAI Service**: Azure OpenAI is [HIPAA Compliant](https://learn.microsoft.com/en-us/answers/questions/1245418/hipaa-compliance).  It may take a few weeks to apply for Azure OpenAI GPT-4.
+2) 🏢 **OpenAI Enterprise**: Specifically for enterprise use, apply at [OpenAI Enterprise](https://openai.com/enterprise). The application process might take longer.
 
 <hr></details>
 
