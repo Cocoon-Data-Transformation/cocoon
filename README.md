@@ -81,9 +81,9 @@ Please see the answers below:
 <details>
 <summary><strong>🌐 Which models does Cocoon use?</strong></summary><br>
 
-⚙️ We always choose the top-performing models available. As of December 4, 2023:
-- 🚀 we use GPT-4-turbo for chat completion
-- 🚀 we use ada-002 for embedding
+🚀 We always choose the top-performing models available. As of December 4, 2023:
+-  we use GPT-4-turbo for chat completion
+-  we use ada-002 for embedding
 
 <hr></details>
 <a id="OpenAI-api-key"></a> <!-- Hidden anchor -->
@@ -101,13 +101,14 @@ Please see the answers below:
 
 🔗 Verify your API key setup at [Test OpenAI Notebook](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/test_openai.ipynb).
 
+🚫 Note that OpenAI API is NOT HIPAA compliant. See data privacy FAQ below.
+
 <hr></details>
 
 <details>
 <summary><strong>💰 What is the cost of using Cocoon?</strong></summary><br>
 
-💰 Depends on the data. Usually, the whole process costs 10 - 50 cents per data.
-
+Depends on the data. Usually, the whole process costs 10 - 50 cents per data.
 
 <hr></details>
 
@@ -118,19 +119,23 @@ Cocoon is a Python project that processes your data locally.
 
 🌐 Cocoon shares a sample of data externally for OpenAI API calls.
 
-🚫 However, OpenAI API is not HIPAA compliant. We recommend using anonymized or privatized data sample for trials.
+🚫 However, OpenAI API is not HIPAA compliant. 
+
+🛡️ If you use OpenAI API, we recommend:
+1. Manually privatize a small sample of data
+2. Run the generated python codes over the whole data
 
 🛡️ For HIPAA compliance, consider these options:
-1) 🏥 **Azure OpenAI Service**: Azure OpenAI is [HIPAA Compliant](https://learn.microsoft.com/en-us/answers/questions/1245418/hipaa-compliance).  It may take a few weeks to apply for Azure OpenAI GPT-4.
-2) 🏢 **OpenAI Enterprise**: Specifically for enterprise use, apply at [OpenAI Enterprise](https://openai.com/enterprise). The application process might take longer.
+1. **Azure OpenAI Service**: Azure OpenAI is [HIPAA Compliant](https://learn.microsoft.com/en-us/answers/questions/1245418/hipaa-compliance).  It may take a few weeks to apply for Azure OpenAI GPT-4.
+2.  **OpenAI Enterprise**: Specifically for enterprise use, apply at [OpenAI Enterprise](https://openai.com/enterprise). The application process might take longer.
 
 <hr></details>
 
 <details>
 <summary><strong>📬 How can I send a Feature Request?</strong></summary><br>
 
-1. 💌 Feel free to [email me](mailto:zh2408@columbia.edu) directly if you're willing to share your use case and data samples. I'll give priority to these requests.
-2. 📝 Post your feature request at [Cocoon GitHub Issues](https://github.com/Cocoon-Data-Transformation/cocoon/issues/1).
+1.  Feel free to [email me](mailto:zh2408@columbia.edu) directly if you're willing to share your use case and data samples. I'll give priority to these requests.
+2.  Post your feature request at [Cocoon GitHub Issues](https://github.com/Cocoon-Data-Transformation/cocoon/issues/1).
 
 <hr></details>
 
@@ -139,7 +144,7 @@ Cocoon is a Python project that processes your data locally.
 
 🐛 Please open an issue on our GitHub, or directly [email me](mailto:zh2408@columbia.edu). 
 
-❤️ If possible, include a few sample data rows to help me identify and fix the error more efficiently.
+If possible, include a few sample data rows to help me identify and fix the error more efficiently.
 
 <hr></details>
 
@@ -157,9 +162,9 @@ Cocoon is a Python project that processes your data locally.
 
 😊 I am Zachary Huang, a PhD from Columbia University. 
 
-💾 I specialize in databases. 
-   
-🤓 I'm passionate about LLM and developing Cocoon as a side project. 
+ I specialize in databases. 
+  
+I'm passionate about LLM and developing Cocoon as a side project. 
    
 🚀 Learn more about my past work on [my webpage](http://www.columbia.edu/~zh2408/).
 
