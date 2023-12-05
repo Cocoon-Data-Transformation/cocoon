@@ -17,9 +17,9 @@
 
 😊 We're looking for closer collaboration to:
 1. Test Cocoon with some of your data samples
-2. Give us your feedback to make it better
+2. Give us your feedback to better fit your use case
    
-You can contact me through email: [zh2408@columbia.edu](mailto:zh2408@columbia.edu)
+If interested, you can contact me through email: [zh2408@columbia.edu](mailto:zh2408@columbia.edu)
 
 ## What Cocoon Offers:
 
