@@ -16,8 +16,8 @@ import ipywidgets as widgets
 from IPython.display import *
 from graphviz import Digraph
 from pygments import highlight
-from pygments.lexers import PythonLexer
-from pygments.formatters import Terminal256Formatter
+from pygments.lexers import PythonLexer, SqlLexer
+from pygments.formatters import Terminal256Formatter, HtmlFormatter
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
@@ -32,6 +32,8 @@ import heapq
 import hashlib
 import chardet
 from matplotlib_venn import venn2
+
+import duckdb
 
 try:
     import rasterio
@@ -55,6 +57,7 @@ try:
 except:
     pass
 
+spinner_value = "Running..."
 
 if 'OPENAI_API_TYPE' in os.environ:
     openai.api_type = os.environ['OPENAI_API_TYPE']
@@ -246,6 +249,50 @@ def create_selection_grid(columns1, columns2, table1_name, table2_name, call_bac
     return grid
 
 
+def recommend_testing(basic_description, table_name):
+    template = f"""{basic_description}
+Propose domain specific testing for table columns.
+E.g., If the table has "volume 1", "volume 2" and "total volume", then the domain specific testing should be "volume 1 + volume 2 = total volume".
+If the table has "start date" and "end date", then the domain specific testing should be "start date < end date" when these columns are not null.
+
+Now respond in the following format:
+```json
+[
+{{
+    "name": "Total Volume Check",
+    "reasoning": "The total volume should be the sum of volume 1 and volume 2",
+    "sql" (select rows that violate the rule): "select * from {table_name} where volume_1 + volume_2 != total_volume",
+}},
+...
+]
+```"""
+
+    messages = [{"role": "user", "content": template}]
+    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+
+    write_log(template)
+    write_log("-----------------------------------")
+    write_log(response['choices'][0]['message']['content'])
+
+    processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+    json_code = json.loads(processed_string)
+
+    def test_json_code(code):
+        if not isinstance(code, list):
+            raise ValueError("The provided JSON is not a list.")
+
+        required_keys = {"name", "reasoning", "sql"}
+        for item in code:
+            if not isinstance(item, dict):
+                raise ValueError("An item in the list is not a dictionary.")
+
+            if not required_keys.issubset(item.keys()):
+                missing_keys = required_keys - item.keys()
+                raise ValueError(f"Missing keys in an item: {missing_keys}")
+
+    test_json_code(json_code)
+    return json_code
+
 
 
 def recommend_join_keys(source_table_description, target_table_description):
@@ -352,9 +399,9 @@ def plot_venn_percentage(array1, array2, name1, name2):
 
 
 
-def create_column_selector(columns, callback):
+def create_column_selector(columns, callback, default=False):
     labels = [widgets.Label(column) for column in columns]
-    checkboxes = [widgets.Checkbox(value=False) for _ in columns]
+    checkboxes = [widgets.Checkbox(value=default) for _ in columns]
     widgets_list = [item for pair in zip(labels, checkboxes) for item in pair]
 
     grid = widgets.GridBox(widgets_list, layout=widgets.Layout(grid_template_columns="repeat(2, auto)"))
@@ -380,6 +427,7 @@ def create_column_selector(columns, callback):
     submit_button.on_click(on_submit)
 
     display(grid, buttons_box, submit_button, output)
+
 
 
 
@@ -443,8 +491,7 @@ def display_and_ask_removal(df, missing_column_indices):
     display(HTML(html_output))
 
     df_sample = color_columns(df.head(), 'lightgreen', missing_column_indices)
-    display(HTML(wrap_in_scrollable_div(df_sample.to_html())))
-
+    display(HTML(wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
 
     display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
 
@@ -482,22 +529,21 @@ def display_duplicated_columns_html(df, duplicate_column_indices):
 
     for group in duplicate_column_indices:
 
-        col_name = df_sample.columns[group[0]]
+        col_name = df.columns[group[0]]
         
-        new_column_names = df_sample.columns.tolist()
+        new_column_names = df.columns.tolist()
 
         for i, idx in enumerate(group):
-            new_column_names[idx] = f"{df_sample.columns[idx]} ({i+1})"
+            new_column_names[idx] = f"{df.columns[idx]} ({i+1})"
         
-        df_sample.columns = new_column_names
+        df.columns = new_column_names
 
     colors = generate_seaborn_palette(len(duplicate_column_indices))
 
     styled_df = color_columns_multiple(df.head(), colors, duplicate_column_indices)
 
     display(HTML(html_output))
-    display(HTML(wrap_in_scrollable_div(styled_df.to_html())))
-
+    display(HTML(wrap_in_scrollable_div(truncate_html_td(styled_df.to_html()))))
 
     display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
 
@@ -564,21 +610,21 @@ def display_xy_duplicated_columns_html(df, duplicate_column_indices):
 
     for group in duplicate_column_indices:
 
-        col_name = df_sample.columns[group[0]]
+        col_name = df.columns[group[0]]
         
-        new_column_names = df_sample.columns.tolist()
+        new_column_names = df.columns.tolist()
 
         for i, idx in enumerate(group):
-            new_column_names[idx] = f"{df_sample.columns[idx]}"
+            new_column_names[idx] = f"{df.columns[idx]}"
         
-        df_sample.columns = new_column_names
+        df.columns = new_column_names
 
     colors = generate_seaborn_palette(len(duplicate_column_indices))
 
     styled_df = color_columns_multiple(df.head(), colors, duplicate_column_indices)
 
     display(HTML(html_output))
-    display(HTML(wrap_in_scrollable_div(styled_df.to_html())))
+    display(HTML(wrap_in_scrollable_div(truncate_html_td(styled_df.to_html()))))
 
     display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
 
@@ -606,7 +652,7 @@ def display_index_and_ask_removal(df, missing_column_indices):
     df_sample = color_columns(df.head(), 'lightgreen', missing_column_indices)
 
     display(HTML(html_output))
-    display(HTML(wrap_in_scrollable_div(df_sample.to_html())))
+    display(HTML(wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
 
     display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
 
@@ -937,7 +983,7 @@ class MinHashLSH:
         intersection_set = set.intersection(*candidate_sets)
         return intersection_set
 
-def wrap_in_scrollable_div(html_code, width='100%', height='400px'):
+def wrap_in_scrollable_div(html_code, width='100%', height='200px'):
     scrollable_div = f'<div style="width: {width}; overflow: auto; height: {height};">{html_code}</div>'
 
     return scrollable_div
@@ -967,7 +1013,7 @@ def plot_missing_values_html(df):
     for index, value in enumerate(missing_percent):
         bar_plot.text(index, value, f'{value:.2f}%', color='black', ha="center", fontsize=8)
 
-    plt.title('Missing Values %', fontsize=8)
+    plt.title('Missing % (for Columns with Missing Values)', fontsize=8)
     plt.ylabel('%', fontsize=10)
     plt.xticks(rotation=45, fontsize=6)
     plt.yticks(fontsize=8)
@@ -1808,6 +1854,8 @@ def describe_missing_values(stats, df, threshold=50):
             description +=  f"{col_name}: {stats[col_name]['null_percentage']}% missing values\n"
     return description
 
+
+
 def describe_df_in_natural_language(df, table_name, num_rows_to_show, num_cols_to_show=None):
     num_rows = len(df)
     num_columns = len(df.columns)
@@ -2343,6 +2391,7 @@ class DocumentedData:
         self.drop_all_missing_columns_step_finished = False
         self.drop_x_y_columns_step_finished = False
         self.drop_index_column_step_finished = False
+        self.project_step_finished = False
 
     def get_summary(self):
         return self.document["table_summary"]["summary"]
@@ -2437,7 +2486,7 @@ And more to come! 🚀""")
 
 
     def start_document(self, viewer=None):
-        next_step = self.check_duplicated_rows
+        next_step = self.decide_project
 
         self.viewer = viewer
         
@@ -2636,6 +2685,38 @@ And more to come! 🚀""")
                 html_content_updated += self.generate_unusual_values_report()
                 html_content_updated += '<hr>'
 
+        if "recommend_testing" in self.document:
+            html_content_updated += f'<h2>🧪 Testing</h2>'
+            json_code = self.document["recommend_testing"]
+            error_count = 0
+            table_name = self.get_table_name()
+
+            duckdb_conn = duckdb.connect()
+            duckdb_conn.register(table_name, self.df)
+
+            for test in json_code:
+                html_content_updated += "<h3>Test: " + test['name'] + "</h3>"
+                html_content_updated += "<p>" + test['reasoning'] + "</p>"
+                
+                highlighted_html = highlight(test['sql'], SqlLexer(), HtmlFormatter())
+                html_content_updated += highlighted_html
+
+                try:
+                    result_df = duckdb_conn.execute(test['sql']).df()
+                    if len(result_df) == 0:
+                        html_content_updated += "<span style='color: green;'>✅ The test passed.</span>"
+                    else:
+                        html_content_updated += "<span style='color: red;'>❌ The test failed. Below are the sample 4 rows that failed the test.</span>"
+                        html_content_updated += wrap_in_scrollable_div(truncate_html_td(result_df[:4].to_html()))
+                        error_count += 1
+
+                except Exception as e:
+                    html_content_updated += "<span style='color: red;'>❌ The test failed. Below is the error message.</span>"
+                    html_content_updated += "<p>" + str(e) + "</p>"
+                    error_count += 1
+
+                html_content_updated += "<hr>"
+
         return html_content_updated
 
     def display_document(self):
@@ -2697,6 +2778,41 @@ And more to come! 🚀""")
                 html_content_updated = self.generate_unusual_values_report()
                 html_content_updated += '<hr>'
                 tab_data.append(("🤔 Unusual", number_of_unusual_columns, html_content_updated))
+        
+        if "recommend_testing" in self.document:
+            json_code = self.document["recommend_testing"]
+            html_output = ""
+            error_count = 0
+            table_name = self.get_table_name()
+
+            duckdb_conn = duckdb.connect()
+            duckdb_conn.register(table_name, self.df)
+
+            for test in json_code:
+                html_output += "<h3>Test: " + test['name'] + "</h3>"
+                html_output += "<p>" + test['reasoning'] + "</p>"
+                
+                highlighted_html = highlight(test['sql'], SqlLexer(), HtmlFormatter())
+                html_output += highlighted_html
+
+                try:
+                    result_df = duckdb_conn.execute(test['sql']).df()
+                    if len(result_df) == 0:
+                        html_output += "<span style='color: green;'>✅ The test passed.</span>"
+                    else:
+                        html_output += "<span style='color: red;'>❌ The test failed. Below are the sample 4 rows that failed the test.</span>"
+                        html_output += result_df[:4].to_html()
+                        error_count += 1
+
+                except Exception as e:
+                    html_output += "<span style='color: red;'>❌ The test failed. Below is the error message.</span>"
+                    html_output += "<p>" + str(e) + "</p>"
+                    error_count += 1
+
+                html_output += "<hr>"
+            
+            tab_data.append(("🧪 Test", error_count, html_output))
+
 
         tabs = create_tabs_with_notifications(tab_data)
         display(tabs)
@@ -2802,11 +2918,18 @@ And more to come! 🚀""")
                                                     "(not implemented) Clean the unusual values",]})
 
         return warnings
+
+    def get_table_name(self):
+        if self.table_name is None:
+            return "table"
+        else:
+            return self.table_name.replace(" ", "_")
     
     def get_sample_text(self, sample_cols=None, sample_size=2, col_size=None):
         if sample_cols is None:
             sample_cols = self.df.columns
-        return describe_df_in_natural_language(self.df[sample_cols], self.table_name, sample_size, num_cols_to_show=col_size)   
+        table_name = self.get_table_name()
+        return describe_df_in_natural_language(self.df[sample_cols], table_name, sample_size, num_cols_to_show=col_size)   
 
     def get_basic_description(self, sample_size=2, cols = None, sample_cols=None):
 
@@ -3326,6 +3449,25 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         if self.viewer:
             on_button_clicked(None)
 
+        
+    
+    def execute_project(self):
+        next_step = self.check_duplicated_rows
+
+        if self.project_step_finished:
+            next_step()
+
+        keep_column_indices = self.document["project"]
+        remove_column_indices = [i for i in range(len(self.df.columns)) if i not in keep_column_indices]
+
+        if len(remove_column_indices) > 0:
+            remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Project Columns")
+            self.pipeline.add_step_to_final(remove_columns_step)
+            self.df = self.pipeline.run_codes()
+        
+        self.project_step_finished = True
+        next_step()
+
     def execute_drop_x_y_columns(self):
         next_step = self.check_index_columns
 
@@ -3439,6 +3581,44 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
     def generate_pipeline(self):
         return self.pipeline
+
+
+    def decide_project(self, overwrite=False, once=False):
+        
+        next_step = self.execute_project
+
+        if "project" not in self.document:
+            pass
+        else:
+            if not overwrite:
+                write_log("Warning: project already exists in the document.")
+                if not once:
+                    next_step()
+                return
+        
+        create_progress_bar_with_numbers(0, doc_steps)
+
+        df = self.df
+
+        df_sample = df.head()
+        display(HTML(wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
+
+        num_cols = len(df.columns)
+
+        display(HTML(f"<p>🧐 There are <b>{num_cols}</b> columns. Please select the columns that you want to keep.</p>"))
+
+        column_names = self.df.columns.to_list()
+
+        def callback_next(selected_indices):
+            clear_output(wait=True)
+            self.document["project"] = selected_indices
+            next_step()
+
+        create_column_selector(column_names, callback_next, default=True)
+
+        if self.viewer:
+            callback_next(list(range(num_cols)))
+            
 
     def check_duplicated_rows(self, overwrite=False, once=False):
 
@@ -4241,9 +4421,36 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
         if LOG_MESSAGE_HISTORY:
             self.document["missing_value"][column]["history"] = messages
 
+    
+    def recommend_testing(self, overwrite=False, once=False):
+        next_step = self.complete
+
+        if "recommend_testing" in self.document:
+            if self.document["recommend_testing"] and not overwrite:
+                write_log("Warning: recommend_testing already exists in the document.")
+                if not once:
+                    next_step()
+                return
+
+        create_progress_bar_with_numbers(3, doc_steps)
+        print("🔍 Recommending testing...")
+        progress = self.show_progress(1)
+
+        basic_description = self.get_basic_description()
+        table_name = self.get_table_name()
+
+        json_code = recommend_testing(basic_description, table_name)
+        
+        progress.value += 1
+
+        self.document["recommend_testing"] = json_code
+
+        clear_output(wait=True)
+
+        next_step()
 
     def check_unusual_all(self):
-        next_step = self.complete
+        next_step = self.recommend_testing
 
         column_meanings = self.document['column_meaning']['summary']
         unusual_columns = {}
@@ -6472,16 +6679,20 @@ DONT change the function name, first line and the return clause.
             layout=widgets.Layout(width='95%', height='200px')
         )
         submit_button = widgets.Button(description="Submit Task")
+        submit_spinner = widgets.HTML()
 
         def on_submit_clicked(b):
             print("Generating codes...")
+            
+            submit_spinner.value = spinner_value
             self.generate_codes(explanation = explanation_text.value)
-
             codes_text.value = self.codes
             reason_label.value = self.reason
+            submit_spinner.value = ""
             print("Done")
 
         submit_button.on_click(on_submit_clicked)
+        submit_box = widgets.HBox([submit_button, submit_spinner])
 
         codes_label = widgets.Label('Codes:')
         codes_text = widgets.Textarea(
@@ -6489,12 +6700,14 @@ DONT change the function name, first line and the return clause.
             layout=widgets.Layout(width='95%', height='200px')
         )
         run_button = widgets.Button(description="Run Codes")
+        run_spinner = widgets.HTML()
+
         reason_label = widgets.Label(layout=Layout(width='100%', overflow='auto', white_space='pre-wrap'))
         output_label = widgets.Label()
 
         def on_run_clicked(b):
             print("Running codes...")
-
+            run_spinner.value =  spinner_value
             output = self.run_codes(dfs = self.sample_df, codes = codes_text.value)
             if isinstance(output, str):
                 error_label.value = "<span style='color: red;'>" + output.replace("\n", "<br>") + "</span>"
@@ -6502,16 +6715,17 @@ DONT change the function name, first line and the return clause.
             else:
                 error_label.value = ""
                 output_df_widget.value = output.to_html(border=0)
+            run_spinner.value = ""
             print("Done")
                 
-
         run_button.on_click(on_run_clicked)
+        run_box = widgets.HBox([run_button, run_spinner])
 
 
         panel_layout = Layout(width='400px')
 
-        left_panel = widgets.VBox([explanation_label, explanation_text, submit_button], layout=panel_layout)
-        right_panel = widgets.VBox([codes_label, codes_text, run_button, output_label], layout=panel_layout)
+        left_panel = widgets.VBox([explanation_label, explanation_text, submit_box], layout=panel_layout)
+        right_panel = widgets.VBox([codes_label, codes_text, run_box, output_label], layout=panel_layout)
         display(widgets.HBox([left_panel, right_panel]))
         display(reason_label)
 
@@ -6606,6 +6820,9 @@ class GeoAggregationStep(TransformationStep):
     def postprocessing(self, df):
         if not isinstance(df, pd.DataFrame):
             raise ValueError("Output is not a pandas dataframe.")
+
+        if not set(self.agg_cols).issubset(df.columns):
+            raise ValueError(f"Columns {self.agg_cols} are not in the output dataframe.")
         
         if df.index.name is not None:
             df = df.reset_index()
@@ -6620,12 +6837,12 @@ class GeoAggregationStep(TransformationStep):
 Input Df:
 {self.sample_df.df[:2].to_csv()}
 ===
-Transformation Requirement
-The final output df should group by {self.agg_cols}.
+Transformation Requirement:
+Aggregate {self.agg_cols}.
 {explanation}
 
 Do the following:
-1. First reason about how to transform
+1. First reason about how to transform. The final output df should group by only attributes: {self.agg_cols}
 2. Then fill in the python function, with detailed comments. 
 DONT change the function name, first line and the return clause.
 
@@ -8429,11 +8646,16 @@ def lightweight_copy(df, columns_to_copy=[]):
 
     return new_df
 
+
+
 def plot_efficient_grid(df, x_col, y_col, value_col=None):
+
     if value_col:
         value_columns = [value_col]
     else:
-        value_columns = [col for col in df.columns if col not in [x_col, y_col]]
+        numeric_columns = df.select_dtypes(include=np.number).columns
+        value_columns = [col for col in numeric_columns if col not in [x_col, y_col]]
+        value_columns = value_columns[:5]
 
     n_rows = len(value_columns)
     fig, axs = plt.subplots(n_rows, 1, figsize=(6, 3 * n_rows))
@@ -9499,6 +9721,10 @@ Below are the first 2 rows of the df:
             df_html = self.df.head(5).to_html()
             df_html = truncate_html_td(df_html)
             html += df_html
+        elif hasattr(self, 'np_array'):
+            np_array = self.np_array
+            html += f"<br>NumPy arraay shape: {np_array.shape}<br>"
+            html += "<br>"
 
         html += self.display_html(value_att=value_att)
         return html
@@ -10248,15 +10474,17 @@ def create_geo_transform_widget(callback):
 
 
 def truncate_html_td(html, max_length=30):
-    pattern = r'(<td>)(.*?)(</td>)'
+    pattern = r'(<td[^>]*>)(.*?)(</td>)'
     
     def truncate_match(match):
-        content = match.group(2)
+        content = match.group(2).strip()
         if len(content) > max_length:
             content = content[:max_length] + '...'
         return match.group(1) + content + match.group(3)
 
-    return re.sub(pattern, truncate_match, html)
+    return re.sub(pattern, truncate_match, html, flags=re.DOTALL)
+
+
 
 def save_np_array_as_raster(np_array, output_path, meta):
     if np_array.ndim == 2:
@@ -10350,7 +10578,7 @@ class GeoDataCleaning(DataCleaning):
             box = widgets.VBox([to_df_button])
             boxes.append(box)
 
-        label = widgets.HTML(value=f"🎲 Want to perform an ad hoc transformation?")
+        label = widgets.HTML(value=f"🎲 Want to perform an ad hoc transformation?\n⚠️ Currently, ad hoc transformation can't change CRS or file type.")
 
         def on_ad_hoc_clicked(b):
             clear_output(wait=True)
@@ -10766,7 +10994,7 @@ class GeoIntegration:
 
             colors = generate_seaborn_palette(len(column_indices))
             styled_df = color_columns_multiple(df.head(), colors, column_indices)
-            display(HTML(wrap_in_scrollable_div(styled_df.to_html())))
+            display(HTML(wrap_in_scrollable_div(truncate_html_td(styled_df.to_html()))))
             
             
             def call_back(longitude, latitude):
