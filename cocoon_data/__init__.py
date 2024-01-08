@@ -7805,8 +7805,7 @@ class DataCleaning:
 
         def callback(remove_missing_value_step):
             if remove_missing_value_step.explanation != "" or remove_missing_value_step.codes != "":
-                rename_step = self.doc_df.rename_step
-                self.pipeline.add_step_right_after(remove_missing_value_step, rename_step)
+                self.pipeline.add_step_to_final(remove_missing_value_step)
             clear_output(wait=True)
             self.display()
 
@@ -7824,9 +7823,8 @@ class DataCleaning:
 
         def callback(regex_step):
             if regex_step.explanation != "" or regex_step.codes != "":
-                rename_step = self.doc_df.rename_step
                 
-                self.pipeline.add_step_right_after(regex_step, rename_step)
+                self.pipeline.add_step_to_final(regex_step)
 
             clear_output(wait=True)
             self.display()
