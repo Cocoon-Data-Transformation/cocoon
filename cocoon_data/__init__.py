@@ -43,6 +43,7 @@ import duckdb
 try:
     import openpyxl
     import xlrd
+
     import rasterio
     from pyproj import Transformer, CRS
     from rasterio.windows import from_bounds
@@ -8865,7 +8866,7 @@ If no matched entity, return empty entity list and reason string.
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_var = json.loads(json_code)
         input_df.at[idx, match] = json_var
-        
+
 def entity_relation_match_cluster(input_df, I, refernece_df, attributes=None, label = "label", match="matches", verbose=False):
 
     emdeb_searcher = EmbeddingSearcher(input_df)
@@ -8906,7 +8907,14 @@ def entity_relation_match_cluster(input_df, I, refernece_df, attributes=None, la
             print(f"👉 Reference: {refernece_desc}")
 
         json_var = entity_relation_match_one(input_desc, refernece_desc)
-        json_var["refernece entities"] = list(refernece_df[label].iloc[selected_I])
+
+        def replace_indices_with_entities(json_var, reference_entities):
+            for category in json_var:
+                if isinstance(json_var[category], dict) and "entity" in json_var[category]:
+                    json_var[category]["entity"] = [reference_entities[int(idx) - 1] for idx in json_var[category]["entity"]]
+            return json_var
+
+        json_var = replace_indices_with_entities(json_var, reference_entities)
 
         if verbose:        
             print(f"👉 Match: {json.dumps(json_var, indent=4)}")
