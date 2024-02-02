@@ -8670,7 +8670,7 @@ def generate_report_for_cluster(df, clusters, exclude_columns=['label', 'index_i
 
         js = clusters[i] 
         middle_html += f"""<h1>{i+1}</h1>
-{generate_page_clusters(df=df, i=i, js=js, exclude_columns=exclude_columns, match_col=match_col)}"""
+{generate_page_clusters(df=df, clusters=clusters, i=i, js=js, exclude_columns=exclude_columns, match_col=match_col)}"""
 
     title_html = f'<div style="display: flex; align-items: center;">' \
         f'<img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">' \
@@ -8907,7 +8907,7 @@ def entity_relation_match_cluster(input_df, I, refernece_df, attributes=None, la
 
         json_var = entity_relation_match_one(input_desc, refernece_desc)
         json_var["refernece entities"] = list(refernece_df[label].iloc[selected_I])
-        
+
         if verbose:        
             print(f"👉 Match: {json.dumps(json_var, indent=4)}")
 
