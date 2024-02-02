@@ -8906,6 +8906,8 @@ def entity_relation_match_cluster(input_df, I, refernece_df, attributes=None, la
             print(f"👉 Reference: {refernece_desc}")
 
         json_var = entity_relation_match_one(input_desc, refernece_desc)
+        json_var["refernece entities"] = list(refernece_df[label].iloc[selected_I])
+        
         if verbose:        
             print(f"👉 Match: {json.dumps(json_var, indent=4)}")
 
