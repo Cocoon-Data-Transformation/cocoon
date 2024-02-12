@@ -37,7 +37,7 @@ import datetime
 from functools import partial
 
 import duckdb
-
+from collections import OrderedDict
 
 
 try:
@@ -95,6 +95,8 @@ cocoon_icon_64 = 'iVBORw0KGgoAAAANSUhEUgAAAaMAAAJSCAYAAABus6rVAAAABGdBTUEAALGPC/
 
 
 from IPython.display import display, HTML
+
+
 
 
 def generate_dialogue_html(dialogue):
@@ -981,9 +983,58 @@ def call_embed(input_string):
         )
         return response
 
+def hash_messages(messages):
+    serialized_input = json.dumps(messages, sort_keys=True)
+    return hashlib.sha256(serialized_input.encode('utf-8')).hexdigest()
 
+class LRUCache:
+    def __init__(self, capacity: int = 100):
+        self.cache = OrderedDict()
+        self.capacity = capacity
+
+    def get(self, key: str):
+        if key not in self.cache:
+            return None
+        else:
+            self.cache.move_to_end(key)
+            return self.cache[key]
+
+    def put(self, key: str, value):
+        if key in self.cache:
+            self.cache.move_to_end(key)
+        else:
+            if len(self.cache) >= self.capacity:
+                self.cache.popitem(last=False)
+        self.cache[key] = value
+
+    def save_to_disk(self, file_path = "./cached_messages.json"):
+        with open(file_path, 'w') as file:
+            json.dump(dict(self.cache), file)
+
+    def load_from_disk(self, file_path= "./cached_messages.json"):
+        with open(file_path, 'r') as file:
+            loaded_cache = json.load(file)
+            self.cache = OrderedDict(loaded_cache)
+
+lru_cache = LRUCache(1000)
+
+
+
+
+
+
+
+if os.path.exists("./cached_messages.json"):
+    lru_cache.load_from_disk("./cached_messages.json")
 
 def call_gpt4(messages, temperature=0.1, top_p=0.1):
+
+    message_hash = hash_messages(messages)
+
+    response = lru_cache.get(message_hash)
+
+    if response is not None:
+        return response
 
 
     if openai.api_type == 'gemini':
@@ -1010,16 +1061,15 @@ def call_gpt4(messages, temperature=0.1, top_p=0.1):
         )
 
         response = convert_gemini_to_openai(responses)
-        return response
 
-    if openai.api_type == 'azure':
+    elif openai.api_type == 'azure':
         response = openai.ChatCompletion.create(
             engine = openai.gpt4_engine,
             temperature=temperature,
             top_p=top_p,
             messages=messages
         )
-        return response
+        
     elif openai.api_type == 'open_ai':
         
         response = openai.ChatCompletion.create(
@@ -1029,10 +1079,12 @@ def call_gpt4(messages, temperature=0.1, top_p=0.1):
             messages=messages
         )
 
-        return response
-
     else:
         raise ValueError(f"openai.api_type is {openai.api_type}, but it should be 'azure' or 'openai'.")
+
+    lru_cache.put(message_hash, response)
+
+    return response
 
 
 def create_tabs_with_notifications(tab_data):
@@ -1615,9 +1667,9 @@ def topological_sort(nodes, edges):
 
 
 
-def show_progress(max_value):
+def show_progress(max_value=1, value=1):
     progress = widgets.IntProgress(
-        value=1,
+        value=value,
         min=0,
         max=max_value+1,  
         step=1,
@@ -9067,9 +9119,9 @@ def generate_html_from_json_entity(json_var):
         html_output += "</ul>"
         if json_var['EXACT_MATCH']['reason']:
             html_output += f"<p><b>Reason:</b> <i>{json_var['EXACT_MATCH']['reason']}</i></p>"
-        return html_output + "</body></html>"
-    
-    html_output += "<p>&#x1F641; We can't find <u>exactly matched</u> entities.</p>"
+        html_output += "</body></html>"
+    else:
+        html_output += "<p>&#x1F641; We can't find <u>exactly matched</u> entities.</p>"
 
     if json_var['GENERAL']['entity']:
         html_output += "<p>&#x1F600; We find entities that are <u>more general</u>:</p>"
@@ -9164,9 +9216,9 @@ def generate_html_from_json(json_var):
         html_output += "</ul>"
         if json_var['EXACT_MATCH']['reason']:
             html_output += f"<p><b>Reason:</b> <i>{json_var['EXACT_MATCH']['reason']}</i></p>"
-        return html_output + "</body></html>"
-    
-    html_output += "<p>&#x1F641; We can't find <u>exactly matched</u> entities.</p>"
+        html_output += "</body></html>"
+    else:
+        html_output += "<p>&#x1F641; We can't find <u>exactly matched</u> entities.</p>"
 
     if json_var['GENERAL']['entity']:
         html_output += "<p>&#x1F600; We find entities that are <u>more general</u>:</p>"
@@ -12234,7 +12286,6 @@ class Workflow(Node):
     def read_document_from_disk(self, filepath: str, viewer=True):
         with open(filepath, 'r') as file:
             self.document = json.load(file)
-        self.start_document(viewer=viewer)
 
     def update_node(self, new_node):
         node_name = new_node.name
@@ -12413,13 +12464,15 @@ class MultipleNode(Workflow):
         self.example_node = self.construct_node("example")
         self.messages = []
 
-    def construct_node(self, element_name):
-        node = Node("Sub Node", para={"element_name": element_name})
+    def construct_node(self, element_name, idx=0, total=0):
+        node = Node("Sub Node", para={"element_name": element_name, "idx": idx, "total": total})
         return node
     
     def extract(self, item, documents):
         self.elements = ['element1', 'element2', 'element3']
-        self.nodes = {element: self.construct_node(element) for element in self.elements}
+        total = len(self.elements)
+        self.nodes = {element: self.construct_node(element, idx, total) for idx, element in enumerate(self.elements)}
+        self.item = item
 
         return None
     
