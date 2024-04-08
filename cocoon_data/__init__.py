@@ -1,4 +1,3 @@
-import openai
 import os
 import io
 import pandas as pd
@@ -23,24 +22,23 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 import plotly.graph_objects as go
-import pandas as pd
 import ast
 import faiss  
 from tqdm import tqdm
 import base64
 from io import BytesIO
 import heapq
-import hashlib
 import chardet
 from matplotlib_venn import venn2
 import datetime
 from functools import partial
 from contextlib import contextmanager
 import yaml
+from html.parser import HTMLParser
 
-import duckdb
-from collections import OrderedDict
 from datasketch import MinHash, MinHashLSH
+from database import *
+from llm import *
 
 try:
     import openpyxl
@@ -61,33 +59,13 @@ try:
 except:
     pass
 
-try:
-    import vertexai
-    from vertexai.preview.generative_models import GenerativeModel, Part, HarmCategory, HarmBlockThreshold
-except:
-    pass
+
 
 
 
 spinner_value = "Running..."
 
-if 'OPENAI_API_TYPE' in os.environ:
-    openai.api_type = os.environ['OPENAI_API_TYPE']
 
-if 'OPENAI_API_BASE' in os.environ:
-    openai.api_base = os.environ['OPENAI_API_BASE']
-
-if 'OPENAI_API_KEY' in os.environ:
-    openai.api_key = os.environ['OPENAI_API_KEY']
-
-if 'OPENAI_API_VERSION' in os.environ:
-    openai.api_version = os.environ['OPENAI_API_VERSION']
-
-if 'OPENAI_GPT4_ENGINE' in os.environ:
-    openai.gpt4_engine = os.environ['OPENAI_GPT4_ENGINE']
-
-if 'OPENAI_EMBED_ENGINE' in os.environ:
-    openai.embed_engine = os.environ['OPENAI_EMBED_ENGINE']
 
 MAX_TRIALS = 3
 
@@ -105,6 +83,456 @@ def yml_from_name(table_name):
     }
         
     return yaml_dict
+
+
+
+def create_list_of_strings(initial_strings):
+    def move_string_up(btn):
+        index = btn.index
+        if index > 0:
+            current_strings[index], current_strings[index-1] = current_strings[index-1], current_strings[index]
+            update_display(current_strings)
+
+    def move_string_down(btn):
+        index = btn.index
+        if index < len(current_strings) - 1:
+            current_strings[index], current_strings[index+1] = current_strings[index+1], current_strings[index]
+            update_display(current_strings)
+
+    def update_display(strings):
+        display_container.children = tuple(build_widgets(strings) + [reset_btn])
+
+    def update_display(strings):
+        display_container.children = tuple(build_widgets(strings) + [reset_btn])
+
+    def delete_string(btn):
+        index = btn.index
+        del current_strings[index]
+        update_display(current_strings)
+
+    def add_string(btn):
+        new_string = new_string_input.value.strip()
+        if new_string:
+            current_strings.append(new_string)
+            new_string_input.value = ''
+            update_display(current_strings)
+
+    def reset_list(btn):
+        global current_strings
+        current_strings = initial_strings.copy()
+        update_display(current_strings)
+
+    def build_widgets(strings):
+        widgets_list = []
+        for index, string in enumerate(strings):
+            text_widget = widgets.Text(value=string)
+            delete_btn = widgets.Button(icon='fa-trash', button_style='danger', layout=widgets.Layout(width='32px'))
+            up_btn = widgets.Button(icon='fa-angle-up', button_style='info', layout=widgets.Layout(width='32px'))
+            down_btn = widgets.Button(icon='fa-angle-down', button_style='info', layout=widgets.Layout(width='32px'))
+
+            delete_btn.index = up_btn.index = down_btn.index = index
+
+            delete_btn.on_click(delete_string)
+            up_btn.on_click(move_string_up)
+            down_btn.on_click(move_string_down)
+
+            hbox = widgets.HBox([text_widget, up_btn, down_btn, delete_btn])
+            widgets_list.append(hbox)
+
+        widgets_list.append(widgets.HBox([new_string_input, add_string_btn]))
+        return widgets_list
+
+    current_strings = initial_strings.copy()
+
+    new_string_input = widgets.Text()
+    add_string_btn = widgets.Button(icon='fa-plus-circle', button_style='primary', layout=widgets.Layout(width='32px'))
+    add_string_btn.on_click(add_string)
+
+    reset_btn = widgets.Button(icon="fa-fast-backward", description='Reset', button_style='warning')
+    reset_btn.on_click(reset_list)
+
+    display_container = widgets.VBox()
+    update_display(current_strings)
+
+    return display_container
+
+
+
+
+def extract_strings_from_display(container):
+    extracted_strings = []
+    
+    for child in container.children[:-2]:
+        text_widget = child.children[0]
+        extracted_strings.append(text_widget.value)
+    
+    return extracted_strings
+
+
+
+class QueryWidget:
+    def __init__(self, con):
+        self.con = con
+        self.label = widgets.Label(value='Enter your SQL query:')
+        self.sql_input = widgets.Textarea(value='SELECT * FROM my_table\n\n\n\n', 
+                                          placeholder='Type something', 
+                                          description='', 
+                                          disabled=False, 
+                                          layout={'width': '100%', 'height': '100px'})
+        self.error_msg = widgets.HTML(value='')
+        self.result_display = widgets.HTML()
+        self.submit_button = widgets.Button(description="Submit Query", button_style='success')
+        self.vbox = widgets.VBox([self.label, self.sql_input, self.submit_button, self.error_msg, self.result_display])
+        
+        self.submit_button.on_click(self.run_query_from_button)
+    
+    def run_query(self, sql_query):
+        sample_size = 100
+        self.sql_input.value = sql_query
+        modified_query = f"SELECT * FROM ({sql_query}) LIMIT {sample_size}"
+        try:
+            result = run_sql_return_df(self.con, modified_query)
+            self.error_msg.value = f'The query was successful. We only show the first {sample_size} rows.'
+            self.result_display.value = wrap_in_scrollable_div(result.to_html(), height="400px")
+        except Exception as e:
+            self.error_msg.value = f"<div style='color: red;'>{str(e)}</div>"
+            self.result_display.value = ''
+    
+    def run_query_from_button(self, b):
+        self.run_query(self.sql_input.value)
+    
+    def display(self):
+        display(self.vbox)
+
+
+        
+data_types ={
+    "INT": ["INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT"],
+    "DECIMAL": ["DECIMAL", "NUMERIC", "DOUBLE", "FLOAT", "FIXED"],
+    "BOOLEAN": ["BOOLEAN"],
+    "DATE": ["DATE"],
+    "TIME": ["TIME"],
+    "TIMESTAMP": ["TIMESTAMP"],
+    "INTERVAL": ["INTERVAL"],
+    "VARCHAR": ["VARCHAR", "CHAR", "TEXT", "STRING", "CHARACTER"],
+    "UUID": ["UUID"],
+    "BLOB": ["BLOB"],
+    "JSON": ["JSON"],
+    "ARRAY": ["ARRAY"]
+}
+
+reverse_data_types = {}
+for key, value in data_types.items():
+    for val in value:
+        reverse_data_types[val] = key
+
+class MyHTMLParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.data = []
+
+    def handle_data(self, data):
+        self.data.append(data)
+
+def extract_text_from_html(html_str):
+    parser = MyHTMLParser()
+    parser.feed(html_str)
+    return ''.join(parser.data)
+
+def grid_to_updated_dataframe(grid, reset=True, lists=[]):
+    updated_data = []
+
+    if reset:
+        j_max = grid.n_columns - 1
+    else:
+        j_max = grid.n_columns
+    
+    column_names = [extract_text_from_html(str(grid[0, j].value)) for j in range(j_max)]  
+    
+    for i in range(1, grid.n_rows):
+        row_data = []
+
+        for j in range(j_max):
+            widget = grid[i, j]
+            
+            column_name = column_names[j]
+
+            if column_name in lists:
+                value = widget.options
+            elif isinstance(widget, widgets.FloatText) or isinstance(widget, widgets.Text):
+                value = widget.value
+            elif isinstance(widget, widgets.Checkbox):
+                value = widget.value
+            elif isinstance(widget, widgets.Dropdown):
+                value = widget.value
+            else:
+                value = None
+            
+            row_data.append(value)
+        
+        updated_data.append(row_data)
+    
+    updated_df = pd.DataFrame(updated_data, columns=column_names)
+    
+    return updated_df
+
+def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists= [], long_text = []):
+
+    rows = len(df) + 1
+    columns = len(df.columns) + (1 if reset else 0)
+    grid = widgets.GridspecLayout(rows, columns, width='100%')
+
+    for j, col_name in enumerate(df.columns):
+        grid[0, j] = widgets.HTML(value=f'<b>{col_name}</b>')
+    
+    if reset:
+        grid[0, -1] = widgets.HTML(value='<b>Reset</b>')
+    
+    row_widgets = []
+
+    def highlight_change(change):
+        change.owner.layout.border = '1px solid #fc5656'
+
+
+    for i, (index, row) in enumerate(df.iterrows()):
+        widgets_in_row = []
+        for j, col_name in enumerate(df.columns):
+            value = row[col_name]
+            widget = None
+            
+            if col_name in category:
+                widget = widgets.Dropdown(options=category[col_name], value=value)
+            elif col_name in lists:
+                widget = widgets.Dropdown(options=value)
+            elif col_name in long_text:
+                widget = widgets.Button(description='Hover over me', 
+                      button_style='',
+                      tooltip=value,
+                      icon='fa-commenting-o')
+            elif pd.api.types.is_bool_dtype(df[col_name]):
+                widget = widgets.Checkbox(value=bool(value))
+            elif pd.api.types.is_numeric_dtype(df[col_name]):
+                widget = widgets.FloatText(value=float(value))
+            else:
+                widget = widgets.Text(value=str(value))
+
+            if not editable_columns[j]:
+                widget.disabled = True
+            else:
+                widget.disabled = False
+                widget.observe(highlight_change, names='value')
+
+            grid[i+1, j] = widget
+            widgets_in_row.append(widget)
+
+        row_widgets.append(widgets_in_row)
+
+        if reset:
+            reset_button = widgets.Button(description="Reset", button_style='danger')
+
+            def create_reset_handler(row_index):
+                def handler(b):
+                    for k, cell in enumerate(df.iloc[row_index]):
+                        widget = row_widgets[row_index][k]
+                        value = cell
+                        if isinstance(widget, widgets.FloatText):
+                            widget.value = float(value)
+                        elif isinstance(widget, widgets.Checkbox):
+                            widget.value = bool(value)
+                        elif isinstance(widget, widgets.Dropdown):
+                            widget.value = value
+                        elif isinstance(widget, widgets.Text):
+                            widget.value = str(value)
+                        
+                        widget.layout.border = ''
+                return handler
+
+            reset_button.on_click(create_reset_handler(i))
+            grid[i+1, -1] = reset_button
+
+    return grid
+
+
+
+
+
+def create_data_type_grid(df):
+    type_domain = list(data_types.keys())
+
+    def update_match_status(change, match_status_label, current_type):
+        match_status_label.value = "✔️ Yes" if change['new'] == current_type else "❌ No"
+
+    grid = widgets.GridspecLayout(len(df) + 1, 4)
+
+    grid[0, 0] = widgets.Label('Column Name')
+    grid[0, 1] = widgets.Label('Current Type')
+    grid[0, 2] = widgets.Label('Target Type')
+    grid[0, 3] = widgets.Label('Matched?')
+
+    for i, row in df.iterrows():
+        column_name_label = widgets.Label(row['column_name'])
+        current_type_label = widgets.Label(row['current_type'])
+        target_type_dropdown = widgets.Dropdown(options=type_domain, value=row['target_type'], description='')
+        match_status_label = widgets.Label(value="✔️ Yes" if row['current_type'] == row['target_type'] else "❌ No")
+
+        target_type_dropdown.observe(lambda change, current_type_label=current_type_label, match_status_label=match_status_label: update_match_status(change, match_status_label, row['current_type']), names='value')
+
+        grid[i + 1, 0] = column_name_label
+        grid[i + 1, 1] = current_type_label
+        grid[i + 1, 2] = target_type_dropdown
+        grid[i + 1, 3] = match_status_label
+
+    return grid
+
+def extract_grid_data_type(grid):
+
+    data = []
+    for i in range(1, grid.n_rows):
+        column_name = grid[i, 0].value
+        current_type = grid[i, 1].value
+        target_type = grid[i, 2].value
+        
+        data.append([column_name, current_type, target_type])
+    return data
+
+
+
+
+
+
+def create_dictionary_grid_remove(input_dict, col1="Key", col2="Value"):
+    grid = widgets.GridspecLayout(len(input_dict) + 2, 4, width='100%')
+
+    grid[0, 0] = widgets.HTML(value=f'<b>{col1}</b>')
+    grid[0, 1] = widgets.HTML(value=f'<b>{col2}</b>')
+    grid[0, 2] = widgets.HTML(value='<b>Remove Rows</b>')
+    grid[0, 3] = widgets.HTML(value='<b>Reset</b>') 
+
+    def create_reset_function(text_widget, toggle_widget, key):
+        """Create a closure that resets the text widget's value to the dictionary's original value and turns the toggle off."""
+        def reset_value(b):
+            text_widget.value = input_dict[key]
+            toggle_widget.value = False
+            text_widget.disabled = False
+        return reset_value
+
+    for i, (key, value) in enumerate(input_dict.items(), start=1):
+        grid[i, 0] = widgets.Label(value=key)
+        
+        text_input = widgets.Text(value=value)
+        grid[i, 1] = text_input
+        
+        reset_button = widgets.Button(description="Reset",
+                                      button_style = "danger")
+        
+        toggle_button = widgets.ToggleButton(value=False, 
+                                             description='Remove', 
+                                             tooltip='Remove rows with this value',
+                                             button_style='')
+        toggle_button.observe(lambda change, text_input=text_input: toggle_text_input(change, text_input), names='value')
+        
+        reset_button.on_click(create_reset_function(text_input, toggle_button, key))
+        grid[i, 3] = reset_button
+        grid[i, 2] = toggle_button
+    
+    return grid
+
+def toggle_text_input(change, text_input):
+    """Disable or enable the text input based on the toggle's state."""
+    text_input.disabled = change['new']
+
+
+
+def process_grid_changes_remove(grid):
+    old_values_to_remove = []
+    non_removed_values = {}
+    
+    for i in range(1, len(grid.children) // 4):
+        key_label = grid[i, 0]
+        text_input = grid[i, 1]
+        toggle_button = grid[i, 2]
+        
+        key = key_label.value
+        old_value = text_input.value
+        
+        if toggle_button.value:
+            old_values_to_remove.append(old_value)
+        else:
+            non_removed_values[key] = old_value
+
+    return old_values_to_remove, non_removed_values
+
+
+
+def create_dictonary_grid(input_dict, col1="Key", col2="Value"):
+    grid = widgets.GridspecLayout(len(input_dict) + 2, 3, width='100%')
+
+    grid[0, 0] = widgets.HTML(value=f'<b>{col1}</b>')
+    grid[0, 1] = widgets.HTML(value=f'<b>{col2}</b>')
+    grid[0, 2] = widgets.HTML(value='<b>Reset</b>')
+
+    def create_reset_function(text_widget, key):
+        """Create a closure that resets the text widget's value to the dictionary's original value."""
+        def reset_value(b):
+            text_widget.value = input_dict[key]
+        return reset_value
+
+    for i, (key, value) in enumerate(input_dict.items(), start=1):
+        grid[i, 0] = widgets.Label(value=key)
+        
+        text_input = widgets.Text(value=value)
+        text_input.observe(lambda change, key=key: on_text_change(change, key), names='value')
+        grid[i, 1] = text_input
+        
+        reset_button = widgets.Button(description="Reset")
+        reset_button.on_click(create_reset_function(text_input, key))
+        grid[i, 2] = reset_button
+    
+    return grid
+
+
+
+
+def collect_updated_dict_from_grid(grid):
+    updated_dict = {}
+    for i in range(1, grid.n_rows - 1):
+        key_widget = grid[i, 0]
+        value_widget = grid[i, 1]
+        
+        key = key_widget.value
+        updated_value = value_widget.value
+        updated_dict[key] = updated_value
+
+    return updated_dict
+
+
+
+def create_text_area_with_char_count(initial_value):
+
+    text_area = Textarea(layout={'height': '200px', 'width': '600px'},
+                            value=initial_value)
+
+    char_count_label = Label()
+
+    def update_char_count(change):
+        if len(text_area.value) < 300:
+            char_count_label.value = f"Characters entered: {len(text_area.value)}"
+        else:
+            char_count_label.value = f"Characters entered: {len(text_area.value)} ⚠️ Too long!"
+
+    text_area.observe(update_char_count, names='value')
+
+    update_char_count(None)
+
+    return text_area, char_count_label
+
+
+def create_text_area(initial_value):
+
+    text_area = Textarea(layout={'height': '100px', 'width': '400px'},
+                            value=initial_value)
+    
+    return text_area
 
 
 def extract_yml_code(s):
@@ -132,45 +560,47 @@ def get_nl_entity_rel_desc(descriptions):
     relation_desc = "\n".join(f"{idx+1}. {relation}" for idx, relation in enumerate(relation_all))
     return nl_descs, entity_desc, relation_desc
 
-def generate_draggable_graph_html(data):
-    graph_html = """<!DOCTYPE html>
+
+def generate_draggable_graph_html(data, svg_height=300, svg_width=1000):
+    graph_data = json.dumps(data)
+    graph_html = f"""<!DOCTYPE html>
 <meta charset="utf-8">
 <style>
-  .nodes rect {
+  .nodes rect {{
     stroke: #aaa;
     fill: #fff;
-  }
+  }}
 
-  .links line {
+  .links line {{
     stroke: #aaa;
     stroke-width: 2px;
-  }
+  }}
 
-  .nodetext {
+  .nodetext {{
     text-anchor: middle;
     alignment-baseline: middle;
-  }
+  }}
 
-  html {
+  html {{
       font-family: sans-serif;
       font-size: 12px;
-  }
+  }}
 </style>
 <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
-<svg id="session1" width="1000" height="300"></svg>
+<svg id="session1" width="{svg_width}" height="{svg_height}"></svg>
 
 <script>
   var svg = d3.select("#session1"),
       width = +svg.attr("width"),
       height = +svg.attr("height");
 
-  var graph = {{data}};
+  var graph = {graph_data};
 
   var nodeWidth = 100;
   var nodeHeight = 30;
 
   var simulation = d3.forceSimulation()
-      .force("link", d3.forceLink().id(function(d) { return d.id; }))
+      .force("link", d3.forceLink().id(function(d) {{ return d.id; }}))
       .force("charge", d3.forceManyBody().strength(-180))
       .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -200,10 +630,10 @@ var texts = node.append("text")
     .attr("class", "nodetext")
     .attr("x", 30) // Temporary x position, half of the default width
     .attr("y", nodeHeight / 2)
-    .text(function(d) { return d.id; });
+    .text(function(d) {{ return d.id; }});
 
 // Update the width of the rectangles and reposition the text
-node.each(function(d, i) {
+node.each(function(d, i) {{
     var rect = d3.select(this).select("rect");
     var text = d3.select(this).select("text");
 
@@ -215,7 +645,7 @@ node.each(function(d, i) {
 
     // Update text position
     text.attr("x", newWidth / 2);
-});
+}});
 
 
 
@@ -227,39 +657,53 @@ node.each(function(d, i) {
       .links(graph.links)
       .distance(100);
 
-  function ticked() {
+  function ticked() {{
   link
-      .attr("x1", function(d) { return Math.max(0,Math.min(width, d.source.x)); })
-      .attr("y1", function(d) { return Math.max(0,Math.min(height, d.source.y)); })
-      .attr("x2", function(d) { return Math.max(0,Math.min(width, d.target.x)); })
-      .attr("y2", function(d) { return Math.max(0,Math.min(height, d.target.y)); });
+      .attr("x1", function(d) {{ return Math.max(0,Math.min(width, d.source.x)); }})
+      .attr("y1", function(d) {{ return Math.max(0,Math.min(height, d.source.y)); }})
+      .attr("x2", function(d) {{ return Math.max(0,Math.min(width, d.target.x)); }})
+      .attr("y2", function(d) {{ return Math.max(0,Math.min(height, d.target.y)); }});
     node
-        .attr("transform", function(d) {
+        .attr("transform", function(d) {{
             var x = Math.max(0, Math.min(width, d.x)) - this.getBBox().width / 2;
             var y = Math.max(0, Math.min(height, d.y)) - this.getBBox().height / 2;
             return "translate(" + x + "," + y + ")";
-        });
-  }
+        }});
+  }}
 
-  function dragstarted(d) {
+  function dragstarted(d) {{
     if (!d3.event.active) simulation.alphaTarget(0.3).restart();
     d.fx = d.x;
     d.fy = d.y;
-  }
+  }}
 
-  function dragged(d) {
+  function dragged(d) {{
     d.fx = Math.max(0, Math.min(width - nodeWidth, d3.event.x));
     d.fy = Math.max(0, Math.min(height - nodeHeight, d3.event.y));
-  }
+  }}
 
-  function dragended(d) {
+  function dragended(d) {{
     if (!d3.event.active) simulation.alphaTarget(0);
     d.fx = null;
     d.fy = null;
-  }
+  }}
 </script>
 """
-    return graph_html.replace("{{data}}", json.dumps(data))
+    return graph_html
+
+
+
+def generate_draggable_graph_html_dynamically(graph_data):
+    number_nodes = len(graph_data["nodes"])
+    svg_width = min(800, 300 + 50 * number_nodes)
+    svg_height = 100 + number_nodes * 30
+    return svg_width, svg_height, generate_draggable_graph_html(graph_data, svg_height, svg_width)
+
+
+def display_draggable_graph_html(graph_data):
+    _, svg_height, html_content = generate_draggable_graph_html_dynamically(graph_data)
+
+    display_html_iframe(html_content, width="100%", height=f"{svg_height+50}px")
 
 
 
@@ -267,6 +711,7 @@ def robust_create_to_replace(input_sql):
     pattern = re.compile(r'create\s+table', re.IGNORECASE)
     
     return pattern.sub('CREATE OR REPLACE TABLE', input_sql)
+
 
 def cluster_tables(tables, threshold=0.5, num_perm=128):
 
@@ -313,7 +758,7 @@ def group_tables_exclude_single(tables):
         else:
             attribute_to_table[attributes_sorted].append(table)
     
-    grouped_tables = [tables for tables in attribute_to_table.values()]
+    grouped_tables = [tables for tables in attribute_to_table.values() if len(tables) > 1]
     
     return grouped_tables
 
@@ -601,6 +1046,15 @@ def select_invalid_data_type(df, column, data_type):
 def sql_cleaner(sql):
     sql = sql.replace('`', '"')
     return sql
+
+def clean_table_name(table_name):
+    if not table_name[0].isalpha() and table_name[0] != "_":
+        table_name = "_" + table_name
+
+    return sanitize_table_name(table_name)
+
+def clean_column_name(column_name):
+    return clean_table_name(column_name)
 
 def sanitize_table_name(table_name):
     return re.sub(r'[^a-zA-Z0-9_]', '_', table_name)
@@ -920,35 +1374,67 @@ def plot_venn_percentage(array1, array2, name1, name2):
 
 
 
-
 def create_column_selector(columns, callback, default=False):
-    labels = [widgets.Label(column) for column in columns]
-    checkboxes = [widgets.Checkbox(value=default) for _ in columns]
-    widgets_list = [item for pair in zip(labels, checkboxes) for item in pair]
-
-    grid = widgets.GridBox(widgets_list, layout=widgets.Layout(grid_template_columns="repeat(2, auto)"))
-
-    def update_checkboxes(value):
-        for checkbox in checkboxes:
-            checkbox.value = value
-
-    select_all_button = widgets.Button(description="Select All")
-    deselect_all_button = widgets.Button(description="Deselect All")
-    select_all_button.on_click(lambda b: update_checkboxes(True))
-    deselect_all_button.on_click(lambda b: update_checkboxes(False))
-    buttons_box = widgets.HBox([select_all_button, deselect_all_button])
-
-    submit_button = widgets.Button(description="Submit")
-    output = widgets.Output()
-
-    def on_submit(b):
-        output.clear_output()
-        selected_indices = [i for i, cb in enumerate(checkboxes) if cb.value]
+    multi_select = widgets.SelectMultiple(
+        options=[(column, i) for i, column in enumerate(columns)],
+        disabled=False,
+        layout={'width': '600px', 'height': '200px'}
+    )
+    
+    instructions_text = "Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, 0 are selected."
+    instructions = widgets.Label(value=instructions_text)
+    
+    def update_instructions(change):
+        selected_count = len(multi_select.value)
+        instructions.value = f"Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, {selected_count} are selected."
+    
+    multi_select.observe(update_instructions, 'value')
+    
+    select_all_button = widgets.Button(description="Select All", button_style='info', icon='check-square')
+    deselect_all_button = widgets.Button(description="Deselect All", button_style='danger', icon='square-o')
+    reverse_selection_button = widgets.Button(description="Reverse Selection", button_style='warning', icon='exchange')
+    submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
+    
+    def select_all(b):
+        multi_select.value = tuple(range(len(columns)))
+        
+    def deselect_all(b):
+        multi_select.value = ()
+    
+    def reverse_selection(b):
+        current_selection = set(multi_select.value)
+        all_indices = set(range(len(columns)))
+        new_selection = tuple(all_indices - current_selection)
+        multi_select.value = new_selection
+    
+    def submit(b):
+        selected_indices = multi_select.value
         callback(selected_indices)
+    
+    select_all_button.on_click(select_all)
+    deselect_all_button.on_click(deselect_all)
+    reverse_selection_button.on_click(reverse_selection)
+    submit_button.on_click(submit)
+    
+    buttons = widgets.HBox([select_all_button, deselect_all_button, reverse_selection_button])
+    ui = widgets.VBox([instructions, multi_select, buttons, submit_button])
+    display(ui)
+    
+    if default:
+        multi_select.value = tuple(range(len(columns)))
 
-    submit_button.on_click(on_submit)
 
-    display(grid, buttons_box, submit_button, output)
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1191,126 +1677,6 @@ doc_steps = ["Sanity", "Table", "Missing", "Unusual"]
 geo_integration_steps = ["Process", "CRS", "Integration"] 
 
 
-def call_embed(input_string):
-
-    if openai.api_type == 'azure':
-        response = openai.Embedding.create(input=input_string, 
-            engine=openai.embed_engine)
-        return response
-    
-    elif openai.api_type == 'open_ai':
-        response = openai.Embedding.create(
-            model="text-embedding-ada-002",
-            input=input_string
-        )
-        return response
-
-def hash_messages(messages):
-    serialized_input = json.dumps(messages, sort_keys=True)
-    return hashlib.sha256(serialized_input.encode('utf-8')).hexdigest()
-
-class LRUCache:
-    def __init__(self, capacity: int = 100):
-        self.cache = OrderedDict()
-        self.capacity = capacity
-
-    def get(self, key: str):
-        if key not in self.cache:
-            return None
-        else:
-            self.cache.move_to_end(key)
-            return self.cache[key]
-
-    def put(self, key: str, value):
-        if key in self.cache:
-            self.cache.move_to_end(key)
-        else:
-            if len(self.cache) >= self.capacity:
-                self.cache.popitem(last=False)
-        self.cache[key] = value
-
-    def pop(self):
-        self.cache.popitem()
-
-    def save_to_disk(self, file_path = "./cached_messages.json"):
-        with open(file_path, 'w') as file:
-            json.dump(dict(self.cache), file)
-
-    def load_from_disk(self, file_path= "./cached_messages.json"):
-        with open(file_path, 'r') as file:
-            loaded_cache = json.load(file)
-            self.cache = OrderedDict(loaded_cache)
-
-lru_cache = LRUCache(1000)
-
-
-
-
-
-
-
-if os.path.exists("./cached_messages.json"):
-    lru_cache.load_from_disk("./cached_messages.json")
-
-def call_gpt4(messages, temperature=0.1, top_p=0.1):
-
-    message_hash = hash_messages(messages)
-
-    response = lru_cache.get(message_hash)
-
-    if response is not None:
-        lru_cache.save_to_disk()
-        return response
-
-
-    if openai.api_type == 'gemini':
-        messages = convert_openai_to_gemini(messages)
-
-        model = GenerativeModel("gemini-pro-vision")
-
-        safety_settings={
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-        }
-                
-        responses = model.generate_content(
-            messages,
-            generation_config={
-                "max_output_tokens": 2048,
-                "temperature": 0.4,
-                "top_p": 1,
-                "top_k": 32
-            },
-            safety_settings=safety_settings
-        )
-
-        response = convert_gemini_to_openai(responses)
-
-    elif openai.api_type == 'azure':
-        response = openai.ChatCompletion.create(
-            engine = openai.gpt4_engine,
-            temperature=temperature,
-            top_p=top_p,
-            messages=messages
-        )
-        
-    elif openai.api_type == 'open_ai':
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-4-1106-preview",
-            temperature=temperature,
-            top_p=top_p,
-            messages=messages
-        )
-
-    else:
-        raise ValueError(f"openai.api_type is {openai.api_type}, but it should be 'azure' or 'openai'.")
-
-    lru_cache.put(message_hash, response)
-    lru_cache.save_to_disk()
-    return response
 
 
 def create_tabs_with_notifications(tab_data):
@@ -1350,44 +1716,6 @@ def create_dropdown_with_content(tab_data):
     dropdown.observe(on_dropdown_change, names='value')
 
     return VBox([dropdown, display_area])
-
-
-
-
-
-
-
-def convert_openai_to_gemini(openai_messages):
-    gemini_messages = []
-
-    for message in openai_messages:
-        role = "USER" if message["role"] == "user" else "model"
-
-        gemini_message = {
-            "role": role.upper(),
-            "parts": [{"text": message["content"]}]
-        }
-
-        gemini_messages.append(gemini_message)
-
-    return gemini_messages
-
-
-
-
-def convert_gemini_to_openai(gemini_response):
-    message_text = gemini_response.candidates[0].content.parts[0].text
-
-    message_content = {"role": "assistant", "content": message_text}
-
-    openai_response = {
-        "choices": [
-            {"message": message_content}
-        ]
-    }
-
-    return openai_response
-
 
 
 def transform_string(s):
@@ -1797,15 +2125,18 @@ def get_tree_html(data):
     processed_data_str = json.dumps(processed_data, indent=4)
 
     height1 = number_of_leaves * 30
-    height2 = number_of_leaves * 40 + 100
+    height2 = number_of_leaves * 40 + 50
+
+    width1 = max_path_length(data, 5, 20)
+    width2 = max_path_length(data, 10, 50) + 150
     
     html_content_updated = html_content.replace('{{data}}', processed_data_str)
     html_content_updated = html_content_updated.replace('{{height1}}', str(height1))
     html_content_updated = html_content_updated.replace('{{height2}}', str(height2))
-    html_content_updated = html_content_updated.replace('{{width1}}', str(max_path_length(data, 5, 20)))
-    html_content_updated = html_content_updated.replace('{{width2}}', str(max_path_length(data, 10, 50) + 200))
+    html_content_updated = html_content_updated.replace('{{width1}}', str(width1))
+    html_content_updated = html_content_updated.replace('{{width2}}', str(width2))
 
-    return html_content_updated
+    return html_content_updated, width2, height2
 
 
 
@@ -2340,7 +2671,7 @@ def plot_distribution(df, column_name):
 
 
 
-def display_html_iframe(html_content, width, height):
+def display_html_iframe(html_content, width="100%", height=None):
 
     encoded_html = base64.b64encode(html_content.encode()).decode()
 
@@ -2349,8 +2680,14 @@ def display_html_iframe(html_content, width, height):
     display(IFrame(src=data_uri, width=width, height=height))
 
 def render_json_in_iframe_with_max_height(json_data, max_height=200):
-    json_str = json.dumps(json_data, indent=2)
-    
+    def default_serializer(obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+
+    json_str = json.dumps(json_data, default=default_serializer, indent=2)
+        
     html_template = f"""
     <html>
     <head>
@@ -2387,6 +2724,9 @@ def get_detailed_error_info():
 
     for i, line in enumerate(tb_list):
         if "exec(" in line:
+            tb_list = tb_list[i+1:]
+            break
+        if "con.execute(" in line:
             tb_list = tb_list[i+1:]
             break
 
@@ -3452,7 +3792,8 @@ And more to come! 🚀""")
             html_content_updated += '<br><b>🌳 Attribute Hierarchy</b><br>'
 
             group_data = self.document['column_grouping']['summary']
-            html_content_updated += wrap_in_iframe(get_tree_html(group_data))
+            tree_html, _, = get_tree_html(group_data) 
+            html_content_updated += wrap_in_iframe(tree_html)
             html_content_updated += '<hr>'
 
         if "visualization" in self.document:
@@ -3549,7 +3890,8 @@ And more to come! 🚀""")
             html_content_updated += '<br><b>🌳 Attribute Hierarchy</b><br>'
 
             group_data = self.document['column_grouping']['summary']
-            html_content_updated += wrap_in_iframe(get_tree_html(group_data))
+            tree_html, _, = get_tree_html(group_data) 
+            html_content_updated += wrap_in_iframe(tree_html)
 
             tab_data.append(("📝 Summary", 0, html_content_updated))
 
@@ -3777,9 +4119,9 @@ And more to come! 🚀""")
     def display_tree(self, data):
 
         if self.display_html:
-            html_content_updated = get_tree_html(data)
+            html_content_updated, _, height = get_tree_html(data)
 
-            display_html_iframe(html_content_updated, width=800, height=400)
+            display_html_iframe(html_content_updated, height=f"{height}px")
         else:
 
             import plotly.graph_objects as go
@@ -6996,6 +7338,26 @@ def find_final_node(steps, edges):
     return final_node
 
 
+def find_source_node(nodes, edges):
+    if not edges and len(nodes) == 1:
+        return 0
+
+    all_nodes_with_outgoing = set(edges.keys())
+
+    nodes_with_incoming = set()
+    for targets in edges.values():
+        nodes_with_incoming.update(targets)
+
+    source_candidates = all_nodes_with_outgoing - nodes_with_incoming
+
+    if len(source_candidates) == 1:
+        return source_candidates.pop()
+    else:
+        return None
+
+
+
+
 def find_path(edges, start, end, visited=None):
     if visited is None:
         visited = set()
@@ -7012,8 +7374,6 @@ def find_path(edges, start, end, visited=None):
             return True
 
     return False
-
-
 
 
 
@@ -7236,6 +7596,19 @@ class TransformationPipeline:
 
     def find_final_node(self):
         return find_final_node(self.steps, self.edges)
+
+    def get_final_step(self):
+        final_node = self.find_final_node()
+        final_step = self.get_step(final_node)
+        return final_step
+
+    def find_source_node(self):
+        return find_source_node(self.steps, self.edges)
+    
+    def get_source_step(self):
+        source_node = self.find_source_node()
+        source_step = self.get_step(source_node)
+        return source_step
 
     def remove_final_node(self):
         if len(self.steps) <= 1:
@@ -12427,7 +12800,7 @@ class NestDocument(dict):
         current_dict = self
         for key in path:
             if key not in current_dict:
-                return None
+                return {}
             current_dict = current_dict[key]
 
         return current_dict
@@ -12473,7 +12846,7 @@ class Node:
     default_name = "Node"
     default_description = "This is the base class for all nodes."
 
-    def __init__(self, name=None, description=None, viewer=False, para=None, output=None):
+    def __init__(self, name=None, description=None, viewer=False, para=None, output=None, id_para="element_name"):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
 
@@ -12486,6 +12859,7 @@ class Node:
         self.messages = []
         
         self.global_document = NestDocument()
+        self.id_para = id_para
         self.init_path()
 
         self.output = output
@@ -12500,8 +12874,8 @@ class Node:
 
     def init_path(self):
         self.path = [self.name]
-        if "element_name" in self.para:
-            self.path.append(self.para["element_name"]) 
+        if self.id_para  in self.para:
+            self.path.append(str(self.para[self.id_para]))
 
     def add_parent_path(self, parent_path):
         self.path = parent_path + self.path
@@ -12512,6 +12886,15 @@ class Node:
     def inherit(self, parent):
         self.add_parent_path(parent.path)
         self.add_parent_document(parent.global_document)
+
+        if self.output is None:
+            self.output = parent.output
+
+        if not self.para:
+            self.para = parent.para
+
+        self.viewer = parent.viewer
+        self.item = parent.item
 
     def set_global_document(self, value):
         self.global_document.set_nested(self.path, value)
@@ -12539,9 +12922,20 @@ class Node:
 
     def display_messages(self):
         if len(self.messages) > 0:
-            html_content = generate_dialogue_html(self.messages)
-            display(HTML("<h3>Message History</h3>" 
-                        + wrap_in_scrollable_div(html_content, height="500px")))
+            if isinstance(self.messages[0], list):
+
+                def create_html_content(page_no):
+                    html_content = generate_dialogue_html(self.messages[page_no])
+                    return wrap_in_scrollable_div(html_content, height="500px")
+                display(HTML("<h3>Message History</h3>"))
+                display_pages(len(self.messages), create_html_content)
+
+            else:
+                html_content = generate_dialogue_html(self.messages)
+                display(HTML("<h3>Message History</h3>" 
+                            + wrap_in_scrollable_div(html_content, height="500px")))
+
+            
 
     def display(self, call_back_list=[]):
         
@@ -12556,7 +12950,8 @@ class Node:
             def on_button_clicked(b):
                 with self.output_context():
                     clear_output(wait=True)
-                    call_back_list.pop()()
+                    call_back_func = call_back_list.pop()
+                    call_back_func(call_back_list)
 
             button.on_click(on_button_clicked)
             display(button)
@@ -12567,12 +12962,11 @@ class Node:
         return None
 
     def run(self, extract_output):
-        self.extract_output = extract_output
-       
+        
         print(f"Running {self.name}.")
-        return {}
+        return extract_output
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         self.run_output = run_output
 
         print(f"Postprocessing {self.name}.")
@@ -12592,12 +12986,18 @@ class Node:
             on_button_click(button)
 
 
+    def get_sibling_document(self, sibling_name):
+        new_path = self.path[:-1]
+        new_path.append(sibling_name)
+
+        return self.global_document.get_nested(new_path)
+
 class Workflow(Node):
 
     default_name = "Workflow"
     default_description = "This is the base class for all workflows."
 
-    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, output=None):
+    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, output=None, id_para="element_name"):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
         self.nodes = {}
@@ -12611,6 +13011,7 @@ class Workflow(Node):
         self.messages = []
         
         self.global_document = NestDocument()
+        self.id_para = id_para
         self.init_path()
 
         self.output = output
@@ -12623,7 +13024,7 @@ class Workflow(Node):
     def run(self, extract_output):
         return None
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
 
         self.finish_workflow = callback
 
@@ -12713,7 +13114,7 @@ class Workflow(Node):
         extract_output = node.extract(self.item)
         run_output = node.run(extract_output)
 
-        node.postprocess(run_output, lambda document: self.callback(node_name, document), viewer=self.viewer)
+        node.postprocess(run_output, lambda document: self.callback(node_name, document), viewer=self.viewer, extract_output=extract_output)
     
     def callback(self, node_name, document):
         node = self.nodes[node_name]
@@ -12723,7 +13124,8 @@ class Workflow(Node):
         children = self.edges.get(node_name, [])
         
         if len(children) == 0:
-            self.finish_workflow(document)
+            this_document = self.get_global_document()
+            self.finish_workflow(this_document)
 
         elif len(children) == 1:
             next_node = children[0]
@@ -12783,7 +13185,8 @@ class Workflow(Node):
             def on_button_clicked3(b):
                 with self.output_context():
                     clear_output(wait=True)
-                    call_back_list.pop()()
+                    call_back_func = call_back_list.pop()
+                    call_back_func(call_back_list)
             
             button3.on_click(on_button_clicked3)
 
@@ -12815,7 +13218,7 @@ class MultipleNode(Workflow):
     default_name = "Multiple Node"
     default_description = "This node dynamically creates multiple nodes based on the input data."
 
-    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, output=None):
+    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, output=None, id_para="element_name"):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
         self.nodes = {}
@@ -12831,11 +13234,14 @@ class MultipleNode(Workflow):
         self.messages = []
 
         self.global_document = NestDocument()
+        self.id_para = id_para
         self.init_path()
+
+        self.output = output
 
         self.example_node = self.construct_node("example")
 
-        self.output = output
+
 
     def construct_node(self, element_name, idx=0, total=0):
         node = Node("Sub Node", para={"element_name": element_name, "idx": idx, "total": total})
@@ -12856,7 +13262,7 @@ class MultipleNode(Workflow):
         
         return None
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
 
         self.finish_workflow = partial(self.display_after_finish_workflow, callback)
 
@@ -12937,7 +13343,8 @@ class MultipleNode(Workflow):
             def on_button_clicked3(b):
                 with self.output_context():
                     clear_output(wait=True)
-                    call_back_list.pop()()
+                    call_back_func = call_back_list.pop()
+                    call_back_func(call_back_list)
             
             button3.on_click(on_button_clicked3)
 
@@ -13007,7 +13414,7 @@ class ProductSteps(Node):
     default_name = 'Product Steps'
     default_description = 'This is typically the dicussion result from business analysts and engineers'
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         clear_output(wait=True)
 
         document = ["Setup", "Source", "Stage", "Model"]
@@ -13092,7 +13499,7 @@ class DataSource(Node):
     default_name = 'Data Source'
     default_description = 'This reads from the data source'
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         clear_output(wait=True)
 
         con = self.input_item["con"]
@@ -13156,7 +13563,7 @@ class BusinessWorkflow(Node):
     default_name = 'Business Workflow'
     default_description = 'This is typically the dicussion result from business analysts and engineers'
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         clear_output(wait=True)
         create_progress_bar_with_numbers(0, self.global_document["Data Product"]['Product Steps'])
 
@@ -13241,7 +13648,7 @@ Now, return in the following format:
         return summary
 
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
 
         self.progress.value += 1
         new_names = run_output
@@ -13337,7 +13744,7 @@ def create_union_table(tables):
         return sql_query
             
         
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         sql_query = run_output
         con = self.input_item["con"]
         con.execute(robust_create_to_replace(sql_query))
@@ -13370,6 +13777,8 @@ class SourceCodeWritingForAll(MultipleNode):
         self.item = item
 
     def display_after_finish_workflow(self, callback, document):
+
+        clear_output(wait=True)
 
         tab_data = []
 
@@ -13421,7 +13830,7 @@ class SourceDocument(Node):
     default_description = 'This step documents each source table'
     clean = True
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
 
         con = self.input_item["con"]
         table_name = self.para["element_name"]
@@ -13591,7 +14000,7 @@ FROM {table_name}"
         return summary
             
         
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         sql_query = run_output['sql']
         con = self.input_item["con"]
         con.execute(robust_create_to_replace(sql_query))
@@ -13728,7 +14137,7 @@ Respond with the following format:
 
         return summary
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
     
 class DecideCRUDForAll(MultipleNode):
@@ -13762,7 +14171,7 @@ class DecideCRUDForAll(MultipleNode):
                 df_sample =  color_columns(doc_df.df.head(), 'lightgreen', op_col_indices+date_col_indices)
 
                 tab_data.append((key, f"These columns represent CRUD operations: <i>{op_cols + date_cols}</i>" +\
-                                        truncate_html_td(df_sample.to_html())))
+                                        wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
 
         if len(tab_data) > 0:
             print(f"🧐 We have identified {BOLD}{len(tab_data)}{END} tables with CRUD logics:")
@@ -13839,7 +14248,7 @@ If it's about relation, the key is all the entity keys.
         json_code = json.loads(json_code)
 
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
 
         summary["primary_key"] = json_code["primary_key"]
         primary_key = json_code['primary_key']
@@ -13875,7 +14284,7 @@ For operations like deactivate, classify them as delete.
         json_code = json.loads(json_code)
 
         messages.append(response['choices'][0]['message'])
-        self.messages += messages
+        self.messages.append(messages)
 
         summary["attributes"] = json_code
 
@@ -13924,7 +14333,7 @@ NOT EXISTS ... (for each deletion ops)"
             json_code = json.loads(json_code)
 
             messages.append(response['choices'][0]['message'])
-            self.messages += messages
+            self.messages.append(messages)
 
             summary["deleted_table"] = json_code
             con.execute(robust_create_to_replace(json_code['sql']))
@@ -13984,7 +14393,7 @@ ORDER BY primary keys"}}
         json_code = json.loads(json_code)
 
         messages.append(response['choices'][0]['message'])
-        self.messages += messages
+        self.messages.append(messages)
 
         summary["final_table"] = json_code
         con.execute(robust_create_to_replace(json_code['sql']))
@@ -14013,7 +14422,7 @@ ORDER BY primary keys"}}
 
         return summary
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
 
 
@@ -14152,7 +14561,7 @@ Respond in the following format:
         return json_code
 
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
 
 class DecideForeignKeyForAll(MultipleNode):
@@ -14280,7 +14689,7 @@ Respond in the following format:
 
         return json_code
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         def create_query(new_table_name1, new_table_name2, key_atts, non_key_atts, table):
             key_atts_str = ', '.join(key_atts)
 
@@ -14504,7 +14913,7 @@ Respond with following format:
 
         return summary
     
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
 
 class ClassifyDimFactForAll(MultipleNode):
@@ -14652,7 +15061,7 @@ Respond with following format:
 
         return summary
     
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         con = self.input_item["con"]
         table_name = self.para["element_name"]
         new_table_name = run_output["name"]
@@ -14774,7 +15183,7 @@ Respond with following format:
 
         return summary
     
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         con = self.input_item["con"]
         table_name = self.para["element_name"]
         new_table_name = run_output["name"]
@@ -14892,7 +15301,7 @@ class ProductDocument(Node):
     default_name = 'Product Document'
     default_description = 'This step documents each product table'
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         con = self.input_item["con"]
         table_name = self.para["element_name"]
         df = con.execute(f"select * from {table_name}").df()
@@ -15043,7 +15452,7 @@ Respond with following format:
 
         return summary
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
 
 class CreateFactMatchDimForAll(MultipleNode):
@@ -15128,7 +15537,7 @@ Respond with following format:
 
         return summary
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
 
 
@@ -15203,7 +15612,7 @@ Respond with following format:
 
         return summary
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         con = self.input_item["con"]
         fact_name = self.fact_name.replace("fact_", "dm_")
         sql_query = run_output["sql"]
@@ -15275,7 +15684,7 @@ Return the result in yml
 
         return summary
 
-    def postprocess(self, run_output, callback, viewer=False):
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         summary = run_output
 
         df = pd.DataFrame(summary)
@@ -15915,4 +16324,235 @@ def find_nodes_with_no_parents(nodes, edges):
 
     return no_parent_nodes
 
+
+
+
+
+
+class SQLStep(TransformationStep):
+    def __init__(self, table_name, con, sql_code= "", *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.explanation = ""
+        self.name = table_name
+        self.sql_code = sql_code
+        self.schema = None
+        self.distinct_count = None
+        self.con =con
+
+    def generate_codes(self):
+        pass
+
+    def get_schema(self):
+        if self.schema is None:
+            schema = get_table_schema(self.con, self.name)
+            self.schema = schema
+        return self.schema
+
+    def get_distinct_count(self):
+        if self.distinct_count is None:
+            distinct_count = {}
+            schema = self.get_schema()
+            for col in schema:
+                distinct_count[col] = count_total_distinct(self.con, self.name, col)
+            self.distinct_count = distinct_count
+        return self.distinct_count
+
+    def run_codes(self, mode="VIEW"):
+        sql_code = self.get_codes(mode=mode)
+        run_sql_return_df(self.con, sql_code)
+
+    def display(self):
+        print(self.name)
+
+    def edit_widget(self, callbackfunc=None):
+        self.display()
+        print("\033[91mEdit Source File is under development!\033[0m")
+
+        return_button = widgets.Button(description="Return")
+
+        def on_return_clicked(b):
+            clear_output(wait=True)
+            callbackfunc(self)
+        
+        return_button.on_click(on_return_clicked)
+
+        display(return_button)
+    
+    def get_codes(self, target_id=0, source_ids=[], mode=""):
+        modes = ["", "TABLE", "VIEW", "AS"]
+
+        if mode not in modes:
+            raise("Mode not supported")
+
+        if mode == "":
+            return self.sql_code
+        
+        if mode == "TABLE":
+            return f"CREATE TABLE OR REPLACE {self.name} AS\n{indent_paragraph(self.sql_code)}"
+
+        if mode == "VIEW":
+            return f"CREATE OR REPLACE VIEW {self.name} AS\n{indent_paragraph(self.sql_code)}"
+        
+        if mode == "AS":
+            return f"{self.name} AS (\n{indent_paragraph(self.sql_code)}\n)"
+
+class TransformationSQLPipeline(TransformationPipeline):
+
+    def get_codes(self):
+        sorted_step_idx = topological_sort(self.steps, self.edges)
+        with_clauses = []
+        
+        for step_idx  in sorted_step_idx[1:-1]:
+            step = self.steps[step_idx]
+            codes = step.get_codes(target_id=step_idx, mode="AS")
+            with_clauses.append(codes)
+
+        codes = ""
+        if len(with_clauses) > 0:
+            codes += "WITH " + ",\n\n".join(with_clauses) + "\n\n"
+
+        codes += self.steps[sorted_step_idx[-1]].get_codes(target_id=sorted_step_idx[-1], mode="")
+
+        return codes
+
+    def __repr__(self):
+        final_step = self.get_final_step()
+        return final_step.name
+
+
+
+
+def find_duplicate_rows(con, table_name, sample_size=0):
+    sql_query = f"""
+SELECT *, COUNT(*) as cocoon_count
+FROM {table_name}
+GROUP BY ALL
+HAVING COUNT(*) > 1"""
+    duplicate_count_sql = f"SELECT COUNT(*) from ({sql_query});"
+    duplicate_count = run_sql_return_df(con, duplicate_count_sql).iloc[0, 0]
+
+    sample_sql = sql_query
+    if sample_size > 0:
+        sample_sql += f" LIMIT {sample_size}"
+
+    sample_duplicate_rows = run_sql_return_df(con,sample_sql)
+    return duplicate_count, sample_duplicate_rows
+
+def create_sample_distinct_query(table_name, column_name, sample_size=None):
+    query =  f"SELECT {column_name} \nFROM {table_name} \nWHERE {column_name} IS NOT NULL \nGROUP BY {column_name} \nORDER BY COUNT(*) DESC,  {column_name}\n"
+    if sample_size is not None:
+        query += f" LIMIT {sample_size}"
+    return query
+    
+def create_sample_distinct(con, table_name, column_name, sample_size):
+
+    query = create_sample_distinct_query(table_name, column_name, sample_size)
+    sample_values = run_sql_return_df(con,query)
+
+    return sample_values
+
+def count_total_distinct(con, table_name, column_name):
+    total_distinct_count = run_sql_return_df(con,f"SELECT COUNT(DISTINCT {column_name}) FROM {table_name} WHERE {column_name} IS NOT NULL").iloc[0, 0]
+    return total_distinct_count
+
+def indent_paragraph(paragraph, spaces=4):
+    indent = ' ' * spaces
+    return '\n'.join(indent + line for line in paragraph.split('\n'))
+
+
+
+
+ 
+class DataProject:
+    def __init__(self):
+        self.tables = {}
+
+        self.links = {}
+
+        self.story = []
+
+    def add_links(self, join_infos):
+        for join_info in join_infos:
+            table1, table2 = join_info['tables'][:2]
+            keys1, keys2 = join_info['join_keys'][:2]
+
+            if table1 not in self.links:
+                self.links[table1] = {}
+
+            if table2 not in self.links:
+                self.links[table2] = {}
+
+            self.links[table1][table2] = [keys1, keys2]
+            self.links[table2][table1] = [keys2, keys1]
+    
+    def get_story(self):
+        return self.story
+
+    def set_story(self, story):
+        self.story = story
+
+    def add_table(self, table_name, attributes):
+        if table_name in self.tables:
+            pass
+        else:
+            self.tables[table_name] = attributes
+
+    def get_columns(self, table_name):
+        if table_name in self.tables:
+            return self.tables[table_name]
+        else:
+            return []
+
+    def remove_table(self, table_name):
+        if table_name in self.tables:
+            del self.tables[table_name]
+
+        else:
+            pass
+        
+        if table_name in self.links:
+            del self.links[table_name]
+
+        for table_name_source in list(self.links.keys()):
+            if table_name in self.links[table_name_source]:
+                del self.links[table_name_source][table_name]
+
+    def list_tables(self):
+        return list(self.tables.keys())
+
+    def describe_project(self):
+        description = ""
+        for idx, (table, attributes) in enumerate(self.tables.items()):
+            if len(attributes) < 10:
+                description += f"{idx+1}. {table}: {attributes}\n"
+            else:
+                description += f"{idx+1}. {table}: {attributes[:5] + ['...']}\n"
+        return description
+
+    def display_graph(self):
+        tables = self.list_tables()
+
+        graph_data = {}
+        graph_data["nodes"] = [{"id": table} for table in tables]
+        links = []
+
+        source_target_pair = {}
+
+        for table1 in self.links:
+            for table2 in self.links[table1]:
+                key = min(table1, table2)
+                value = max(table1, table2)
+
+                if key not in source_target_pair:
+                    source_target_pair[key] = set()
+
+                source_target_pair[key].add(value)
+
+        for table1 in source_target_pair:
+            for table2 in source_target_pair[table1]:
+                links.append({"source": table1, "target": table2})
+
+        graph_data["links"] = links
+
+        display_draggable_graph_html(graph_data)
 
