@@ -6,7 +6,9 @@
 😎 **Cocoon** is a Python tool for data transformation with Large Language Models (LLMs). 
 
 
-😃 To start using Cocoon, you only need: (1). Your table (2). OpenAI API Key. See [FAQ on OpenAI API Key](#openai-api-key)
+😃 To start using Cocoon, you only need: (1). Your table (2). LLM API Key. See [FAQ on OpenAI API Key](#openai-api-key)
+
+👉 Check out the [3 min demo](https://www.youtube.com/watch?v=nddQ3jIdPCI)
    
 👉 Try out the demo notebooks 
 
