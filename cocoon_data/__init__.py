@@ -37,8 +37,8 @@ import yaml
 from html.parser import HTMLParser
 
 from datasketch import MinHash, MinHashLSH
-from database import *
-from llm import *
+from .database import *
+from .llm import *
 
 try:
     import openpyxl
@@ -66,6 +66,10 @@ except:
 spinner_value = "Running..."
 
 
+
+
+
+icon_import = False
 
 MAX_TRIALS = 3
 
@@ -375,8 +379,10 @@ def create_data_type_grid(df):
         target_type_dropdown = widgets.Dropdown(options=type_domain, value=row['target_type'], description='')
         match_status_label = widgets.Label(value="✔️ Yes" if row['current_type'] == row['target_type'] else "❌ No")
 
-        target_type_dropdown.observe(lambda change, current_type_label=current_type_label, match_status_label=match_status_label: update_match_status(change, match_status_label, row['current_type']), names='value')
-
+        target_type_dropdown.observe(
+            lambda change, current_type=row['current_type'], match_status_label=match_status_label: update_match_status(change, match_status_label, current_type), 
+            names='value'
+        )
         grid[i + 1, 0] = column_name_label
         grid[i + 1, 1] = current_type_label
         grid[i + 1, 2] = target_type_dropdown
@@ -16398,22 +16404,38 @@ class SQLStep(TransformationStep):
 
 class TransformationSQLPipeline(TransformationPipeline):
 
-    def get_codes(self):
+    def get_codes(self, mode="dbt"):
         sorted_step_idx = topological_sort(self.steps, self.edges)
-        with_clauses = []
         
-        for step_idx  in sorted_step_idx[1:-1]:
-            step = self.steps[step_idx]
-            codes = step.get_codes(target_id=step_idx, mode="AS")
-            with_clauses.append(codes)
+        if mode == "dbt":
+            
+            with_clauses = []
+            
+            for step_idx  in sorted_step_idx[1:-1]:
+                step = self.steps[step_idx]
+                codes = step.get_codes(target_id=step_idx, mode="AS")
+                with_clauses.append(codes)
 
-        codes = ""
-        if len(with_clauses) > 0:
-            codes += "WITH " + ",\n\n".join(with_clauses) + "\n\n"
+            codes = ""
+            if len(with_clauses) > 0:
+                codes += "WITH " + ",\n\n".join(with_clauses) + "\n\n"
 
-        codes += self.steps[sorted_step_idx[-1]].get_codes(target_id=sorted_step_idx[-1], mode="")
+            codes += self.steps[sorted_step_idx[-1]].get_codes(target_id=sorted_step_idx[-1], mode="")
 
-        return codes
+            return codes
+
+        if mode == "TABLE":
+            
+            table_clauses = []
+            
+            for step_idx  in sorted_step_idx[1:]:
+                step = self.steps[step_idx]
+                codes = step.get_codes(target_id=step_idx, mode="TABLE")
+                table_clauses.append(codes)
+                
+            return "\n\n".join(table_clauses)
+            
+            
 
     def __repr__(self):
         final_step = self.get_final_step()
@@ -16526,7 +16548,7 @@ class DataProject:
             if len(attributes) < 10:
                 description += f"{idx+1}. {table}: {attributes}\n"
             else:
-                description += f"{idx+1}. {table}: {attributes[:5] + ['...']}\n"
+                description += f"{idx+1}. {table}: {attributes[:10] + ['...']}\n"
         return description
 
     def display_graph(self):
@@ -16555,4 +16577,1154 @@ class DataProject:
         graph_data["links"] = links
 
         display_draggable_graph_html(graph_data)
+
+
+
+
+
+
+def display_duplicated_rows_html2(df):
+    html_output = f"<p>🤨 There are {len(df)} groups of duplicated rows.</p>"
+    for i, row in df.iterrows():
+        html_output += f"<p>Group {i+1} appear {row['cocoon_count']} times:</p>"
+        row_without_cocoon_count = row.drop(labels=['cocoon_count'])
+        html_output += row_without_cocoon_count.to_frame().T.to_html(index=False)
+
+    if len(df) > 5:
+        html_output += "<p>...</p>"
+    html_output += "<p>🧐 Do you want to remove the duplicated rows?</p>"
+    
+    display(HTML(html_output))
+
+
+def create_explore_button(query_widget, table_name=None, query=""):
+    if table_name is not None:
+        query = f"SELECT * FROM {table_name}"
+    explore_button = widgets.Button(
+        description='Explore',
+        disabled=False,
+        button_style='info',
+        tooltip='Click to explore',
+        icon='search'
+    )
+
+    def on_button_clicked(b):
+        print("😎 Query submitted. Check out the data widget!")
+        query_widget.run_query(query)
+
+    explore_button.on_click(on_button_clicked)
+
+    display(explore_button)
+
+
+    
+class DecideProjection(Node):
+    default_name = 'Decide Projection'
+    default_description = 'This allows users to select a subset of columns.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        create_progress_bar_with_numbers(0, doc_steps)
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        schema = get_table_schema(con, table_pipeline)
+
+        print(f"🔍 Exploring table {BOLD}{table_pipeline}{END} ...")
+        
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+
+        num_cols = len(schema)
+
+        print(f"🧐 There are {BOLD}{num_cols}{END} columns in the table.")
+        print(f"👨‍⚕️ If you want to {BOLD}exclude{END} any column, please specify them:")
+
+        column_names = list(schema.keys())
+
+        document = {"selected_columns": []}
+
+        def callback_next(selected_indices):
+            clear_output(wait=True)
+            selected_indices = [i for i in range(num_cols) if i not in selected_indices]
+
+            if len(selected_indices) == 0:
+                print("🙁 Please keep at least one column.")
+                return
+
+            if len(selected_indices) > 100:
+                print("""🙁 Cocoon can only handle up to 100 columns now. Please remove more columns.
+😊 Support of wide tables is under development. Please send a feature request!""")
+            
+            document["selected_columns"] = [column_names[i] for i in selected_indices]
+
+            if len(selected_indices) < num_cols:
+                new_table_name = f"{table_pipeline}_projected"
+                selection_clause = ',\n'.join(document['selected_columns'])
+                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                step.run_codes()
+                table_pipeline.add_step_to_final(step)
+            callback(document)
+
+        create_column_selector(column_names, callback_next, default=False)
+
+        if self.viewer:
+            callback_next(list(range(num_cols)))
+
+class CreateColumnGrouping(Node):
+    default_name = 'Create Column Grouping'
+    default_description = 'This node allows users to group columns based on their meanings.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Building column hierarchy ...")
+        create_progress_bar_with_numbers(1, doc_steps)
+        
+        self.progress = show_progress(1)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        sample_size = 5
+
+        table_summary = self.get_sibling_document("Create Table Summary")
+        schema = get_table_schema(con, table_pipeline)
+        columns = list(schema.keys())
+
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        self.sample_df = sample_df
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+
+        schema = table_pipeline.get_final_step().get_schema()
+        column_names = list(schema.keys())
+
+        return table_desc, table_summary, column_names
+    
+    def run(self, extract_output):
+        table_desc, table_summary, column_names = extract_output
+
+        template = f"""You have the following table:
+{table_desc}
+
+{table_summary}
+
+- Task: Recursively group the attributes based on inherent entity association, not conceptual similarity.
+    E.g., for [student name, student grade, teacher grade], group by student and teacher, not by name.
+Avoid groups with too many/few subgroups. 
+
+Conclude with the final result as a multi-level JSON. Make sure all attributes are included.
+
+```json
+{{
+    "main_entity":
+        {{
+        "Sub group": {{
+        "sub-sub group": ["attribute1", "attribute2", ...],
+        }},
+    }}
+}}
+```"""
+        
+        def extract_attributes(json_var):
+            attributes = []
+            
+            def traverse(element):
+                if isinstance(element, dict):
+                    for value in element.values():
+                        traverse(value)
+                        
+                elif isinstance(element, list):
+                    for item in element:
+                        if isinstance(item, str):
+                            attributes.append(item)
+                        
+                        else:
+                            traverse(item)
+                            
+
+            traverse(json_var)
+            
+            return attributes
+
+        def validate_attributes(attributes, reference_attributes):
+            error_messages = []
+
+            seen_attributes = set()
+            duplicates = set()
+            for attribute in attributes:
+                if attribute in seen_attributes:
+                    duplicates.add(attribute)
+                seen_attributes.add(attribute)
+            
+            if duplicates:
+                error_messages.append("Duplicate attributes: " + ', '.join(duplicates))
+
+            attributes_set = set(attributes)
+            reference_set = set(reference_attributes)
+
+            extra_attributes = attributes_set - reference_set
+            if extra_attributes:
+                error_messages.append("Extra attributes: " + ', '.join(extra_attributes))
+
+            missing_attributes = reference_set - attributes_set
+            if missing_attributes:
+                error_messages.append("Missing attributes: " + ', '.join(missing_attributes) + "\n Are attributes in the leaf as an array [att1, att2]?")
+
+            return '\n'.join(error_messages)
+        
+        messages =[ {"role": "user", "content": template}]
+        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+
+
+        assistant_message = response['choices'][0]['message']
+        json_code = extract_json_code_safe(assistant_message['content'])
+        json_code = json_code.replace('\'', '\"')
+        json_var = json.loads(json_code)
+        attributes = extract_attributes(json_var)
+
+        messages.append(assistant_message)
+        self.messages = messages
+
+        error = validate_attributes(attributes, column_names)
+
+        if error!= '':
+            raise ValueError(f"Validation failed with the following error(s):\n{error}")
+        
+        return json_var
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        self.progress.value += 1
+        
+        json_code = run_output
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+    
+        html_content_updated, _, height = get_tree_html(json_code)
+
+        print(f"😎 We have built the Column Hierarchy:")
+
+        display_html_iframe(html_content_updated, height=f"{height+50}px")
+
+        print("🧐 Next we will delve into the columns")
+
+        edit_button = widgets.Button(
+            description='Edit',
+            disabled=False,
+            button_style='danger', 
+            tooltip='Click to edit',
+            icon='edit'
+        )
+
+        def on_edit_clicked(b):
+            print("Not implemented yet")
+
+        edit_button.on_click(on_edit_clicked)
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            print("Submission received.")
+            callback(json_code)
+
+        submit_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+
+        display(HBox([edit_button, submit_button]))
+        
+        if self.viewer:
+            on_button_clicked(submit_button)
+        
+    
+class CreateTableSummary(Node):
+    default_name = 'Create Table Summary'
+    default_description = 'This node creates a summary of the table.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+
+        print("📝 Generating table summary ...")
+        
+        create_progress_bar_with_numbers(1, doc_steps)
+
+        self.progress = show_progress(1)
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        sample_size = 5
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+
+        self.sample_df = sample_df
+
+        return table_desc, columns
+    
+    def run(self, extract_output):
+        table_desc, table_columns = extract_output
+
+        template = f"""You have the following table:
+{table_desc}
+        
+- Task: Summarize the table.
+-  Highlight: Include and highlight ALL attributes as **Attribute**. 
+-  Structure: Start with the big picture, then explain how attributes are related
+-  Requirement: ALL attributes must be mentioned and **highlighted**. The attribute name should be exactly the same (case sensitive and no extra space or _).
+-  Style: Use a few short sentences with very simple words.
+
+Example: The table is about ... at **Time**, in **Location**...
+Now, your summary:
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+
+        summary = response['choices'][0]['message']['content']
+        assistant_message = response['choices'][0]['message']
+        messages.append(assistant_message)
+        self.messages = messages
+
+
+
+
+        def extract_words_in_asterisks(text):
+            import re
+
+            pattern = r'\*\*(.*?)\*\*'
+
+            matches = re.findall(pattern, text)
+
+            return matches
+
+        def find_extra_columns(text_columns, table_columns):
+            text_columns_set = set(text_columns)
+            table_columns_set = set(table_columns)
+
+            if text_columns_set.issuperset(table_columns_set):
+                extra_columns = text_columns_set - table_columns_set
+                return list(extra_columns)
+            else:
+                raise ValueError(f"text_columns is not a superset of table_columns. text_columns: {text_columns}, table_columns: {table_columns}")
+
+        def update_summary(summary, extra_columns):
+            for column in extra_columns:
+                summary = summary.replace(f"**{column}**", column)
+
+            return summary
+
+        
+
+        return summary
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output 
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        self.progress.value += 1
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+
+        display(HTML(f"<b>Table Summary</b>:\n{replace_asterisks_with_tags(summary)}"))
+
+        edit_button = widgets.Button(
+            description='Edit',
+            disabled=False,
+            button_style='danger', 
+            tooltip='Click to edit',
+            icon='edit'
+        )
+
+        def on_edit_clicked(b):
+            print("Not implemented yet")
+
+        edit_button.on_click(on_edit_clicked)
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            print("Submission received.")
+            callback(summary)
+
+        submit_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+
+        display(HBox([edit_button, submit_button]))
+        
+        if self.viewer:
+            on_button_clicked(submit_button)
+
+
+class DecideDuplicate(Node):
+    default_name = 'Decide Duplicate'
+    default_description = 'This allows users to decide how to handle duplicated rows.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        create_progress_bar_with_numbers(0, doc_steps)
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+
+        duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, table_pipeline)
+
+        document = {"duplicate_count": duplicate_count}
+
+        if duplicate_count > 0:
+            display_duplicated_rows_html2(sample_duplicate_rows)
+
+            def on_button_clicked(b):
+                clear_output(wait=True)
+                if b.description == 'Yes':
+                    print("⚠️ This feature is under development.")
+                else:
+                    callback(document)
+
+            yes_button = widgets.Button(
+                description='Yes',
+                disabled=False,
+                button_style='',
+                tooltip='Click to submit Yes',
+                icon='check'
+            )
+
+            no_button = widgets.Button(
+                description='No',
+                disabled=False,
+                button_style='',
+                tooltip='Click to submit No',
+                icon='times'
+            )
+
+            yes_button.on_click(on_button_clicked)
+            no_button.on_click(on_button_clicked)
+
+            display(HBox([yes_button, no_button]))
+
+            if self.viewer:
+                on_button_clicked(yes_button)
+
+
+        else:
+            callback(document)
+
+
+
+class DecideDataType(Node):
+    default_name = 'Decide Data Type'
+    default_description = 'This node allows users to decide the data type for each column.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Checking data types ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        sample_size = 5
+
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+
+        return sample_df
+
+    def run(self, extract_output):
+        sample_df = extract_output
+
+        template = f"""You have the following table:
+{sample_df.to_csv(index=False, quoting=2)}
+
+For each column, classify what the column type should be.
+The column type should be one of the following:
+{list(data_types.keys())}
+
+Return in the following format:
+```json
+{{
+    "column_type": {{
+        "column1": "INT",
+        ...
+    }}
+}}
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        schema = table_pipeline.get_final_step().get_schema()
+
+        rows_list = []
+
+        for col in schema:
+            current_type = reverse_data_types[schema[col]]
+            target_type = json_code["column_type"][col]
+
+            rows_list.append({
+                "column_name": col,
+                "current_type": current_type,
+                "target_type": target_type,
+            })
+
+        df = pd.DataFrame(rows_list)
+        
+        grid = create_data_type_grid(df)
+        print("😎 We have recommended the Data Types for Columns:")
+        display(grid)
+        print("🛠️ Automatical Data Casting will be available soon...")
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            extracted_data = extract_grid_data_type(grid)
+            callback(extracted_data)
+
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+
+
+
+
+
+def get_missing_percentage(con, table_name, column_name):
+    query = f"""
+    SELECT COUNT(*) as total_count, COUNT({column_name}) as non_missing_count
+    FROM {table_name}
+    """
+    
+    result = run_sql_return_df(con, query)
+    total_count = result.iloc[0, 0]
+    non_missing_count = result.iloc[0, 1]
+    
+    return (total_count - non_missing_count) / total_count
+
+
+class DecideRegex(Node):
+    default_name = 'Decide Regex'
+    default_description = 'This node allows users to decide the regex pattern for a string column.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Reading regex pattern ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        self.input_item = item
+
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+
+        show_progress(max_value=total, value=idx)
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        sample_size = 20
+
+        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
+
+        return column_name, sample_values
+    
+    def run(self, extract_output):
+        column_name, sample_values = extract_output
+
+        template = f"""{column_name}' has the following distinct values (sep by "):
+{sample_values.to_csv(index=False, header=False, quoting=1)}
+
+Task: Identify the *meaningful* regular expression pattern for the column.
+E.g., Date string "1972/01/01" has regex of ^\d{{4}}\/\d{{2}}\/\d{{2}}$
+Free text doesn't have meaningful regex. Just use .*
+Some columns may have multiple patterns. Please analyze the semantic meaning of these values and provide the categories.
+
+Return the result in yml
+```yml
+reasoning: |
+    This column contains X types of values...
+
+patterns: # shall be a short list, mostly jsut one
+    -   name: |
+            semantic meaning of these values (e.g., date, free text)
+        regex: | 
+            .* # don't use quotes
+    - ...
+```"""
+        messages = [{"role": "user", "content": template}]
+        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        
+
+        return summary
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+
+class DecideRegexForAll(MultipleNode):
+    default_name = 'Decide Regex For All'
+    default_description = 'This node allows users to decide the regex pattern for all string columns.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        node = DecideRegex(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        self.elements = []
+        self.nodes = {}
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        distinct_count = table_pipeline.get_final_step().get_distinct_count()
+
+        for col in columns:
+            if schema[col] == 'VARCHAR' and distinct_count[col] > 50:
+                self.elements.append(col)
+
+        self.nodes = {col: self.construct_node(col, idx, len(self.elements)) for idx, col in enumerate(self.elements)}
+
+    def display_after_finish_workflow(self, callback, document):
+        callback(document)
+
+
+class DecideUnusual(Node):
+    default_name = 'Decide Unusual'
+    default_description = 'This node allows users to decide how to handle unusual values.'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+
+        print("🔍 Understanding unusual values ...")
+        create_progress_bar_with_numbers(3, doc_steps)
+
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+        show_progress(max_value=total, value=idx)
+
+        self.input_item = input_item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        sample_size = 20
+
+        sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
+        
+        return column_name, sample_values
+
+    def run(self, extract_output):
+        column_name, sample_values = extract_output
+
+        template = f"""{column_name} has the following distinct values:
+{sample_values.to_csv(index=False, header=False, quoting=2)}
+
+Review if there are any unusual values. Look out for:
+1. Values too large/small that are inconsistent with the context.
+E.g., age 999 or -5.
+Outlier is fine as long as it falls in a reasonable range, e.g., person age 120 is fine.
+2. Patterns that don't align with the nature of the data.
+E.g., age 10.22
+3. Special characters that don't fit within the real-world domain.
+E.g., age X21b 
+
+Follow below step by step:
+1. Summarize the values. Reason if it is unusual or also acceptable.
+2. Conclude with the following dict:
+
+```json
+{{
+    "Unusualness": true/false,
+    "Examples": "xxx values are unusual because ..." (empty if not unusual) 
+}}
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+
+class DecideUnusualForAll(MultipleNode):
+    default_name = 'Decide Unusual For All'
+    default_description = 'This node allows users to decide how to handle unusual values for all columns.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        node = DecideUnusual(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        self.elements = []
+        self.nodes = {}
+
+        idx = 0
+        for col in columns:
+            self.elements.append(col)
+            self.nodes[col] = self.construct_node(col, idx, len(columns))
+            idx += 1
+
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(3, doc_steps)
+        print("The following columns have unusual values: ❓")
+
+        def radio_change_handler(change):
+            instance = change['owner']
+            if instance.value == 'Explanation:':
+                instance.text_area.layout.display = ''
+            else:
+                instance.text_area.layout.display = 'none'
+
+        container = widgets.VBox()
+
+        unusual_columns = {}
+        for key in document["Decide Unusual"]:
+            if document["Decide Unusual"][key]["Unusualness"]:
+                unusual_columns[key] = document["Decide Unusual"][key]["Examples"]
+
+
+        col_to_radio = {}
+
+        for item in unusual_columns:
+
+            reasons = unusual_columns[item]
+            
+            label_text = f"<b>{item}</b>: {reasons}"
+
+            label = widgets.HTML(value=label_text)
+
+            options = ['Unclear', 'Explanation:']
+
+            radio = widgets.RadioButtons(
+                options=options,
+                value=options[0],
+                layout=widgets.Layout(width='80%', align_items='flex-start')
+            )
+            
+            text_area = widgets.Textarea(
+                value='',
+                placeholder='Please provide the reason for unusual values.',
+                description='',
+                disabled=False,
+                layout=widgets.Layout(display='none', width='100%')
+            )
+            
+            radio.text_area = text_area
+            col_to_radio[item] = radio
+            radio.observe(radio_change_handler, names='value')
+            
+            item_container = widgets.VBox([label, radio, text_area])
+            container.children += (item_container,)
+
+        def submit_callback(btn):
+            error_items = []
+            
+            for col in col_to_radio:
+                radio = col_to_radio[col]
+                if radio.value == 'Explanation:' and not radio.text_area.value.strip():
+                    error_items.append(col)
+            
+            if error_items:
+                for col in error_items:
+                    print(f"\033[91m{col} explanation can't be empty.\033[0m")
+            else:
+                clear_output(wait=True)
+
+                for col in col_to_radio:
+                    radio = col_to_radio[col]
+                    
+                    if radio.value == 'Explanation:':
+                        document["Decide Unusual"][col]["final_reason"] =  radio.text_area.value
+                    else:
+                        document["Decide Unusual"][col]["final_reason"] = "unclear"
+                print("Submission received.")
+                callback(document)
+                        
+        submit_btn = widgets.Button(
+            description="Submit",
+            button_style='',
+            tooltip='Submit',
+            icon=''
+        )
+
+        submit_btn.on_click(submit_callback)
+
+        display(container, submit_btn)
+
+        if self.viewer:
+            submit_callback(submit_btn)
+
+
+
+class DecideMissing(Node):
+    default_name = 'Decide Missing Values'
+    default_description = 'This node allows users to decide how to handle missing values.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Checking missing values ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+        
+        self.progress = show_progress(1)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        table_name = table_pipeline.get_final_step().name
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        sample_size = 5
+
+        missing_columns = {}
+
+        for col in columns:
+            missing_percentage = get_missing_percentage(con, table_name, col)
+            if missing_percentage > 0:
+                missing_columns[col] = missing_percentage
+
+        
+
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_name} LIMIT {sample_size}")
+        sample_df_str = sample_df.to_csv(index=False, quoting=2)    
+
+        return missing_columns, sample_df_str, table_name
+
+    def run(self, extract_output):
+        
+        missing_columns, sample_df_str, table_name = extract_output
+        
+        if len(missing_columns) == 0:
+            return {"reasoning": "No missing values found.", "columns_obvious_not_applicable": {}}
+
+        missing_desc = "\n".join([f'{idx+1}. {col}: {missing_columns[col]}' for idx, (col, desc) in enumerate(missing_columns.items())])
+
+        template = f"""You have the following table:
+{sample_df_str}
+
+The following columns have percentage of missing values:
+{missing_desc}
+
+For each column, decide whether there is an obvious reason for the missing values to be "not applicable"
+E.g., if the column is 'Date of Death', it is "not applicable" for patients still alive.
+Reasons like not not collected, sensitive info, encryted, data corruption, etc. are not considered 'not applicable'.
+
+Return in the following format:
+```json
+{{
+    "reasoning": "X column has an obvious not applicable reason... The rest don't.",
+    "columns_obvious_not_applicable": {{
+        "column_name": "Short specific reason why not applicable, in < 10 words.",
+        ...
+    }}
+}}
+"""
+            
+        messages = [{"role": "user", "content": template}]
+        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        self.progress.value += 1
+        json_code = run_output
+        missing_columns, sample_df_str, table_name = extract_output
+        
+        if len(missing_columns) == 0:
+            callback(json_code)
+            return
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+
+        rows_list = []
+        for col in missing_columns:
+            missing_percentage = missing_columns[col]
+            reason = json_code["columns_obvious_not_applicable"].get(col, "")
+            rows_list.append({
+                "Column": col,
+                
+                "NULL (%)": f"{missing_percentage*100:.2f}",
+                "Is NULL Acceptable?": True if reason != "" else False,
+                "Reason": reason
+            })
+            
+        df = pd.DataFrame(rows_list)
+        
+        editable_columns = [False, False, True, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        
+        print("😎 We have identified missing values, and potential causes:")
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="records")
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+
+class DecideDMV(Node):
+    default_name = 'Decide Disguised Missing Values'
+    default_description = 'This node allows users to decide how to handle disguised missing values.'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+
+        print("🔍 Understanding disguised missing values ...")
+        create_progress_bar_with_numbers(3, doc_steps)
+
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+        show_progress(max_value=total, value=idx)
+
+        self.input_item = input_item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        sample_size = 20
+
+        sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
+        
+        return column_name, sample_values
+
+    def run(self, extract_output):
+        column_name, sample_values = extract_output
+
+        template = f"""{column_name} has the following distinct values:
+{sample_values.to_csv(index=False, header=False, quoting=2)}
+
+From these values, detect disguised missing values: values that are not null but should be considered as missing.
+
+Return in json format:
+```json
+{{
+    "reasoning": "xxx values are disguised missing values because ...",
+    "DMV": ["N/A", "-1", ...], (empty if no disguised missing values)
+    "explanation": "if has DMV, short explanation in <10 words"
+}}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+        
+        self.messages = messages
+        
+        return json_code
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+
+class DecideDMVforAll(MultipleNode):
+    default_name = 'Decide Disguised Missing Values For All'
+    default_description = 'This node allows users to decide how to handle disguised missing values for all columns.'
+    
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        node = DecideDMV(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        self.elements = []
+        self.nodes = {}
+        
+        idx = 0
+        for col in columns:
+            self.elements.append(col)
+            self.nodes[col] = self.construct_node(col, idx, len(columns))
+            idx += 1
+            
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        
+        data = []
+        for key in document["Decide Disguised Missing Values"]:
+            if document["Decide Disguised Missing Values"][key]["DMV"]:
+                data.append([key, document["Decide Disguised Missing Values"][key]["DMV"], 
+                             document["Decide Disguised Missing Values"][key]["explanation"], True])
+                
+        if not data:
+            callback(document)
+            return
+        
+        df = pd.DataFrame(data, columns=["Column Name", "Disguised Missing Values", "Explanation", "Endorse"])
+        
+        editable_columns = [False, True, False, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True, lists=["Disguised Missing Values"])
+        
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="records")
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+
+def create_profile_workflow(table_name, con):
+        
+    query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+
+    sql_step = SQLStep(table_name=table_name, con=con)
+    pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+
+    para = {"table_pipeline": pipeline}
+
+    main_workflow = Workflow("Data Profiling", 
+                            item = item, 
+                            description="A workflow to profile dataset",
+                            para = para)
+
+    main_workflow.add_to_leaf(DecideProjection())
+    main_workflow.add_to_leaf(DecideDuplicate())
+    main_workflow.add_to_leaf(CreateTableSummary())
+    main_workflow.add_to_leaf(CreateColumnGrouping())
+    main_workflow.add_to_leaf(DecideRegexForAll())
+    main_workflow.add_to_leaf(DecideDataType())
+    main_workflow.add_to_leaf(DecideDMVforAll())
+    main_workflow.add_to_leaf(DecideMissing())
+    main_workflow.add_to_leaf(DecideUnusualForAll())
+    
+    return query_widget, main_workflow
 
