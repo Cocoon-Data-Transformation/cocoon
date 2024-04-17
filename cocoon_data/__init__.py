@@ -4,7 +4,6 @@ import pandas as pd
 import json
 import re
 import uuid
-import pandas as pd
 import numpy as np
 import sys
 import traceback
@@ -40,14 +39,15 @@ from datasketch import MinHash, MinHashLSH
 from .database import *
 from .llm import *
 
+import rasterio
+from rasterio.warp import calculate_default_transform, reproject, Resampling
+
 try:
     import openpyxl
     import xlrd
 
-    import rasterio
     from pyproj import Transformer, CRS
     from rasterio.windows import from_bounds
-    from rasterio.warp import calculate_default_transform, reproject, Resampling
     from rasterio.features import rasterize
     from rasterio.transform import from_origin, Affine
     from rasterio.enums import Resampling as ResamplingMethods
