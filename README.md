@@ -2,6 +2,8 @@
   <img src="./images/cocoon_logo.png" alt="Cocoon Logo" width="400"/>
 </div>
 
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 ## Overview
 😎 **Cocoon** is a Python tool for data transformation with Large Language Models (LLMs). 
 
