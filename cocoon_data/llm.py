@@ -15,6 +15,13 @@ try:
 except:
     pass
 
+try:
+    from anthropic import AnthropicVertex
+except:
+    pass
+
+
+
 
 
 if 'OPENAI_API_TYPE' in os.environ:
@@ -98,15 +105,15 @@ lru_cache = LRUCache(1000)
 if os.path.exists("./cached_messages.json"):
     lru_cache.load_from_disk("./cached_messages.json")
 
-def call_gpt4(messages, temperature=0.1, top_p=0.1):
+def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
 
     message_hash = hash_messages(messages)
 
-    response = lru_cache.get(message_hash)
-
-    if response is not None:
-        lru_cache.save_to_disk()
-        return response
+    if use_cache:
+        response = lru_cache.get(message_hash)
+        if response is not None:
+            lru_cache.save_to_disk()
+            return response
 
     if openai.api_type == 'claude':
         messages = convert_openai_to_claude(messages)
@@ -119,6 +126,18 @@ def call_gpt4(messages, temperature=0.1, top_p=0.1):
         )
 
         response = convert_claude_to_openai(responses)
+        
+    elif openai.api_type == 'AnthropicVertex':
+        messages = convert_openai_to_claude(messages)
+
+        client = AnthropicVertex(region=os.environ['AnthropicVertex_region'] , project_id=os.environ['AnthropicVertex_project_id'])
+        responses = client.messages.create(
+            max_tokens=1024,
+            messages=messages,
+            model="claude-3-opus@20240229",
+            )
+
+        response = convert_anthropicvertex_to_openai(responses)
         
     elif openai.api_type == 'gemini':
         messages = convert_openai_to_gemini(messages)
@@ -156,7 +175,7 @@ def call_gpt4(messages, temperature=0.1, top_p=0.1):
     elif openai.api_type == 'open_ai':
         
         response = openai.ChatCompletion.create(
-            model="gpt-4-1106-preview",
+            model="gpt-4-1106-Preview",
             temperature=temperature,
             top_p=top_p,
             messages=messages
@@ -196,6 +215,22 @@ def convert_openai_to_gemini(openai_messages):
 
 def convert_gemini_to_openai(gemini_response):
     message_text = gemini_response.candidates[0].content.parts[0].text
+
+    message_content = {"role": "assistant", "content": message_text}
+
+    openai_response = {
+        "choices": [
+            {"message": message_content}
+        ]
+    }
+
+    return openai_response
+
+
+
+
+def convert_anthropicvertex_to_openai(anthropicvertex_response):
+    message_text = anthropicvertex_response.content[0].text
 
     message_content = {"role": "assistant", "content": message_text}
 

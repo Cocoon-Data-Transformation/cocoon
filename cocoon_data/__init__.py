@@ -34,20 +34,21 @@ from functools import partial
 from contextlib import contextmanager
 import yaml
 from html.parser import HTMLParser
-
+import rasterio
+from rasterio.warp import calculate_default_transform, reproject, Resampling
 from datasketch import MinHash, MinHashLSH
 from .database import *
 from .llm import *
 
-import rasterio
-from rasterio.warp import calculate_default_transform, reproject, Resampling
 
 try:
     import openpyxl
     import xlrd
 
+
     from pyproj import Transformer, CRS
     from rasterio.windows import from_bounds
+    
     from rasterio.features import rasterize
     from rasterio.transform import from_origin, Affine
     from rasterio.enums import Resampling as ResamplingMethods
@@ -1032,7 +1033,7 @@ def select_invalid_data_type(df, column, data_type):
         mask = ~(numeric_mask | null_mask)
     elif data_type == 'BOOLEAN':
         mask = ~df[column].isin([True, False, 1, 0, 'True', 'False', 'true', 'false'])
-    elif data_type in ['VARCHAR', 'TEXT', 'STRING']:
+    elif data_type in data_types['VARCHAR']:
         mask = df[column].astype(str).isnull()
     elif data_type == 'DATE':
         mask = ~df[column].apply(lambda x: isinstance(x, (datetime.date, datetime.datetime, datetime.time)))
@@ -1101,7 +1102,7 @@ Respond in JSON format:
 
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     summary = response['choices'][0]['message']['content']
     assistant_message = response['choices'][0]['message']
@@ -1250,7 +1251,7 @@ Now respond in the following format:
 ```"""
 
     messages = [{"role": "user", "content": template}]
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     write_log(template)
     write_log("-----------------------------------")
@@ -1298,7 +1299,7 @@ Respond in JSON format:
 
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     summary = response['choices'][0]['message']['content']
     assistant_message = response['choices'][0]['message']
@@ -1799,7 +1800,7 @@ Respond in the following format without reasonings:
 ```"""
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     assistant_message = response['choices'][0]['message']
 
@@ -2131,7 +2132,7 @@ def get_tree_html(data):
     processed_data_str = json.dumps(processed_data, indent=4)
 
     height1 = number_of_leaves * 30
-    height2 = number_of_leaves * 40 + 50
+    height2 = number_of_leaves * 35 + 50
 
     width1 = max_path_length(data, 5, 20)
     width2 = max_path_length(data, 10, 50) + 150
@@ -2164,7 +2165,7 @@ def get_rename(meanings):
 
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     assistant_message = response['choices'][0]['message']
     messages.append(assistant_message)
@@ -2236,7 +2237,7 @@ def give_title(task):
 
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     title = response['choices'][0]['message']['content']
     assistant_message = response['choices'][0]['message']
@@ -2266,7 +2267,7 @@ Return the results in json format:
 
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     assistant_message = response['choices'][0]['message']
     messages.append(assistant_message)
@@ -2327,7 +2328,7 @@ Return the results in json format:
 
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
 
     assistant_message = response['choices'][0]['message']
@@ -2943,7 +2944,7 @@ Example: The table is about ... at **Time**, in **Location**..."""
 
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     summary = response['choices'][0]['message']['content']
     assistant_message = response['choices'][0]['message']
@@ -2970,7 +2971,7 @@ Then, concisely summarize the targt tables (case sensitive) that can be directly
 }}
 ```"""
     messages = [{"role": "user", "content": template}]
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
     summry = json.loads(json_code)
@@ -3004,7 +3005,7 @@ Steps:
 ```"""
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.95)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.95)
 
     json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
     summry = json.loads(json_code)
@@ -3036,7 +3037,7 @@ Then group the similar mapping, and how to map in json:
 ```"""
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.95)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.95)
 
     json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
     summry = json.loads(json_code)
@@ -3070,7 +3071,7 @@ def transform(input_df):
 ```"""
     messages = [{"role": "user", "content": template}]
     
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
     
     python_code = extract_python_code(response['choices'][0]['message']['content'])
 
@@ -3108,7 +3109,7 @@ def transform(input_df):
 ```"""
         messages.append({"role": "user", "content": error_message})
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         python_code = extract_python_code(response['choices'][0]['message']['content'])
         messages.append(response['choices'][0]['message'])
@@ -3151,7 +3152,7 @@ def process_dataframe(df, instruction_name, **kwargs):
 
     while len(messages_history) < max_turns:
         
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
 
         assistant_message = response['choices'][0]['message']
@@ -4476,7 +4477,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 write_log("-----------------------------------")
 
             while number_of_trials > 0:
-                response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
                 
                 write_log(response['choices'][0]['message']['content'])
                 write_log("-----------------------------------")
@@ -5224,7 +5225,7 @@ Respond in JSON, for all columns:
             try:
                 messages = [{"role": "user", "content": template}]
 
-                response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
                 progress.value += 1
 
@@ -5401,7 +5402,7 @@ Now respond in the following format:
 ```"""
 
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         progress.value += 1
         
@@ -5676,7 +5677,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
 
 
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         
         write_log(template)
         write_log("-----------------------------------")
@@ -5901,7 +5902,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
                 messages = [{"role": "user", 
                             "content": f"The column '{col}' is about: {meaning}. Guess in 10 words how the values usually look like."}]
 
-                response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
                 template = f"""{values_string}
 
@@ -5931,7 +5932,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
                 messages.append({"role": "user", 
                 "content": template})
 
-                response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
                 messages.append(response['choices'][0]['message'])
 
@@ -7010,7 +7011,7 @@ def etl(source_df):
 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         write_log(template)
         write_log("-----------------------------------")
@@ -7049,7 +7050,7 @@ def etl(source_df):
             {"role": "assistant", "content": python_code},
             {"role": "user", "content": error_message},]
 
-            response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
             write_log(error_message)
             write_log("-----------------------------------")
@@ -7192,7 +7193,7 @@ Enumerate the target concepts that the source table can be potentially mapped to
 ```"""
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         write_log(template)
         write_log("-----------------------------------")
@@ -7231,7 +7232,7 @@ Return the remaining concepts in the following format (empty list if no).
 
         messages = [{"role": "user", "content": template}]
         
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         
         write_log(template)
         write_log("-----------------------------------")
@@ -7266,7 +7267,7 @@ Then, enumerate the target concept where there exists attributes can be transfor
 ```"""
         messages = [{"role": "user", "content": template}]
         
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1) 
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1) 
         
         write_log(template)    
         write_log("-----------------------------------")
@@ -7798,7 +7799,7 @@ DONT change the function name and the return clause.
 """
         messages = [{"role": "user", "content": template}]
     
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         write_log(template)
         write_log("-----------------------------------")
@@ -7953,7 +7954,7 @@ DONT change the function name, first line and the return clause.
 """
         messages = [{"role": "user", "content": template}]
     
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         write_log(template)
         write_log("-----------------------------------")
@@ -8184,7 +8185,7 @@ DONT change the function name, first line and the return clause.
 """
         messages = [{"role": "user", "content": template}]
     
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         write_log(template)
         write_log("-----------------------------------")
@@ -8474,7 +8475,7 @@ DONT change the function name and the return clause.
 """
         messages = [{"role": "user", "content": template}]
     
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         write_log(template)
         write_log("-----------------------------------")
@@ -9617,7 +9618,7 @@ The list is prioritized. Choose the first one that applies."""
 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         
 
@@ -9661,7 +9662,7 @@ Next, provide your corrected answer as json:
 If no matched entity, return empty entity list and reason string.
 """},]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_var = json.loads(json_code)
@@ -11929,7 +11930,7 @@ Provide your answer as json:
 
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     assistant_message = response['choices'][0]['message']
     messages.append(assistant_message)
@@ -11966,7 +11967,7 @@ Conclude with the list of indices of entities with minor differences:
 ``` """
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     assistant_message = response['choices'][0]['message']
     messages.append(assistant_message)
@@ -11998,7 +11999,7 @@ Now, find entities that satisfy the description. Provide your answer as json:
 ``` """
     messages = [{"role": "user", "content": template}]
 
-    response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
     assistant_message = response['choices'][0]['message']
     messages.append(assistant_message)
@@ -12851,6 +12852,7 @@ class NestDocument(dict):
 class Node:
     default_name = "Node"
     default_description = "This is the base class for all nodes."
+    retry_times = 0
 
     def __init__(self, name=None, description=None, viewer=False, para=None, output=None, id_para="element_name"):
         self.name = name if name is not None else self.default_name
@@ -12967,11 +12969,24 @@ class Node:
 
         return None
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         
         print(f"Running {self.name}.")
         return extract_output
-
+    
+    def run_and_retry(self, extract_output):
+        try:
+            return self.run(extract_output, use_cache=True)
+        except Exception as e:
+            print(f"Failed to run {self.name}. Retrying...")
+            
+            for i in range(self.retry_times):
+                try:
+                    return self.run(extract_output, use_cache=False)
+                except Exception as e:
+                    print(f"Failed to run {self.name}. Retrying...")
+            raise e
+            
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         self.run_output = run_output
 
@@ -13027,7 +13042,7 @@ class Workflow(Node):
         self.item = item
         return None
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         return None
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -13118,7 +13133,7 @@ class Workflow(Node):
             return 
 
         extract_output = node.extract(self.item)
-        run_output = node.run(extract_output)
+        run_output = node.run_and_retry(extract_output)
 
         node.postprocess(run_output, lambda document: self.callback(node_name, document), viewer=self.viewer, extract_output=extract_output)
     
@@ -13261,7 +13276,7 @@ class MultipleNode(Workflow):
 
         return None
     
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
 
         if len(self.elements) != len(set(self.elements)):
             raise ValueError("Element names must be unique.")
@@ -13623,7 +13638,7 @@ class GroupDataSource(Node):
         table_list = "\n".join([f"{idx}. {names}: {tables[names[0]]}" for idx, names in enumerate(self.groups)])
         return table_list
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         table_list = extract_output
         template = f"""Below are a list of table groups. Each table group has the same attributes.
 We list the [table names]: [attributes] for each group:
@@ -13641,7 +13656,7 @@ Now, return in the following format:
 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         summary = json.loads(json_code)
@@ -13713,7 +13728,7 @@ class SourceCodeWriting(Node):
 
         return table_name, group, schema
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         new_table_name, group, schema = extract_output
 
         sql_query = ""
@@ -13735,7 +13750,7 @@ def create_union_table(tables):
 ```"""
             messages = [{"role": "user", "content": template}]
 
-            response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
             python_code = extract_python_code(response['choices'][0]['message']['content'])
             exec(python_code, globals())
 
@@ -13956,7 +13971,7 @@ class BasicStage(Node):
 
         return table_name, stg_table_name, basic_description
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         table_name, stg_table_name, basic_description = extract_output
 
         template = f"""Write the SQL query for the stg table of the following table:
@@ -13995,7 +14010,7 @@ FROM {table_name}"
 ```""" 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
@@ -14114,7 +14129,7 @@ class DecideCRUDTable(Node):
 
         return basic_description
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         basic_description = extract_output
 
         template =  f"""{basic_description}
@@ -14133,7 +14148,7 @@ Respond with the following format:
 ```"""
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
@@ -14226,7 +14241,7 @@ class PerformCRUD(Node):
 
         return op_cols, date_cols, doc_df, df, con
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         summary = {}
         op_cols, date_cols, doc_df, df, con = extract_output
 
@@ -14248,7 +14263,7 @@ If it's about relation, the key is all the entity keys.
 ```"""
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
@@ -14284,7 +14299,7 @@ For operations like deactivate, classify them as delete.
 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
@@ -14333,7 +14348,7 @@ NOT EXISTS ... (for each deletion ops)"
 ```"""
             messages = [{"role": "user", "content": template}]
 
-            response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
             json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
             json_code = replace_newline(json_code)
             json_code = json.loads(json_code)
@@ -14393,7 +14408,7 @@ WHERE rn = 1
 ORDER BY primary keys"}}
 ```"""
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
@@ -14529,7 +14544,7 @@ class DecideForeignKey(Node):
 
         return df, basic_summary, table_name
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         df, basic_summary, table_name = extract_output
 
         template = f"""{describe_df_in_natural_language(df=df, 
@@ -14553,7 +14568,7 @@ Respond in the following format:
 ```"""  
 
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
@@ -14630,7 +14645,7 @@ class PerformNormalization(Node):
 
         return df, basic_summary, table_name, fk_desc, len(self.foreign_keys)
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         df, basic_summary, table_name, fk_desc, num_foreign_keys = extract_output
 
         template = f"""{describe_df_in_natural_language(df=df, 
@@ -14663,7 +14678,7 @@ Respond in the following format:
 }}
 ```"""
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         messages.append(response['choices'][0]['message'])
 
         template = """Are there attributes from the previous answers also depend on other entities?
@@ -14680,7 +14695,7 @@ Respond in the following format:
 }
 ```"""
         messages += [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
@@ -14879,7 +14894,7 @@ class ClassifyDimFact(Node):
 
         return df, table_name
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         df, table_name = extract_output
 
         table_name = table_name.replace("_update", "")
@@ -14905,7 +14920,7 @@ Respond with following format:
         
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
@@ -15030,7 +15045,7 @@ class CreateFactTable(Node):
 
         return df, table_name, relation_desc
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         df, table_name, relation_desc = extract_output
 
         template = f"""You have the relations in the business Workflow:
@@ -15057,7 +15072,7 @@ Respond with following format:
             
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
@@ -15147,7 +15162,7 @@ class CreateDimensionTable(Node):
 
         return df, table_name, nl_descs
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         df, table_name, nl_descs = extract_output
 
         template = template = f"""You have the business Workflow:
@@ -15175,7 +15190,7 @@ Respond with following format:
                 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
@@ -15423,7 +15438,7 @@ class CreateFactMatchDim(Node):
 
         return df, fact_name, dim_desc, summary
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         df, table_name, dim_desc, fact_summary = extract_output
 
         template = template = f"""You have the following fact table:
@@ -15448,7 +15463,7 @@ Respond with following format:
                     
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
@@ -15511,7 +15526,7 @@ class MatchDimensions(Node):
 
         return  dim_desc
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         dim_desc = extract_output
 
         template = f"""You have the following dimension tables with their keys
@@ -15533,7 +15548,7 @@ Respond with following format:
 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
@@ -15585,7 +15600,7 @@ class BuildDataMart(Node):
 
         return fact_table_desc, dim_table_desc, join_conditions, fact_name
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         fact_table_desc, dim_table_desc, join_conditions, fact_name = extract_output
 
         template = f"""You have the following fact table:
@@ -15608,7 +15623,7 @@ Respond with following format:
 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
@@ -15663,7 +15678,7 @@ class SourceToBusiness(Node):
 
         return nl_descs, table_desc
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         nl_descs, table_desc = extract_output
 
         template = f"""You have the following business workflow: {nl_descs}.
@@ -15680,7 +15695,7 @@ Return the result in yml
 
         messages = [{"role": "user", "content": template}]
 
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.safe_load(yml_code)
@@ -16617,7 +16632,107 @@ def create_explore_button(query_widget, table_name=None, query=""):
     display(explore_button)
 
 
+
+class DescribeColumns(Node):
+    default_name = 'Describe Columns'
+    default_description = 'This node allows users to describe the columns of a table.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Checking columns ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        sample_size = 5
+        
+        table_summary = self.get_sibling_document("Create Table Summary")
+
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+        
+        return table_desc, table_summary, columns
+
+    def run(self, extract_output, use_cache=True):
+        table_desc, table_summary, column_names = extract_output
+
+        template = f"""You have the following table:
+{table_desc}
+
+{table_summary}
+
+Task: Describe the columns in the table.
+
+Return in the following format:
+```json
+{{
+    "{column_names[0]}": "Short description in < 10 words",
+    ...
+}}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
     
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        schema = table_pipeline.get_final_step().get_schema()
+
+        rows_list = []
+
+        for col in schema:
+            rows_list.append({
+                "column_name": col,
+                "description": json_code[col],
+            })
+
+        df = pd.DataFrame(rows_list)
+        
+        editable_columns = [False, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        print("😎 We have described the columns:")
+        display(grid)
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="records")
+            callback(document)
+
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+        
+        
 class DecideProjection(Node):
     default_name = 'Decide Projection'
     default_description = 'This allows users to select a subset of columns.'
@@ -16679,6 +16794,7 @@ class DecideProjection(Node):
 class CreateColumnGrouping(Node):
     default_name = 'Create Column Grouping'
     default_description = 'This node allows users to group columns based on their meanings.'
+    retry_times = 3
 
     def extract(self, item):
         clear_output(wait=True)
@@ -16708,7 +16824,7 @@ class CreateColumnGrouping(Node):
 
         return table_desc, table_summary, column_names
     
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         table_desc, table_summary, column_names = extract_output
 
         template = f"""You have the following table:
@@ -16781,7 +16897,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             return '\n'.join(error_messages)
         
         messages =[ {"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
 
 
         assistant_message = response['choices'][0]['message']
@@ -16883,7 +16999,7 @@ class CreateTableSummary(Node):
 
         return table_desc, columns
     
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         table_desc, table_columns = extract_output
 
         template = f"""You have the following table:
@@ -16900,7 +17016,7 @@ Now, your summary:
 ```"""
 
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         summary = response['choices'][0]['message']['content']
         assistant_message = response['choices'][0]['message']
@@ -17070,7 +17186,7 @@ class DecideDataType(Node):
 
         return sample_df
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         sample_df = extract_output
 
         template = f"""You have the following table:
@@ -17091,7 +17207,7 @@ Return in the following format:
 ```"""
         
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         messages.append(response['choices'][0]['message'])
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -17165,6 +17281,7 @@ def get_missing_percentage(con, table_name, column_name):
     return (total_count - non_missing_count) / total_count
 
 
+
 class DecideRegex(Node):
     default_name = 'Decide Regex'
     default_description = 'This node allows users to decide the regex pattern for a string column.'
@@ -17191,7 +17308,7 @@ class DecideRegex(Node):
 
         return column_name, sample_values
     
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         column_name, sample_values = extract_output
 
         template = f"""{column_name}' has the following distinct values (sep by "):
@@ -17215,7 +17332,7 @@ patterns: # shall be a short list, mostly jsut one
     - ...
 ```"""
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         messages.append(response['choices'][0]['message'])
         self.messages = messages
 
@@ -17287,7 +17404,7 @@ class DecideUnusual(Node):
         
         return column_name, sample_values
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         column_name, sample_values = extract_output
 
         template = f"""{column_name} has the following distinct values:
@@ -17302,19 +17419,17 @@ E.g., age 10.22
 3. Special characters that don't fit within the real-world domain.
 E.g., age X21b 
 
-Follow below step by step:
-1. Summarize the values. Reason if it is unusual or also acceptable.
-2. Conclude with the following dict:
-
+Now, respond in Json:
 ```json
 {{
+    "Reaonsing": "The valuses are ... They are unusual/acceptable ...",
     "Unusualness": true/false,
-    "Examples": "xxx values are unusual because ..." (empty if not unusual) 
+    "Explanation": "xxx values are unusual because ..." # if unusual, short in 10 words
 }}
 ```"""
         
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         messages.append(response['choices'][0]['message'])
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -17325,6 +17440,7 @@ Follow below step by step:
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
+
 
 class DecideUnusualForAll(MultipleNode):
     default_name = 'Decide Unusual For All'
@@ -17342,7 +17458,7 @@ class DecideUnusualForAll(MultipleNode):
     def extract(self, item):
         table_pipeline = self.para["table_pipeline"]
         schema = table_pipeline.get_final_step().get_schema()
-        columns = list(schema.keys())
+        columns = [col for col in schema if schema[col] in data_types['VARCHAR']]
         self.elements = []
         self.nodes = {}
 
@@ -17355,95 +17471,201 @@ class DecideUnusualForAll(MultipleNode):
     def display_after_finish_workflow(self, callback, document):
         clear_output(wait=True)
         create_progress_bar_with_numbers(3, doc_steps)
+        
+        data = []
+        if "Decide Unusual" in document:
+            for key in document["Decide Unusual"]:
+                if document["Decide Unusual"][key]["Unusualness"]:
+                    data.append([key, document["Decide Unusual"][key]["Explanation"], True])
+        
+        if not data:
+            callback(document)
+            return
+        
+        df = pd.DataFrame(data, columns=["Column", "Explanation", "Endorse"])
+        
+        editable_columns = [False, True, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        
         print("The following columns have unusual values: ❓")
-
-        def radio_change_handler(change):
-            instance = change['owner']
-            if instance.value == 'Explanation:':
-                instance.text_area.layout.display = ''
-            else:
-                instance.text_area.layout.display = 'none'
-
-        container = widgets.VBox()
-
-        unusual_columns = {}
-        for key in document["Decide Unusual"]:
-            if document["Decide Unusual"][key]["Unusualness"]:
-                unusual_columns[key] = document["Decide Unusual"][key]["Examples"]
-
-
-        col_to_radio = {}
-
-        for item in unusual_columns:
-
-            reasons = unusual_columns[item]
-            
-            label_text = f"<b>{item}</b>: {reasons}"
-
-            label = widgets.HTML(value=label_text)
-
-            options = ['Unclear', 'Explanation:']
-
-            radio = widgets.RadioButtons(
-                options=options,
-                value=options[0],
-                layout=widgets.Layout(width='80%', align_items='flex-start')
-            )
-            
-            text_area = widgets.Textarea(
-                value='',
-                placeholder='Please provide the reason for unusual values.',
-                description='',
-                disabled=False,
-                layout=widgets.Layout(display='none', width='100%')
-            )
-            
-            radio.text_area = text_area
-            col_to_radio[item] = radio
-            radio.observe(radio_change_handler, names='value')
-            
-            item_container = widgets.VBox([label, radio, text_area])
-            container.children += (item_container,)
-
-        def submit_callback(btn):
-            error_items = []
-            
-            for col in col_to_radio:
-                radio = col_to_radio[col]
-                if radio.value == 'Explanation:' and not radio.text_area.value.strip():
-                    error_items.append(col)
-            
-            if error_items:
-                for col in error_items:
-                    print(f"\033[91m{col} explanation can't be empty.\033[0m")
-            else:
-                clear_output(wait=True)
-
-                for col in col_to_radio:
-                    radio = col_to_radio[col]
-                    
-                    if radio.value == 'Explanation:':
-                        document["Decide Unusual"][col]["final_reason"] =  radio.text_area.value
-                    else:
-                        document["Decide Unusual"][col]["final_reason"] = "unclear"
-                print("Submission received.")
-                callback(document)
-                        
-        submit_btn = widgets.Button(
-            description="Submit",
-            button_style='',
-            tooltip='Submit',
-            icon=''
+        display(grid)
+      
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
         )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="records")
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
 
-        submit_btn.on_click(submit_callback)
+        display(next_button)
+        
+class DecideLongitudeLatitude(Node):
+    default_name = 'Decide Longitude Latitude'
+    default_description = 'This node allows users to decide the longitude and latitude columns.'
 
-        display(container, submit_btn)
+    def extract(self, item):
+        clear_output(wait=True)
 
-        if self.viewer:
-            submit_callback(submit_btn)
+        print("🔍 Deciding longitude and latitude columns ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        self.input_item = item
+
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        
+        sample_size = 5
+        con = self.item["con"]
+        all_columns = [col for col in schema if schema[col] in data_types['INT'] or schema[col] in data_types['DECIMAL']]
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+        
+        return table_desc
+    
+    def run(self, extract_output, use_cache=True):
+        table_desc = extract_output
+
+        template = f"""You have the following table:
+{table_desc}
+
+Task: Identify the pairs of longitude/latitude attribute names (case sensitive), if any.
+Respond in JSON format:
+```json
+[["longitude", "latitude"], ]
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
 
 
+class DecideColumnRange(Node):
+    default_name = 'Decide Column Range'
+    default_description = 'This node allows users to decide the range of numerical columns.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Deciding column range ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        self.input_item = item
+
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        
+        sample_size = 5
+        con = self.item["con"]
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+        
+        numerical_columns = [col for col in schema if schema[col] in data_types['INT'] or schema[col] in data_types['DECIMAL']]
+        min_max = {}
+        for col in numerical_columns:
+            min_max_tuple = run_sql_return_df(con, f"SELECT MIN({col}) as min, MAX({col}) as max FROM {table_pipeline}").iloc[0]
+            min_max[col] = [min_max_tuple["min"], min_max_tuple["max"]]
+        
+        return table_desc, numerical_columns, min_max
+    
+    def run(self, extract_output, use_cache=True):
+        table_desc, numerical_columns, min_max = extract_output
+
+        template = f"""You have the following table:
+{table_desc}
+
+The numerical columns in the table are: {numerical_columns}
+Task: based on the understanding of the data, decide the normal range of each numerical column.
+E.g., for a column "age", the normal range could be 0-150.
+
+Now, return in the following format:
+```json
+{{
+    "{numerical_columns[0]}": {{
+        "min": 0,
+        "max": 150,
+        "explanation": "short in < 10 words"
+    }}, ...
+}}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+        _, _, min_max = extract_output
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        schema = table_pipeline.get_final_step().get_schema()
+
+        rows_list = []
+
+        for col in schema:
+            if col in json_code:
+                rows_list.append({
+                    "Column": col,
+                    "True Range": min_max[col],
+                    "Expected Range": [json_code[col]["min"],json_code[col]["max"]],
+                    "Explanation": json_code[col]["explanation"],
+                    "Out of Range?": True if json_code[col]["min"] > min_max[col][0] or json_code[col]["max"] < min_max[col][1] else False,
+                })
+
+        df = pd.DataFrame(rows_list)
+        
+        editable_columns = [False, False, False, True, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        print("😎 We have decided the column range:")
+        display(grid)
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="records")
+            callback(document)
+
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
 
 class DecideMissing(Node):
     default_name = 'Decide Missing Values'
@@ -17482,7 +17704,7 @@ class DecideMissing(Node):
 
         return missing_columns, sample_df_str, table_name
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         
         missing_columns, sample_df_str, table_name = extract_output
         
@@ -17513,7 +17735,7 @@ Return in the following format:
 """
             
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         messages.append(response['choices'][0]['message'])
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -17603,7 +17825,7 @@ class DecideDMV(Node):
         
         return column_name, sample_values
 
-    def run(self, extract_output):
+    def run(self, extract_output, use_cache=True):
         column_name, sample_values = extract_output
 
         template = f"""{column_name} has the following distinct values:
@@ -17621,7 +17843,7 @@ Return in json format:
 ```"""
 
         messages = [{"role": "user", "content": template}]
-        response = call_gpt4(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         messages.append(response['choices'][0]['message'])
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -17663,20 +17885,23 @@ class DecideDMVforAll(MultipleNode):
         clear_output(wait=True)
         
         data = []
-        for key in document["Decide Disguised Missing Values"]:
-            if document["Decide Disguised Missing Values"][key]["DMV"]:
-                data.append([key, document["Decide Disguised Missing Values"][key]["DMV"], 
-                             document["Decide Disguised Missing Values"][key]["explanation"], True])
-                
+        if "Decide Disguised Missing Values" in document:
+            for key in document["Decide Disguised Missing Values"]:
+                if document["Decide Disguised Missing Values"][key]["DMV"]:
+                    data.append([key, document["Decide Disguised Missing Values"][key]["DMV"], 
+                                document["Decide Disguised Missing Values"][key]["explanation"], 
+                                True,])
+                    
         if not data:
             callback(document)
             return
         
-        df = pd.DataFrame(data, columns=["Column Name", "Disguised Missing Values", "Explanation", "Endorse"])
+        df = pd.DataFrame(data, columns=["Column", "Disguised Missing Values", "Explanation", "Endorse"])
         
-        editable_columns = [False, True, False, True]
+        editable_columns = [False, True, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True, lists=["Disguised Missing Values"])
         
+        print("😎 We have identified disguised missing values:")
         display(grid)
         
         next_button = widgets.Button(
@@ -17696,6 +17921,146 @@ class DecideDMVforAll(MultipleNode):
         next_button.on_click(on_button_clicked)
 
         display(next_button)
+
+def check_column_uniqueness(con, table_name, column_name, allow_null=False):
+    if not allow_null:
+        query = f"""
+        SELECT COUNT(DISTINCT {column_name}) AS distinct_count,
+               COUNT(*) AS total_count
+        FROM {table_name}
+        """
+    else:
+        query = f"""
+        SELECT COUNT(DISTINCT {column_name}) AS distinct_count,
+               COUNT({column_name}) AS non_null_count
+        FROM {table_name}
+        """
+
+    result = run_sql_return_df(con, query)
+    distinct_count = result.iloc[0]['distinct_count']
+    
+    total_count = result.iloc[0]['total_count'] if not allow_null else result.iloc[0]['non_null_count']
+
+    return distinct_count == total_count
+
+
+class DecideUnique(Node):
+    default_name = 'Decide Unique Columns'
+    default_description = 'This node allows users to decide which columns should be unique.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Checking uniqueness ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+        
+        self.progress = show_progress(1)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        table_name = table_pipeline.get_final_step().name
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        sample_size = 5
+
+        unique_columns = {}
+
+        for col in columns:
+            unique_columns[col] = check_column_uniqueness(con, table_name, col, allow_null=True)
+
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_name} LIMIT {sample_size}")
+        sample_df_str = sample_df.to_csv(index=False, quoting=2)    
+
+        return unique_columns, sample_df_str, table_name
+
+    def run(self, extract_output, use_cache=True):
+        
+        unique_columns, sample_df_str, table_name = extract_output
+
+        unique_desc = "\n".join([f'{idx+1}. {col}: {unique_columns[col]}' for idx, (col, desc) in enumerate(unique_columns.items())])
+
+        template = f"""You have the following table:
+{sample_df_str}
+
+Identify the columns that are supposed to be unique.
+E.g., for a table of customer data, 'Customer ID' should be unique, but 'First Name' should not.
+
+Return in the following format:
+```json
+{{
+    "reasoning": "The table is about ... X column should be unique.",
+    "unique_columns": {{
+        "column_name": "Short specific reason why unique, in < 10 words.",
+        ...
+    }}
+}}
+"""
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        json_code = run_output
+        unique_columns, _, _ = extract_output
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        
+        
+        rows_list = []
+        for col in unique_columns:
+            is_unique = unique_columns[col]
+            reason = json_code["unique_columns"].get(col, "")
+            rows_list.append({
+                "Column": col,
+                "Is Unique": is_unique,
+                "Should be Unique?": True if reason != "" else False,
+                "Explanation": reason
+            })
+        
+        df = pd.DataFrame(rows_list)
+        
+        editable_columns = [False, False, True, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        
+        print("😎 We have identified columns that should be unique:")
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="records")
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+
+
 
 def create_profile_workflow(table_name, con):
         
@@ -17719,12 +18084,256 @@ def create_profile_workflow(table_name, con):
     main_workflow.add_to_leaf(DecideProjection())
     main_workflow.add_to_leaf(DecideDuplicate())
     main_workflow.add_to_leaf(CreateTableSummary())
+    main_workflow.add_to_leaf(DescribeColumns())
     main_workflow.add_to_leaf(CreateColumnGrouping())
-    main_workflow.add_to_leaf(DecideRegexForAll())
     main_workflow.add_to_leaf(DecideDataType())
     main_workflow.add_to_leaf(DecideDMVforAll())
     main_workflow.add_to_leaf(DecideMissing())
+    main_workflow.add_to_leaf(DecideUnique())
     main_workflow.add_to_leaf(DecideUnusualForAll())
+    main_workflow.add_to_leaf(DecideColumnRange())
+    main_workflow.add_to_leaf(DecideLongitudeLatitude())
     
     return query_widget, main_workflow
+
+def create_map_viz_html(coordinates):
+    map_html = f"""
+<!DOCTYPE html>
+<head>
+  <style>
+    .map-container {{
+      width: 300px;
+      height: 200px;
+      border: 1px solid black;
+    }}
+  </style>
+</head>
+<body>
+  <div id="mapArea"></div>
+
+  <script src="https://d3js.org/d3.v6.js"></script>
+  <script>
+    function drawMap(divId, coordinates) {{
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {{
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {{
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        }});
+      }});
+    }}
+
+    let coordinates = {coordinates}
+    // Example usage: Plotting a point in Boston
+    drawMap("mapArea", coordinates)
+  </script>
+</body>
+</html>
+"""
+    return map_html
+  
+
+
+
+def create_histogram_viz_html(counts, bin_width, bin_centers):
+
+    histogram_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .histogram-container {{
+      width: 300px;
+      height: 100px;
+      border: 1px solid black;
+    }}
+    svg {{
+      font: 10px sans-serif;
+    }}
+  </style>
+</head>
+<body>
+  <div id="histogramArea"></div>
+
+  <script src="https://d3js.org/d3.v6.js"></script>
+  <script>
+    function drawHistogram(divId, data, binWidth) {{
+      const margin = {{top: 10, right: 10, bottom: 20, left: 40}},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x);
+      const yAxis = d3.axisLeft(y);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }}
+
+    const data = {[
+        {"x": center, "y": count} for center, count in zip(bin_centers, counts)
+    ]};
+    const binWidth = {bin_width};
+    drawHistogram("histogramArea", data, binWidth);
+  </script>
+</body>
+</html>
+"""
+    return histogram_html
+
+
+
+
+
+def create_bar_chart_viz_html(data_dict):
+
+    total_value = sum(data_dict.values())
+    data = [{"label": label[:15] + "..." if len(label) > 15 else label, "value": (value / total_value) * 100}
+            for label, value in data_dict.items()]
+
+    bar_chart_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .bar-chart-container {{
+      width: 300px;
+      height: 100px;
+      border: 1px solid black;
+    }}
+
+  </style>
+</head>
+<body>
+  <div id="barChartArea" class="bar-chart-container"></div>
+
+  <script src="https://d3js.org/d3.v6.js"></script>
+  <script>
+    function drawBarChart(data) {{
+      const margin = {{top: 10, right: 10, bottom: 25, left: 100}},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const svg = d3.select("#barChartArea")
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }}
+
+    const data = {data};
+    drawBarChart(data);
+  </script>
+</body>
+</html>
+"""
+    return bar_chart_html
+
+
+
+def truncate_text_vectorized(df, max_length=100, col_max_length=10):
+    def truncate_series(series):
+        mask = series.str.len() > max_length
+        truncated = series[mask].str.slice(0, max_length//2) + '...' + series[mask].str.slice(-max_length//2)
+        series[mask] = truncated
+        return series
+
+    for column in df.select_dtypes(include=[object]).columns:
+        df[column] = truncate_series(df[column])
+
+    new_columns = []
+    for column in df.columns:
+        if len(column) > col_max_length:
+            half_len = col_max_length // 2
+            new_column = column[:half_len] + '_' + column[-half_len:]
+        else:
+            new_column = column
+        new_columns.append(new_column)
+    df.columns = new_columns
+    
+    return df
+
 
