@@ -94,44 +94,8 @@ Cocoon is a Python project that processes your data locally.
 
 <hr></details>
 
-<details>
-<summary><strong>📬 How can I send a Feature Request?</strong></summary><br>
 
-1.  Feel free to [email me](mailto:zh2408@columbia.edu) directly if you're willing to share your use case and data samples. I'll give priority to these requests.
-2.  Post your feature request at [Cocoon GitHub Issues](https://github.com/Cocoon-Data-Transformation/cocoon/issues/1).
 
-<hr></details>
-
-<details>
-<summary><strong>🐛 How to report errors and bugs?</strong></summary><br>
-
-🐛 Please open an issue on our GitHub, or directly [email me](mailto:zh2408@columbia.edu). 
-
-If possible, include a few sample data rows to help me identify and fix the error more efficiently.
-
-<hr></details>
-
-<details>
-<summary><strong>💡 Is Cocoon optimized for performance? Does it support R and SQL?</strong></summary><br>
-
-😅 Currently, Cocoon is not performance-optimized and supports only Python. 
-
-😊 If there is a demand, let me know through a feature request.
-
-<hr></details>
-
-<details>
-<summary><strong>👤 About the Author</strong></summary><br>
-
-😊 I am Zachary Huang, a PhD from Columbia University. 
-
- I specialize in databases. 
-  
-I'm passionate about LLM and developing Cocoon as a side project. 
-   
-🚀 Learn more about my past work on [my webpage](http://www.columbia.edu/~zh2408/).
-
-<hr></details>
 
 
 
