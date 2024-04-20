@@ -36,60 +36,6 @@
    
 If interested, you can contact me through email: [zh2408@columbia.edu](mailto:zh2408@columbia.edu)
 
-## What Cocoon Offers:
-
-Cocoon automates documentation, cleaning, standardization, and transformation.
-
-<details>
-<summary><strong> Documentation</strong></summary>
-<br>
-😎 Semi-automatically documents data, identifies tables, and flags data errors. 
-
-🤓 View the [Example Table Documentation](http://htmlpreview.github.io/?https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/files/patients.html?token=GHSAT0AAAAAACGPOG73B5C3TKBDNR633SHAZLNIQNQ) yourself!
-   
-   ![Documentation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/docu_screenshot.png)
-
-<hr></details>
-
-<details>
-  
-<summary><strong> Cleaning</strong></summary>
-<br>
-😎 Corrects data errors detected during documentation 
-   
-   <kbd>![Cleaning Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/cleaning_screenshot.png)</kbd>
-
-🚧 Cleaning is under development. Currently only support remove abnormal values. More options will come soon.
-
-<hr></details>
-
-<details>
-  
-<summary><strong> Standardization</strong></summary>
-<br>
-😎 Use text embedding and LLM to map text descriptions to standardized vocabularies. 
-
-👉 Try out this demo notebook for[Standardize Procedure Vocabularies](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/standardization_demo.ipynb)
-
-🤓 View the [Example Standardization Report](http://htmlpreview.github.io/?https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/files/standardization_report.html) yourself!
-
-   ![Standardization Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/stand_screenshot.png)
-
-🚧 Standardization is under development. Currently support Athena Procedure vocabularies
-
-
-
-<hr></details>
-
-<details>
-<summary><strong> Transformation</strong></summary>
-<br>
-😎 Automatically transform your table into target data schemas.
-   
-<kbd> ![Transformation Screenshot](https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/tran_screenshot.png)</kbd>
-
-<hr></details>
-
 
 ## FAQ 
 
