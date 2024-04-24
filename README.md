@@ -32,7 +32,7 @@ We plan to support Data Cleaning, Data Integration, and Data Modeling.
 
 👉 Check out the [3 min demo](https://www.youtube.com/watch?v=nddQ3jIdPCI)
 
-If interested, you can contact me through email: [zh2408@columbia.edu](mailto:zh2408@columbia.edu)
+If interested, please fill in wait list: https://forms.gle/PCKespY7AUbF4EMZ7
 
 
 
