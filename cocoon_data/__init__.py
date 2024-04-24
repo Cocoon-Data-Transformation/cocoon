@@ -5,8 +5,6 @@ import json
 import re
 import uuid
 import numpy as np
-import sys
-import traceback
 import networkx as nx
 import matplotlib.patches as patches
 import matplotlib.colors as mcolors
@@ -22,7 +20,7 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 import plotly.graph_objects as go
 import ast
-import faiss  
+import faiss
 from tqdm import tqdm
 import base64
 from io import BytesIO
@@ -39,16 +37,17 @@ from rasterio.warp import calculate_default_transform, reproject, Resampling
 from datasketch import MinHash, MinHashLSH
 from .database import *
 from .llm import *
+from .utils import get_detailed_error_info, replace_newline, write_log
+from .extract import extract_json_code_safe, extract_python_code
 
 
 try:
     import openpyxl
     import xlrd
 
-
     from pyproj import Transformer, CRS
     from rasterio.windows import from_bounds
-    
+
     from rasterio.features import rasterize
     from rasterio.transform import from_origin, Affine
     from rasterio.enums import Resampling as ResamplingMethods
@@ -61,13 +60,7 @@ except:
     pass
 
 
-
-
-
 spinner_value = "Running..."
-
-
-
 
 
 icon_import = False
@@ -86,9 +79,8 @@ def yml_from_name(table_name):
             "name": table_name
         }]
     }
-        
-    return yaml_dict
 
+    return yaml_dict
 
 
 def create_list_of_strings(initial_strings):
@@ -162,17 +154,14 @@ def create_list_of_strings(initial_strings):
     return display_container
 
 
-
-
 def extract_strings_from_display(container):
     extracted_strings = []
-    
+
     for child in container.children[:-2]:
         text_widget = child.children[0]
         extracted_strings.append(text_widget.value)
-    
-    return extracted_strings
 
+    return extracted_strings
 
 
 class QueryWidget:
@@ -188,9 +177,9 @@ class QueryWidget:
         self.result_display = widgets.HTML()
         self.submit_button = widgets.Button(description="Submit Query", button_style='success')
         self.vbox = widgets.VBox([self.label, self.sql_input, self.submit_button, self.error_msg, self.result_display])
-        
+
         self.submit_button.on_click(self.run_query_from_button)
-    
+
     def run_query(self, sql_query):
         sample_size = 100
         self.sql_input.value = sql_query
@@ -202,15 +191,14 @@ class QueryWidget:
         except Exception as e:
             self.error_msg.value = f"<div style='color: red;'>{str(e)}</div>"
             self.result_display.value = ''
-    
+
     def run_query_from_button(self, b):
         self.run_query(self.sql_input.value)
-    
+
     def display(self):
         display(self.vbox)
 
 
-        
 data_types ={
     "INT": ["INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT"],
     "DECIMAL": ["DECIMAL", "NUMERIC", "DOUBLE", "FLOAT", "FIXED"],
@@ -289,22 +277,21 @@ def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists=
 
     for j, col_name in enumerate(df.columns):
         grid[0, j] = widgets.HTML(value=f'<b>{col_name}</b>')
-    
+
     if reset:
         grid[0, -1] = widgets.HTML(value='<b>Reset</b>')
-    
+
     row_widgets = []
 
     def highlight_change(change):
         change.owner.layout.border = '1px solid #fc5656'
-
 
     for i, (index, row) in enumerate(df.iterrows()):
         widgets_in_row = []
         for j, col_name in enumerate(df.columns):
             value = row[col_name]
             widget = None
-            
+
             if col_name in category:
                 widget = widgets.Dropdown(options=category[col_name], value=value)
             elif col_name in lists:
@@ -348,7 +335,7 @@ def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists=
                             widget.value = value
                         elif isinstance(widget, widgets.Text):
                             widget.value = str(value)
-                        
+
                         widget.layout.border = ''
                 return handler
 
@@ -356,9 +343,6 @@ def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists=
             grid[i+1, -1] = reset_button
 
     return grid
-
-
-
 
 
 def create_data_type_grid(df):
@@ -398,13 +382,9 @@ def extract_grid_data_type(grid):
         column_name = grid[i, 0].value
         current_type = grid[i, 1].value
         target_type = grid[i, 2].value
-        
+
         data.append([column_name, current_type, target_type])
     return data
-
-
-
-
 
 
 def create_dictionary_grid_remove(input_dict, col1="Key", col2="Value"):
@@ -449,26 +429,24 @@ def toggle_text_input(change, text_input):
     text_input.disabled = change['new']
 
 
-
 def process_grid_changes_remove(grid):
     old_values_to_remove = []
     non_removed_values = {}
-    
+
     for i in range(1, len(grid.children) // 4):
         key_label = grid[i, 0]
         text_input = grid[i, 1]
         toggle_button = grid[i, 2]
-        
+
         key = key_label.value
         old_value = text_input.value
-        
+
         if toggle_button.value:
             old_values_to_remove.append(old_value)
         else:
             non_removed_values[key] = old_value
 
     return old_values_to_remove, non_removed_values
-
 
 
 def create_dictonary_grid(input_dict, col1="Key", col2="Value"):
@@ -486,18 +464,16 @@ def create_dictonary_grid(input_dict, col1="Key", col2="Value"):
 
     for i, (key, value) in enumerate(input_dict.items(), start=1):
         grid[i, 0] = widgets.Label(value=key)
-        
+
         text_input = widgets.Text(value=value)
         text_input.observe(lambda change, key=key: on_text_change(change, key), names='value')
         grid[i, 1] = text_input
-        
+
         reset_button = widgets.Button(description="Reset")
         reset_button.on_click(create_reset_function(text_input, key))
         grid[i, 2] = reset_button
-    
+
     return grid
-
-
 
 
 def collect_updated_dict_from_grid(grid):
@@ -505,13 +481,12 @@ def collect_updated_dict_from_grid(grid):
     for i in range(1, grid.n_rows - 1):
         key_widget = grid[i, 0]
         value_widget = grid[i, 1]
-        
+
         key = key_widget.value
         updated_value = value_widget.value
         updated_dict[key] = updated_value
 
     return updated_dict
-
 
 
 def create_text_area_with_char_count(initial_value):
@@ -699,7 +674,6 @@ node.each(function(d, i) {{
     return graph_html
 
 
-
 def generate_draggable_graph_html_dynamically(graph_data):
     number_nodes = len(graph_data["nodes"])
     svg_width = min(800, 300 + 50 * number_nodes)
@@ -711,7 +685,6 @@ def display_draggable_graph_html(graph_data):
     _, svg_height, html_content = generate_draggable_graph_html_dynamically(graph_data)
 
     display_html_iframe(html_content, width="100%", height=f"{svg_height+50}px")
-
 
 
 def robust_create_to_replace(input_sql):
@@ -738,38 +711,34 @@ def cluster_tables(tables, threshold=0.5, num_perm=128):
     for table_name, minhash in minhashes.items():
         if table_name in seen:
             continue
-        
+
         similar_tables = lsh.query(minhash)
-        
+
         new_cluster = {table for table in similar_tables if table not in seen}
-        
+
         new_cluster.add(table_name)
-        
+
         if new_cluster:
             clusters.append(new_cluster)
             seen.update(new_cluster)
 
-            
     return clusters
-
 
 
 def group_tables_exclude_single(tables):
     attribute_to_table = {}
-    
+
     for table, attributes in tables.items():
         attributes_sorted = tuple(sorted(attributes))
-        
+
         if attributes_sorted not in attribute_to_table:
             attribute_to_table[attributes_sorted] = [table]
         else:
             attribute_to_table[attributes_sorted].append(table)
-    
+
     grouped_tables = [tables for tables in attribute_to_table.values() if len(tables) > 1]
-    
+
     return grouped_tables
-
-
 
 
 def generate_dialogue_html(dialogue):
@@ -803,7 +772,6 @@ def generate_dialogue_html(dialogue):
     </tr>
     """
 
-
     for msg in dialogue:
         if msg["role"] == "user":
             row_class = "user"
@@ -811,7 +779,7 @@ def generate_dialogue_html(dialogue):
             row_class = "assistant"
         else:
             row_class = "system"
-        
+
         html_content += f"""
         <tr class="{row_class}">
             <td>{msg["role"].capitalize()}</td>
@@ -824,18 +792,10 @@ def generate_dialogue_html(dialogue):
     return html_content
 
 
-
-
-
 def replace_keys_and_values_with_index(nodes, edges):
     node_index = {node: index for index, node in enumerate(nodes)}
     updated_edges = {node_index[node]: [node_index[edge] for edge in edges[node]] for node in edges}
     return updated_edges
-
-
-
-
-
 
 
 def display_pages(total_page, create_html_content):
@@ -1013,14 +973,13 @@ def generate_html_for_sanity_check(document):
 def select_invalid_data_type(df, column, data_type):
     data_type = data_type.upper()
 
-    
     def is_uuid(val):
         try:
             uuid.UUID(str(val))
             return True
         except ValueError:
             return False
-    
+
     if data_type == 'NULL':
         mask = ~df[column].isnull()
     elif data_type in ['INTEGER', 'SMALLINT', 'TINYINT', 'BIGINT', 'HUGEINT']:
@@ -1047,7 +1006,6 @@ def select_invalid_data_type(df, column, data_type):
         raise ValueError(f"Data type {data_type} is not supported.")
 
     return mask
-
 
 
 def sql_cleaner(sql):
@@ -1147,9 +1105,7 @@ def display_longitude_latitude(json_code, full_list, call_back):
         print(f"🤓 You can try to first extract these attributes")
         print(f"😊 GeoEncoding is under development. Please send a feature request! ")
 
-
     radio_options.append('Manual Selection:')
-
 
     selection_radio_buttons = widgets.RadioButtons(
         options=radio_options,
@@ -1159,7 +1115,6 @@ def display_longitude_latitude(json_code, full_list, call_back):
 
     longitude_label = widgets.HTML(value='<strong>Longitude:</strong>')
     latitude_label = widgets.HTML(value='<strong>Latitude:</strong>')
-
 
     custom_longitude_dropdown = widgets.Dropdown(
         options=full_list,
@@ -1176,7 +1131,7 @@ def display_longitude_latitude(json_code, full_list, call_back):
 
     def on_submit_button_clicked(b):
         clear_output(wait=True)
-        
+
         selected_index = selection_radio_buttons.index
         if selected_index < len(json_code):
             selected_pair = json_code[selected_index]
@@ -1196,8 +1151,6 @@ def display_longitude_latitude(json_code, full_list, call_back):
 
     selection_radio_buttons.observe(on_selection_change, names='value')
     on_selection_change({'new': selection_radio_buttons.value})
-
-
 
 
 def create_selection_grid(columns1, columns2, table1_name, table2_name, call_back_func):
@@ -1277,7 +1230,6 @@ Now respond in the following format:
     return json_code
 
 
-
 def recommend_join_keys(source_table_description, target_table_description):
     template = f"""Below are summary of tables. The attributes are highlighted in **bold**.
 Table 1: {source_table_description}.
@@ -1355,7 +1307,7 @@ def plot_venn_percentage(array1, array2, name1, name2):
         only_set2 = len(set2 - set1) / total_elements * 100
 
     font_size=8
-    
+
     venn_diagram = venn2(subsets=(only_set1, only_set2, overlap), set_labels=(name1, name2))
 
     for patch in venn_diagram.patches:
@@ -1372,13 +1324,10 @@ def plot_venn_percentage(array1, array2, name1, name2):
 
     for label in venn_diagram.set_labels:
         label.set_fontsize(font_size)
-        
+
     plt.show()
 
     return overlap, only_set1, only_set2
-
-
-
 
 
 def create_column_selector(columns, callback, default=False):
@@ -1387,63 +1336,48 @@ def create_column_selector(columns, callback, default=False):
         disabled=False,
         layout={'width': '600px', 'height': '200px'}
     )
-    
+
     instructions_text = "Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, 0 are selected."
     instructions = widgets.Label(value=instructions_text)
-    
+
     def update_instructions(change):
         selected_count = len(multi_select.value)
         instructions.value = f"Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, {selected_count} are selected."
-    
+
     multi_select.observe(update_instructions, 'value')
-    
+
     select_all_button = widgets.Button(description="Select All", button_style='info', icon='check-square')
     deselect_all_button = widgets.Button(description="Deselect All", button_style='danger', icon='square-o')
     reverse_selection_button = widgets.Button(description="Reverse Selection", button_style='warning', icon='exchange')
     submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
-    
+
     def select_all(b):
         multi_select.value = tuple(range(len(columns)))
-        
+
     def deselect_all(b):
         multi_select.value = ()
-    
+
     def reverse_selection(b):
         current_selection = set(multi_select.value)
         all_indices = set(range(len(columns)))
         new_selection = tuple(all_indices - current_selection)
         multi_select.value = new_selection
-    
+
     def submit(b):
         selected_indices = multi_select.value
         callback(selected_indices)
-    
+
     select_all_button.on_click(select_all)
     deselect_all_button.on_click(deselect_all)
     reverse_selection_button.on_click(reverse_selection)
     submit_button.on_click(submit)
-    
+
     buttons = widgets.HBox([select_all_button, deselect_all_button, reverse_selection_button])
     ui = widgets.VBox([instructions, multi_select, buttons, submit_button])
     display(ui)
-    
+
     if default:
         multi_select.value = tuple(range(len(columns)))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def find_duplicate_indices(df):
@@ -1460,8 +1394,6 @@ def find_duplicate_indices(df):
     grouped = duplicates.groupby(list(duplicates.columns)).apply(lambda x: x.index.tolist())
 
     return grouped.values.tolist()
-
-
 
 
 def display_duplicated_rows_html(df, duplicated_indices):
@@ -1497,7 +1429,6 @@ def color_columns(df, color, column_indices):
     return color_columns_multiple(df, [color], [column_indices])
 
 
-
 def columns_with_all_missing_values(df):
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame")
@@ -1516,9 +1447,6 @@ def display_and_ask_removal(df, missing_column_indices):
     display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
 
 
-
-
-
 def color_columns_multiple(df, colors, column_indices_list):
 
     def apply_color_to_columns(styler, colors, column_indices_list):
@@ -1530,10 +1458,6 @@ def color_columns_multiple(df, colors, column_indices_list):
     styled_df = apply_color_to_columns(df.style, colors, column_indices_list)
 
     return styled_df
-
-
-
-
 
 
 def generate_seaborn_palette(n_colors):
@@ -1581,8 +1505,6 @@ def find_duplicate_column_indices(df):
     return duplicate_columns
 
 
-
-
 def find_default_index_column(df):
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame")
@@ -1596,10 +1518,6 @@ def find_default_index_column(df):
             default_index_indices.append(df.columns.get_loc(col))
 
     return default_index_indices
-
-
-
-
 
 
 def find_columns_with_xy_suffix_indices(df):
@@ -1627,16 +1545,15 @@ def find_columns_with_xy_suffix_indices(df):
 def display_xy_duplicated_columns_html(df, duplicate_column_indices):
     html_output = f"<p>🤔 There are {len(duplicate_column_indices)} groups of column names, duplicated likely by merge.</p>"
 
-
     for group in duplicate_column_indices:
 
         col_name = df.columns[group[0]]
-        
+
         new_column_names = df.columns.tolist()
 
         for i, idx in enumerate(group):
             new_column_names[idx] = f"{df.columns[idx]}"
-        
+
         df.columns = new_column_names
 
     colors = generate_seaborn_palette(len(duplicate_column_indices))
@@ -1647,8 +1564,6 @@ def display_xy_duplicated_columns_html(df, duplicate_column_indices):
     display(HTML(wrap_in_scrollable_div(truncate_html_td(styled_df.to_html()))))
 
     display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
-
-
 
 
 def find_default_index_column(df):
@@ -1665,7 +1580,7 @@ def find_default_index_column(df):
 
     return default_index_indices
 
-    
+
 def display_index_and_ask_removal(df, missing_column_indices):
     html_output = f"<p>🤔 There are {len(missing_column_indices)} columns <b>for row id</b>:</p>"
 
@@ -1677,13 +1592,8 @@ def display_index_and_ask_removal(df, missing_column_indices):
     display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
 
 
-
-
-
 doc_steps = ["Sanity", "Table", "Missing", "Unusual"]
 geo_integration_steps = ["Process", "CRS", "Integration"] 
-
-
 
 
 def create_tabs_with_notifications(tab_data):
@@ -1705,8 +1615,6 @@ def create_tabs_with_notifications(tab_data):
             tab.set_title(index, title)
 
     return tab
-
-
 
 
 def create_dropdown_with_content(tab_data):
@@ -1753,7 +1661,6 @@ def process_lists(list1, list2):
     return mapping_dict
 
 
-
 def image_json_to_base64(json_var, df):
     histogram_imgs = []
     map_imgs = []
@@ -1772,7 +1679,7 @@ def image_json_to_base64(json_var, df):
             raise ValueError(f"Visualization name {json_entry['name']} is not supported")
 
     return histogram_imgs, map_imgs
-    
+
 
 def generate_visualization_recommendation(table_summary):    
     template =  f"""Below are table summary, where attributes are in **bold**:
@@ -1813,7 +1720,6 @@ Respond in the following format without reasonings:
     return json_var, messages
 
 
-
 def get_source_nodes_ids(edges, node):
     source_nodes = []
 
@@ -1824,7 +1730,6 @@ def get_source_nodes_ids(edges, node):
     return source_nodes
 
 
-
 def wrap_in_scrollable_div(html_code, width='100%', height='200px'):
     scrollable_div = f'<div style="width: {width}; overflow: auto; max-height: {height};">{html_code}</div>'
 
@@ -1833,12 +1738,10 @@ def wrap_in_scrollable_div(html_code, width='100%', height='200px'):
 def json_to_html(json_code):
 
     json_str = json.dumps(json_code, indent=2)
-    
+
     html_content = f"<pre>{json_str}</pre>"
-    
+
     return html_content
-
-
 
 
 def wrap_in_iframe(html_code, width=800, height=400):
@@ -1905,8 +1808,6 @@ def get_tree_html(data):
                 children.append(process_data({sub_key: sub_value}))
 
         return {"name": key, "children": children}
-
-
 
     def count_leaf_nodes(node):
         """
@@ -2136,7 +2037,7 @@ def get_tree_html(data):
 
     width1 = max_path_length(data, 5, 20)
     width2 = max_path_length(data, 10, 50) + 150
-    
+
     html_content_updated = html_content.replace('{{data}}', processed_data_str)
     html_content_updated = html_content_updated.replace('{{height1}}', str(height1))
     html_content_updated = html_content_updated.replace('{{height2}}', str(height2))
@@ -2144,8 +2045,6 @@ def get_tree_html(data):
     html_content_updated = html_content_updated.replace('{{width2}}', str(width2))
 
     return html_content_updated, width2, height2
-
-
 
 
 def get_rename(meanings):
@@ -2213,7 +2112,6 @@ def topological_sort(nodes, edges):
         return "Cycle detected in the graph, topological sort not possible."
 
     return order
-
 
 
 def show_progress(max_value=1, value=1):
@@ -2330,7 +2228,6 @@ Return the results in json format:
 
     response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
-
     assistant_message = response['choices'][0]['message']
     messages.append(assistant_message)
 
@@ -2341,8 +2238,6 @@ Return the results in json format:
     json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
     json_code = replace_newline(json_code)
     json_code = json.loads(json_code)
-
-
 
     def verify_json(json_code):
         fields = ['reasoning', 'exists_regex', 'regex']
@@ -2358,7 +2253,7 @@ Return the results in json format:
             raise ValueError(f"Field 'regex' should be string.")
 
     verify_json(json_code)
-    
+
     if json_code['exists_regex']:
 
         def verify_regex(regex, normal_values, unusual_values):
@@ -2369,32 +2264,10 @@ Return the results in json format:
             for value in unusual_values:
                 if regex.match(value):
                     raise ValueError(f"Regex matches unusual value: {value}")
-                
+
         verify_regex(json_code["regex"], result['normal_values'], result['unusual_values'])
 
     return json_code
-
-def replace_newline(input_string):
-    parts = input_string.split('"')
-
-    for i in range(len(parts)):
-        if i % 2 == 1:
-            parts[i] = parts[i].replace("\n", "\\n")
-            characters = ["d", "t", "b", "r", "f", "D", "w", "W", "s", "S", "B", ".", "(", ")", "[", "]", "{", "}", "|", "?", "*", "+", "^", "$"]
-            for character in characters:
-                parts[i] = parts[i].replace(f"\\\\{character}", f"\\{character}").replace(f"\\{character}", f"\\\\{character}")
-
-    modified_string = '"'.join(parts)
-
-    return modified_string
-
-
-def write_log(message: str):
-    log_file = open('data_log.txt', 'a')
-    log_file.write(message + '\n')
-    log_file.close()
-
-
 
 def generate_workflow_html(nodes, edges, edge_labels=None, highlight_nodes=None, highlight_edges=None, height=400):
     dot = Digraph(format='png')
@@ -2467,10 +2340,6 @@ def display_workflow(nodes, edges, edge_labels=None, highlight_nodes=None, highl
     display(HTML(scrollable_html))
 
 
-
-
-
-
 def print_history(history):
     for chat in history:
         print(chat['content'])
@@ -2497,7 +2366,6 @@ def visualize_graph(tables, edges):
     plt.gca().set_facecolor('lightgrey')
     plt.gca().grid(which='major', color='white', linestyle='-', linewidth=0.5)
     plt.show()
-
 
 
 def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, height=400):
@@ -2542,7 +2410,6 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
         'penwidth': '2.0'
     }
 
-
     for i, node in enumerate(nodes):
         if i in highlight_nodes_indices:
             dot.node(node, node, **{**node_style, **highlighted_node_style})
@@ -2566,13 +2433,6 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
     </div>
     """
     return scrollable_html
-
-
-
-
-
-
-
 
 
 def plot_geospatial_data(df, longitude_col, latitude_col):
@@ -2641,7 +2501,7 @@ def plot_distribution(df, column_name):
             top_categories = pd.concat([top_categories, other_values_series])
 
         plt.figure(figsize=(4, 2))
-        
+
         top_category_str = top_categories.index.astype(str)
 
         bar_plot = sns.barplot(y=top_category_str, x=top_categories, color="lightgreen", edgecolor="black")
@@ -2656,7 +2516,7 @@ def plot_distribution(df, column_name):
         plt.ylabel(column_name)
 
     plt.tight_layout()
-    
+
     buf = io.BytesIO()
     plt.savefig(buf, format='png', dpi=300)
     plt.close()
@@ -2665,17 +2525,6 @@ def plot_distribution(df, column_name):
     image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
 
     return image_base64
-
-
-
-
-
-        
-            
-
-
-        
-
 
 
 def display_html_iframe(html_content, width="100%", height=None):
@@ -2692,9 +2541,8 @@ def render_json_in_iframe_with_max_height(json_data, max_height=200):
             return int(obj)
         raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
-
     json_str = json.dumps(json_data, default=default_serializer, indent=2)
-        
+
     html_template = f"""
     <html>
     <head>
@@ -2708,78 +2556,17 @@ def render_json_in_iframe_with_max_height(json_data, max_height=200):
     <body style="margin:0; padding:0;"></body>
     </html>
     """
-    
+
     encoded_html = base64.b64encode(html_template.encode('utf-8')).decode('utf-8')
-    
+
     iframe_html = f'''
     <div style="overflow-y:auto; border-left: 4px solid #ccc; padding-left: 10px;">
         <iframe src="data:text/html;base64,{encoded_html}" style="width:100%; height:{max_height}px; border:none;"></iframe>
     </div>
     '''
 
-    return iframe_html    
+    return iframe_html
 
-
-def get_detailed_error_info():
-    """
-    Retrieve detailed information about the most recent exception caught by an except clause.
-    Specifically, it fetches the exact line and explanation of the error within the exec block.
-    """
-    exc_type, exc_value, exc_traceback = sys.exc_info()
-
-    tb_list = traceback.format_exception(exc_type, exc_value, exc_traceback)
-
-    for i, line in enumerate(tb_list):
-        if "exec(" in line:
-            tb_list = tb_list[i+1:]
-            break
-        if "con.execute(" in line:
-            tb_list = tb_list[i+1:]
-            break
-
-    detailed_error_info = ''.join(tb_list)
-
-    return detailed_error_info
-
-def extract_json_code_safe(s):
-    s_stripped = s.strip()
-    if (s_stripped.startswith('{') and s_stripped.endswith('}')) or \
-       (s_stripped.startswith('[') and s_stripped.endswith(']')):
-        return s_stripped
-
-    json_code =  extract_json_code(s_stripped)
-
-    if json_code is not None:
-        return json_code
-
-    start_brace = s_stripped.find('{')
-    start_bracket = s_stripped.find('[')
-    start_index = start_brace if start_bracket == -1 else (start_bracket if start_brace == -1 else min(start_brace, start_bracket))
-
-    if start_index == -1:
-        return None
-
-    end_brace = s_stripped.rfind('}')
-    end_bracket = s_stripped.rfind(']')
-    end_index = end_brace if end_bracket == -1 else (end_bracket if end_brace == -1 else max(end_brace, end_bracket))
-
-    if end_index == -1:
-        return None
-
-    potential_json = s_stripped[start_index:end_index + 1]
-    return potential_json
-
-def extract_json_code(s):
-    import re
-    pattern = r"```json(.*?)```"
-    match = re.search(pattern, s, re.DOTALL)
-    return match.group(1).strip() if match else None
-
-def extract_python_code(s):
-    import re
-    pattern = r"```python(.*?)```"
-    match = re.search(pattern, s, re.DOTALL)
-    return match.group(1).strip() if match else None
 
 def collect_df_statistics_(df, document=None, sample_distinct=20):
 
@@ -2887,7 +2674,6 @@ def describe_missing_values(stats, df, threshold=50):
         if stats[col_name]['null_percentage'] > threshold:
             description +=  f"{col_name}: {stats[col_name]['null_percentage']}% missing values\n"
     return description
-
 
 
 def describe_df_in_natural_language(df, table_name, num_rows_to_show, num_cols_to_show=None):
@@ -3348,8 +3134,7 @@ def read_data(data, document_path=None, viewer=None):
         else:
             document_data.start(viewer = viewer)
         return document_data
-    
-    
+
     if isinstance(data, str) and data.endswith('.csv'):
         document_data = DocumentedData(file_path=data)
         if document_path is not None:
@@ -3396,7 +3181,7 @@ def read_data(data, document_path=None, viewer=None):
                 else:
                     document_data.start()
                 return document_data
-                
+
             button.on_click(on_button_clicked)
 
             display(sheet_dropdown, button)
@@ -3411,8 +3196,6 @@ def read_data(data, document_path=None, viewer=None):
             else:
                 document_data.start()
             return document_data
-
-    
 
 
 class DocumentedData:
@@ -3430,7 +3213,7 @@ class DocumentedData:
         if file_path is not None:
 
             if file_path.endswith('.csv'):
-            
+
                 sep, encoding, df = read_csv_file_advanced(file_path)
 
                 self.sep = sep
@@ -3443,7 +3226,7 @@ class DocumentedData:
                     self.table_name = table_name
                 self.original_df = lightweight_copy(df)
                 self.df = df
-            
+
             elif file_path.endswith('.xlsx') or file_path.endswith('.xls'):
                 xlsx = pd.ExcelFile(file_path)
 
@@ -3452,7 +3235,6 @@ class DocumentedData:
                 if len(sheet_names) > 1 and sheet_name is None:
 
                     raise ValueError(f"Excel file {file_path} has more than 1 sheet. Please pass in the sheet_name from {sheet_names}.")
-
 
                 if sheet_name is not None and sheet_name not in sheet_names:
                     raise ValueError(f"Sheet name {sheet_name} is not in the sheet names {sheet_names}.")
@@ -3467,7 +3249,7 @@ class DocumentedData:
                     self.table_name = os.path.basename(file_path).split('.')[0]
                 else:
                     self.table_name = table_name
-                
+
                 self.table_name += f"-{sheet_name}"
 
                 df = pd.read_excel(file_path, sheet_name=sheet_name)
@@ -3480,11 +3262,11 @@ class DocumentedData:
         elif df is not None:
             if not isinstance(df, pd.DataFrame):
                 raise ValueError("Input must be a pandas DataFrame.")
-            
+
             self.table_name = table_name
             self.original_df = df.copy()
             self.df = df
-        
+
         else:
             raise ValueError("Either path or df must be provided.")
 
@@ -3505,7 +3287,7 @@ class DocumentedData:
         self.viewer = None
 
         source = SourceStep(self)
-        
+
         self.pipeline = TransformationPipeline(steps = [source], edges=[])
 
         self.rename_step_finished = False
@@ -3526,7 +3308,7 @@ class DocumentedData:
         if not hasattr(self, 'cleaner'):
             self.cleaner = DataCleaning(self)
         self.cleaner.display()
-    
+
     def get_cleaner(self):
         if not hasattr(self, 'cleaner'):
             self.cleaner = GeoDataCleaning(self)
@@ -3535,7 +3317,7 @@ class DocumentedData:
     def get_df(self):
         if hasattr(self, 'cleaner'):
             return self.cleaner.run_codes()
-        
+
         return self.pipeline.run_codes()
 
     def describe_missing_values(self,threshold=50):
@@ -3585,7 +3367,6 @@ And more to come! 🚀""")
             if os.path.exists(file_name):
                 print(f"🤔 There is a document file ./{file_name} Do you want to load it?")
 
-
                 yes_button = widgets.Button(description="Yes")
                 no_button = widgets.Button(description="No")
 
@@ -3605,22 +3386,18 @@ And more to come! 🚀""")
                 if self.viewer:
                     on_yes(yes_button)
 
-            
             else:
                 next_step()
 
         else:
             next_step()
 
-    
-
-
     def start_document(self, viewer=None):
         next_step = self.decide_project
-        
+
         if viewer is not None:
             self.viewer = viewer
-        
+
         if self.viewer is  None:
             mode_selector = widgets.RadioButtons(
                 options=[
@@ -3631,7 +3408,6 @@ And more to come! 🚀""")
                 layout={'width': 'max-content'},
                 style={'description_width': 'initial'}
             )
-
 
             submit_button = widgets.Button(description="Submit")
 
@@ -3647,7 +3423,6 @@ And more to come! 🚀""")
                 if selected_mode == 'Table Viewer':
                     print("We got it. Sit back and grab a coffee. It will be done in 10-20 minutes. ☕")
                 next_step()
-
 
             submit_button.on_click(on_submit)
 
@@ -3788,7 +3563,6 @@ And more to come! 🚀""")
             html_content_updated += f'<h2>🔍 Sanity Check</h2>'
             html_content_updated += sanity_html
 
-
         if "main_entity" in self.document and "column_grouping" in self.document:
             main_entity = self.document['main_entity']['summary']
             reason = self.document['table_summary']['summary']
@@ -3824,7 +3598,7 @@ And more to come! 🚀""")
                 if value:
                     exist_unusual = True
                     break
-            
+
             if exist_unusual:
                 html_content_updated +=f'<h2>🤔 Unusual Values </h2>'
                 html_content_updated += self.generate_unusual_values_report()
@@ -3842,7 +3616,7 @@ And more to come! 🚀""")
             for test in json_code:
                 html_content_updated += "<h3>Test: " + test['name'] + "</h3>"
                 html_content_updated += "<p>" + test['reasoning'] + "</p>"
-                
+
                 highlighted_html = highlight(test['sql'], SqlLexer(), HtmlFormatter())
                 html_content_updated += highlighted_html
 
@@ -3880,9 +3654,8 @@ And more to come! 🚀""")
         display(HTML(html_content_updated))
         display(self.df.head())
         display(HTML('<hr>'))
-        
-        tab_data = []
 
+        tab_data = []
 
         sanity_html = generate_html_for_sanity_check(self.document)
         if sanity_html != "":
@@ -3924,12 +3697,12 @@ And more to come! 🚀""")
                 value = self.document['unusual'][key]['summary']['Unusualness']
                 if value:
                     number_of_unusual_columns += 1
-            
+
             if number_of_unusual_columns > 0:
                 html_content_updated = self.generate_unusual_values_report()
                 html_content_updated += '<hr>'
                 tab_data.append(("🤔 Unusual", number_of_unusual_columns, html_content_updated))
-        
+
         if "recommend_testing" in self.document:
             json_code = self.document["recommend_testing"]
             html_output = ""
@@ -3942,7 +3715,7 @@ And more to come! 🚀""")
             for test in json_code:
                 html_output += "<h3>Test: " + test['name'] + "</h3>"
                 html_output += "<p>" + test['reasoning'] + "</p>"
-                
+
                 highlighted_html = highlight(test['sql'], SqlLexer(), HtmlFormatter())
                 html_output += highlighted_html
 
@@ -3962,9 +3735,8 @@ And more to come! 🚀""")
                     error_count += 1
 
                 html_output += "<hr>"
-            
-            tab_data.append(("🧪 Test", error_count, html_output))
 
+            tab_data.append(("🧪 Test", error_count, html_output))
 
         tabs = create_tabs_with_notifications(tab_data)
         display(tabs)
@@ -3979,7 +3751,7 @@ And more to come! 🚀""")
         html_output = "<b>Reasons for Missing Values 🤓</b> <br><ul>"
         missing_values_dict = self.document['missing_value']
         for column, details in missing_values_dict.items():
-            
+
             if 'summary' in details:
                 html_output += f"<li><strong>{column}</strong>: "
                 html_output += str(details['summary'])
@@ -3992,7 +3764,7 @@ And more to come! 🚀""")
         unusual_values_dict = self.document['unusual']
         html_output = ""
         for column, details in unusual_values_dict.items():
-            
+
             if details['summary']['Unusualness']:
                 html_output += f"<li><strong>{column}</strong>: "
                 html_output += str(details['summary']['Examples'])
@@ -4003,9 +3775,8 @@ And more to come! 🚀""")
         html_output += "</ul>"
         return html_output
 
-
     def generate_html_unusual_values_report(self):
-        
+
         html_output = self.generate_unusual_values_report()
         display(HTML(html_output))
 
@@ -4019,7 +3790,7 @@ And more to come! 🚀""")
         missing_percent = df.isnull().mean() * 100
 
         missing_percent = missing_percent[missing_percent > 0]
-        
+
         if len(missing_percent) == 0:
             return
 
@@ -4050,7 +3821,7 @@ And more to come! 🚀""")
                                     "explanation": "There are inconsistent values: " + summary["Examples"],
                                     "solution": ["Proceed with the transformation as is",
                                                 "(not implemented) Clean the inconsistent values",]})
-        
+
         if "missing_value" in self.document:
             if col in self.document["missing_value"]:
                 if self.document["missing_value"][col]:
@@ -4059,7 +3830,7 @@ And more to come! 🚀""")
                                     "solution": ["Proceed with the transformation as is",
                                                 "Remove the rows with missing values",
                                                 "(not implemented) Clean the inconsistent values",]})    
-        
+
         if "unusual" in self.document:
             if col in self.document["unusual"]:
                 summary  = self.document["unusual"][col]["summary"]
@@ -4071,7 +3842,6 @@ And more to come! 🚀""")
 
         return warnings
 
-
     def get_table_name(self):
         if self.table_name is None:
             return "table"
@@ -4082,7 +3852,7 @@ And more to come! 🚀""")
                 table_name = self.table_name
 
             return sanitize_table_name(table_name)
-    
+
     def get_sample_text(self, sample_cols=None, sample_size=2, col_size=None):
         if sample_cols is None:
             sample_cols = self.df.columns
@@ -4095,7 +3865,7 @@ And more to come! 🚀""")
             cols = self.df.columns
 
         table_sample = self.get_sample_text(sample_cols=sample_cols, sample_size=sample_size)
-        
+
         column_desc = ""
 
         idx=1
@@ -4119,7 +3889,7 @@ And more to come! 🚀""")
             bar_style='',
             orientation='horizontal'
         )
-        
+
         display(progress)
         return progress
 
@@ -4136,7 +3906,7 @@ And more to come! 🚀""")
             def extract_hierarchy(data, parent_name='', hierarchy=None):
                 if hierarchy is None:
                     hierarchy = {'names': [], 'parents': []}
-                
+
                 for name, children in data.items():
                     hierarchy['names'].append(name)
                     hierarchy['parents'].append(parent_name)
@@ -4194,8 +3964,6 @@ And more to come! 🚀""")
 
                 table_columns = self.df.columns.to_list()
 
-
-
                 def extract_words_in_asterisks(text):
                     import re
 
@@ -4237,8 +4005,6 @@ And more to come! 🚀""")
                     write_log("-----------------------------------")
                     summary = updated_summary
 
-                
-
                 break
 
             except Exception as e:
@@ -4248,12 +4014,10 @@ And more to come! 🚀""")
                 if max_trials == 0:
                     raise e
                 break
-                
 
         self.document["table_summary"]["summary"] = summary
         if LOG_MESSAGE_HISTORY:
             self.document["table_summary"]["history"] = messages
-
 
         html = f"<b>Table Summary</b><br>{replace_asterisks_with_tags(summary)}"
         display(HTML(html))
@@ -4274,10 +4038,9 @@ And more to come! 🚀""")
         submit_button.on_click(on_button_clicked)
 
         display(submit_button)
-        
+
         if self.viewer:
             on_button_clicked(submit_button)
-
 
     def get_visualization(self, overwrite=False, once=False):
         next_step = self.check_missing_all
@@ -4301,7 +4064,7 @@ And more to come! 🚀""")
         while max_trials > 0:
             try:
                 json_var, messages = generate_visualization_recommendation(table_summary)
-                
+
                 for message in messages:
                     write_log(message['content'])
                     write_log("-----------------------------------")
@@ -4329,7 +4092,7 @@ And more to come! 🚀""")
                 json_var = verify_json(json_var, self.df.columns)
 
                 break
-            
+
             except Exception as e:
                 write_log(f"Error: {e}")
                 write_log("-----------------------------------")
@@ -4368,7 +4131,6 @@ And more to come! 🚀""")
         if self.viewer:
             on_button_clicked(submit_button)
 
-
     def get_column_grouping(self, overwrite=False, once=False):
         next_step = self.get_visualization
         if "column_grouping" not in self.document:
@@ -4392,10 +4154,6 @@ And more to come! 🚀""")
 
         sample = self.get_sample_text()
 
-
-
-
-
         template = f"""{sample}
 
 {column_meanings}
@@ -4418,26 +4176,25 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
     }}
 }}
 ```"""
-        
+
         def extract_attributes(json_var):
             attributes = []
-            
+
             def traverse(element):
                 if isinstance(element, dict):
                     for value in element.values():
                         traverse(value)
-                        
+
                 elif isinstance(element, list):
                     for item in element:
                         if isinstance(item, str):
                             attributes.append(item)
-                        
+
                         else:
                             traverse(item)
-                            
 
             traverse(json_var)
-            
+
             return attributes
 
         def validate_attributes(attributes, reference_attributes):
@@ -4449,7 +4206,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 if attribute in seen_attributes:
                     duplicates.add(attribute)
                 seen_attributes.add(attribute)
-            
+
             if duplicates:
                 error_messages.append("Duplicate attributes: " + ', '.join(duplicates))
 
@@ -4466,10 +4223,8 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
             return '\n'.join(error_messages)
 
-        
-
         def build_concept_map_and_verify(messages):
-            
+
             number_of_trials = 3
 
             for messgae in messages:
@@ -4478,7 +4233,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
             while number_of_trials > 0:
                 response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-                
+
                 write_log(response['choices'][0]['message']['content'])
                 write_log("-----------------------------------")
 
@@ -4505,7 +4260,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
                     if number_of_trials == 0:
                         raise Exception(error)
-                
+
                 else:
                     self.document["column_grouping"]["summary"] = json_var
                     if LOG_MESSAGE_HISTORY:
@@ -4515,17 +4270,14 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                             self.document["column_grouping"]["history"] += messages
                     break
 
-
         messages =[ {"role": "user", "content": template}]
         build_concept_map_and_verify(messages)
         data = self.document["column_grouping"]["summary"]
-        
-        
 
         progress.value += 1
-        
+
         clear_output(wait=True)
-        
+
         self.display_tree(data)
 
         def create_widgets_for_column_grouping():
@@ -4582,14 +4334,14 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                     messages.append({"role": "system", "content": "```json\n"+str(data)+"\n```"})
                     messages.append({"role": "user", 
                                     "content": f"""{feedback} Please refine the json and return the result within ```json``` block."""})
-                    
+
                     build_concept_map_and_verify(messages)
                     clear_output(wait=True)
                     data = self.document["column_grouping"]["summary"]
                     self.display_tree(data)
                     accuracy_question = create_widgets_for_column_grouping()
                     display(accuracy_question)
-                    
+
                 else:
                     clear_output(wait=True)
                     print("Submission received.")
@@ -4608,8 +4360,6 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         if self.viewer:
             on_button_clicked(None)
 
-        
-    
     def execute_project(self):
         next_step = self.check_duplicated_rows
 
@@ -4624,7 +4374,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Project Columns")
             self.pipeline.add_step_to_final(remove_columns_step)
             self.df = self.pipeline.run_codes()
-        
+
         self.project_step_finished = True
         next_step()
 
@@ -4641,7 +4391,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Remove _x _y Columns")
             self.pipeline.add_step_to_final(remove_columns_step)
             self.df = self.pipeline.run_codes()
-        
+
         self.drop_x_y_columns_step_finished = True
         next_step()
 
@@ -4651,14 +4401,14 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         if self.drop_duplicated_colulmn_step_finished:
             next_step()
             return
-        
+
         remove_column_indices = self.document["duplicate_columns"]["remove_columns"]
 
         if len(remove_column_indices) > 0:
             remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Remove Duplicated Columns") 
             self.pipeline.add_step_to_final(remove_columns_step)
             self.df = self.pipeline.run_codes()
-        
+
         self.drop_duplicated_colulmn_step_finished = True
         next_step()
 
@@ -4668,14 +4418,14 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         if self.drop_index_column_step_finished:
             next_step()
             return
-        
+
         index_column_indices = self.document["index_columns"]["remove_columns"]
 
         if len(index_column_indices) > 0:
             remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = index_column_indices, name="Remove Index Columns")
             self.pipeline.add_step_to_final(remove_columns_step)
             self.df = self.pipeline.run_codes()
-        
+
         self.drop_index_column_step_finished = True
         next_step()
 
@@ -4692,7 +4442,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             remove_columns_step = RemoveColumnsStep(sample_df = self.df[:2], col_indices = remove_column_indices, name="Remove All Missing Columns")
             self.pipeline.add_step_to_final(remove_columns_step)
             self.df = self.pipeline.run_codes()
-        
+
         self.drop_all_missing_columns_step_finished = True
         next_step()
 
@@ -4702,12 +4452,12 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         if self.drop_duplicated_row_step_finished:
             next_step()
             return
-        
+
         if self.document["duplicate_rows"]["remove_duplicates"]:
             deduplicate_step = RemoveDuplicatesStep(sample_df = self.df[:2])
             self.pipeline.add_step_to_final(deduplicate_step)
             self.df = self.pipeline.run_codes()
-        
+
         self.drop_duplicated_row_step_finished = True
         next_step()
 
@@ -4729,11 +4479,10 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             clean_data_type_step = CleanDataType(sample_df = self.df[:2], column_data_type_dict = column_data_type_dict)
             self.pipeline.add_step_to_final(clean_data_type_step)
             self.df = self.pipeline.run_codes()
-        
+
         self.remove_data_type_step_finished = True
         next_step()
 
-        
     def execute_rename_column(self):
 
         next_step = self.get_table_summary
@@ -4759,13 +4508,8 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             self.df = self.pipeline.run_codes()
 
         self.rename_step_finished = True
-        
-
-
-
 
         self.stats = collect_df_statistics(self)
-
 
         next_step()
 
@@ -4773,7 +4517,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         return self.pipeline
 
     def decide_project(self, overwrite=False, once=False):
-        
+
         next_step = self.execute_project
 
         if "project" not in self.document:
@@ -4784,7 +4528,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 if not once:
                     next_step()
                 return
-        
+
         create_progress_bar_with_numbers(0, doc_steps)
 
         df = self.df
@@ -4807,7 +4551,6 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
         if self.viewer:
             callback_next(list(range(num_cols)))
-            
 
     def check_duplicated_rows(self, overwrite=False, once=False):
 
@@ -4823,10 +4566,10 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 if not once:
                     next_step()
                 return
-        
+
         create_progress_bar_with_numbers(0, doc_steps)
         print("🔍 Checking duplicated rows...")
-        
+
         duplicated_indices = find_duplicate_indices(self.df)
         self.document["duplicate_rows"]["duplicated_indices"] = duplicated_indices
         self.document["duplicate_rows"]["num_duplicated_rows"] = len(duplicated_indices)
@@ -4866,7 +4609,6 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             if self.viewer:
                 on_button_clicked(yes_button)
 
-
         else:
             self.document["duplicate_rows"]["remove_duplicates"] = False
             next_step()
@@ -4884,7 +4626,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 if not once:
                     next_step()
                 return
-        
+
         clear_output(wait=True)
         create_progress_bar_with_numbers(0, doc_steps)
         print("🔍 Checking index columns...")
@@ -4912,8 +4654,6 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             self.document["index_columns"]["remove_columns"] = []
             next_step()
 
-
-
     def check_all_missing_columns(self, overwrite=False, once=False):
 
         next_step = self.execute_drop_all_missing_columns
@@ -4932,7 +4672,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         clear_output(wait=True)
         create_progress_bar_with_numbers(0, doc_steps)
         print("🔍 Checking columns with all missing values...")
-        
+
         missing_column_indices = columns_with_all_missing_values(self.df)
         self.document["missing_columns"]["missing_column_indices"] = missing_column_indices
         self.document["missing_columns"]["missing_column_names"] = [self.df.columns[i] for i in missing_column_indices]
@@ -4953,7 +4693,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
             if self.viewer:
                 callback_next(list(range(len(missing_columns))))
-        
+
         else:
             self.document["missing_columns"]["remove_columns"] = []
             next_step()
@@ -4971,7 +4711,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 if not once:
                     next_step()
                 return
-                
+
         clear_output(wait=True)
         create_progress_bar_with_numbers(0, doc_steps)
         print("🔍 Checking duplicated columns...")
@@ -4983,22 +4723,22 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
         if len(duplicated_column_indices) > 0:
             display_duplicated_columns_html(self.df, duplicated_column_indices)
-            
+
             column_names = self.df.columns.to_list()
 
             duplicated_columns = []
             for group_indices in duplicated_column_indices:
                 duplicated_columns += [f"{column_names[i]} ({i+1})" for i in group_indices]
-            
+
             def callback_next(selected_indices):
-                
+
                 flattened_indices = [item for sublist in duplicated_column_indices for item in sublist]
 
                 to_remove_indices = [flattened_indices[i] for i in selected_indices]
 
                 self.document["duplicate_columns"]["remove_columns"] = to_remove_indices
                 next_step()
-            
+
             create_column_selector(duplicated_columns, callback_next)
 
             if self.viewer:
@@ -5070,9 +4810,8 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                     next_step()
                 return
 
-
         clear_output(wait=True)
-        
+
         clear_output(wait=True)
         create_progress_bar_with_numbers(0, doc_steps)
         print("🔍 Checking data types...")
@@ -5095,15 +4834,12 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
             column_name = row['name']
             data_type = row['type'].upper()
 
-            
-
             mask = select_invalid_data_type(df, column_name, data_type)
-            
+
             self.document["data_type"][column_name] = {"data_type": data_type}
 
             if mask.any():
                 print(f"{BOLD}Column '{column_name}'{END} is of type {ITALIC}{data_type}{END}.")
-
 
                 example = df[mask][column_name][:5].to_list()
                 self.document["data_type"][column_name]["invalid_rows"] = example
@@ -5135,10 +4871,9 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
             if self.viewer:
                 on_button_clicked(next_button)
-        
+
         else:
             next_step()
-
 
     def rename_column(self, overwrite=False, once=False):
         next_step = self.execute_rename_column
@@ -5163,7 +4898,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 json_code, messages = get_rename(meanings)
                 progress.value += 1
                 break
-                
+
             except Exception as e:
                 write_log(f"Error: {e}")
                 write_log("-----------------------------------")
@@ -5171,13 +4906,6 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 if max_trials == 0:
                     raise e
                 continue
-
-
-
-
-
-
-        
 
         self.document["rename_column"]["summary"] = json_code
         if LOG_MESSAGE_HISTORY:
@@ -5202,11 +4930,6 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         main_entity = self.document["main_entity"]["summary"]
         basic_description = self.get_basic_description()
 
-
-
-
-
-
         template = f"""{basic_description}
 
 This table is about {main_entity}. The goal is study the high-level column meaning.
@@ -5218,7 +4941,7 @@ Respond in JSON, for all columns:
    "meaning": "short, simple  guess on the meaning"
 }},...]
 ```"""
-        
+
         max_trials = 3
 
         while max_trials > 0:
@@ -5232,7 +4955,7 @@ Respond in JSON, for all columns:
                 write_log(template)
                 write_log("-----------------------------------")
                 write_log(response['choices'][0]['message']['content'])
-                
+
                 json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
                 data = json.loads(json_code)
 
@@ -5245,7 +4968,7 @@ Respond in JSON, for all columns:
                     for item in data:
                         if item['column'] not in self.df.columns:
                             raise Exception(f"Column {item['column']} does not exist in the table.")
-                
+
                 check_column_complete(data)
 
                 self.document["column_meaning"]["summary"] = data
@@ -5253,7 +4976,7 @@ Respond in JSON, for all columns:
                     self.document["column_meaning"]["history"] = messages
 
                 break
-            
+
             except Exception as e:
                 write_log(f"Error: {e}")
                 write_log("-----------------------------------")
@@ -5285,18 +5008,18 @@ Respond in JSON, for all columns:
                 value=label_text, 
                 layout=widgets.Layout(margin='0 0 10px 0')
             )
-            
+
             options = [item['meaning']] 
             if 'ambiguous' in item:
                 options += item['ambiguous']
             options += ['Other']
-            
+
             radio = widgets.RadioButtons(
                 options=options,
                 value=item['meaning'],
                 layout=widgets.Layout(width='80%', align_items='flex-start')
             )
-            
+
             text_area = widgets.Textarea(
                 value='',
                 placeholder='Please provide the meaning of the column.',
@@ -5304,21 +5027,21 @@ Respond in JSON, for all columns:
                 disabled=False,
                 layout=widgets.Layout(display='none', width='100%')
             )
-            
+
             radio.text_area = text_area
             column_to_radio[item['column']] = radio
             radio.observe(radio_change_handler, names='value')
-            
+
             container.children += (label, radio, text_area)
 
         def submit_callback(btn):
             error_items = []
-            
+
             for item in data:
                 radio = column_to_radio[item['column']] 
                 if radio.value == 'Other' and not radio.text_area.value.strip():
                     error_items.append(item)
-            
+
             if error_items:
                 clear_output(wait=True)
                 display(container, submit_btn)
@@ -5330,7 +5053,7 @@ Respond in JSON, for all columns:
 
                 for item in data:
                     radio = column_to_radio[item['column']] 
-                    
+
                     if radio.value == 'Other':
                         feedback_data.append({'column': item['column'], 'meaning': radio.text_area.value})
                     else:
@@ -5341,9 +5064,7 @@ Respond in JSON, for all columns:
                                                                     "content": feedback_data})
                 print("Submission received.")
                 next_step()
-                                                                          
 
-                        
         submit_btn = widgets.Button(
             description="Submit",
             button_style='',
@@ -5358,11 +5079,10 @@ Respond in JSON, for all columns:
         if self.viewer:
             submit_callback(submit_btn)
 
-    
     def get_main_entity(self, overwrite=False, once=False):
 
         next_step = self.get_column_meaning
-        
+
         if "main_entity" not in self.document:
             self.document["main_entity"] = {}
         else:
@@ -5405,11 +5125,11 @@ Now respond in the following format:
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         progress.value += 1
-        
+
         write_log(template)
         write_log("-----------------------------------")
         write_log(response['choices'][0]['message']['content'])
-        
+
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
         main_entity = json_code['main entity']
@@ -5460,7 +5180,7 @@ Now respond in the following format:
                     print("\033[91mPlease enter the information\033[0m.")
                     return
                 corrected_entity = text_area.value
-                
+
                 print(f"Corrected information received. This table is mainly about {corrected_entity}")
                 self.document["main_entity"]["summary"] = corrected_entity
                 if LOG_MESSAGE_HISTORY:
@@ -5489,7 +5209,6 @@ Now respond in the following format:
         if self.viewer:
             on_button_clicked(submit_button)
 
-
     def document_all(self):
         self.get_main_entity()
         self.get_column_grouping()
@@ -5511,7 +5230,7 @@ Now respond in the following format:
             progress.value += 1
 
         ambiguous_missing = {}
-        
+
         for col in self.document["missing_value"]:
             if "summary" in self.document["missing_value"][col]:
                 summary = self.document["missing_value"][col]["summary"]
@@ -5534,11 +5253,10 @@ Now respond in the following format:
 
         container = widgets.VBox()
 
-
         col_to_radio = {}
 
         for item in ambiguous_missing:
-            
+
             label_text = f"<b>{item}</b>"
 
             label = widgets.HTML(value=label_text)
@@ -5551,7 +5269,7 @@ Now respond in the following format:
                 value=options[0],
                 layout=widgets.Layout(width='80%', align_items='flex-start')
             )
-            
+
             text_area = widgets.Textarea(
                 value='',
                 placeholder='Please provide the reason for missing values.',
@@ -5559,22 +5277,22 @@ Now respond in the following format:
                 disabled=False,
                 layout=widgets.Layout(display='none', width='100%')
             )
-            
+
             radio.text_area = text_area
             col_to_radio[item] = radio
             radio.observe(radio_change_handler, names='value')
-            
+
             item_container = widgets.VBox([label, radio, text_area])
             container.children += (item_container,)
 
         def submit_callback(btn):
             error_items = []
-            
+
             for col in col_to_radio:
                 radio = col_to_radio[col]
                 if radio.value == 'Other' and not radio.text_area.value.strip():
                     error_items.append(col)
-            
+
             if error_items:
                 for col in error_items:
                     print(f"\033[91m{col} reason can't be empty.\033[0m")
@@ -5583,7 +5301,7 @@ Now respond in the following format:
 
                 for col in col_to_radio:
                     radio = col_to_radio[col]
-                    
+
                     if radio.value == 'Other':
                         self.document["missing_value"][col]["summary"] = radio.text_area.value
                         if LOG_MESSAGE_HISTORY:
@@ -5594,12 +5312,10 @@ Now respond in the following format:
                         if LOG_MESSAGE_HISTORY:
                             self.document["missing_value"][col]["history"].append({"role": "user",
                                                                                      "content": radio.value})
-                
+
                 print("Submission received.")
                 next_step()
-                                                                          
 
-                        
         submit_btn = widgets.Button(
             description="Submit",
             button_style='',
@@ -5614,13 +5330,10 @@ Now respond in the following format:
         if self.viewer:
             submit_callback(submit_btn)
 
-        
-        
-
     def check_missing(self, column: str):
         if column not in self.df.columns:
             raise ValueError(f"Column {column} does not exist in the DataFrame.")
-        
+
         if "missing_value" not in self.document:
             self.document["missing_value"] = {}
 
@@ -5630,7 +5343,7 @@ Now respond in the following format:
             if self.document["missing_value"][column]:
                 write_log(f"Warning: {column} already exists in the document.")
                 return
-        
+
         df_col = self.df[column]
 
         if isinstance(df_col, pd.DataFrame):
@@ -5675,14 +5388,13 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
    "explanation": "Short explanation of the reason in 5 words",}}...]
 ```"""
 
-
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-        
+
         write_log(template)
         write_log("-----------------------------------")
         write_log(response['choices'][0]['message']['content'])
-        
+
         messages.append(response['choices'][0]['message'])
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -5690,7 +5402,6 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
         if LOG_MESSAGE_HISTORY:
             self.document["missing_value"][column]["history"] = messages
 
-    
     def recommend_testing(self, overwrite=False, once=False):
         next_step = self.complete
 
@@ -5709,7 +5420,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
         table_name = self.get_table_name()
 
         json_code = recommend_testing(basic_description, table_name)
-        
+
         progress.value += 1
 
         self.document["recommend_testing"] = json_code
@@ -5758,13 +5469,12 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
 
         container = widgets.VBox()
 
-
         col_to_radio = {}
 
         for item in unusual_columns:
 
             reasons = unusual_columns[item]
-            
+
             label_text = f"<b>{item}</b>: {reasons['Examples']}"
 
             label = widgets.HTML(value=label_text)
@@ -5776,7 +5486,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
                 value=options[0],
                 layout=widgets.Layout(width='80%', align_items='flex-start')
             )
-            
+
             text_area = widgets.Textarea(
                 value='',
                 placeholder='Please provide the reason for unusual values.',
@@ -5784,22 +5494,22 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
                 disabled=False,
                 layout=widgets.Layout(display='none', width='100%')
             )
-            
+
             radio.text_area = text_area
             col_to_radio[item] = radio
             radio.observe(radio_change_handler, names='value')
-            
+
             item_container = widgets.VBox([label, radio, text_area])
             container.children += (item_container,)
 
         def submit_callback(btn):
             error_items = []
-            
+
             for col in col_to_radio:
                 radio = col_to_radio[col]
                 if radio.value == 'Explanation:' and not radio.text_area.value.strip():
                     error_items.append(col)
-            
+
             if error_items:
                 for col in error_items:
                     print(f"\033[91m{col} explanation can't be empty.\033[0m")
@@ -5808,7 +5518,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
 
                 for col in col_to_radio:
                     radio = col_to_radio[col]
-                    
+
                     if radio.value == 'Explanation:':
                         self.document["unusual"][col]["summary"]["Explanation"] = radio.text_area.value
                         if LOG_MESSAGE_HISTORY:
@@ -5816,12 +5526,10 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
                                                                                             "content": radio.text_area.value})
                     else:
                         self.document["unusual"][col]["summary"]["Explanation"] = "Unclear"
-                
+
                 print("Submission received.")
                 next_step()
-                                                                          
 
-                        
         submit_btn = widgets.Button(
             description="Submit",
             button_style='',
@@ -5836,12 +5544,10 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
         if self.viewer:
             submit_callback(submit_btn)
 
-
-
     def check_unusual(self, col, meaning):
         if col not in self.df.columns:
             raise ValueError(f"Column {col} does not exist in the DataFrame.")
-        
+
         if "unusual" not in self.document:
             self.document["unusual"] = {}
 
@@ -5888,8 +5594,6 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
 
         char_limit = 300
         values_string = construct_string_with_limit(values_string, unique_values, char_limit)
-
-
 
         max_trials = 3
 
@@ -5939,13 +5643,13 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
                 for message in messages:  
                     write_log(message['content'])
                     write_log("-----------------------------------")
-                
+
                 processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
                 json_code = json.loads(processed_string)
 
                 if "Unusualness" not in json_code:
                     raise Exception("Unusualness is not in the json_code")
-                
+
                 if json_code["Unusualness"] and "Examples" not in json_code:
                     raise Exception("Unusualness is true but Examples is not in the json_code")
 
@@ -5959,7 +5663,6 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
                     raise e
                 continue
 
-
         self.document["unusual"][col]["summary"] = json_code
         if LOG_MESSAGE_HISTORY:
             self.document["unusual"][col]["history"] = messages
@@ -5971,17 +5674,17 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
     def check_consistency(self, col: str):
         if col not in self.df.columns:
             raise ValueError(f"Column {col} does not exist in the DataFrame.")
-        
+
         if "consistency" not in self.document:
             self.document["consistency"] = {}
-        
+
         if col not in self.document["consistency"]:
             self.document["consistency"][col] = {}
         else:
             if self.document["consistency"][col]:
                 write_log(f"Warning: {col} already exists in the document.")
                 return
-        
+
         result = process_dataframe(self.df, 'consistency.txt', col_name=col)
 
         processed_string = escape_json_string(result[-1]["content"])
@@ -6001,11 +5704,10 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
     def check_pattern(self, col: str):
         if col not in self.df.columns:
             raise ValueError(f"Column {col} does not exist in the DataFrame.")
-        
+
         if pd.api.types.is_numeric_dtype(self.df[col].dtype):
             write_log(f"Warning: {col} is a numeric column. Skipping...")
             return
-
 
         if "pattern" not in self.document:
             self.document["pattern"] = {}
@@ -6016,7 +5718,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
             if self.document["pattern"][col]:
                 write_log(f"Warning: {col} already exists in the document.")
                 return
-        
+
         result = process_dataframe(self.df, 'pattern.txt', col_name=col)
 
         processed_string = escape_json_string(result[-1]["content"])
@@ -6049,7 +5751,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
                 "description": column_info["meaning"]
             }
             yaml_dict["models"][0]["columns"].append(column_dict)
-            
+
         return yaml_dict
 
     def write_yml_to_disk(self, filepath: str):
@@ -6101,7 +5803,6 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
 
         if self.viewer:
             save_file_click(save_button)
-
 
 
 BOLD = '\033[1m'
@@ -6460,7 +6161,6 @@ cdm_tables = """1. PATIENT: Individual's healthcare identity hub, capturing demo
 """
 
 
-
 class CDMTransformation:
     def __init__(self, doc_df, log_file_path='data_log.txt'):
 
@@ -6471,8 +6171,6 @@ class CDMTransformation:
             self.doc_df = doc_df.doc_df
             self.pipeline = doc_df.generate_pipeline()
 
-        
-        
         self.document = {}
 
         self.log_file_path = log_file_path
@@ -6507,7 +6205,6 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             ("PATIENT", "PAYER_PLAN_PERIOD")
         ]
         self.edges = edges
-        
 
     def display_database(self):
         database_description = replace_asterisks_with_tags(self.database_description)
@@ -6540,7 +6237,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             bar_style='',
             orientation='horizontal'
         )
-        
+
         display(progress)
         return progress
 
@@ -6563,7 +6260,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
 
         progress = self.show_progress(1)
         source_table_description = self.doc_df.document["table_summary"]["summary"]
-        
+
         summary, messages = find_target_table(source_table_description)
         progress.value += 1
 
@@ -6574,24 +6271,12 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         for table in summary:
             if table not in self.tables:
                 raise ValueError(f"Table {table} does not exist in the CDM.")
-        
+
         self.document["main_table"]["summary"] = summary
         if LOG_MESSAGE_HISTORY: 
             self.document["main_table"]["history"] = messages
 
         next_step()
-
-
-
-
-
-
-
-
-
-        
-
-
 
     def concept_mapping(self, target_table):
 
@@ -6599,7 +6284,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
 
         if "concept_mapping" not in self.document:
             self.document["concept_mapping"] = {}
-        
+
         if target_table in self.document["concept_mapping"]:
             write_log(f"Warning: {target_table} already exists in the document for concept_mapping.")
         else:
@@ -6611,14 +6296,13 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             target_table_description = table_description[target_table]
             target_table_sample = table_samples[target_table]
             transform_reason = self.document["main_table"]["summary"][target_table]
-            
+
             summary, messages = get_concept_mapping(source_table_description, source_table_sample, target_table_description, target_table_sample, transform_reason)
             progress.value += 1
 
             for message in messages:
                 write_log(message['content'])
                 write_log("-----------------------------------")
-
 
             self.document["concept_mapping"][target_table] = {}
             self.document["concept_mapping"][target_table]["summary"] = summary
@@ -6628,7 +6312,6 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         summary = self.document["concept_mapping"][target_table]["summary"]
 
         print(f"""💡 {BOLD}Plan to map attributes from source to target table:{END}""")
-        
 
         def display_mapping(summary):
             for mapping in summary:
@@ -6665,7 +6348,6 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         def on_submit_button_clicked(b):
             clear_output(wait=True)
             next_step(target_table)
-            
 
         submit_button.on_click(on_submit_button_clicked)
 
@@ -6675,7 +6357,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         print(f"""    1. 💭 concept id: vocabulary standardization is under development""")
         print(f"""    2. 🔗 foreign key: table connection is under development""")
         print(f"""😊 Please send a feature request if you want them!""")    
-    
+
     def write_codes2(self, target_table):
 
         print("💻 Writing the codes...")
@@ -6689,9 +6371,9 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         for mapping in concept_mapping:
 
             target_attributes = mapping["target_columns"]
-            
+
             potential_attributes = attributes_description[target_table]
-            
+
             target_attributes = [attr for attr in target_attributes if attr in potential_attributes]
 
             if not target_attributes:
@@ -6705,7 +6387,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             reason = mapping["reason"]
 
             progress.value += 1
-            
+
             if "code_mapping" not in self.document:
                 self.document["code_mapping"] = {}
             else:
@@ -6714,7 +6396,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
                     continue
 
             source_table_description  = self.doc_df.get_basic_description(sample_cols=source_attributes, cols=source_attributes)
-            
+
             codes, messages = write_code_and_debug(key=key, 
                                                 source_attributes=source_attributes, 
                                                 source_table_description=source_table_description, 
@@ -6742,7 +6424,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             target_attributes = mapping["target_columns"]
 
             potential_attributes = attributes_description[target_table]
-            
+
             target_attributes = [attr for attr in target_attributes if attr in potential_attributes]
 
             if not target_attributes:
@@ -6752,15 +6434,13 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
 
             key = str(target_attributes) + str(source_attributes)
 
-
             code = self.document["code_mapping"][key]["summary"]
 
             transform_step = TransformationStep(name = "Column Transformation",
                                                         explanation=f"""Map from source table {BOLD}{str(source_attributes)}{END} to target table {BOLD}{str(target_attributes)}{END}""", 
                                                         codes=code, 
                                                         sample_df=sample_df)
-            
-            
+
             step_index = self.pipeline.add_new_step(transform_step)
             transform_step_indices.append(step_index)
 
@@ -6770,12 +6450,8 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             step_index = self.pipeline.add_new_step(project_step)
             project_step_indices.append(step_index)
 
-
-            
-
         concat_step = ConcatenateHorizontalStep()
         concat_step_idx = self.pipeline.add_new_step(concat_step)
-
 
         for transform_step_idx in transform_step_indices:
             self.pipeline.add_edge_by_index(final_node_idx, transform_step_idx)
@@ -6783,7 +6459,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         for i in range(len(transform_step_indices)):
             self.pipeline.add_edge_by_index(transform_step_indices[i], 
                                             project_step_indices[i])
-        
+
         for project_step_idx in project_step_indices:
             self.pipeline.add_edge_by_index(project_step_idx, concat_step_idx)
 
@@ -6791,7 +6467,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
 
     def print_codes(self):
         self.pipeline.print_codes()
-    
+
     def run_codes(self):
         return self.pipeline.run_codes()
 
@@ -6809,13 +6485,12 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
 
             progress = self.show_progress(1)
 
-
             source_table_description = self.doc_df.document["table_summary"]["summary"]
             source_table_sample = self.doc_df.get_sample_text()
             target_table_description = table_description[target_table]
             target_table_sample = table_samples[target_table]
             transform_reason = self.document["main_table"]["summary"][target_table]
-            
+
             summary, messages = decide_one_one(source_table_description, source_table_sample, target_table_description, target_table_sample, transform_reason)
             progress.value += 1
 
@@ -6825,7 +6500,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
 
             if not isinstance(summary["1:1"], bool):
                 raise ValueError(f"summary['1:1'] is not a boolean.")
-            
+
             self.document["one_to_one"][target_table] = {}
             self.document["one_to_one"][target_table]["summary"] = summary
             if LOG_MESSAGE_HISTORY:
@@ -6838,22 +6513,17 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         else:
             display(HTML("☹️ <b>Source doesn't have 1-1 row mapping with Target:</b> " + summary["reason"]))
             print("😊 M-N row mapping is under development. Please send a feature request!")
-        
-
 
     def decide_main_table(self):
 
         next_step = self.decide_one_one_table
 
-
         json_code = self.document["main_table"]["summary"]
-
 
         source_table_description = self.doc_df.document["table_summary"]["summary"]
         source_table_description = replace_asterisks_with_tags(source_table_description)
 
         display(HTML("<b>Source table</b> " + source_table_description))
-                    
 
         if json_code:
             print("💡 Below are potential tables to transform to.")
@@ -6909,7 +6579,6 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             clear_output(wait=True)
 
             next_step(main_table)
-            
 
         submit_button.on_click(on_submit_button_clicked)
 
@@ -6918,7 +6587,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         display(container)
 
     def write_codes(self):
-        
+
         next_step = self.complete
 
         print("💻 Writing the codes...")
@@ -6926,14 +6595,14 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         return
 
         concept_mapping = self.document["concept_mapping"]
-        
+
         source_concepts = self.doc_df.document["column_grouping"]["summary"]
 
         target_to_source = {}
 
         for key, value in concept_mapping.items():
             source_path = key.strip("[]").replace("'", "").split(", ")
-            
+
             if "summary" in value:
                 for summary_mapping in value["summary"]:
                     target_path = str(summary_mapping)
@@ -6950,14 +6619,14 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             source_attributes = get_value_from_path(source_concepts, source_path)
 
             progress.value += 1
-            
+
             if "code_mapping" not in self.document:
                 self.document["code_mapping"] = {}
             else:
                 if key in self.document["code_mapping"]:
                     write_log(f"Warning: code_mapping for {key} already exists in the document.")
                     continue
-            
+
             self.write_code_single(key, source_attributes, target_attributes)
 
         self.target_df = pd.DataFrame()    
@@ -6966,7 +6635,6 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             target_path = key.strip("[]").replace("'", "").split(", ")
             target_attributes = get_value_from_path(target_concepts, target_path)
             source_attributes = get_value_from_path(source_concepts, source_path)
-
 
             print(f"""Codes that map 
 # from source table {BOLD}{str(source_path)}{END} ({ITALIC}{str(source_attributes)}{END})
@@ -6979,14 +6647,11 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
             print("-" * 80) 
             print()
 
-            
             exec(code, globals())
             temp_target_df = etl(self.doc_df.df)
             for col in temp_target_df.columns:
                 self.target_df[col] = temp_target_df[col]
 
-        
-    
     def write_code_single(self, key, source_attributes, target_attributes):
 
         target_attributes = "\n".join(f"{idx + 1}. {target_attribute}: {attributes_description[target_attribute]}" for idx, target_attribute in enumerate(target_attributes))
@@ -7036,7 +6701,6 @@ def etl(source_df):
                 self.document["code_mapping"][key] = python_code
                 return
 
-
             error_message = f"""There is a bug in the code: {detailed_error_info}.
 First, study the error message and point out the problem.
 Then, fix the bug and return the codes in the following format:
@@ -7057,9 +6721,8 @@ def etl(source_df):
             write_log(response['choices'][0]['message']['content'])
 
             python_code = extract_python_code(response['choices'][0]['message']['content'])
-    
-        raise Exception("The code is not correct. Please try again.")
 
+        raise Exception("The code is not correct. Please try again.")
 
     def map_concept(self):
 
@@ -7083,7 +6746,7 @@ def etl(source_df):
                     descriptive_map.update(dict_to_descriptive_list(value, current_keys))
                 elif isinstance(value, list):
                     keys_path = '[' + ', '.join(current_keys) + ']'
-                    
+
                     attributes = ', '.join(value)
 
                     description = f"{keys_path}, with {len(value)} attributes: {attributes}"
@@ -7091,7 +6754,7 @@ def etl(source_df):
                     descriptive_map[str(current_keys)] = description
 
             return descriptive_map
-        
+
         source_concept = dict_to_descriptive_list(self.doc_df.document["column_grouping"]["summary"])
 
         progress = self.show_progress(len(source_concept))
@@ -7116,16 +6779,14 @@ def etl(source_df):
 
         concept_mapping = self.document["concept_mapping"]
 
-
-
         def display_mapping(concept_mapping, target_concepts, source_concepts):
             results = []
 
             for key, value in concept_mapping.items():
                 source_path = key.strip("[]").replace("'", "").split(", ")
-                
+
                 source_attributes = get_value_from_path(source_concepts, source_path)
-                
+
                 print(f"{BOLD}{'->'.join(source_path)}{END} ({ITALIC}{', '.join(source_attributes)}{END})")
                 if "summary" in value:
                     for summary_mapping in value["summary"]:
@@ -7136,9 +6797,8 @@ def etl(source_df):
                 else:
                     print(f"    Can't be used for any attributes.")
 
-
         display_mapping(concept_mapping, target_concepts, source_concepts)
-        
+
         submit_button = widgets.Button(
             description='Next',
             disabled=False,
@@ -7147,11 +6807,10 @@ def etl(source_df):
         )
 
         def on_submit_button_clicked(b):
-            
+
             clear_output(wait=True)
 
             next_step()
-            
 
         submit_button.on_click(on_submit_button_clicked)
 
@@ -7202,14 +6861,10 @@ Enumerate the target concepts that the source table can be potentially mapped to
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
-
-        
         if len(json_code) == 0:
             self.document["concept_mapping"][keys_path] = {}
             return
 
-
-        
         result = "\n".join(f'{idx + 1}. {path}: {get_value_from_path(target_concept, path)}' for idx, path in enumerate(json_code))
 
         template = f"""You have list of target concepts about {list(target_concept.keys())[0]}. Each concept is a list from category to specifics:
@@ -7231,9 +6886,9 @@ Return the remaining concepts in the following format (empty list if no).
 ```"""
 
         messages = [{"role": "user", "content": template}]
-        
+
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-        
+
         write_log(template)
         write_log("-----------------------------------")
         write_log(response['choices'][0]['message']['content'])
@@ -7241,15 +6896,10 @@ Return the remaining concepts in the following format (empty list if no).
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
-
-        
         if len(json_code) == 0:
             self.document["concept_mapping"][keys_path] = {}
             return
-        
 
-
-        
         result = "\n".join(f'{idx + 1}. {path}: {get_value_from_path(target_concept, path)}' for idx, path in enumerate(json_code))
 
         template = f"""You have list of target concepts about {list(target_concept.keys())[0]}. Each concept is a list from category to specifics. The right side is its attributes:
@@ -7266,34 +6916,28 @@ Then, enumerate the target concept where there exists attributes can be transfor
   ["{list(target_concept.keys())[0]}", ...]...]
 ```"""
         messages = [{"role": "user", "content": template}]
-        
+
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1) 
-        
+
         write_log(template)    
         write_log("-----------------------------------")
         write_log(response['choices'][0]['message']['content'])
-        
+
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
-
-
 
         self.document["concept_mapping"][keys_path] = {}
 
         if len(json_code) == 0:    
             return
-        
+
         self.document["concept_mapping"][keys_path]["summary"] = json_code
-    
 
 
-
-        
 def check_functional_dependency(df, determinant, dependent):
     groups = df.groupby(list(determinant))[dependent].nunique()
     is_functionally_dependent = (groups == 1).all()
     return is_functionally_dependent
-
 
 
 def combine_pipelines(pipelines):
@@ -7317,8 +6961,6 @@ def find_instance_index(instance_list, target_instance):
         if instance is target_instance:
             return idx
     return -1
-
-
 
 
 def find_final_node(steps, edges):
@@ -7363,8 +7005,6 @@ def find_source_node(nodes, edges):
         return None
 
 
-
-
 def find_path(edges, start, end, visited=None):
     if visited is None:
         visited = set()
@@ -7383,11 +7023,7 @@ def find_path(edges, start, end, visited=None):
     return False
 
 
-
-
-
 class TransformationPipeline:
-
 
     def __init__(self, steps, edges):
         if not isinstance(steps, list):
@@ -7415,7 +7051,7 @@ class TransformationPipeline:
                 if source_idx not in self.edges:
                     self.edges[source_idx] = []
                 self.edges[source_idx].append(target_idx)
-        
+
         else:
             self.edges = edges
 
@@ -7423,21 +7059,11 @@ class TransformationPipeline:
 
         self.cached_results = {}
 
-
-
     def get_step(self, idx):
         return self.steps[idx]
 
     def get_step_idx(self, step):
         return find_instance_index(self.steps, step)
-
-
-
-
-
-
-
-
 
     def validate_graph(self):
         if self._is_cyclic():
@@ -7485,12 +7111,11 @@ class TransformationPipeline:
 
         if call_back is None:
             call_back = self.display
-        
 
         def create_widget(instances):
 
             nodes = self.get_nodes()
-            
+
             dropdown = widgets.Dropdown(
                 options=nodes,
                 disabled=False,
@@ -7542,11 +7167,7 @@ class TransformationPipeline:
 
             display(dropdown, buttons)
 
-
         create_widget(self.steps)
-
-
-
 
     def get_codes(self):
         sorted_step_idx = topological_sort(self.steps, self.edges)
@@ -7563,13 +7184,12 @@ class TransformationPipeline:
 
         return codes
 
-    
     def run_codes(self, use_cache=True):
 
         sorted_step_idx = topological_sort(self.steps, self.edges)
-        
+
         for step_idx  in sorted_step_idx:
-        
+
             if use_cache and step_idx in self.cached_results:
                 continue
 
@@ -7586,20 +7206,17 @@ class TransformationPipeline:
                 raise ValueError(result)
             else:
                 self.cached_results[step_idx] = result
-        
+
         final_node_idx = self.find_final_node()
         if final_node_idx is None:
             raise ValueError("No final node to return")
         else:
             return self.cached_results[final_node_idx]
 
-
     def print_codes(self):
         codes = self.get_codes()
-        
-        print(highlight(codes, PythonLexer(), Terminal256Formatter()))
 
-    
+        print(highlight(codes, PythonLexer(), Terminal256Formatter()))
 
     def find_final_node(self):
         return find_final_node(self.steps, self.edges)
@@ -7611,7 +7228,7 @@ class TransformationPipeline:
 
     def find_source_node(self):
         return find_source_node(self.steps, self.edges)
-    
+
     def get_source_step(self):
         source_node = self.find_source_node()
         source_step = self.get_step(source_node)
@@ -7620,7 +7237,6 @@ class TransformationPipeline:
     def remove_final_node(self):
         if len(self.steps) <= 1:
             raise ValueError("The graph has less than or equal to 1 step. Cannot remove the final node.")
-
 
         final_node = self.find_final_node()
         if final_node is None:
@@ -7662,7 +7278,7 @@ class TransformationPipeline:
 
         if not isinstance(new_step, TransformationStep):
             raise ValueError("The new step must be an instance of TransformationStep.")
-        
+
         self.steps.append(new_step)
 
         new_step_idx = len(self.steps) - 1
@@ -7671,9 +7287,7 @@ class TransformationPipeline:
             if parent_node_idx not in self.edges:
                 self.edges[parent_node_idx] = []
             self.edges[parent_node_idx].append(new_step_idx)
-        
 
-    
     def add_step_right_after(self, new_step, parent_node_idx):
 
         if isinstance(parent_node_idx, TransformationStep):
@@ -7684,20 +7298,16 @@ class TransformationPipeline:
 
         if not isinstance(new_step, TransformationStep):
             raise ValueError("The new step must be an instance of TransformationStep.")
-        
+
         self.steps.append(new_step)
 
         new_step_idx = len(self.steps) - 1
-
 
         children = self.edges.get(parent_node_idx, [])
         self.edges[parent_node_idx] = [new_step_idx]
         self.edges[new_step_idx] = children
 
         self.cached_results = {}
-
-
-
 
     def add_step_to_final(self, new_step):
 
@@ -7707,9 +7317,6 @@ class TransformationPipeline:
 
         self.add_step(new_step, final_node)
 
-
-
-
     def add_edge(self, source_step, target_step):
         source_idx = find_instance_index(self.steps, source_step)
         target_idx = find_instance_index(self.steps, target_step)
@@ -7718,11 +7325,9 @@ class TransformationPipeline:
             raise ValueError("The source step is not in the graph.")
         if target_idx == -1:
             raise ValueError("The target step is not in the graph.")
-        
+
         self.add_edge_by_index(source_idx, target_idx)
 
-
-    
     def add_new_step(self, new_step):
         self.steps.append(new_step)
         return len(self.steps) - 1
@@ -7734,172 +7339,12 @@ class TransformationPipeline:
 
         self.cached_results = {}
 
-
     def start(self):
         pass
 
     def __repr__(self):
         self.display()
         return ""
-
-class Testing: 
-    def __init__(self, name = None, explanation="", codes="", sample_df=None):
-        if name is None:
-            self.name = "Testing Task"
-        else:
-            self.name = name
-        
-        self.codes = codes
-        self.explanation = explanation
-        self.sample_df = sample_df
-            
-
-    def run_codes(self, dfs, codes = None):
-
-        if codes is None:
-            codes = self.codes
-        
-        if isinstance(dfs, list):
-            df = dfs[0]
-        else:
-            df = dfs
-
-        input_df = df.copy()
-        try:
-            if 'transform' in globals():
-                del globals()['transform']
-            exec(codes, globals())
-            result = test(input_df) 
-            return result
-
-        except Exception: 
-            detailed_error_info = get_detailed_error_info()
-            return detailed_error_info
-    
-    def generate_codes(self, explanation=None):
-        if explanation is None:
-            explanation = self.explanation
-        template = f"""Testing task: Given input df, write python codes that test df and output True/False
-===
-Input Df:
-{self.sample_df.to_csv()}
-===
-Testing Requirement
-{explanation}
-
-Do the following:
-1. First reason about how to test
-2. Then fill in the python function, with detailed comments. 
-DONT change the function name and the return clause.
-
-{{
-    "reason": "To transform, we need to ...",
-    "codes": "def test(input_df):\\n   ...\\n    return True/False"
-}}
-"""
-        messages = [{"role": "user", "content": template}]
-    
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-        write_log(template)
-        write_log("-----------------------------------")
-        write_log(response['choices'][0]['message']['content'])
-
-        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = replace_newline(json_code)
-        json_code = json.loads(json_code)
-        
-        self.reason = json_code["reason"]
-        self.codes = json_code["codes"]
-    
-    def display(self):
-        raise NotImplementedError
-
-
-class TestColumnUnique(Testing):
-    def __init__(self, col_name, name = None, explanation="", codes="", sample_df=None):
-        super().__init__(name, explanation, codes, sample_df)
-        self.col_name = col_name
-
-        if name is None:
-            self.name = f"Test if {col_name} is unique"
-
-    def generate_test_unique_codes(self):
-        self.codes = """# Concatenate all dataframes horizontally
-def test(input_df):
-    return input_df["{col_name}"].is_unique"""
-
-class TestColumnNotNull(Testing):
-    def __init__(self, col_name, name=None, explanation="", codes="", sample_df=None):
-        super().__init__(name, explanation, codes, sample_df)
-        self.col_name = col_name
-
-        if name is None:
-            self.name = f"Test if {col_name} has no null"
-
-    def generate_test_not_null_codes(self):
-        self.codes = f"""def test(input_df):
-    return not input_df["{self.col_name}"].isnull().any()"""
-
-class TestColumnAcceptedValues(Testing):
-    def __init__(self, col_name, accepted_values, name=None, explanation="", codes="", sample_df=None):
-        super().__init__(name, explanation, codes, sample_df)
-        self.col_name = col_name
-        if not isinstance(accepted_values, list):
-            raise ValueError("Accepted values must be a list.")
-        self.accepted_values = accepted_values
-
-        if name is None:
-            self.name = f"Test {col_name} domain"
-
-    def generate_test_accepted_values_codes(self):
-        self.codes = f"""def test(input_df):
-    return input_df["{self.col_name}"].isin({self.accepted_values}).all()"""
-
-class TestColumnType(Testing):
-    def __init__(self, col_name, expected_type, name=None, explanation="", codes="", sample_df=None):
-        super().__init__(name, explanation, codes, sample_df)
-        self.col_name = col_name
-        self.expected_type = expected_type
-
-        if name is None:
-            self.name = f"Test {col_name} type"
-
-    def generate_test_column_type_codes(self):
-        self.codes = f"""def test(input_df):
-    return input_df["{self.col_name}"].dtype == "{self.expected_type}"""
-
-class TestColumnRange(Testing):
-    def __init__(self, col_name, min_value, max_value, name=None, explanation="", codes="", sample_df=None):
-        super().__init__(name, explanation, codes, sample_df)
-        self.col_name = col_name
-        self.min_value = min_value
-        self.max_value = max_value
-
-        if name is None:
-            self.name = f"Test {col_name} range"
-
-    def generate_test_range_codes(self):
-        self.codes = f"""def test(input_df):
-    if not pd.api.types.is_numeric_dtype(input_df["{self.col_name}"]):
-        return False
-    return input_df["{self.col_name}"].between({self.min_value}, {self.max_value}).all()"""
-
-
-class TestColumnRegex(Testing):
-    def __init__(self, col_name, regex_pattern, name=None, explanation="", codes="", sample_df=None):
-        super().__init__(name, explanation, codes, sample_df)
-        self.col_name = col_name
-        self.regex_pattern = regex_pattern
-
-        if name is None:
-            self.name = f"Test {col_name} regex pattern"
-
-    def generate_test_regex_codes(self):
-        self.codes = f"""def test(input_df):
-    return input_df["{self.col_name}"].str.match("{self.regex_pattern}").all()"""
-
-
 
 class TransformationStep:
 
@@ -7919,7 +7364,6 @@ class TransformationStep:
                 self.sample_df = sample_df
 
         self.reason = ""
-            
 
     def verify_infput(self, df):
         if not isinstance(df, pd.DataFrame):
@@ -7929,11 +7373,10 @@ class TransformationStep:
         if not isinstance(df, pd.DataFrame):
             raise ValueError(f"Output is not a pandas dataframe. It is {type(df)}.")
 
-
     def generate_codes(self, explanation=None):
         if explanation is None:
             explanation = self.explanation
-            
+
         template = f"""Transformation task: Given input df, write python codes that transform and ouput df.
 ===
 Input Df:
@@ -7953,7 +7396,7 @@ DONT change the function name, first line and the return clause.
 }}
 """
         messages = [{"role": "user", "content": template}]
-    
+
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         write_log(template)
@@ -7963,10 +7406,9 @@ DONT change the function name, first line and the return clause.
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
-        
+
         self.reason = json_code["reason"]
         self.codes = json_code["codes"]
-
 
     def postprocessing(self, df):
         return df
@@ -7975,14 +7417,13 @@ DONT change the function name, first line and the return clause.
 
         if codes is None:
             codes = self.codes
-        
+
         if isinstance(dfs, list):
             df = dfs[0]
         else:
             df = dfs
 
         input_df = df.copy()
-
 
         try:
             if 'transform' in globals():
@@ -7995,9 +7436,6 @@ DONT change the function name, first line and the return clause.
         except Exception: 
             detailed_error_info = get_detailed_error_info()
             return detailed_error_info
-
-
-
 
     def edit_widget(self, callbackfunc=None):
 
@@ -8013,7 +7451,7 @@ DONT change the function name, first line and the return clause.
 
         def on_submit_clicked(b):
             print("Generating codes...")
-            
+
             submit_spinner.value = spinner_value
             self.generate_codes(explanation = explanation_text.value)
 
@@ -8048,11 +7486,9 @@ DONT change the function name, first line and the return clause.
                 output_df_widget.value = output.to_html(border=0)
             run_spinner.value = ""
             print("Done")
-                
 
         run_button.on_click(on_run_clicked)
         run_box = widgets.HBox([run_button, run_spinner])
-
 
         panel_layout = Layout(width='400px')
 
@@ -8071,7 +7507,7 @@ DONT change the function name, first line and the return clause.
             placeholder='Output DataFrame will be shown here',
             description='',
         )
-        
+
         error_label = widgets.HTML(layout=Layout(overflow='auto'))
 
         save_button = widgets.Button(description="Save the Step")
@@ -8113,10 +7549,10 @@ DONT change the function name, first line and the return clause.
 
         if hasattr(self, 'sample_df'):
             display(HTML(f"<hr><b>Example Input</b>: {self.sample_df.to_html()}"))
-            
+
             if not hasattr(self, 'output_sample_df'):
                 self.output_sample_df = self.run_codes(self.sample_df)
-            
+
             display(HTML(f"<hr><b>Example Output</b>: {self.output_sample_df.to_html()}"))
 
     def __repr__(self):
@@ -8130,7 +7566,6 @@ DONT change the function name, first line and the return clause.
     def get_codes(self, target_id=0, source_ids=[]):
         source_ids_str = ", ".join([f"df_{source_id}" for source_id in source_ids])
         return self.codes + "\n\n" + f"df_{target_id} = transform({source_ids_str})\n\n"
-
 
 
 class GeoAggregationStep(TransformationStep):
@@ -8284,7 +7719,6 @@ def transform(*dfs):
     return pd.concat(dfs, axis=1)"""
 
 
-
 class SourceStep(TransformationStep):
     def __init__(self, doc_df, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -8335,7 +7769,6 @@ class RemoveMissingValueStep(TransformationStep):
         if 'name' not in kwargs:
             self.name = f"Remove NULL for {col}"
 
-
     def generate_remove_missing_value_codes(self):
         self.codes = f"""# Remove the rows with missing values in column {self.col}
 def transform(df):
@@ -8343,102 +7776,11 @@ def transform(df):
     output_df = output_df.dropna(subset=["{self.col}"])
     return output_df"""
 
-
     def generate_missing_value_samples(self):
         sample_df1 = self.sample_df[self.sample_df[self.col].notnull()][:2]
         sample_df2 = self.sample_df[self.sample_df[self.col].isnull()][:2]
         sample_df = pd.concat([sample_df1, sample_df2])
         self.sample_df = sample_df
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-    
-
-
-
-
-
-
-    
-
-
-
-
-
-
-        
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-        
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-    
-
-
-
-
-
-
-    
 
 
 class GeoShapeCustomTransformStep(TransformationStep):
@@ -8612,7 +7954,7 @@ class SourceShapeStep(GeoShapeStep):
         super().__init__(*args, **kwargs)
         self.explanation = ""
         self.shape_data = shape_data
-        
+
         if "table_name" in shape_data.meta:
             self.name = shape_data.meta["table_name"]
         else:
@@ -8623,10 +7965,10 @@ class SourceShapeStep(GeoShapeStep):
 
     def run_codes(self, dfs):
         return self.shape_data
-    
+
     def display(self):
         self.shape_data.display()
-    
+
     def edit_widget(self, callbackfunc=None):
         self.display()
         print("\033[91mEdit Source File is under development!\033[0m")
@@ -8636,7 +7978,7 @@ class SourceShapeStep(GeoShapeStep):
         def on_return_clicked(b):
             clear_output(wait=True)
             callbackfunc(self)
-        
+
         return_button.on_click(on_return_clicked)
 
         display(return_button)
@@ -8652,7 +7994,6 @@ class SourceShapeStep(GeoShapeStep):
             return f"df_{str(target_id)} = pd.read_csv(ADD_YOUR_SOURCE_FILE_PATH_HERE) \n\n"
 
 
-
 class RemoveColumnsStep(TransformationStep):
 
     def __init__(self, col_indices, *args, **kwargs):
@@ -8661,14 +8002,13 @@ class RemoveColumnsStep(TransformationStep):
 
         if self.explanation == "":
             self.explanation = f"""Remove columns"""
-        
+
         self.generate_remove_columns_codes()
         self.generate_remove_columns_samples()
-        
+
         if 'name' not in kwargs:
             self.name = f"Remove Columns"
-        
-    
+
     def generate_remove_columns_codes(self):
         if isinstance(self.col_indices, list):
             cols_indices_str = str(self.col_indices)
@@ -8688,8 +8028,6 @@ def transform(df):
     def generate_remove_columns_samples(self):
         sample_df = self.sample_df[:4]
         self.sample_df = sample_df
-
-
 
 
 class RemoveRowsStep(TransformationStep):
@@ -8807,7 +8145,6 @@ def transform(df):
         self.sample_df = sample_df
 
 
-
 class RegexTransformationStep(TransformationStep):
 
     def __init__(self, col, unique_values, reason, *args, **kwargs):
@@ -8830,14 +8167,13 @@ class RegexTransformationStep(TransformationStep):
         unusual_values = self.labeled_result["unusual_values"]
         normal_values = self.labeled_result["normal_values"]
 
-
         self.sample_df[self.col] = self.sample_df[self.col].astype(str)
 
         sample_df1 = self.sample_df[self.sample_df[self.col].isin(normal_values)][:2]
         sample_df2 = self.sample_df[self.sample_df[self.col].isin(unusual_values)][:2]
         sample_df = pd.concat([sample_df1, sample_df2])
         self.sample_df = sample_df
-        
+
         print("Generating codes...")
 
         progress = show_progress(1)
@@ -8862,7 +8198,7 @@ def transform(df):
     return output_df"""
 
             self.explanation = f"""Remove the unusual values from column {self.col} by removing the rows that don't match the regex pattern: {regex_pattern}"""
-        
+
         else:
             unusual_values = self.labeled_result["unusual_values"]
             self.codes = f"""# Clean column {self.col} by removing the unusual rows with unusual values
@@ -8879,7 +8215,6 @@ def transform(df):
 
     def parent_edit_widget(self, callbackfunc=None):
         super().edit_widget(callbackfunc)
-
 
     def edit_widget(self, callbackfunc=None):
 
@@ -8902,7 +8237,7 @@ def transform(df):
 
             for email in result['normal_values'] + result['unusual_values']:
                 is_normal = email in result['normal_values']
-                
+
                 label = widgets.Label(value=email)
                 grid_items.append(label)
 
@@ -8939,15 +8274,14 @@ def transform(df):
                         updated_result['normal_values'].append(email)
                     else:
                         updated_result['unusual_values'].append(email)
-                
+
                 self.labeled_result = updated_result
-                
+
                 self.generate_regex_codes()
 
                 print("Done")
 
                 self.parent_edit_widget(callbackfunc)
-
 
             submit_button.on_click(on_submit_button_clicked)
 
@@ -8956,7 +8290,6 @@ def transform(df):
         print("Please verify the unusual values...")
 
         create_tabular_widgets_toggle(self.labeled_result)
-
 
 
 class ColumnRename(TransformationStep):
@@ -8982,7 +8315,7 @@ class ColumnRename(TransformationStep):
         rename_map_str += "\n    }"
 
         self.explanation += rename_map_str
-        
+
         self.generate_rename_codes()
 
     def verify_input(self, df):
@@ -8990,7 +8323,7 @@ class ColumnRename(TransformationStep):
 
         if len(self.rename_map) != len(set(self.rename_map.keys())):
             raise ValueError("Some old column names are duplicated.")
-        
+
         if len(self.rename_map) != len(set(self.rename_map.values())):
             raise ValueError("Some new column names are duplicated.")
 
@@ -9001,7 +8334,7 @@ class ColumnRename(TransformationStep):
     def generate_rename_codes(self):
 
         valid_renaming = {}
-        
+
         for old_name, new_name in self.rename_map.items():
             if old_name != new_name:
                 valid_renaming[old_name] = new_name
@@ -9028,11 +8361,6 @@ def transform(df):
     df.columns = new_column_names
     return df
 """
-
-
-
-        
-
 
 
 class DocumentedDatabase:
@@ -9434,18 +8762,6 @@ def df_row_to_column_value(df, idx=0, exclude_columns=[]):
 
     return new_df
 
-def extract_json_code_safe(s):
-    s_stripped = s.strip()
-    if (s_stripped.startswith('{') and s_stripped.endswith('}')) or \
-       (s_stripped.startswith('[') and s_stripped.endswith(']')):
-        return s_stripped
-    return extract_json_code(s_stripped)
-
-def extract_json_code(s):
-    import re
-    pattern = r"```json(.*?)```"
-    match = re.search(pattern, s, re.DOTALL)
-    return match.group(1).strip() if match else None
 
 def compute_cluster(df, match="matches"):
     clusters = {}
@@ -9895,7 +9211,6 @@ def generate_html_from_json(json_var):
     return html_output
 
 
-
 def generate_page_clusters(df, clusters, i=0, js=[], exclude_columns=['label', 'index_ids', 'embedding', 'matches'], match_col='matches'):
     input_data_html = df_row_to_column_value(df, idx=i, exclude_columns=exclude_columns).to_html(index=False)
     similar_data_html = ""
@@ -10051,7 +9366,7 @@ def CRS_select(callbackfunc=None):
     text_input1 = widgets.Text(description='', indent=False)
 
     box1 = widgets.VBox([text_input1])
-    
+
     projection_label = widgets.Label(value='Projection Parameters', style={'font_weight': 'bold'})
     projection_description = widgets.Label(value='Select the type of map projection.')
 
@@ -10094,7 +9409,6 @@ def CRS_select(callbackfunc=None):
         false_northing.disabled = not uses['false_easting_northing']
         scale_factor.disabled = not uses['scale_factor']
 
-
     proj_dropdown.observe(update_visibility, 'value')
 
     projection_group = widgets.VBox([projection_label, projection_description, proj_dropdown])
@@ -10106,8 +9420,6 @@ def CRS_select(callbackfunc=None):
     lon_0 = widgets.FloatText(value=0, description='lon_0:')
 
     central_meridian_group = widgets.VBox([central_meridian_label, central_meridian_description, lat_0, lon_0])
-
-
 
     standard_parallels_label = widgets.Label(value='Standard Parallels', style={'font_weight': 'bold'})
     standard_parallels_description = widgets.Label(value='Standard parallels for accurate map scale.')
@@ -10127,13 +9439,11 @@ def CRS_select(callbackfunc=None):
     ]
     ellps_dropdown = widgets.Dropdown(options=ellps_options, value='WGS84', description='Ellipsoid:')
 
-
     datum_options = [
         'WGS84', 'NAD83', 'NAD27', 'ED50', 'OSGB36', 'GDA94', 'Pulkovo1942', 
         'AGD66', 'AGD84', 'SAD69', 'Ireland1965', 'NZGD49', 'ATS77', 'JGD2000'
     ]
     datum_dropdown = widgets.Dropdown(options=datum_options, value='WGS84', description='Datum:')
-
 
     ellipsoid_datum_group = widgets.VBox([ellipsoid_datum_label, ellipsoid_datum_description, ellps_dropdown, datum_dropdown])
 
@@ -10145,14 +9455,12 @@ def CRS_select(callbackfunc=None):
 
     false_easting_northing_group = widgets.VBox([false_easting_northing_label, false_easting_northing_description, false_easting, false_northing])
 
-
     scale_factor_label = widgets.Label(value='Scale Factor', style={'font_weight': 'bold'})
     scale_factor_description = widgets.Label(value='Multiplier to reduce or increase the scale of the projection.')
 
     scale_factor = widgets.FloatText(value=1.0, description='+k:')
 
     scale_factor_group = widgets.VBox([scale_factor_label, scale_factor_description, scale_factor])
-
 
     submit_button = widgets.Button(description='Create CRS')
 
@@ -10188,7 +9496,6 @@ def CRS_select(callbackfunc=None):
 
     submit_button.on_click(on_submit_clicked)
 
-
     update_visibility()
 
     box2 = widgets.VBox([projection_group, 
@@ -10203,7 +9510,7 @@ def CRS_select(callbackfunc=None):
     box2.layout.display = 'none'
 
     def update_widgets(change):
-        
+
         if change['owner'] == checkbox1:
             checkbox2.value = not checkbox1.value
             box1.layout.display = 'none' if not checkbox1.value else 'flex'
@@ -10219,16 +9526,10 @@ def CRS_select(callbackfunc=None):
     display(checkbox1, box1, checkbox2, box2, submit_button)
 
 
-
-
 def lightweight_copy(df, columns_to_copy=[]):
-    
-    
-    
-    
-    
+
     new_df = pd.DataFrame(index=df.index, columns=df.columns)
-    
+
     for col in df.columns:
         if col in columns_to_copy:
             new_df[col] = df[col].copy()
@@ -10236,7 +9537,6 @@ def lightweight_copy(df, columns_to_copy=[]):
             new_df[col] = df[col]
 
     return new_df
-
 
 
 def plot_efficient_grid(df, x_col, y_col, value_col=None):
@@ -10456,22 +9756,20 @@ def create_geotransform(bounds, resolution):
 Current resolution: {resolution}
 Geometry bounds: {bounds}                   
 The width and height of the raster must be at least 1 pixel.""")
-    
+
     transform = from_origin(bounds[0], bounds[3], resolution, resolution)
     return transform
 
 
-
-
 def rasterize_gdf(gdf, transform=None, resolution=None, dtype='uint8', nodata=0):
-    
+
     if transform is None:
         if resolution is None:
             raise ValueError("Either transform or resolution must be provided.")
         bounds = gdf.total_bounds
         width = int((bounds[2] - bounds[0]) / resolution)
         height = int((bounds[3] - bounds[1]) / resolution)
-        
+
         transform = create_geotransform(bounds, resolution)
 
     else:
@@ -10509,21 +9807,6 @@ The width and height of the raster must be at least 1 pixel.""")
     return rasterized, meta
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def standardize_crs_bbox(target_transform, bbox):
     left, bottom, right, top = bbox
 
@@ -10540,7 +9823,6 @@ def read_raster_to_numpy(raster, window=None):
     all_bands = raster.read(window=window)
 
     return all_bands
-
 
 
 def get_meta_from_gdf(gdf):
@@ -10564,7 +9846,6 @@ def write_raster_to_disk(self, meta, output_path):
         for i in range(1, self.raster.count + 1):
             data = self.raster.read(i)
             dst.write(data, i)
-
 
 
 def resample_raster_to_transform(raster, target_transform, resampling_method=Resampling.bilinear):
@@ -10682,7 +9963,6 @@ def resample_3d_array(np_array, src_meta, target_transform, resampling_method, n
     return resampled_array, resampled_meta
 
 
-
 def reproject_raster(raster, meta, target_crs):
 
     src_crs = meta['crs']
@@ -10714,9 +9994,8 @@ def reproject_raster(raster, meta, target_crs):
             dst_transform=new_transform,
             dst_crs=target_crs,
             resampling=Resampling.nearest)
-    
-    return new_raster, new_meta
 
+    return new_raster, new_meta
 
 
 def reproject_array(np_array, meta, target_crs):
@@ -10836,7 +10115,7 @@ class ShapeData:
         elif df is not None:
             if x_att is None or y_att is None:
                 raise ValueError("x_att and y_att must be provided if df is provided")
-            
+
             self.df = lightweight_copy(df)
             self.x_att = x_att
             self.y_att = y_att
@@ -10861,15 +10140,15 @@ class ShapeData:
             raise ValueError("Not implemented yet")
 
     def get_band_names(self):
-        
+
         if "band_names" in self.meta.keys():
             return self.meta["band_names"]
 
         table_name = self.get_name()
-        
+
         if hasattr(self, 'raster'):
             return [f"{table_name}_band_{i+1}" for i in range(self.raster.count)]
-        
+
         if hasattr(self, 'np_array'):
             if self.np_array.ndim == 2:
                 return [table_name]
@@ -10902,7 +10181,7 @@ Its nodata value is {self.raster.nodata}. Its crs is {self.raster.crs.to_string(
             nodata_summary = ""
             if "nodata" in self.meta.keys():
                 nodata_summary = f"Its nodata value is {self.meta['nodata']}."
-            
+
             np_array = self.np_array
             min_value = np.nanmin(np_array)
             max_value = np.nanmax(np_array)
@@ -10927,17 +10206,16 @@ The attribute for x is {self.x_att}. The attribute for y is {self.y_att}.
 Below are the first 2 rows of the df:
 {self.df.head(2)}"""
 
-
     def get_type(self):
         if hasattr(self, 'gdf'):
             return "gdf"
-        
+
         elif hasattr(self, 'raster'):
             return "raster"
-        
+
         elif hasattr(self, 'np_array'):
             return "np_array"
-        
+
         elif hasattr(self, 'df'):
             return "df"
 
@@ -10969,14 +10247,10 @@ Below are the first 2 rows of the df:
             meta = self.meta
             save_np_array_as_raster(np_array, output_path, meta)
 
-
         elif hasattr(self, 'df'):
             df = self.df
             meta = self.meta
             df.to_csv(output_path, index=False)
-
-        
-
 
     def get_data(self):
         if hasattr(self, 'gdf'):
@@ -10988,12 +10262,11 @@ Below are the first 2 rows of the df:
         elif hasattr(self, 'df'):
             return self.df
 
-    
     def apply_window(self, window):
 
         if hasattr(self, 'gdf'):
             pass
-        
+
         elif hasattr(self, 'raster'):
             np_array = read_raster_to_numpy(self.raster, window=window)
             return ShapeData(np_array=np_array, meta=self.meta)
@@ -11007,10 +10280,10 @@ Below are the first 2 rows of the df:
     def get_crs(self):
         if hasattr(self, 'gdf'):
             return self.gdf.crs.to_string()
-        
+
         elif hasattr(self, 'raster'):
             return self.raster.crs.to_string()
-        
+
         elif hasattr(self, 'np_array'):
             if "crs" not in self.meta.keys():
                 return ""
@@ -11020,7 +10293,7 @@ Below are the first 2 rows of the df:
                     return crs
                 else:
                     return crs.to_string()
-                
+
         elif hasattr(self, 'df'):
             if "crs" not in self.meta.keys():
                 return ""
@@ -11037,11 +10310,11 @@ Below are the first 2 rows of the df:
 
         if are_crs_equivalent(source_crs, target_crs):
             return self
-        
+
         if hasattr(self, 'gdf'):
             gdf = standardize_crs_geo_df(target_crs, self.gdf)
             return ShapeData(gdf=gdf, meta=self.meta)
-        
+
         elif hasattr(self, 'raster'):
             new_raster, new_meta = reproject_raster(self.raster, self.meta, target_crs)
             return ShapeData(raster=new_raster, meta=new_meta)
@@ -11051,7 +10324,7 @@ Below are the first 2 rows of the df:
             return ShapeData(np_array=new_np_array, meta=new_meta)
 
         elif hasattr(self, 'df'):
-            
+
             source_transform = self.get_geo_transform()
 
             new_shape_data = self.row_column_to_x_y()
@@ -11059,20 +10332,18 @@ Below are the first 2 rows of the df:
             source_crs = self.get_crs()
 
             transformer = Transformer.from_crs(source_crs, target_crs, always_xy=True)
-            
+
             new_shape_data.df[new_shape_data.x_att], new_shape_data.df[new_shape_data.y_att] = transformer.transform(new_shape_data.df[new_shape_data.x_att].values, new_shape_data.df[new_shape_data.y_att].values)
 
             new_shape_data.meta['crs'] = target_crs
 
-            
             return new_shape_data
-
 
     def row_column_to_x_y(self):
 
         if hasattr(self, 'gdf'):
             raise ValueError("not implemented yet")
-        
+
         elif hasattr(self, 'raster'):
             raise ValueError("this is only for vector data")
 
@@ -11084,14 +10355,14 @@ Below are the first 2 rows of the df:
 
             if source_transform is None:
                 return self
-            
+
             x_att = self.df[self.x_att]
             y_att = self.df[self.y_att]
 
             source_matrix = np.array([[source_transform.a, source_transform.b, source_transform.c],
                                         [source_transform.d, source_transform.e, source_transform.f],
                                         [0, 0, 1]])
-            
+
             x_att, y_att = apply_affine_transform(source_matrix, x=x_att, y=y_att)
 
             new_df = lightweight_copy(self.df)
@@ -11107,7 +10378,7 @@ Below are the first 2 rows of the df:
     def is_aggregated(self):
         if hasattr(self, 'gdf'):
             raise ValueError("not implemented yet")
-        
+
         elif hasattr(self, 'raster'):
             return True
 
@@ -11123,10 +10394,10 @@ Below are the first 2 rows of the df:
     def set_aggregated(self, aggregated):
         if hasattr(self, 'gdf'):
             raise ValueError("not implemented yet")
-        
+
         elif hasattr(self, 'raster'):
             raise ValueError("this is only for df")
-        
+
         elif hasattr(self, 'np_array'):
             raise ValueError("this is only for df")
 
@@ -11158,7 +10429,7 @@ Below are the first 2 rows of the df:
 
         if resolution is not None and target_geo_transform is not None:
             raise ValueError("resolution and target_geo_transform cannot be both provided")
-        
+
         if resolution is None and target_geo_transform is None:
             raise ValueError("resolution and target_geo_transform cannot be both None")
 
@@ -11168,7 +10439,7 @@ Below are the first 2 rows of the df:
 
         if hasattr(self, 'gdf'):
             raise ValueError("not implemented yet")
-        
+
         elif hasattr(self, 'raster'):
             raise ValueError("this is only for vector data")
 
@@ -11199,8 +10470,7 @@ Below are the first 2 rows of the df:
             new_meta['transform'] = target_geo_transform
 
             return ShapeData(df=new_df, x_att=self.x_att, y_att=self.y_att, meta=new_meta)
-            
-    
+
     def resample_to_target_transform(self, geo_transform = None, resolution = None):
 
         source_transform = self.get_geo_transform()
@@ -11215,7 +10485,7 @@ Below are the first 2 rows of the df:
         if hasattr(self, 'gdf'):
             np_array, new_meta = rasterize_gdf(self.gdf, transform=geo_transform, resolution=resolution)
             return ShapeData(np_array=np_array, meta=new_meta)
-        
+
         elif hasattr(self, 'raster'):
             np_array,  new_meta = resample_raster_to_transform(self.raster, geo_transform)
             return ShapeData(np_array=np_array, meta=new_meta)
@@ -11226,7 +10496,7 @@ Below are the first 2 rows of the df:
             return ShapeData(np_array=new_np_array, meta=new_meta)
 
         elif hasattr(self, 'df'):
-            
+
             x_att = self.df[self.x_att]
             y_att = self.df[self.y_att]
 
@@ -11243,7 +10513,7 @@ Below are the first 2 rows of the df:
                 width = int((bounds[2] - bounds[0]) / resolution)
                 height = int((bounds[3] - bounds[1]) / resolution)
                 target_transform = create_geotransform(bounds, resolution)
-   
+
             target_matrix = np.array([[target_transform.a, target_transform.b, target_transform.c],
                                     [target_transform.d, target_transform.e, target_transform.f],
                                     [0, 0, 1]])
@@ -11258,7 +10528,6 @@ Below are the first 2 rows of the df:
             new_meta = self.meta.copy()
             new_meta['transform'] = target_transform
 
-
             new_shape_data = ShapeData(df=new_df, x_att=self.x_att, y_att=self.y_att, meta=new_meta)
             if self.is_aggregated():
                 print("⚠️ Warning: resampling aggregated data is not implemented yet")
@@ -11267,7 +10536,6 @@ Below are the first 2 rows of the df:
             return new_shape_data
 
     def load_raster(self, raster_path):
-
 
         raster = rasterio.open(raster_path)
 
@@ -11301,7 +10569,7 @@ Below are the first 2 rows of the df:
                     invert = False
 
                 image_b64 = plot_df_with_geo(self.df, self.x_att, self.y_att, invert=invert, value_att=value_att)
-            
+
         html_img = f'<img src="data:image/png;base64,{image_b64}" width="400"/>'
         return html_img
 
@@ -11329,7 +10597,7 @@ Below are the first 2 rows of the df:
             display(self.gdf.head())
         if hasattr(self, 'df'):
             display(self.df.head())
-        
+
         display(HTML(html_img))
 
     def get_geo_transform(self):
@@ -11338,15 +10606,15 @@ Below are the first 2 rows of the df:
             if 'transform' not in self.meta.keys():
                 return None
             return self.meta['transform']
-        
+
         elif hasattr(self, 'raster'):
             return self.raster.transform
-        
+
         elif hasattr(self, 'np_array'):
             if 'transform' not in self.meta.keys():
                 return None
             return self.meta['transform']
-        
+
         elif hasattr(self, 'df'):
             if 'transform' not in self.meta.keys():
                 return None
@@ -11356,13 +10624,13 @@ Below are the first 2 rows of the df:
 
         if hasattr(self, 'gdf'):
             return get_geodataframe_bbox(self.gdf)
-        
+
         elif hasattr(self, 'raster'):
             return get_bounding_box(self.raster)
-        
+
         elif hasattr(self, 'np_array'):
             return get_raster_bounding_box(self.meta)
-        
+
         elif hasattr(self, 'df'):
             min_x = self.df[self.x_att].min()
             max_x = self.df[self.x_att].max()
@@ -11387,31 +10655,31 @@ Below are the first 2 rows of the df:
 
         if hasattr(self, 'gdf'):
             return self.gdf.height, self.gdf.width
-        
+
         elif hasattr(self, 'raster'):
             return self.raster.height, self.raster.width
-        
+
         elif hasattr(self, 'np_array'):
             return self.meta['height'], self.meta['width']
-        
+
         elif hasattr(self, 'df'):
             pass
 
     def crop_by_bounding_box(self, bbox):
-            
+
         if hasattr(self, 'gdf'):
             raise ValueError("Not implemented yet")
-        
+
         elif hasattr(self, 'raster'):
             window = standardize_crs_bbox(self.raster.transform, bbox)
             np_array, new_meta = crop_raster_by_window(self.raster, self.meta, window)
             return ShapeData(np_array=np_array, meta=new_meta)
-        
+
         elif hasattr(self, 'np_array'):
             window = standardize_crs_bbox(self.meta['transform'], bbox)
             np_array, new_meta = crop_np_array_by_window(self.np_array, self.meta, window)
             return ShapeData(np_array=np_array, meta=new_meta)
-        
+
         elif hasattr(self, 'df'):
             new_shape = self.row_column_to_x_y()
 
@@ -11419,16 +10687,15 @@ Below are the first 2 rows of the df:
 
             return ShapeData(df=new_df, x_att=new_shape.x_att, y_att=new_shape.y_att, meta=new_meta)
 
-    
     def crop(self, height, width):
 
         if hasattr(self, 'gdf'):
             raise ValueError("Not implemented yet")
-        
+
         elif hasattr(self, 'raster'):
             np_array, new_meta = crop_raster(self.raster, self.meta, height, width)
             return ShapeData(np_array=np_array, meta=new_meta)
-        
+
         elif hasattr(self, 'np_array'):
             new_np_array = crop_np_array(self.np_array, height, width)
             new_meta = self.meta.copy()
@@ -11443,10 +10710,10 @@ Below are the first 2 rows of the df:
     def get_np_array(self):
         if hasattr(self, 'gdf'):
             raise ValueError("Can't get np_array from gdf")
-        
+
         elif hasattr(self, 'raster'):
             return read_raster_to_numpy(self.raster)
-        
+
         elif hasattr(self, 'np_array'):
             return self.np_array
 
@@ -11467,10 +10734,10 @@ Below are the first 2 rows of the df:
     def __repr__(self):
         if hasattr(self, 'gdf'):
             print("This is a GeoDataFrame")
-        
+
         elif hasattr(self, 'raster'):
             print("This is a raster of shape", self.raster.shape)
-        
+
         elif hasattr(self, 'np_array'):
             print("This is a numpy array of shape", self.np_array.shape)
 
@@ -11479,7 +10746,7 @@ Below are the first 2 rows of the df:
 
         if hasattr(self, 'meta'):
             print("Meta: ", self.meta)
-        
+
         self.display()
 
         return ""
@@ -11497,9 +10764,9 @@ Below are the first 2 rows of the df:
     def get_shape(self):
         if hasattr(self, 'cleaner'):
             return self.cleaner.run_codes()
-        
+
         return self
-    
+
 
 def crop_df_based_on_bbox(df, meta, x_att, y_att, bbox):
 
@@ -11553,7 +10820,6 @@ def crop_raster(raster, meta, height, width):
     return cropped_data, new_meta
 
 
-
 def crop_raster_by_window(raster, meta, window):
 
     cropped_data = raster.read(window=window)
@@ -11601,7 +10867,6 @@ def crop_np_array_by_window(np_array, meta, window):
     return cropped_array, new_meta
 
 
-
 def crop_np_array(np_array, height, width):
     if np_array.ndim == 2:
         return np_array[:height, :width]
@@ -11624,7 +10889,7 @@ def extract_values_by_indices(main_array, row_indices, col_indices):
         result = np.full((1, len(row_indices)), np.nan)
         result[0, valid_indices] = main_array[row_indices[valid_indices], col_indices[valid_indices]]
         return result
-    
+
     elif main_array.ndim == 3:
         result = np.full((main_array.shape[0], len(row_indices)), np.nan)
 
@@ -11634,13 +10899,6 @@ def extract_values_by_indices(main_array, row_indices, col_indices):
         return result
     else: 
         raise ValueError("The input array must be 2D or 3D")
-
-
-
-
-
-
-    
 
 
 def to_target_shape_data(source_shape_data, target_shape_data, semi_join=True):
@@ -11749,7 +11007,6 @@ def plot_bounding_boxes(bounding_boxes):
     plt.show()
 
 
-
 def validate_bounding_box(bbox, is_longlat=False):
 
     min_x, min_y, max_x, max_y = bbox
@@ -11773,7 +11030,6 @@ def validate_bounding_box(bbox, is_longlat=False):
             raise ValueError(f"Minimum y-coordinate {min_y} is not less than maximum y-coordinate {max_y}.")
 
 
-
 def is_valid_geo_transform(original_transform, new_transform, data_bounds=None):
 
     if not all(isinstance(t, Affine) for t in [original_transform, new_transform]):
@@ -11793,10 +11049,6 @@ def is_valid_geo_transform(original_transform, new_transform, data_bounds=None):
     return True
 
 
-
-
-
-
 class EmbeddingSearcher:
     def __init__(self, df, embedding_col='embedding'):
         self.df = df
@@ -11806,7 +11058,7 @@ class EmbeddingSearcher:
 
     def _create_index(self):
         embeddings = np.vstack(self.df[self.embedding_col].values)
-        
+
         d = embeddings.shape[1]
 
         base_index = faiss.IndexFlatL2(d)
@@ -11845,15 +11097,14 @@ class EmbeddingSearcher:
 
         return self.df.iloc[closest_indices]
 
-    
     def search_by_row_index(self, row_idx, k=10):
         if row_idx < 0 or row_idx >= len(self.df):
             raise IndexError("Row index is out of bounds.")
 
         query_embedding = self.df.iloc[row_idx][self.embedding_col]
-        
+
         search_results = self.get_closest_rows(query_embedding, k + 1)
-        
+
         if row_idx in search_results.index:
             filtered_results = search_results.drop(index=row_idx)
         else:
@@ -11875,7 +11126,6 @@ class EmbeddingSearcher:
 
     def get_size(self):
         return self.index.ntotal
-
 
 
 def entity_relation_match_one(input_desc, refernece_desc):
@@ -12008,12 +11258,11 @@ Now, find entities that satisfy the description. Provide your answer as json:
         write_log(message['content'])
         write_log("-----------------------------------")
 
-
     json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
     json_var = json.loads(json_code)
-    
+
     return json_var
-    
+
 def parse_match_result(json_var, reference_entities):
 
     def replace_indices_with_entities(json_var, reference_entities):
@@ -12024,7 +11273,6 @@ def parse_match_result(json_var, reference_entities):
 
     updated_json_var = replace_indices_with_entities(json_var, reference_entities)
 
-    
     def parse_json_to_string(json_var):
         parsed_string = ""
         if json_var['EXACT_MATCH']['entity']:
@@ -12048,9 +11296,6 @@ def parse_match_result(json_var, reference_entities):
     parsed_json_string = parse_json_to_string(updated_json_var)
 
     return parsed_json_string
-
-
-
 
 
 def create_geo_transform_widget(callback):
@@ -12096,11 +11341,9 @@ def create_geo_transform_widget(callback):
     display(radio_buttons, geo_transform_widgets, resolution_widget, button)
 
 
-
-
 def truncate_html_td(html, max_length=30):
     pattern = r'(<td[^>]*>)(.*?)(</td>)'
-    
+
     def truncate_match(match):
         content = match.group(2).strip()
         if len(content) > max_length:
@@ -12108,7 +11351,6 @@ def truncate_html_td(html, max_length=30):
         return match.group(1) + content + match.group(3)
 
     return re.sub(pattern, truncate_match, html, flags=re.DOTALL)
-
 
 
 def save_np_array_as_raster(np_array, output_path, meta):
@@ -12141,7 +11383,7 @@ class GeoDataCleaning(DataCleaning):
         source = SourceShapeStep(shape_data)
         self.pipeline = TransformationPipeline(steps = [source], edges=[])
         self.final_shape = self.pipeline.run_codes()
-    
+
     def display(self):
         self.pipeline.display(call_back=self.display)
         display(HTML("<hr> <h3>🤓 Result Data</h3>"))
@@ -12150,23 +11392,22 @@ class GeoDataCleaning(DataCleaning):
         data_type = self.final_shape.get_type()
 
         boxes = []
-        
+
         def on_reproject_clicked(b):
             clear_output(wait=True)
             self.add_reproject_step()
-        
+
         reproject_button = widgets.Button(description="Reproject")
         reproject_button.on_click(on_reproject_clicked)
         box = widgets.VBox([reproject_button])
         boxes.append(box)
 
-        
         def on_resample_clicked(b):
             clear_output(wait=True)
             self.add_resample_step()
 
         resample_button = widgets.Button(description="Rasterize")
-            
+
         if data_type == "raster" or data_type == "np_array":
             resample_button = widgets.Button(description="Resample")
 
@@ -12177,7 +11418,7 @@ class GeoDataCleaning(DataCleaning):
         def on_save_clicked(b):
             clear_output(wait=True)
             self.save()
-        
+
         save_button = widgets.Button(description="💾 Save Result")
         save_button.on_click(on_save_clicked)
         box = widgets.VBox([save_button])
@@ -12196,7 +11437,7 @@ class GeoDataCleaning(DataCleaning):
             def on_to_df_clicked(b):
                 clear_output(wait=True)
                 self.add_to_df_step()
-            
+
             to_df_button = widgets.Button(description="To DataFrame")
 
             to_df_button.on_click(on_to_df_clicked)
@@ -12215,7 +11456,6 @@ class GeoDataCleaning(DataCleaning):
         boxes.append(box)
 
         display(widgets.VBox(boxes))
-
 
     def save(self):
         post_fix = self.final_shape.get_post_fix()
@@ -12236,12 +11476,11 @@ class GeoDataCleaning(DataCleaning):
                 print(f"🎉 File saved successfully as {updated_file_name}")
 
         file_name_input = Text(value=file_name, description='File Name:')
-        
+
         save_button = Button(description="Save File")
         save_button.on_click(save_file)
 
         display(file_name_input, save_button)
-        
 
     def add_reproject_step(self):
 
@@ -12261,7 +11500,7 @@ class GeoDataCleaning(DataCleaning):
             self.final_shape = self.pipeline.run_codes()
             clear_output(wait=True)
             self.display()
-        
+
         CRS_select(call_back)
 
     def add_remove_last_step(self):
@@ -12269,7 +11508,6 @@ class GeoDataCleaning(DataCleaning):
         self.final_shape = self.pipeline.run_codes()
         clear_output(wait=True)
         self.display()
-
 
     def add_to_df_step(self):
         step = NumpyToDfStep(sample_df = self.final_shape)
@@ -12280,7 +11518,7 @@ class GeoDataCleaning(DataCleaning):
             print("☹️ There is an error in the step you added:")
             print(e)
             return
-        
+
         self.pipeline.add_step_to_final(step)
         self.final_shape = self.pipeline.run_codes()
         clear_output(wait=True)
@@ -12294,13 +11532,13 @@ class GeoDataCleaning(DataCleaning):
         plot_bounding_boxes(bounding_box)
 
         print("🧐 Please specify the target transform/resolution:")
-        
+
         def call_back(geo_transform, resolution):
             if geo_transform:
                 print("Geo Transform:", geo_transform)
             if resolution:
                 print("Resolution:", resolution)
-            
+
             step = ResampleStep(geo_transform=geo_transform, resolution=resolution, sample_df = self.final_shape)
 
             step.run_codes(self.final_shape)
@@ -12309,7 +11547,7 @@ class GeoDataCleaning(DataCleaning):
             self.final_shape = self.pipeline.run_codes()
             clear_output(wait=True)
             self.display()
-        
+
         create_geo_transform_widget(call_back)
 
     def create_ad_hoc_step(self):
@@ -12329,27 +11567,6 @@ class GeoDataCleaning(DataCleaning):
         callbackfunc = callback
 
         add_hoc_step.edit_widget(callbackfunc=callbackfunc)
-    
-
-            
-
-
-
-
-
-            
-
-    
-
-
-
-            
-        
-
-
-
-
-
 
 
 def create_np_array_from_df(df, x_col, y_col, height, width, nodata=0):
@@ -12369,8 +11586,6 @@ def create_np_array_from_df(df, x_col, y_col, height, width, nodata=0):
     return output_array, included_columns
 
 
-
-
 def create_df_from_np_array(np_array, column_names, nodata=0, x_col="x", y_col="y"):
 
     df = pd.DataFrame()
@@ -12380,19 +11595,18 @@ def create_df_from_np_array(np_array, column_names, nodata=0, x_col="x", y_col="
             slice_2d = np_array[i, :, :]
         elif np_array.ndim == 2:
             slice_2d = np_array[:, :]
-        
+
         y_indices, x_indices = np.where(slice_2d != nodata)
         values = slice_2d[y_indices, x_indices]
 
         temp_df = pd.DataFrame({x_col: x_indices, y_col: y_indices, name: values})
-        
+
         if df.empty:
             df = temp_df
         else:
             df = pd.merge(df, temp_df, on=[x_col, y_col], how='outer')
 
     return df
-
 
 
 def parse_raster_to_dataframe(raster, window=None, table_name=""):
@@ -12457,9 +11671,8 @@ def refill_nodata(np_array, old_no_data, new_no_data):
 
 def integrate_geo(main_geo_data, geo_data_arr):
     main_data_type = main_geo_data.get_type()
-   
-    if main_data_type == "df":
 
+    if main_data_type == "df":
 
         main_df = main_geo_data.df
         main_x_att = main_geo_data.x_att
@@ -12476,7 +11689,7 @@ def integrate_geo(main_geo_data, geo_data_arr):
                 df_y_att = geo_data.y_att
 
                 main_df = main_df.merge(df, left_on=[main_x_att, main_y_att], right_on=[df_x_att, df_y_att], how="left")
-                
+
                 if df_x_att != main_x_att:
                     main_df.drop(columns=[df_x_att], inplace=True)
                 if df_y_att != main_y_att:
@@ -12494,13 +11707,11 @@ def integrate_geo(main_geo_data, geo_data_arr):
                 print("Length of band_names:", len(band_names))
                 print(band_names)
                 print("Shape of main_df:", main_df.shape)
-                
+
                 main_df = pd.concat([main_df, pd.DataFrame(extracted_np_array, columns=band_names)], axis=1)
 
-        
         new_shape_data = ShapeData(df=main_df, x_att=main_x_att, y_att=main_y_att, meta=main_geo_data.meta)
         return new_shape_data
-
 
     elif main_data_type == "np_array":
         main_no_data = main_geo_data.get_nodata()
@@ -12515,7 +11726,7 @@ def integrate_geo(main_geo_data, geo_data_arr):
             width = main_np_array.shape[1]
 
         for geo_data in geo_data_arr:
-            
+
             data_type = geo_data.get_type()
 
             if data_type == "df":
@@ -12535,22 +11746,20 @@ def integrate_geo(main_geo_data, geo_data_arr):
                 no_data = geo_data.get_nodata()
                 np_array = geo_data.np_array
                 band_names = geo_data.get_band_names()
-                
+
                 if main_no_data is not None and no_data is not None and main_no_data != no_data:
                     np_array = refill_nodata(np_array, no_data, main_no_data)
 
                 main_np_array = integrate_np_array(main_np_array, np_array, nodata=main_no_data)
-                
+
                 main_band_names = main_band_names + band_names
-        
+
         new_meta = main_geo_data.meta.copy()
         new_shape_data = ShapeData(np_array=main_np_array, meta=new_meta)
         new_shape_data.set_band_names(main_band_names)
         return new_shape_data
 
-        
 
-        
 class GeoIntegration:
     
     def __init__(self, doc_dfs):
@@ -12828,7 +12037,7 @@ class NestDocument(dict):
                 current_dict[key] = {}
             current_dict = current_dict[key]
         current_dict[path[-1]] = value 
-    
+
     def remove_nested(self, path):
         current_dict = self
         for key in path[:-1]:
@@ -12837,16 +12046,6 @@ class NestDocument(dict):
             current_dict = current_dict[key]
         if path[-1] in current_dict:
             del current_dict[path[-1]]
-            
-
-
-
-
-
-
-
-
-
 
 
 class Node:
@@ -13026,17 +12225,16 @@ class Workflow(Node):
         self.item = item
 
         self.para = para
-        
+
         self.root_node = None
         self.viewer = viewer
         self.messages = []
-        
+
         self.global_document = NestDocument()
         self.id_para = id_para
         self.init_path()
 
         self.output = output
-
 
     def extract(self, item):
         self.item = item
@@ -13052,7 +12250,6 @@ class Workflow(Node):
         print(f"Starting workflow {self.name}.")
         self.start_workflow(run_output)
 
-        
     def write_document_to_disk(self, filepath: str):
         with open(filepath, 'w') as file:
             json.dump(self.global_document, file)
@@ -13065,7 +12262,7 @@ class Workflow(Node):
         node_name = new_node.name
         if node_name not in self.nodes:
             raise ValueError(f"Node {node_name} not found.")
-        
+
         self.nodes[node_name] = new_node
 
         new_node.inherit(self)
@@ -13113,17 +12310,17 @@ class Workflow(Node):
     def start_workflow(self, meta_info = None):
         if self.root_node is None:
             raise ValueError("Workflow has no root node defined.")
-        
+
         if self.output is not None:
             display(self.output)
-        
+
         with self.output_context():
             self.execute_node(self.root_node)
-        
+
     def execute_node(self, node_name):
         if node_name not in self.nodes:
             raise ValueError(f"Node {node_name} not found.")
-            
+
         node = self.nodes[node_name]
 
         if node.exist_global_document():
@@ -13136,14 +12333,14 @@ class Workflow(Node):
         run_output = node.run_and_retry(extract_output)
 
         node.postprocess(run_output, lambda document: self.callback(node_name, document), viewer=self.viewer, extract_output=extract_output)
-    
+
     def callback(self, node_name, document):
         node = self.nodes[node_name]
 
         node.set_global_document(document)
-        
+
         children = self.edges.get(node_name, [])
-        
+
         if len(children) == 0:
             this_document = self.get_global_document()
             self.finish_workflow(this_document)
@@ -13159,10 +12356,10 @@ class Workflow(Node):
             if next_node and next_node in children:
                 print(f"Proceeding to the specified next node: {next_node}")
                 self.execute_node(next_node)
-                
+
             else:
                 raise ValueError(f"Node {node_name} has multiple possible next nodes. 'next_node' must be specified in the document.")
-    
+
     def finish_workflow(self, document=None):
         print(f"Workflow {self.name} completed.")
 
@@ -13170,18 +12367,17 @@ class Workflow(Node):
         nodes, edges = list(self.nodes.keys()), self.edges 
 
         edges = replace_keys_and_values_with_index(nodes, edges)
-        
+
         self.display_document()
         display(HTML(f"<h3>Flow Diagram</h3>"))
         display_workflow(nodes, edges)
-        
+
     def display(self, call_back_list=[]):
 
         display(HTML(self.to_html()))
-        
 
         def create_widget(nodes, instances):
-            
+
             dropdown = widgets.Dropdown(
                 options=nodes,
                 disabled=False,
@@ -13208,12 +12404,12 @@ class Workflow(Node):
                     clear_output(wait=True)
                     call_back_func = call_back_list.pop()
                     call_back_func(call_back_list)
-            
+
             button3.on_click(on_button_clicked3)
 
             if len(nodes) == 0:
                 display(HTML("<p>The workflow is empty.</p>"))
-                
+
                 if len(call_back_list) > 0:
                     display(button3)
 
@@ -13227,11 +12423,9 @@ class Workflow(Node):
 
                 display(dropdown, buttons)
 
-
         nodes = list(self.nodes.keys())
         instances = list(self.nodes.values())
         create_widget(nodes, instances)
-
 
 
 class MultipleNode(Workflow):
@@ -13247,11 +12441,11 @@ class MultipleNode(Workflow):
 
         self.elements = []
         self.item = item
-        
+
         self.para = para
         self.viewer = viewer
         self.unit = "element"
-        
+
         self.messages = []
 
         self.global_document = NestDocument()
@@ -13262,25 +12456,23 @@ class MultipleNode(Workflow):
 
         self.example_node = self.construct_node("example")
 
-
-
     def construct_node(self, element_name, idx=0, total=0):
         node = Node("Sub Node", para={"element_name": element_name, "idx": idx, "total": total})
         node.inherit(self)
         return node
-    
+
     def extract(self, item):
         self.elements = ['element1', 'element2', 'element3']
         total = len(self.elements)
         self.nodes = {element: self.construct_node(element, idx, total) for idx, element in enumerate(self.elements)}
 
         return None
-    
+
     def run(self, extract_output, use_cache=True):
 
         if len(self.elements) != len(set(self.elements)):
             raise ValueError("Element names must be unique.")
-        
+
         return None
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -13300,7 +12492,7 @@ class MultipleNode(Workflow):
             return 
 
         self.execute_node(self.elements[0])
-    
+
     def callback(self, element_name, document):
         element_idx = self.elements.index(element_name)
         element_node = self.nodes[element_name]
@@ -13327,7 +12519,7 @@ class MultipleNode(Workflow):
             </div>
             """
             display(HTML(scrollable_html))
-        
+
         self.display_document()
         display(HTML(f"<h3>Flow Diagram</h3>"))
         display_workflow_with_unit(nodes, edges, unit=self.unit)
@@ -13335,10 +12527,9 @@ class MultipleNode(Workflow):
     def display(self, call_back_list=[]):
 
         display(HTML(self.to_html()))
-        
 
         def create_widget(nodes, instances):
-            
+
             dropdown = widgets.Dropdown(
                 options=nodes,
                 disabled=False,
@@ -13366,18 +12557,17 @@ class MultipleNode(Workflow):
                     clear_output(wait=True)
                     call_back_func = call_back_list.pop()
                     call_back_func(call_back_list)
-            
+
             button3.on_click(on_button_clicked3)
 
             self.display_workflow()
 
             if len(nodes) == 0:
                 display(HTML(f"<p>There is no {self.unit}.</p>"))
-                
+
                 if len(call_back_list) > 0:
                     display(button3)
             else:
-                
 
                 if len(call_back_list) > 0:
                     buttons = widgets.HBox([button1, button3])
@@ -13386,37 +12576,9 @@ class MultipleNode(Workflow):
 
                 display(dropdown, buttons)
 
-
         nodes = list(self.nodes.keys())
         instances = list(self.nodes.values())
         create_widget(nodes, instances)
-
-
-
-
-
-
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def process_query_to_dbt(query, input_tables):
@@ -13761,10 +12923,9 @@ def create_union_table(tables):
 
         else:
             sql_query = f"CREATE TABLE {new_table_name} AS SELECT * FROM {group[0]}"
-    
+
         return sql_query
-            
-        
+
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         sql_query = run_output
         con = self.input_item["con"]
@@ -13779,8 +12940,8 @@ def create_union_table(tables):
             f.write(dbt_formatted_query)
 
         callback(sql_query)
-    
-    
+
+
 class SourceCodeWritingForAll(MultipleNode):
 
     default_name = 'Source Code Writing For All'
@@ -14019,8 +13180,7 @@ FROM {table_name}"
         self.messages = messages
 
         return summary
-            
-        
+
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         sql_query = run_output['sql']
         con = self.input_item["con"]
@@ -14048,7 +13208,7 @@ FROM {table_name}"
             yaml.dump(yml_dict, file)
 
         callback(sql_query)
-    
+
 
 class BasicStageForAll(MultipleNode):
     default_name = 'Basic Stage For All'
@@ -14160,7 +13320,7 @@ Respond with the following format:
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
-    
+
 class DecideCRUDForAll(MultipleNode):
     default_name = 'Decide CRUD For All'
     default_description = 'This decide if the given table contains CRUD/overwriting'
@@ -15491,15 +14651,11 @@ class CreateFactMatchDimForAll(MultipleNode):
 
         self.nodes = {element: self.construct_node(element, idx, len(self.elements))
                         for idx, element in enumerate(self.elements)}
-        
+
         self.item = item
 
     def display_after_finish_workflow(self, callback, document):
         callback(document)
-
-
-        
-
 
 
 class MatchDimensions(Node):
@@ -15730,7 +14886,7 @@ Return the result in yml
         next_button.on_click(on_button_click)
 
         display(next_button)
-        
+
 
 class BuildDataMartForAll(MultipleNode):
     default_name = 'Build Data Mart For All'
@@ -15752,11 +14908,11 @@ class BuildDataMartForAll(MultipleNode):
 
         self.nodes = {element: self.construct_node(element, idx, len(self.elements))
                         for idx, element in enumerate(self.elements)}
-        
+
         self.item = item
 
     def display_after_finish_workflow(self, callback, document):
-        
+
         match_document = self.global_document["Data Product"]["Match Dimensions"]
         edges = match_document["definite_pairs"]
 
@@ -15774,8 +14930,6 @@ class BuildDataMartForAll(MultipleNode):
         print("🎉 The join graph has been constructed!")
         html_content = generate_draggable_graph_html(data)
         display(HTML(wrap_in_iframe(html_content, width=1000)))
-
-
 
         tab_data = []
         formatter = HtmlFormatter(style='default')
@@ -15801,7 +14955,6 @@ class BuildDataMartForAll(MultipleNode):
 
         next_button.on_click(on_button_click)
         display(next_button)
-
 
 
 def create_data_product_workflow(dbt_directory, output=False):
@@ -15887,7 +15040,6 @@ def get_dbt_model_info(sql_file_path):
     used_macros = list(set(used_macros))
 
     return model_name, referenced_tables, referenced_sources, used_variables, used_macros
-
 
 
 class DbtTable:
@@ -16191,9 +15343,8 @@ class DbtProject:
     def process_dbt_files(self, file_path):
         for root, dirs, files in os.walk(file_path):
             for file in files:
-                
-                full_path = os.path.join(root, file)
 
+                full_path = os.path.join(root, file)
 
                 if file.endswith('.yml') or file.endswith('.yaml'):
                     with open(full_path, 'r') as yml_file:
@@ -16224,11 +15375,10 @@ class DbtProject:
                 instance_names.append(str(idx) + ". " + tagged_name)
                 instances.append(self.tables[node])
                 idx += 1
-                
+
             else:
                 tagged_name = node
                 tagged_names.append(tagged_name)
-  
 
         self.tagged_names = tagged_names
         self.instances = instances
@@ -16249,17 +15399,17 @@ class DbtProject:
                 tagged_names.append(tagged_name)
 
         self.tagged_names = tagged_names
-        
+
     def display_workflow(self):
         display_workflow(self.tagged_names, self.edges, height=400)
-    
+
     def display(self, call_back=None):
 
         if call_back is None:
             call_back = self.display
 
         def create_widget(nodes, instances):
-            
+
             dropdown = widgets.Dropdown(
                 options=nodes,
                 disabled=False,
@@ -16274,9 +15424,6 @@ class DbtProject:
                 call_back()
 
             def on_button_clicked(b):
-
-
-
 
                 idx = nodes.index(dropdown.value)
 
@@ -16298,9 +15445,7 @@ class DbtProject:
 
             display(dropdown, buttons, html_widget)
 
-
         create_widget(self.instance_names, self.instances)
-        
 
     def build_graph_from_project(self):
         nodes_set = set()
@@ -16318,7 +15463,6 @@ class DbtProject:
             table = self.tables.get(node)
             if table:
 
-
                 for ref_source in table.get_source():
                     if ref_source in nodes_set:
                         ref_idx = nodes.index(ref_source)
@@ -16331,10 +15475,6 @@ class DbtProject:
         return nodes, edges
 
 
-
-
-
-
 def find_nodes_with_no_parents(nodes, edges):
     destination_indices = set()
 
@@ -16344,10 +15484,6 @@ def find_nodes_with_no_parents(nodes, edges):
     no_parent_nodes = [node for idx, node in enumerate(nodes) if idx not in destination_indices]
 
     return no_parent_nodes
-
-
-
-
 
 
 class SQLStep(TransformationStep):
@@ -16421,11 +15557,11 @@ class TransformationSQLPipeline(TransformationPipeline):
 
     def get_codes(self, mode="dbt"):
         sorted_step_idx = topological_sort(self.steps, self.edges)
-        
+
         if mode == "dbt":
-            
+
             with_clauses = []
-            
+
             for step_idx  in sorted_step_idx[1:-1]:
                 step = self.steps[step_idx]
                 codes = step.get_codes(target_id=step_idx, mode="AS")
@@ -16440,23 +15576,19 @@ class TransformationSQLPipeline(TransformationPipeline):
             return codes
 
         if mode == "TABLE":
-            
+
             table_clauses = []
-            
+
             for step_idx  in sorted_step_idx[1:]:
                 step = self.steps[step_idx]
                 codes = step.get_codes(target_id=step_idx, mode="TABLE")
                 table_clauses.append(codes)
-                
+
             return "\n\n".join(table_clauses)
-            
-            
 
     def __repr__(self):
         final_step = self.get_final_step()
         return final_step.name
-
-
 
 
 def find_duplicate_rows(con, table_name, sample_size=0):
@@ -16480,7 +15612,7 @@ def create_sample_distinct_query(table_name, column_name, sample_size=None):
     if sample_size is not None:
         query += f" LIMIT {sample_size}"
     return query
-    
+
 def create_sample_distinct(con, table_name, column_name, sample_size):
 
     query = create_sample_distinct_query(table_name, column_name, sample_size)
@@ -16497,9 +15629,6 @@ def indent_paragraph(paragraph, spaces=4):
     return '\n'.join(indent + line for line in paragraph.split('\n'))
 
 
-
-
- 
 class DataProject:
     def __init__(self):
         self.tables = {}
@@ -16521,7 +15650,7 @@ class DataProject:
 
             self.links[table1][table2] = [keys1, keys2]
             self.links[table2][table1] = [keys2, keys1]
-    
+
     def get_story(self):
         return self.story
 
@@ -16546,7 +15675,7 @@ class DataProject:
 
         else:
             pass
-        
+
         if table_name in self.links:
             del self.links[table_name]
 
@@ -16594,10 +15723,6 @@ class DataProject:
         display_draggable_graph_html(graph_data)
 
 
-
-
-
-
 def display_duplicated_rows_html2(df):
     html_output = f"<p>🤨 There are {len(df)} groups of duplicated rows.</p>"
     for i, row in df.iterrows():
@@ -16632,7 +15757,6 @@ def create_explore_button(query_widget, table_name=None, query=""):
     display(explore_button)
 
 
-
 class DescribeColumns(Node):
     default_name = 'Describe Columns'
     default_description = 'This node allows users to describe the columns of a table.'
@@ -16651,13 +15775,13 @@ class DescribeColumns(Node):
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
         sample_size = 5
-        
+
         table_summary = self.get_sibling_document("Create Table Summary")
 
         all_columns = ", ".join(columns)
         sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
         table_desc = sample_df.to_csv(index=False, quoting=2)
-        
+
         return table_desc, table_summary, columns
 
     def run(self, extract_output, use_cache=True):
@@ -16687,7 +15811,7 @@ Return in the following format:
         self.messages = messages
 
         return json_code
-    
+
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
@@ -16709,7 +15833,7 @@ Return in the following format:
             })
 
         df = pd.DataFrame(rows_list)
-        
+
         editable_columns = [False, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
         print("😎 We have described the columns:")
@@ -16731,8 +15855,8 @@ Return in the following format:
         next_button.on_click(on_button_clicked)
 
         display(next_button)
-        
-        
+
+
 class DecideProjection(Node):
     default_name = 'Decide Projection'
     default_description = 'This allows users to select a subset of columns.'
@@ -16801,7 +15925,7 @@ class CreateColumnGrouping(Node):
 
         print("🔍 Building column hierarchy ...")
         create_progress_bar_with_numbers(1, doc_steps)
-        
+
         self.progress = show_progress(1)
 
         self.input_item = item
@@ -16823,7 +15947,7 @@ class CreateColumnGrouping(Node):
         column_names = list(schema.keys())
 
         return table_desc, table_summary, column_names
-    
+
     def run(self, extract_output, use_cache=True):
         table_desc, table_summary, column_names = extract_output
 
@@ -16848,26 +15972,25 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
     }}
 }}
 ```"""
-        
+
         def extract_attributes(json_var):
             attributes = []
-            
+
             def traverse(element):
                 if isinstance(element, dict):
                     for value in element.values():
                         traverse(value)
-                        
+
                 elif isinstance(element, list):
                     for item in element:
                         if isinstance(item, str):
                             attributes.append(item)
-                        
+
                         else:
                             traverse(item)
-                            
 
             traverse(json_var)
-            
+
             return attributes
 
         def validate_attributes(attributes, reference_attributes):
@@ -16879,7 +16002,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 if attribute in seen_attributes:
                     duplicates.add(attribute)
                 seen_attributes.add(attribute)
-            
+
             if duplicates:
                 error_messages.append("Duplicate attributes: " + ', '.join(duplicates))
 
@@ -16895,10 +16018,9 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
                 error_messages.append("Missing attributes: " + ', '.join(missing_attributes) + "\n Are attributes in the leaf as an array [att1, att2]?")
 
             return '\n'.join(error_messages)
-        
+
         messages =[ {"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-
 
         assistant_message = response['choices'][0]['message']
         json_code = extract_json_code_safe(assistant_message['content'])
@@ -16913,13 +16035,13 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
 
         if error!= '':
             raise ValueError(f"Validation failed with the following error(s):\n{error}")
-        
+
         return json_var
-    
+
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        
+
         self.progress.value += 1
-        
+
         json_code = run_output
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
@@ -16928,7 +16050,7 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         query_widget = self.item["query_widget"]
 
         create_explore_button(query_widget, table_pipeline)
-    
+
         html_content_updated, _, height = get_tree_html(json_code)
 
         print(f"😎 We have built the Column Hierarchy:")
@@ -16966,11 +16088,11 @@ Conclude with the final result as a multi-level JSON. Make sure all attributes a
         submit_button.on_click(on_button_clicked)
 
         display(HBox([edit_button, submit_button]))
-        
+
         if self.viewer:
             on_button_clicked(submit_button)
-        
-    
+
+
 class CreateTableSummary(Node):
     default_name = 'Create Table Summary'
     default_description = 'This node creates a summary of the table.'
@@ -17155,10 +16277,8 @@ class DecideDuplicate(Node):
             if self.viewer:
                 on_button_clicked(yes_button)
 
-
         else:
             callback(document)
-
 
 
 class DecideDataType(Node):
@@ -17175,7 +16295,6 @@ class DecideDataType(Node):
 
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
-
 
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
@@ -17205,7 +16324,7 @@ Return in the following format:
     }}
 }}
 ```"""
-        
+
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         messages.append(response['choices'][0]['message'])
@@ -17241,7 +16360,7 @@ Return in the following format:
             })
 
         df = pd.DataFrame(rows_list)
-        
+
         grid = create_data_type_grid(df)
         print("😎 We have recommended the Data Types for Columns:")
         display(grid)
@@ -17265,21 +16384,17 @@ Return in the following format:
         display(next_button)
 
 
-
-
-
 def get_missing_percentage(con, table_name, column_name):
     query = f"""
     SELECT COUNT(*) as total_count, COUNT({column_name}) as non_missing_count
     FROM {table_name}
     """
-    
+
     result = run_sql_return_df(con, query)
     total_count = result.iloc[0, 0]
     non_missing_count = result.iloc[0, 1]
-    
-    return (total_count - non_missing_count) / total_count
 
+    return (total_count - non_missing_count) / total_count
 
 
 class DecideRegex(Node):
@@ -17471,25 +16586,25 @@ class DecideUnusualForAll(MultipleNode):
     def display_after_finish_workflow(self, callback, document):
         clear_output(wait=True)
         create_progress_bar_with_numbers(3, doc_steps)
-        
+
         data = []
         if "Decide Unusual" in document:
             for key in document["Decide Unusual"]:
                 if document["Decide Unusual"][key]["Unusualness"]:
                     data.append([key, document["Decide Unusual"][key]["Explanation"], True])
-        
+
         if not data:
             callback(document)
             return
-        
+
         df = pd.DataFrame(data, columns=["Column", "Explanation", "Endorse"])
-        
+
         editable_columns = [False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
-        
+
         print("The following columns have unusual values: ❓")
         display(grid)
-      
+
         next_button = widgets.Button(
             description='Submit',
             disabled=False,
@@ -17497,16 +16612,16 @@ class DecideUnusualForAll(MultipleNode):
             tooltip='Click to submit',
             icon='check'
         )
-        
+
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="records")
             callback(document)
-        
+
         next_button.on_click(on_button_clicked)
 
         display(next_button)
-        
+
 class DecideLongitudeLatitude(Node):
     default_name = 'Decide Longitude Latitude'
     default_description = 'This node allows users to decide the longitude and latitude columns.'
@@ -17953,7 +17068,7 @@ class DecideUnique(Node):
 
         print("🔍 Checking uniqueness ...")
         create_progress_bar_with_numbers(2, doc_steps)
-        
+
         self.progress = show_progress(1)
 
         self.input_item = item
@@ -17978,7 +17093,7 @@ class DecideUnique(Node):
         return unique_columns, sample_df_str, table_name
 
     def run(self, extract_output, use_cache=True):
-        
+
         unique_columns, sample_df_str, table_name = extract_output
 
         unique_desc = "\n".join([f'{idx+1}. {col}: {unique_columns[col]}' for idx, (col, desc) in enumerate(unique_columns.items())])
@@ -18008,21 +17123,20 @@ Return in the following format:
         self.messages = messages
 
         return json_code
-    
+
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        
+
         json_code = run_output
         unique_columns, _, _ = extract_output
-        
+
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
-        
+
         table_pipeline = self.para["table_pipeline"]
         query_widget = self.item["query_widget"]
 
         create_explore_button(query_widget, table_pipeline)
-        
-        
+
         rows_list = []
         for col in unique_columns:
             is_unique = unique_columns[col]
@@ -18033,15 +17147,15 @@ Return in the following format:
                 "Should be Unique?": True if reason != "" else False,
                 "Explanation": reason
             })
-        
+
         df = pd.DataFrame(rows_list)
-        
+
         editable_columns = [False, False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
-        
+
         print("😎 We have identified columns that should be unique:")
         display(grid)
-        
+
         next_button = widgets.Button(
             description='Submit',
             disabled=False,
@@ -18049,17 +17163,16 @@ Return in the following format:
             tooltip='Click to submit',
             icon='check'
         )
-        
+
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="records")
 
             callback(document)
-        
+
         next_button.on_click(on_button_clicked)
 
         display(next_button)
-
 
 
 def create_profile_workflow(table_name, con):
@@ -18157,8 +17270,6 @@ def create_map_viz_html(coordinates):
 </html>
 """
     return map_html
-  
-
 
 
 def create_histogram_viz_html(counts, bin_width, bin_centers):
@@ -18238,9 +17349,6 @@ def create_histogram_viz_html(counts, bin_width, bin_centers):
     return histogram_html
 
 
-
-
-
 def create_bar_chart_viz_html(data_dict):
 
     total_value = sum(data_dict.values())
@@ -18313,7 +17421,6 @@ def create_bar_chart_viz_html(data_dict):
     return bar_chart_html
 
 
-
 def truncate_text_vectorized(df, max_length=100, col_max_length=10):
     def truncate_series(series):
         mask = series.str.len() > max_length
@@ -18335,5 +17442,3 @@ def truncate_text_vectorized(df, max_length=100, col_max_length=10):
     df.columns = new_columns
     
     return df
-
-
