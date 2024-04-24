@@ -5,8 +5,8 @@ import hashlib
 from collections import OrderedDict
 
 try:
-    import vertexai  # type: ignore
-    from vertexai.preview.generative_models import (  # type: ignore
+    import vertexai
+    from vertexai.preview.generative_models import (
         GenerativeModel,
         Part,
         HarmCategory,
@@ -16,12 +16,12 @@ except:
     pass
 
 try:
-    import anthropic  # type: ignore
+    import anthropic
 except:
     pass
 
 try:
-    from anthropic import AnthropicVertex  # type: ignore
+    from anthropic import AnthropicVertex
 except:
     pass
 
