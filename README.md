@@ -32,7 +32,7 @@ We plan to support Data Cleaning, Data Integration, and Data Modeling.
 
 👉 Check out the [3 min demo](https://www.youtube.com/watch?v=nddQ3jIdPCI)
 
-If interested, please fill in wait list: https://forms.gle/PCKespY7AUbF4EMZ7
+If interested, please fill in [waitlist](https://forms.gle/njhNd1NHfh3MvD8V9)
 
 
 
