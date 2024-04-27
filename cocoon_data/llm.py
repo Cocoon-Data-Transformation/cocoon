@@ -176,7 +176,7 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
     elif openai.api_type == "open_ai":
 
         response = openai.ChatCompletion.create(
-            model="gpt-4-1106-Preview",
+            model="gpt-4-turbo",
             temperature=temperature,
             top_p=top_p,
             messages=messages,
