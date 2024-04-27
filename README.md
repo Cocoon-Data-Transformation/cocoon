@@ -9,8 +9,8 @@
 😎 **Cocoon** uses LLMs to automate data engineering + science.
 
 😃 Cocoon Data Profiling is publically available. 
-- **Free Service:** Drop your CSV, and we will email you the profile: https://cocoon-data-transformation.github.io/page/
-- **Python Package:** Check out the notebook to interactively profile your table in python.
+- [**Free Service:** Drop your CSV, and we will email you the profile](https://cocoon-data-transformation.github.io/page/)
+- [**Python Package:** Check out the notebook to interactively profile your table in python](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Profile.ipynb)
 
 🖼️ Profile Gallery
 
@@ -44,7 +44,7 @@ We plan to support Data Cleaning, Data Integration, and Data Modeling.
 
 👉 Check out the [3 min demo](https://www.youtube.com/watch?v=nddQ3jIdPCI)
 
-If interested, please fill in [waitlist](https://forms.gle/njhNd1NHfh3MvD8V9)
+👉 If interested, please fill in [waitlist](https://forms.gle/njhNd1NHfh3MvD8V9)
 
 
 
