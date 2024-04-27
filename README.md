@@ -6,9 +6,11 @@
 
 ## Overview
 
-😎 **Cocoon** uses AI to automate data transformation.
+😎 **Cocoon** uses LLMs to automate data engineering + science.
 
-😃 Cocoon Data Profiling will be publically available soon!
+😃 Cocoon Data Profiling is publically available. 
+- **Free Service:** Drop your CSV, and we will email you the profile: https://cocoon-data-transformation.github.io/page/
+- **Python Package:** Check out the notebook to interactively profile your table in python.
 
 🖼️ Profile Gallery
 
@@ -25,8 +27,18 @@
 | Patients                                   | [View Profile](https://cocoon-data-transformation.github.io/page/profile_gallery/Cocoon_Profile_patients.html) |
 | Used Car Data                              | [View Profile](https://cocoon-data-transformation.github.io/page/profile_gallery/Cocoon_Profile_used_car_data_new.html) |
 
+Cite Cocoon:
+```
+@article{huang2024cocoon,
+  title={Cocoon: Semantic Table Profiling Using Large Language Models},
+  author={Huang, Zezhou and Wu, Eugene},
+  journal={arXiv preprint arXiv:2404.12552},
+  year={2024}
+}
+```
 
-<hr>
+## Future
+
 
 We plan to support Data Cleaning, Data Integration, and Data Modeling.
 
