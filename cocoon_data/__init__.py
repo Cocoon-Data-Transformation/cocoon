@@ -46,7 +46,6 @@ from .data_type import *
 from .widgets import *
 
 
-
 try:
     import openpyxl
     import xlrd
@@ -714,7 +713,7 @@ def clean_column_name(column_name):
     
     if column_name.upper() in reserved_words:
         column_name += "_"
-        
+    
     return clean_table_name(column_name)
 
 def sanitize_table_name(table_name):
@@ -17327,7 +17326,7 @@ Return in the following format:
 
 
 
-def create_profile_workflow(table_name, con):
+def create_profile_workflow(table_name, con, viewer=True):
         
     query_widget = QueryWidget(con)
 
@@ -17344,7 +17343,7 @@ def create_profile_workflow(table_name, con):
     main_workflow = Workflow("Data Profiling", 
                             item = item, 
                             description="A workflow to profile dataset",
-                            viewer=True,
+                            viewer=viewer,
                             para = para)
 
     main_workflow.add_to_leaf(DecideProjection())
