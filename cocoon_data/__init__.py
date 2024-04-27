@@ -38,12 +38,13 @@ from bs4 import BeautifulSoup
 
 from .database import *
 from .llm import *
-from .utils import get_detailed_error_info, replace_newline, write_log
-from .extract import extract_json_code_safe, extract_python_code
+from .utils import *
+from .extract import *
 from .viz import *
 from .constant import *
 from .data_type import *
 from .widgets import *
+
 
 
 try:
@@ -684,8 +685,31 @@ def clean_table_name(table_name):
 
 def clean_column_name(column_name):
     reserved_words = {
-        "SELECT", "FROM", "WHERE", "JOIN", "ON", "CREATE", "DROP", "TABLE",
-        "INSERT", "UPDATE", "DELETE", "ALTER", "CAST", "EXECUTE", "ORDER", "GROUP", "BY"
+        "ADD", "ALL", "ALTER", "AND", "ANY", "AS", "ASC", "AUTHORIZATION", "BACKUP",
+        "BEGIN", "BETWEEN", "BREAK", "BROWSE", "BULK", "BY", "CASCADE", "CASE",
+        "CHECK", "CHECKPOINT", "CLOSE", "CLUSTERED", "COALESCE", "COLLATE",
+        "COLUMN", "COMMIT", "COMPUTE", "CONSTRAINT", "CONTAINS", "CONTINUE",
+        "CONVERT", "CREATE", "CROSS", "CURRENT", "CURRENT_DATE", "CURRENT_TIME",
+        "CURRENT_TIMESTAMP", "CURRENT_USER", "CURSOR", "DATABASE", "DBCC",
+        "DEALLOCATE", "DECLARE", "DEFAULT", "DELETE", "DENY", "DESC", "DISK",
+        "DISTINCT", "DISTRIBUTED", "DOUBLE", "DROP", "DUMP", "ELSE", "END", "ERRLVL",
+        "ESCAPE", "EXCEPT", "EXEC", "EXECUTE", "EXISTS", "EXIT", "EXTERNAL", "FETCH",
+        "FILE", "FILLFACTOR", "FOR", "FOREIGN", "FREETEXT", "FROM", "FULL", "FUNCTION",
+        "GOTO", "GRANT", "GROUP", "HAVING", "HOLDLOCK", "IDENTITY", "IDENTITY_INSERT",
+        "IDENTITYCOL", "IF", "IN", "INDEX", "INNER", "INSERT", "INTERSECT", "INTO",
+        "IS", "JOIN", "KEY", "KILL", "LEFT", "LIKE", "LINENO", "LOAD", "MERGE", "NATIONAL",
+        "NOCHECK", "NONCLUSTERED", "NOT", "NULL", "NULLIF", "OF", "OFF", "OFFSETS", "ON",
+        "OPEN", "OPENDATASOURCE", "OPENQUERY", "OPENROWSET", "OPENXML", "OPTION", "OR",
+        "ORDER", "OUTER", "OVER", "PERCENT", "PIVOT", "PLAN", "PRECISION", "PRIMARY",
+        "PRINT", "PROC", "PROCEDURE", "PUBLIC", "RAISERROR", "READ", "READTEXT", "RECONFIGURE",
+        "REFERENCES", "REPLICATION", "RESTORE", "RESTRICT", "RETURN", "REVERT", "REVOKE",
+        "RIGHT", "ROLLBACK", "ROWCOUNT", "ROWGUIDCOL", "RULE", "SAVE", "SCHEMA", "SECURITYAUDIT",
+        "SELECT", "SEMANTICKEYPHRASETABLE", "SEMANTICSIMILARITYDETAILSTABLE", "SEMANTICSIMILARITYTABLE",
+        "SESSION_USER", "SET", "SETUSER", "SHUTDOWN", "SOME", "STATISTICS", "SYSTEM_USER", "TABLE",
+        "TABLESAMPLE", "TEXTSIZE", "THEN", "TO", "TOP", "TRAN", "TRANSACTION", "TRIGGER", "TRUNCATE",
+        "TRY_CONVERT", "TSEQUAL", "UNION", "UNIQUE", "UNPIVOT", "UPDATE", "UPDATETEXT", "USE",
+        "USER", "VALUES", "VARYING", "VIEW", "WAITFOR", "WHEN", "WHERE", "WHILE", "WITH", "WITHIN GROUP",
+        "WRITETEXT"
     }
     
     if column_name.upper() in reserved_words:
@@ -5638,9 +5662,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
 
 
 
-BOLD = '\033[1m'
-ITALIC = '\033[3m'
-END = '\033[0m'
+
 
 def get_value_from_path(data, path):
     """Recursively extract value from nested dict using the given path."""
@@ -5651,349 +5673,6 @@ def get_value_from_path(data, path):
     if not path:
         return data
     return get_value_from_path(data[path[0]], path[1:])
-
-target_concepts = {
-    "PATIENT": {
-        "Identity": {
-            "Gender": ["gender_concept_id","gender_source_value"],
-            "Race": ["race_concept_id","race_source_value"],
-            "Ethnicity": ["ethnicity_concept_id","ethnicity_source_value"]
-        },
-        "Birth Details": {
-            "Date of Birth": ["year_of_birth","month_of_birth","day_of_birth","birth_datetime"]
-        },
-        "Residence": {
-            "Address": ["address","city","state","zip","county","location_source_value"],
-            "Coordinates": ["latitude","longitude"]
-        },
-        "Identifier": ["person_id"]
-    },
-    "CONDITION_OCCURRENCE": {
-        "Condition Information": {
-            "Basic Condition Details": ["condition_occurrence_id", "condition_source_description_value", "condition_source_concept_id"],
-            "Condition Duration": ["condition_start_date", "condition_start_datetime", "condition_end_date", "condition_end_datetime"],
-            "Condition Status": ["stop_reason", "condition_status_source_value"]
-        },
-        "Patient Information": ["person_id"],
-        "Provider Information": ["provider_id"],
-        "Visit Information": {
-            "Visit Identification": ["visit_occurrence_id", "visit_detail_id"],
-            "Visit Context": ["condition_type_source"]
-        }
-    }
-
-}
-
-table_description = {
-    "PATIENT": "The Patients table focuses on demographic and general information about individual patients. Key attributes include **person_id**, a unique identifier for each patient, and **gender_concept_id**, which records the patient's gender. The **year_of_birth**, **month_of_birth**, and **day_of_birth** attributes collectively provide the patient's date of birth. Other critical attributes are **race_concept_id** and **ethnicity_concept_id**, capturing the patient's race and ethnicity respectively. The **location_id** links to the patient's geographical information, while **provider_id** and **care_site_id** associate the patient with healthcare providers and care sites. Additionally, the **person_source_value**, **gender_source_value**, **gender_source_concept_id**, **race_source_value**, **race_source_concept_id**, **ethnicity_source_value**, and **ethnicity_source_concept_id** provide source-specific details for each corresponding attribute.",
-    "VISIT_OCCURRENCE": "The VISIT_OCCURRENCE table documents detailed information about patient visits to healthcare facilities. It includes attributes such as **visit_occurrence_id** as a unique identifier for each visit, **person_id** linking to the patient's record, and **visit_concept_id** that classifies the type of visit (e.g., outpatient, inpatient). The table also tracks the **visit_start_date** and **visit_end_date** to specify the duration of the visit. Attributes like **visit_type_concept_id** offer insights into the context of the data collection, while **provider_id** links to the healthcare provider involved. Additionally, **care_site_id** associates the visit with a specific location, and **visit_source_value** and **visit_source_concept_id** capture information from original data sources. The table can also include **admitting_source_concept_id** and **discharge_to_concept_id** to detail patient transitions into and out of the care setting.", 
-    "CONDITION_OCCURRENCE": "The CONDITION_OCCURRENCE table primarily focuses on recording patient conditions, typically diagnosed by a healthcare provider. It contains key attributes such as **person_id**, which uniquely identifies a patient, and **condition_concept_id**, referencing the specific condition diagnosed. The attribute **condition_start_date** indicates when the condition was first observed, while **condition_end_date** reflects when it was resolved or ceased. Additionally, **condition_type_concept_id** describes the context or source of the diagnosis, such as a hospital visit. The **stop_reason** attribute provides insight into why a condition was considered resolved or ended. Another crucial attribute, **provider_id**, identifies the healthcare provider responsible for the diagnosis, and **visit_occurrence_id** links the condition to a specific patient visit. The table also includes **condition_source_value**, a textual representation of the condition from the original source data, and **condition_source_concept_id** for mapping to a standardized concept. Lastly, **condition_status_concept_id** gives further details about the status of the condition, like whether it's an active diagnosis or a historical record.", 
-    "DRUG_EXPOSURE": "The DRUG_EXPOSURE table captures information about a patient's exposure to a drug. The primary attribute, **DRUG_EXPOSURE_ID**, uniquely identifies each drug exposure event. **PERSON_ID** links to the individual patient, while **DRUG_CONCEPT_ID** identifies the specific drug. **DRUG_EXPOSURE_START_DATE** and **DRUG_EXPOSURE_END_DATE** denote the period of drug exposure. Dosage and frequency are detailed through **DOSE_UNIT_CONCEPT_ID** and **QUANTITY**. The table also includes **ROUTE_CONCEPT_ID** to specify the drug administration route, and **PROVIDER_ID** to identify the healthcare provider. **VISIT_OCCURRENCE_ID** links the drug exposure to a specific patient visit, and **DRUG_TYPE_CONCEPT_ID** categorizes the context of drug exposure, like prescription or inpatient administration.", 
-    "PROCEDURE_OCCURRENCE": "The PROCEDURE_OCCURRENCE table records details of clinical procedures performed on patients. At its core, this table includes the **procedure_concept_id**, which identifies the specific type of procedure carried out. The **person_id** attribute links the procedure to a specific patient. The **procedure_date** and **procedure_datetime** attributes specify when the procedure was performed. The **procedure_type_concept_id** defines the context or source of data entry. Other important attributes include **quantity**, representing the number of times the procedure was performed, and **provider_id**, identifying the healthcare provider who performed the procedure. The **visit_occurrence_id** links the procedure to the patient visit during which it was performed, and **modifier_concept_id** provides additional details or modifications to the procedure. Finally, **procedure_source_value** and **procedure_source_concept_id** offer source-specific codes for the procedure, and **qualifier_concept_id** gives further context or qualifiers related to the procedure.", 
-    "DEVICE": "The DEVICE table focuses on medical device usage in patient care. Key attributes include **device_id**, a unique identifier for each device record, and **person_id**, linking the device to an individual. **device_concept_id** represents the specific type of device. **device_exposure_start_date** and **device_exposure_end_date** define the usage period. **device_type_concept_id** describes the context of the device usage. **provider_id** identifies the healthcare provider involved, while **visit_occurrence_id** connects the device usage to a specific visit. Additional attributes like **device_source_value** and **quantity** provide extra details about the device and its usage.", 
-    "MEASUREMENT": "The MEASUREMENT table captures quantitative data and observations about a patient's health status. It includes key attributes like **measurement_id**, a unique identifier for each measurement, and **person_id**, linking the measurement to a specific patient. The **measurement_concept_id** identifies what was measured, such as blood pressure or glucose level. The **measurement_date** and **measurement_datetime** record when the measurement was taken. The **measurement_type_concept_id** indicates the nature of the measurement, like lab result or vital sign. The **operator_concept_id** represents how the measurement was taken, for example, by a device or a clinician. The **value_as_number**, **value_as_concept_id**, and **unit_concept_id** provide the result and unit of the measurement. **range_low** and **range_high** offer reference ranges for the measurement value. **provider_id** and **visit_occurrence_id** link the measurement to the provider and the visit during which it was taken. Additional details such as **measurement_source_value**, **measurement_source_concept_id**, and **unit_source_value** capture the original source information. Lastly, **value_source_value** records the measurement result as it was originally represented.", 
-    "OBSERVATION": "The OBSERVATION captures patient observations or measurements that are not diagnoses, procedures, or drug prescriptions. This table includes **person_id** to identify the patient, **observation_id** as a unique identifier for the observation, and **observation_concept_id** to specify the type of observation. The **observation_date** and **observation_datetime** record when the observation was made. **observation_type_concept_id** classifies the observation source, such as from a survey or a lab result. **value_as_number**, **value_as_string**, **value_as_concept_id**, and **unit_concept_id** describe the observation result in various formats. **qualifier_concept_id** and **associated_provider_id** give additional context to the observation, while **visit_occurrence_id** and **visit_detail_id** link the observation to specific visits. **obs_event_field_concept_id** captures the field from the source data where the observation originated, and **observation_source_value**, **observation_source_concept_id**, **unit_source_value**, and **qualifier_source_value** provide source-specific information. **observation_event_id**, **obs_event_field_concept_id**, and **value_as_datetime** offer further details on the observation event.", 
-    "DEATH": "The DEATH table is specifically designed to capture information about patient deaths. It contains several key attributes that provide details about the circumstances and documentation of a patient's death. The primary attribute is **person_id**, which uniquely identifies the deceased individual within the database. Another crucial attribute is **death_date**, specifying the exact date of death. The **death_datetime** attribute can offer more precise timing if available. The **death_type_concept_id** is used to indicate the source or method of death determination, like a death certificate or autopsy report. The **cause_concept_id** and **cause_source_value** attributes are used to record the cause of death, either as a standard concept or as a raw value from the data source, respectively. Additionally, the **cause_source_concept_id** represents a standardized concept that corresponds to the source value for the cause of death.", 
-    "SPECIMEN": "The SPECIMEN table stores detailed information about biological specimens collected from patients for diagnostic, treatment, or research purposes. This table includes several attributes that provide comprehensive data about each specimen. Key attributes include **specimen_id**, which is a unique identifier for each specimen, and **person_id**, linking the specimen to a specific individual in the database. The **specimen_concept_id** and **specimen_type_concept_id** describe the type of specimen and the method of its collection, respectively. **specimen_date** and **specimen_datetime** capture the date and time of specimen collection. **quantity** reflects the amount of specimen collected, and **unit_concept_id** indicates the unit of measurement. The **anatomic_site_concept_id** specifies the body site from where the specimen was taken, and **disease_status_concept_id** provides information about the disease status associated with the specimen. **specimen_source_id** and **visit_occurrence_id** are used to link the specimen to other relevant data in the database, such as the visit during which the specimen was collected. The **specimen_source_value**, **anatomic_site_source_value**, and **disease_status_source_value** attributes store the original values from the source data for mapping purposes.", 
-    "COST": "The COST table stores financial information related to healthcare services provided to patients. This table captures various cost-related details associated with healthcare encounters, procedures, and medications. Key attributes include **cost_event_id** and **cost_domain_id**, which identify the event and its domain (like drug or procedure) associated with the cost. The **currency_concept_id** specifies the currency of the cost. There's a focus on the specific nature of costs with attributes like **paid_copay**, **paid_coinsurance**, **paid_toward_deductible**, and **paid_by_payer**, detailing different payment components. The **amount_allowed** and **revenue_code_concept_id** provide information on allowable amounts and revenue codes.", 
-    "LOCATION": "The LOCATION table stores information about physical locations relevant to healthcare data. This table typically includes attributes such as **location_id**, which serves as a unique identifier for each location. It also contains **address_1** and **address_2** for detailed street addresses, **city** and **state** for regional identification, and **zip** for postal codes. Furthermore, the table includes **county**, **location_source_value**, and **country** to provide a comprehensive geographic context.", 
-    "CARE_SITE": "The CARE_SITE table represents information related to healthcare facilities where patient care is provided. It includes the **care_site_id**, a unique identifier for each care site. The **care_site_name** provides the name of the care site, and the **place_of_service_concept_id** links to a standardized concept identifying the type of care site (e.g., hospital, clinic). The **location_id** associates the care site with a physical location, and the **care_site_source_value** captures the original source data for the care site as it appears in the source system. Additionally, the **place_of_service_source_value** is the source code used in the source data to identify the type of care site.", 
-    "PROVIDER": "The PROVIDER tablecaptures detailed information about healthcare providers. It primarily focuses on the background and characteristics of individual providers. Key attributes include **provider_id**, serving as a unique identifier for each provider. The table also contains **provider_name**, which records the name of the provider. To classify the type of provider, there's **provider_type**, while **specialty_concept_id** links to their medical specialty. The **care_site_id** associates providers with their place of practice. Additionally, attributes like **gender_concept_id**, **year_of_birth**, and **provider_source_value** offer demographic and source-specific details about the providers.", 
-    "PAYER_PLAN_PERIOD": "The PAYER_PLAN_PERIOD table stores information about the periods of time a person is covered by a particular payer or plan. It captures details about the insurance or payer coverage for an individual. The table includes attributes such as **PAYER_PLAN_PERIOD_ID**, which is a unique identifier for each record. **PERSON_ID** links the record to a specific individual. The coverage period is defined by **PAYER_PLAN_PERIOD_START_DATE** and **PAYER_PLAN_PERIOD_END_DATE**, indicating the start and end of the coverage period. **PAYER_SOURCE_VALUE** and **PLAN_SOURCE_VALUE** provide information about the payer and plan from the source data. There are also attributes for standard concepts: **PAYER_CONCEPT_ID** and **PLAN_CONCEPT_ID**, along with their associated source values and source concept IDs (**PAYER_SOURCE_CONCEPT_ID** and **PLAN_SOURCE_CONCEPT_ID**). Lastly, **FAMILY_SOURCE_VALUE** may contain additional information about the family or group plan, if applicable."
-}
-
-
-table_samples = {
-    "PATIENT": 
-"""	person_id	gender_concept_id	year_of_birth	month_of_birth	day_of_birth	birth_datetime	race_concept_id	ethnicity_concept_id	location_id	provider_id	care_site_id	person_source_value	gender_source_value	gender_source_concept_id	race_source_value	race_source_concept_id	ethnicity_source_value	ethnicity_source_concept_id
-0	1	8507	1985	5	20	1985-05-20	8527	38003564	1	1	1	12345	M	8507	White	8527	Not Hispanic or Latino	38003564
-1	2	8532	1990	8	10	1990-08-10	8516	38003563	2	2	2	67890	F	8532	Black or African American	8516	Hispanic or Latino	38003563""",
-    
-    "VISIT_OCCURRENCE": 
-"""visit_occurrence_id	person_id	visit_concept_id	visit_start_date	visit_start_datetime	visit_end_date	visit_end_datetime	visit_type_concept_id	provider_id	care_site_id	visit_source_value	visit_source_concept_id	admitting_source_concept_id	admitting_source_value	discharge_to_concept_id	discharge_to_source_value	preceding_visit_occurrence_id
-0	123456	101	9201	2023-01-10	2023-01-10 08:00:00	2023-01-12	2023-01-12 15:00:00	2001	501	601	VS123	3001	4001	AS123	5001	DS123	111
-1	789012	102	9202	2023-02-15	2023-02-15 09:30:00	2023-02-16	2023-02-16 10:30:00	2002	502	602	VS456	3002	4002	AS456	5002	DS456	222""",
-    
-    "CONDITION_OCCURRENCE":
-"""condition_occurrence_id	person_id	condition_concept_id	condition_start_date	condition_start_datetime	condition_end_date	condition_end_datetime	condition_type_concept_id	stop_reason	provider_id	visit_occurrence_id	visit_detail_id	condition_source_value	condition_source_concept_id	condition_status_concept_id	condition_status_source_value
-0	1	101	201826	2021-01-10	2021-01-10 08:30:00	2021-01-20	2021-01-20 17:00:00	32019	Resolved	150	200	300	Diabetes	401	501	Active
-1	2	102	31967	2021-02-15	2021-02-15 09:45:00	2021-02-25	2021-02-25 16:30:00	32020	Improved	151	201	301	Hypertension	402	502	Controlled""",
-    
-    "DRUG_EXPOSURE": 
-"""drug_exposure_id	person_id	drug_concept_id	drug_exposure_start_date	drug_exposure_end_date	verbatim_end_date	drug_type_concept_id	stop_reason	refills	quantity	days_supply	sig	route_concept_id	lot_number	provider_id	visit_occurrence_id	drug_source_value	drug_source_concept_id	route_source_value	dose_unit_source_value
-0	1	1001	456789	2023-01-01	2023-01-10	2023-01-10	38000177	Completed course	0	10	10	Take 1 tablet daily	0	LOT1001	12345	111	DrugA	0	Oral	mg
-1	2	1002	987654	2023-02-15	2023-03-01	2023-03-01	38000177	Adverse reaction	1	30	15	Take 2 tablets twice daily	0	LOT1002	67890	222	DrugB	0	Oral	mg""",
-    
-    "PROCEDURE_OCCURRENCE":
-"""   procedure_occurrence_id  person_id  procedure_concept_id procedure_date  \
-0                        1        101               2100001     2023-01-15   
-1                        2        102               2100002     2023-02-20   
-    procedure_datetime  procedure_type_concept_id  modifier_concept_id  \
-0  2023-01-15 10:00:00                   38000275                    0   
-1  2023-02-20 14:30:00                   38000275                    0   
-
-   quantity  provider_id  visit_occurrence_id  visit_detail_id  \
-0         1          501                  701                0   
-1         2          502                  702                0   
-
-   procedure_source_concept_id procedure_source_value  qualifier_concept_id  \
-0                      2100001                  PROC1                     0   
-1                      2100002                  PROC2                     0   
-
-  qualifier_source_value  procedure_cost  
-0                   None           200.0  
-1                   None           450.0  """,
-    "DEVICE": 
-"""device_id	person_id	device_exposure_start_date	device_exposure_start_datetime	device_exposure_end_date	device_exposure_end_datetime	device_concept_id	device_type_concept_id	unique_device_id	quantity	provider_id	visit_occurrence_id	device_source_value	device_source_concept_id
-0	1001	2001	2023-01-15	2023-01-15 08:00:00	2023-01-20	2023-01-20 18:00:00	3001	4001	UD1001	1	5001	6001	DeviceA	7001
-1	1002	2002	2023-02-20	2023-02-20 09:30:00	2023-02-25	2023-02-25 16:30:00	3002	4002	UD1002	2	5002	6002	DeviceB	7002""",
-    
-    "MEASUREMENT": """measurement_id	person_id	measurement_concept_id	measurement_date	measurement_datetime	measurement_type_concept_id	operator_concept_id	value_as_number	value_as_concept_id	unit_concept_id	range_low	range_high	provider_id	visit_occurrence_id	measurement_source_value	measurement_source_concept_id	unit_source_value	value_source_value
-1001	2001	3001	2023-01-15	2023-01-15 08:00:00	4001	5001	5.6	6001	7001	4.5	8.0	8001	9001	BP_SYS	10001	mmHg	120
-1002	2002	3002	2023-01-16	2023-01-16 09:30:00	4002	5002	7.8	6002	7002	6.0	9.5	8002	9002	BP_DIA	10002	mmHg	80""",
-    
-    "OBSERVATION": 
-"""observation_id  person_id  observation_concept_id observation_date  \
-0            1001        123                    3001       2023-01-01   
-1            1002        456                    3002       2023-01-02   
-
-  observation_datetime  observation_type_concept_id  value_as_number  \
-0  2023-01-01 08:00:00                         2001             98.6   
-1  2023-01-02 09:30:00                         2002             99.5   
-
-  value_as_string  value_as_concept_id  qualifier_concept_id  unit_concept_id  \
-0          Normal                 4001                  5001             6001   
-1        Elevated                 4002                  5002             6002   
-
-   provider_id  visit_occurrence_id observation_source_value  \
-0         7001                 8001           Blood Pressure   
-1         7002                 8002               Heart Rate   
-
-   observation_source_concept_id unit_source_value qualifier_source_value  
-0                           9001              mmHg                Resting  
-1                           9002         beats/min         After Exercise  """,
-    
-    "DEATH": 
-""" person_id  death_date      death_datetime  death_type_concept_id  cause_concept_id cause_source_value  cause_source_concept_id
-    123456  2023-05-15  2023-05-15 14:30:00               38003565             50115              I21.9                  4323456
-    789012  2023-06-20  2023-06-20 08:45:00               38003566            433146              C50.9                  7654321""",
-    
-    "SPECIMEN": 
-"""specimen_id	person_id	specimen_concept_id	specimen_type_concept_id	specimen_date	specimen_datetime	quantity	unit_concept_id	anatomic_site_concept_id	disease_status_concept_id	specimen_source_id	visit_occurrence_id	visit_detail_id	specimen_source_value	unit_source_value	anatomic_site_source_value	disease_status_source_value
-101	2001	3001	4001	2023-01-15	2023-01-15 10:00:00	1.5	5001	6001	7001	A123	8001	9001	Blood Sample	ml	Arm	Healthy
-102	2002	3002	4002	2023-01-20	2023-01-20 11:30:00	2.0	5002	6002	7002	B456	8002	9002	Tissue Sample	g	Liver	Diseased""",
-    
-    "COST": 
-"""	cost_id	person_id	cost_event_id	cost_domain_id	currency_concept_id	total_charge	total_paid	payer_plan_period_id	amount_allowed	paid_by_payer	paid_by_patient	paid_patient_copay	paid_patient_coinsurance	paid_patient_deductible	paid_by_primary	paid_ingredient_cost	paid_dispensing_fee
-0	1001	2001	3001	Drug	840	500.0	450.0	4001	450.0	400.0	50.0	25.0	15.0	10.0	400.0	300.0	20.0
-1	1002	2002	3002	Procedure	840	1500.0	1400.0	4002	1400.0	1300.0	100.0	50.0	40.0	10.0	1300.0	1000.0	50.0""",
-    
-    "LOCATION": 
-"""location_id	address_1	address_2	city	state	zip	county	location_source_value	latitude	longitude
-0	1	123 Main St	Suite 100	Springfield	NY	12345	Hampden	L123	40.7128	-74.0060
-1	2	456 Elm St	Apt 202	Riverdale	CA	67890	Archie	L456	34.0522	-118.2437""",
-    
-    "CARE_SITE": 
-""" care_site_id   care_site_name  place_of_service_concept_id  location_id care_site_source_value place_of_service_source_value
-1   City Hospital                        12345          101                  CS001                      Hospital
-2    Rural Clinic                        67890          102                  CS002                        Clinic""",
-    
-    "PROVIDER": 
-"""provider_id	provider_name	npi	dea	specialty_concept_id	care_site_id	year_of_birth	gender_concept_id	provider_source_value	specialty_source_value	specialty_source_concept_id	gender_source_value	gender_source_concept_id
-0	101	Dr. Jane Smith	1234567890	AB1234567	111	10	1970	8507	P101	Cardiology	1001	F	1003
-1	102	Dr. John Doe	0987654321	CD7654321	222	20	1980	8507	P102	Neurology	1002	M	1004""",
-    
-    "PAYER_PLAN_PERIOD": 
-"""payer_plan_period_id	person_id	payer_plan_period_start_date	payer_plan_period_end_date	payer_concept_id	plan_concept_id	sponsor_concept_id	family_plan_concept_id	stop_reason	payer_source_value	payer_source_concept_id	plan_source_value	plan_source_concept_id	sponsor_source_value	sponsor_source_concept_id	family_plan_source_value	family_plan_source_concept_id
-1001	123	2023-01-01	2023-12-31	2001	3001	4001	5001	End of contract	PayerA	6001	PlanA	7001	SponsorA	8001	FamilyPlanA	9001
-1002	456	2023-06-01	2023-12-31	2002	3002	4002	5002	Change of employment	PayerB	6002	PlanB	7002	SponsorB	8002	FamilyPlanB	9002""",
-}
-
-attributes_description = {
-    "PATIENT" :{
-    "person_id": "the original id from the source data provided, otherwise it can be an autogenerated number. ",
-    "year_of_birth": "as an integer",
-    "month_of_birth": "as an integer",
-    "day_of_birth": "as an integer",
-    "birth_datetime": "If birth_datetime is not provided in the source, use the following logic to infer the date: If day_of_birth is null and month_of_birth is not null then use the first of the month in that year. If month_of_birth is null or if day_of_birth AND month_of_birth are both null and the person has records during their year of birth then use the date of the earliest record, otherwise use the 15th of June of that year. If time of birth is not given use midnight (00:00:0000).",
-    "gender_concept_id": "{ 'FEMALE': 8532, 'MALE': 8507 }",
-    "gender_source_value": "the original value in the source table",
-    "person_source_value": "any identifier from the source data that identifies the person.",
-    "race_concept_id": "{ 'American Indian or Alaska Native': 8657, 'Asian': 8515, 'Black': 8516, 'Native Hawaiian or Other Pacific Islander': 8557, 'White': 8527 }",
-    "race_source_value": "the original value in the source table",
-    "ethnicity_concept_id": "{ 'Hispanic or Latino': 38003564, 'Not Hispanic or Latino': 38003563 }",
-    "ethnicity_source_value": "the original value in the source table",
-    },
-    "CONDITION_OCCURRENCE": {
-    "condition_occurrence_id": "the original id column from the source data provided, otherwise it can be an autogenerated number. ",
-    "person_id": "The PERSON_ID of the PERSON for whom the condition is recorded.",
-    "condition_start_date": "the start date of the condition",
-    "condition_start_datetime": "If a source does not specify datetime the convention is to set the time to midnight (00:00:0000)",
-    "condition_end_date": "The end date of the condition",
-    "condition_end_datetime": " the end date of the condition",
-    "stop_reason": "The Stop Reason indicates why a Condition is no longer valid with respect to the purpose within the source data.",
-    "visit_occurrence_id": "The visit during which the condition occurred.",
-    "condition_source_description_value": "Source data representing the condition that occurred.",
-    "condition_type_source": "the provenance of the Condition record, as in whether the condition was from an EHR system, insurance claim, registry, or other sources.",
-    "condition_status_source_value": "the source data indicating when and how a diagnosis was given to a patients",
-    },
-    "DEATH" :{
-    "death_date": "Date of death, use January 1st of the year if only year is known. E.g., 2020-01-01",
-    "death_datetime": "Exact date and time of death, default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "cause_source_value": "Original cause of death from source data. E.g., 'Heart Attack'",
-    "death_record_source": "Source of death record (e.g., death certificate, hospital record). E.g., 'Death Certificate'",
-    },
-    "DRUG_EXPOSURE" :{
-    "drug_exposure_id": "Unique identifier for each drug exposure record. E.g., 101",
-    "drug_exposure_start_date": "Start date of the drug exposure. E.g., 2022-03-15",
-    "drug_exposure_start_datetime": "Exact start date and time of the drug exposure. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "drug_exposure_end_date": "End date of the drug exposure. E.g., 2022-04-14",
-    "drug_exposure_end_datetime": "Exact end date and time of the drug exposure. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "verbatim_end_date": "Original end date as recorded in the source data. E.g., 2022-04-14",
-    "stop_reason": "Reason the drug exposure was stopped. E.g., 'Completed treatment'",
-    "refills": "Number of refills prescribed. E.g., 2",
-    "quantity": "Quantity of the drug prescribed. E.g., 30 (tablets)",
-    "days_supply": "Number of days the drug supply is expected to last. E.g., 30",
-    "sig": "Directions for use as specified by the prescriber. E.g., 'Take 1 tablet daily'",
-    "lot_number": "Lot number of the drug. E.g., 'LN123456'",
-    "drug_source_value": "Original value of the drug as in the source data. E.g., 'Aspirin'",
-    "route_source_value": "Original value of the route of administration in the source data. E.g., 'Oral'",
-    "dose_unit_source_value": "Unit of the dose as in the source data. E.g., 'mg'",
-    },
-    "PROCEDURE_OCCURRENCE" :{
-    "procedure_occurrence_id": "Unique identifier for the procedure record. E.g., 456789",
-    "procedure_date": "Date when the procedure was performed. E.g., 2023-05-20",
-    "procedure_datetime": "Exact date and time of the procedure. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "procedure_type_concept_id": "Concept ID indicating the type of procedure (e.g., surgical, diagnostic). E.g., 44818701 (for 'Surgical procedure')",
-    "modifier_concept_id": "Concept ID for any modifiers related to the procedure. E.g., 2000000 ('Laparoscopic')",
-    "quantity": "Number of times the procedure was performed. E.g., 1",
-    "procedure_source_value": "Original value of the procedure as in the source data. E.g., 'Appendectomy'",
-    "qualifier_source_value": "Additional details about the procedure from the source data. E.g., 'Laparoscopic'",
-    },
-    "DEVICE" :{
-    "device_exposure_id": "Unique identifier for each device exposure record. E.g., 999888",
-    "device_exposure_start_date": "Start date of the device exposure. E.g., 2023-01-15",
-    "device_exposure_start_datetime": "Exact start date and time of the device exposure. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "device_exposure_end_date": "End date of the device exposure. E.g., 2023-06-15",
-    "device_exposure_end_datetime": "Exact end date and time of the device exposure. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "quantity": "Number of devices used or exposed to. E.g., 1",
-    "device_source_value": "Original value of the device as in the source data. E.g., 'Pacemaker'",
-    },
-    "MEASUREMENT" :{
-    "measurement_id": "Unique identifier for the measurement record. E.g., 123456",
-    "measurement_date": "Date when the measurement was taken. E.g., 2023-08-10",
-    "measurement_datetime": "Exact date and time the measurement was taken. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "value_as_number": "Numerical value of the measurement. E.g., 120 (for systolic blood pressure)",
-    "range_low": "Lower limit of the normal range for the measurement. E.g., 90 (for systolic blood pressure)",
-    "range_high": "Upper limit of the normal range for the measurement. E.g., 120 (for systolic blood pressure)",
-    "measurement_source_value": "Original value of the measurement as in the source data. E.g., 'Blood Pressure'",
-    "unit_source_value": "Original unit of the measurement as in the source data. E.g., 'mmHg'",
-    },
-    "OBSERVATION" :{
-    "observation_id": "Unique identifier for each observation record. E.g., 789123",
-    "observation_date": "Date of the observation. E.g., 2023-02-15",
-    "observation_datetime": "Exact date and time of the observation. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "value_as_number": "Numerical value of the observation if applicable. E.g., 10 (for 'Cigarettes per day')",
-    "value_as_string": "Textual value of the observation if applicable. E.g., 'Non-smoker'",
-    "observation_source_value": "Original value of the observation as in the source data. E.g., 'Smoking status'",
-    "unit_source_value": "Original unit of the observation as in the source data. E.g., 'Cigarettes per day'",
-    },
-    "SPECIMEN" :{
-    "specimen_id": "Unique identifier for each specimen record. E.g., 123456",
-    "specimen_date": "Date when the specimen was collected. E.g., 2023-03-01",
-    "specimen_datetime": "Exact date and time when the specimen was collected. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "quantity": "Quantity of the specimen collected. E.g., 10 (ml for blood)",
-    "specimen_source_value": "Original value of the specimen as in the source data. E.g., 'Blood Sample'",
-    "unit_source_value": "Original unit of the specimen quantity as in the source data. E.g., 'ml'",
-    },
-    "COST" :{
-    "total_charge": "Total charge for the event. E.g., 200.00",
-    "total_cost": "Total cost for the event. E.g., 150.00",
-    "total_paid": "Total amount paid for the event. E.g., 150.00",
-    "paid_by_payer": "Amount paid by the payer (e.g., insurance). E.g., 100.00",
-    "paid_by_patient": "Amount paid by the patient. E.g., 50.00",
-    "paid_patient_copay": "Patient's copay amount. E.g., 20.00",
-    "paid_patient_coinsurance": "Patient's coinsurance amount. E.g., 10.00",
-    "paid_patient_deductible": "Patient's deductible amount. E.g., 20.00",
-    "paid_by_primary": "Amount paid by primary payer. E.g., 100.00",
-    "paid_ingredient_cost": "Cost of the ingredient for a drug. E.g., 30.00",
-    "paid_dispensing_fee": "Dispensing fee paid. E.g., 5.00",
-    "amount_allowed": "Amount allowed by the payer. E.g., 150.00",
-    "cost_source_value": "Original value of the cost as in the source data. E.g., 'Procedure cost'",
-    },
-    "LOCATION" :{
-    "location_id": "Unique identifier for each location record. E.g., 123",
-    "address_1": "First line of the address. E.g., '123 Main St'",
-    "address_2": "Second line of the address (if applicable). E.g., 'Apt 4'",
-    "city": "City of the location. E.g., 'New York'",
-    "state": "State of the location. E.g., 'NY'",
-    "zip": "Zip code of the location. E.g., '10001'",
-    "county": "County of the location. E.g., 'New York County'",
-    "location_source_value": "Original value of the location as in the source data. E.g., '123 Main St, Apt 4, New York, NY, 10001'",
-    "latitude": "a float, must be between -90 and 90.",
-    "longitude": "a float, must be between -180 and 180.",
-    },
-    "CARE_SITE" :{
-    "care_site_id": "Unique identifier for each care site record. E.g., 456",
-    "care_site_name": "Name of the care site. E.g., 'Main Street Medical Center'",
-    "care_site_source_value": "Original value of the care site as in the source data. E.g., 'Main Street Medical Center, Outpatient'",
-    "place_of_service_source_value": "Original place of service as in the source data. E.g., 'Outpatient Hospital'",
-    },
-    "PROVIDER" :{
-    "provider_id": "Unique identifier for each provider record. E.g., 789",
-    "provider_name": "Name of the provider. E.g., 'Dr. Jane Smith'",
-    "NPI": "National Provider Identifier. E.g., '1234567890'",
-    "DEA": "Drug Enforcement Administration registration number. E.g., 'AB1234567'",
-    "year_of_birth": "Year of birth of the provider. E.g., 1970",
-    "provider_source_value": "Original value of the provider as in the source data. E.g., 'Dr. Jane Smith'",
-    "specialty_source_value": "Original specialty of the provider as in the source data. E.g., 'Cardiology'",
-    "gender_source_value": "Original gender of the provider as in the source data. E.g., 'Female'",
-    },
-    "PAYER_PLAN_PERIOD" :{
-    "payer_plan_period_id": "Unique identifier for each payer plan period record. E.g., 12345",
-    "payer_plan_period_start_date": "Start date of the coverage period. E.g., 2023-01-01",
-    "payer_plan_period_end_date": "End date of the coverage period. E.g., 2023-12-31",
-    "stop_reason": "Reason for the end of the coverage period. E.g., 'Change of employment'",
-    "payer_source_value": "Original value of the payer as in the source data. E.g., 'Medicare'",
-    "plan_source_value": "Original value of the plan as in the source data. E.g., 'Medicare Part D'",
-    "sponsor_source_value": "Original value of the sponsor as in the source data. E.g., 'Government'",
-    },
-    "VISIT_OCCURRENCE" :{
-    "visit_occurrence_id": "Unique identifier for each visit record. E.g., 456789",
-    "visit_start_date": "Start date of the visit. E.g., 2023-04-15",
-    "visit_start_datetime": "Exact start date and time of the visit. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "visit_end_date": "End date of the visit. E.g., 2023-04-15",
-    "visit_end_datetime": "Exact end date and time of the visit. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "visit_source_value": "Original value of the visit as in the source data. E.g., 'Outpatient Visit'",
-    },
-    "OBSERVATION_PERIOD" :{
-    "observation_period_id": "Unique identifier for each observation period record. E.g., 112233",
-    "observation_period_start_date": "Start date of the observation period. E.g., 2023-01-01",
-    "observation_period_start_datetime": "Exact start date and time of the observation period. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    "observation_period_end_date": "End date of the observation period. E.g., 2023-12-31",
-    "observation_period_end_datetime": "Exact end date and time of the observation period. Default to midnight if time unknown. E.g., 2020-01-01 00:00:00",
-    }
-}
-
-cdm_tables = """1. PATIENT: Individual's healthcare identity hub, capturing demographics, contact information, and unique medical identifiers.
-2. OBSERVATION_PERIOD: Clinical data timeframe, marking the start and end dates of health monitoring or treatment phases.
-3. VISIT_OCCURRENCE: Healthcare interaction records, detailing visit dates, types (e.g., inpatient, outpatient), locations, and involved healthcare professionals.
-4. CONDITION_OCCURRENCE: Medical condition logs, encompassing diagnosis dates, condition types, severity indicators, and observed symptoms.
-5. DRUG_EXPOSURE: Medication intake documentation, including drug names, dosages, administration routes, prescribing dates, and treatment durations.
-6. PROCEDURE_OCCURRENCE: Patient treatment actions, specifying procedure types, execution dates, purposes, and attending practitioners.
-7. DEVICE: Medical device utilization specifics, identifying device types, application or implantation dates, functional purposes, and locations.
-8. MEASUREMENT: Clinical test outcomes, containing types of tests, numerical or categorical results, units, and test dates.
-9. OBSERVATION: Diverse health-related facts, sourced from examinations, questionnaires, or procedural outcomes, inclusive of non-clinical information. This is general, and please prefer to use MEASUREMENT or CONDITION_OCCURRENCE if possible.
-10. DEATH: End-of-life data, specifying causes, dates, and circumstances surrounding a patient's death.
-11. SPECIMEN: Biological sample records, denoting sample types, collection dates, handling processes, and preservation methods.
-12. COST: Healthcare financials, enumerating costs associated with medical events like procedures, medications, visits, and equipment.
-13. LOCATION: Geographical pinpointing, detailing physical addresses or coordinates of healthcare facilities or patient residences.
-14. CARE_SITE: Health service points, defining types of facilities (e.g., hospitals, clinics), specializations, and operational scopes.
-15. PROVIDER: Practitioner profiles, listing professionals' credentials, specialties, roles, and contact information.
-16. PAYER_PLAN_PERIOD: Insurance coverage chronology, indicating enrollment spans, plan types, provided benefits, and payer information.
-"""
-
-
 
 class CDMTransformation:
     def __init__(self, doc_df, log_file_path='data_log.txt'):
