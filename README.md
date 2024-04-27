@@ -11,7 +11,7 @@
 Cocoon Data Profiling is publicly available:
 - 👉 [**Free Service:** Drop your CSV, and we will email you the profile](https://cocoon-data-transformation.github.io/page/)
 - 👉 [**Python Package:** Check out the notebook to interactively profile your table in python](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Profile.ipynb)
-- (The above two run the same code; the Python package requires your LLM API and is interactive)
+- (Both run the same code; Python package requires LLM API, but is interactive and no size/#col limit)
 
 🖼️ Profile Gallery
 
