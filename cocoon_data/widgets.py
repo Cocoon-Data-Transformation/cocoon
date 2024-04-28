@@ -353,3 +353,168 @@ def create_text_area(initial_value):
     
     return text_area
 
+
+
+def display_pages(total_page, create_html_content):
+    
+    current_page = 0
+
+    def update_html_display(page_no):
+        html_display.value = create_html_content(page_no)
+        page_label.value = f'Page {page_no + 1} of {total_page}'
+    
+    def on_prev_clicked(b):
+        nonlocal current_page
+        if current_page > 0:
+            current_page -= 1
+            update_html_display(current_page)
+
+    def on_next_clicked(b):
+        nonlocal current_page
+        if current_page < total_page - 1:
+            current_page += 1
+            update_html_display(current_page)
+    
+    html_display = widgets.HTML(value=create_html_content(current_page))
+    
+    btn_prev = widgets.Button(description='Previous Page', button_style='success')
+    btn_next = widgets.Button(description='Next Page', button_style='success')
+
+    btn_prev.on_click(on_prev_clicked)
+    btn_next.on_click(on_next_clicked)
+
+    page_label = widgets.Label(value=f'Page {current_page + 1} of {total_page}')
+    
+    navigation_bar = widgets.HBox([btn_prev, page_label, btn_next])
+    
+    display(navigation_bar, html_display)
+    
+def create_select_widget(options, callback):
+    list_widget = widgets.Select(
+        options=options,
+        description='Choices:',
+        disabled=False
+    )
+
+    button = widgets.Button(description="Submit")
+
+    def on_button_clicked(b):
+        callback(list_widget.value)
+
+    button.on_click(on_button_clicked)
+
+    display(list_widget, button)
+
+
+def create_selection_grid(columns1, columns2, table1_name, table2_name, call_back_func):
+    table1_label = widgets.Label(value=table1_name)
+    table2_label = widgets.Label(value=table2_name)
+
+    table1_selectors = [widgets.Checkbox() for col in columns1]
+    table2_selectors = [widgets.Checkbox() for col in columns2]
+
+    def on_submit_clicked(b):
+        selected_table1_indices = [i for i, selected in enumerate(table1_selectors) if selected.value]
+        selected_table2_indices = [i for i, selected in enumerate(table2_selectors) if selected.value]
+        call_back_func(selected_table1_indices, selected_table2_indices)
+
+    submit_button = widgets.Button(description="Submit")
+    submit_button.on_click(on_submit_clicked)
+
+    grid = widgets.GridspecLayout(2 + max(len(columns1), len(columns2)), 4)
+    grid[0, 0] = table1_label
+    grid[0, 2] = table2_label
+
+    for i, selector in enumerate(table1_selectors):
+        grid[i + 1, 0] = widgets.Label(columns1[i])
+        grid[i + 1, 1] = selector
+
+    for i, selector in enumerate(table2_selectors):
+        grid[i + 1, 2] = widgets.Label(columns2[i])
+        grid[i + 1, 3] = selector
+
+    grid[-1, :] = submit_button
+    return grid
+
+def create_column_selector(columns, callback, default=False):
+    multi_select = widgets.SelectMultiple(
+        options=[(column, i) for i, column in enumerate(columns)],
+        disabled=False,
+        layout={'width': '600px', 'height': '200px'}
+    )
+    
+    instructions_text = "Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, 0 are selected."
+    instructions = widgets.Label(value=instructions_text)
+    
+    def update_instructions(change):
+        selected_count = len(multi_select.value)
+        instructions.value = f"Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, {selected_count} are selected."
+    
+    multi_select.observe(update_instructions, 'value')
+    
+    select_all_button = widgets.Button(description="Select All", button_style='info', icon='check-square')
+    deselect_all_button = widgets.Button(description="Deselect All", button_style='danger', icon='square-o')
+    reverse_selection_button = widgets.Button(description="Reverse Selection", button_style='warning', icon='exchange')
+    submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
+    
+    def select_all(b):
+        multi_select.value = tuple(range(len(columns)))
+        
+    def deselect_all(b):
+        multi_select.value = ()
+    
+    def reverse_selection(b):
+        current_selection = set(multi_select.value)
+        all_indices = set(range(len(columns)))
+        new_selection = tuple(all_indices - current_selection)
+        multi_select.value = new_selection
+    
+    def submit(b):
+        selected_indices = multi_select.value
+        callback(selected_indices)
+    
+    select_all_button.on_click(select_all)
+    deselect_all_button.on_click(deselect_all)
+    reverse_selection_button.on_click(reverse_selection)
+    submit_button.on_click(submit)
+    
+    buttons = widgets.HBox([select_all_button, deselect_all_button, reverse_selection_button])
+    ui = widgets.VBox([instructions, multi_select, buttons, submit_button])
+    display(ui)
+    
+    if default:
+        multi_select.value = tuple(range(len(columns)))
+
+
+
+
+def create_progress_bar_with_numbers(current, labels):
+
+    total = len(labels)
+    circles_with_labels = []
+    for i in range(total):
+        color = "#274e13" if i == current else "#d9ead3"
+        circle_html = f'''
+        <div style="display: inline-block; text-align: center; width: 60px;">
+            <span style="display: block; width: 20px; height: 20px; border-radius: 50%; background: {color}; margin: 0 auto; line-height: 20px; color: white; font-size: 12px;">{i+1}</span>
+            <label style="display: block; margin-top: 5px; font-size: 12px;">{labels[i]}</label>
+        </div>
+        '''
+        circles_with_labels.append(circle_html)
+
+    display(HTML(''.join(circles_with_labels)))
+
+
+def color_columns_multiple(df, colors, column_indices_list):
+
+    def apply_color_to_columns(styler, colors, column_indices_list):
+        for color, indices in zip(colors, column_indices_list):
+            for index in indices:
+                styler = styler.set_properties(**{'background-color': color}, subset=df.columns[index])
+        return styler
+
+    styled_df = apply_color_to_columns(df.style, colors, column_indices_list)
+
+    return styled_df
+
+
