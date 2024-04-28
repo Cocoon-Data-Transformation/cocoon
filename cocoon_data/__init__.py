@@ -15034,18 +15034,15 @@ class SQLStep(TransformationStep):
             self.distinct_count = distinct_count
         return self.distinct_count
 
-    # don't run codes in Python
     def run_codes(self, mode="VIEW"):
         sql_code = self.get_codes(mode=mode)
         run_sql_return_df(self.con, sql_code)
 
     def display(self):
         print(self.name)
-        # self.doc_df.display_document()
 
     def edit_widget(self, callbackfunc=None):
         self.display()
-        # print in red
         print("\033[91mEdit Source File is under development!\033[0m")
 
         return_button = widgets.Button(description="Return")
@@ -15083,16 +15080,12 @@ class TransformationSQLPipeline(TransformationPipeline):
         
         if mode == "dbt":
             
-            # codes = "WITH"
             with_clauses = []
             
-            # skip the first one because it is the source table without any sql
-            # skip the last for dbt syntax
             for step_idx  in sorted_step_idx[1:-1]:
                 step = self.steps[step_idx]
                 codes = step.get_codes(target_id=step_idx, mode="AS")
                 with_clauses.append(codes)
-                # codes += "\n\n"
 
             codes = ""
             if len(with_clauses) > 0:
@@ -15106,8 +15099,6 @@ class TransformationSQLPipeline(TransformationPipeline):
             
             table_clauses = []
             
-            # skip the first one because it is the source table without any sql
-            # skip the last for dbt syntax
             for step_idx  in sorted_step_idx[1:]:
                 step = self.steps[step_idx]
                 codes = step.get_codes(target_id=step_idx, mode="TABLE")
@@ -15149,7 +15140,6 @@ def create_sample_distinct_query(table_name, column_name, sample_size=None):
 def create_sample_distinct(con, table_name, column_name, sample_size):
 
     query = create_sample_distinct_query(table_name, column_name, sample_size)
-    # sample the distinct values, but not null
     sample_values = run_sql_return_df(con,query)
 
     return sample_values
@@ -15162,29 +15152,16 @@ def indent_paragraph(paragraph, spaces=4):
     indent = ' ' * spaces
     return '\n'.join(indent + line for line in paragraph.split('\n'))
 
-# # Example usage:
-# paragraph = """This is a sample paragraph.
-# It contains multiple lines.
-# Each line will be indented."""
 
-# indented_paragraph = indent_paragraph(paragraph)
-# print(paragraph)
-# print(indented_paragraph)
 
 
  
-# create a class called data project
-# it mainly manage a dictionary (table_name: list of attributes)
 class DataProject:
     def __init__(self):
-        # tables are (table_name) -> [list of attributes]
         self.tables = {}
 
-        # link is a dict of
-        # table1 -> table2 -> [["table1_key1", "table1_key2", ...], [...]]
         self.links = {}
 
-        # story is [list of sentences]
         self.story = []
 
     def add_links(self, join_infos):
@@ -15209,37 +15186,28 @@ class DataProject:
 
     def add_table(self, table_name, attributes):
         if table_name in self.tables:
-            # print(f"Table '{table_name}' already exists.")
             pass
         else:
             self.tables[table_name] = attributes
-            # print(f"Table '{table_name}' added with attributes {attributes}.")
 
     def get_columns(self, table_name):
         if table_name in self.tables:
             return self.tables[table_name]
         else:
-            # print(f"Table '{table_name}' does not exist.")
             return []
 
     def remove_table(self, table_name):
         if table_name in self.tables:
             del self.tables[table_name]
 
-            # print(f"Table '{table_name}' has been removed.")
         else:
-            # print(f"Table '{table_name}' does not exist.")
             pass
         
-        # Remove the table from the links dict if it is a key
         if table_name in self.links:
             del self.links[table_name]
 
-        # Iterate over the links dict and remove any links to the table being removed
-        for table_name_source in list(self.links.keys()):  # list() to avoid RuntimeError
-            # Check if table_name is in the nested keys of self.links[table_name_source]
+        for table_name_source in list(self.links.keys()):
             if table_name in self.links[table_name_source]:
-                # Remove the entry for table_name from the nested dict
                 del self.links[table_name_source][table_name]
 
     def list_tables(self):
@@ -15261,21 +15229,16 @@ class DataProject:
         graph_data["nodes"] = [{"id": table} for table in tables]
         links = []
 
-        # source -> target
         source_target_pair = {}
 
         for table1 in self.links:
             for table2 in self.links[table1]:
-                # compare which one str is smaller and which one is larger
-                # the smaller is the key and the larger one is the value
                 key = min(table1, table2)
                 value = max(table1, table2)
 
                 if key not in source_target_pair:
-                    # create an empty set
                     source_target_pair[key] = set()
 
-                # add the value to the set
                 source_target_pair[key].add(value)
 
         for table1 in source_target_pair:
@@ -15286,33 +15249,16 @@ class DataProject:
 
         display_draggable_graph_html(graph_data)
 
-# Example usage:
-# project = DataProject()
-# project.add_table("users", ["id", "name", "email"])
-# project.add_table("products", ["id", "name", "price"])
-# project.list_tables()
-# project.remove_table("users")
-# project.list_tables()
 
 
-# # Create a simple DataFrame to simulate a table with one column and duplicate rows
-# data = {'name': ['Alice', 'Alice']}
-# df_simple = pd.DataFrame(data)
 
-# # Create a table with the simple DataFrame
-# con.register('simple_table', df_simple)
 
-# # Find the duplicate rows in the simple table
-# duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, 'simple_table')
 
 def display_duplicated_rows_html2(df):
     html_output = f"<p>🤨 There are {len(df)} groups of duplicated rows.</p>"
-    # for each df row
     for i, row in df.iterrows():
         html_output += f"<p>Group {i+1} appear {row['cocoon_count']} times:</p>"
-        # remove the cocoon_count column from the row
         row_without_cocoon_count = row.drop(labels=['cocoon_count'])
-        # Convert the Series (row) to a DataFrame, remove the index, and then to HTML
         html_output += row_without_cocoon_count.to_frame().T.to_html(index=False)
 
     if len(df) > 5:
@@ -15325,17 +15271,14 @@ def display_duplicated_rows_html2(df):
 def create_explore_button(query_widget, table_name=None, query=""):
     if table_name is not None:
         query = f"SELECT * FROM {table_name}"
-    # create a button to exploe the table
-    # when clicked, query_widget.run_query(f"SELECT * FROM {table_name}")
     explore_button = widgets.Button(
         description='Explore',
         disabled=False,
-        button_style='info', # 'success', 'info', 'warning', 'danger' or ''
+        button_style='info',
         tooltip='Click to explore',
         icon='search'
     )
 
-    # Define function to handle response
     def on_button_clicked(b):
         print("😎 Query submitted. Check out the data widget!")
         query_widget.run_query(query)
@@ -15344,7 +15287,6 @@ def create_explore_button(query_widget, table_name=None, query=""):
 
     display(explore_button)
 
-# display_duplicated_rows_html2(sample_duplicate_rows)
 
 
 class DescribeColumns(Node):
@@ -15414,17 +15356,14 @@ Return in the following format:
         create_explore_button(query_widget, table_pipeline)
         schema = table_pipeline.get_final_step().get_schema()
 
-        # Initialize an empty list to store row data
         rows_list = []
 
         for col in schema:
-            # Append the row data as a dictionary to the rows_list
             rows_list.append({
                 "Column": col,
                 "Summary": json_code[col],
             })
 
-        # Convert the list of dictionaries to a DataFrame
         df = pd.DataFrame(rows_list)
         
         editable_columns = [False, True]
@@ -15432,16 +15371,14 @@ Return in the following format:
         print("😎 We have described the columns:")
         display(grid)
 
-        # create a button to next
         next_button = widgets.Button(
             description='Next',
             disabled=False,
-            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            button_style='success',
             tooltip='Click to submit',
             icon='check'
         )  
 
-        # Define function to handle response
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="split")
@@ -15487,7 +15424,6 @@ class DecideProjection(Node):
 
         def callback_next(selected_indices):
             
-            # flip the selected_indices, to be the one not selected
             selected_indices = [i for i in range(num_cols) if i not in selected_indices]
 
             if len(selected_indices) == 0:
@@ -15501,7 +15437,6 @@ class DecideProjection(Node):
             clear_output(wait=True)
             document["selected_columns"] = [column_names[i] for i in selected_indices]
 
-            # if any column is projected out
             if len(selected_indices) < num_cols:
                 new_table_name = f"{table_pipeline}_projected"
                 selection_clause = ',\n'.join(document['selected_columns'])
@@ -15514,7 +15449,6 @@ class DecideProjection(Node):
         create_column_selector(column_names, callback_next, default=False)
 
         if self.viewer:
-            # by default, we will not remove any columns
             callback_next([])
 
 class CreateColumnGrouping(Node):
@@ -15575,42 +15509,29 @@ Conclude with the final result as a multi-level JSON.
 ```"""
         
         def extract_attributes(json_var):
-            # This list will hold the collected attributes.
             attributes = []
             
             def traverse(element):
-                # If the current element is a dictionary, we'll iterate through its values.
-                # This works because each nested level in your JSON is represented by a dictionary.
                 if isinstance(element, dict):
                     for value in element.values():
                         traverse(value)
                         
-                # If the current element is a list, it's one of the lists you're interested in.
-                # We'll extend the main list of attributes with the values from this list.
                 elif isinstance(element, list):
                     for item in element:
-                        # Ensure we only add strings to the attributes list.
                         if isinstance(item, str):
                             attributes.append(item)
                         
-                        # If the item is not a string (for example, it's a dictionary or another list),
-                        # we should continue traversing it to extract any nested attributes.
                         else:
                             traverse(item)
                             
-                # If the element is neither a dictionary nor a list, there's nothing to do with it here.
-                # In your JSON structure, such an element wouldn't represent a container of attributes.
 
-            # Start the traversal with the top-level JSON structure.
             traverse(json_var)
             
             return attributes
 
         def validate_attributes(attributes, reference_attributes):
-            # This string will collect error messages.
             error_messages = []
 
-            # Check for duplicate attributes.
             seen_attributes = set()
             duplicates = set()
             for attribute in attributes:
@@ -15621,8 +15542,6 @@ Conclude with the final result as a multi-level JSON.
             if duplicates:
                 error_messages.append("Duplicate attributes: " + ', '.join(duplicates))
 
-            # Check for one-to-one correspondence by ensuring both the attributes
-            # and reference attributes have no items that the other doesn't.
             attributes_set = set(attributes)
             reference_set = set(reference_attributes)
 
@@ -15634,8 +15553,6 @@ Conclude with the final result as a multi-level JSON.
             if missing_attributes:
                 error_messages.append("Missing attributes: " + ', '.join(missing_attributes) + "\n Are attributes in the leaf as an array [att1, att2]?")
 
-            # Join all error messages into a single string separated by newlines.
-            # If there were no issues, this results in an empty string.
             return '\n'.join(error_messages)
         
         messages =[ {"role": "user", "content": template}]
@@ -15648,7 +15565,6 @@ Conclude with the final result as a multi-level JSON.
         
         json_code = extract_json_code_safe(assistant_message['content'])
         json_var = json.loads(json_code)
-        # remove "reasoning" from the json_var
         json_var.pop("reasoning", None)
         attributes = extract_attributes(json_var)
 
@@ -15685,7 +15601,6 @@ Conclude with the final result as a multi-level JSON.
 
         print("🧐 Next we will delve into the columns")
 
-        # create a button to edit the json_code
         edit_button = widgets.Button(
             description='Edit',
             disabled=False,
@@ -15694,14 +15609,11 @@ Conclude with the final result as a multi-level JSON.
             icon='edit'
         )
 
-        # add a on_click event to the button, that prints "Not implemented yet"
         def on_edit_clicked(b):
             print("Not implemented yet")
-            # callback(summary)
 
         edit_button.on_click(on_edit_clicked)
 
-        # Define function to handle response
         def on_button_clicked(b):
             clear_output(wait=True)
             print("Submission received.")
@@ -15720,7 +15632,6 @@ Conclude with the final result as a multi-level JSON.
         display(HBox([edit_button, submit_button]))
         
         if self.viewer:
-            # automatically triggert the on_button_clicked
             on_button_clicked(submit_button)
         
     
@@ -15746,7 +15657,6 @@ class CreateTableSummary(Node):
         columns = list(schema.keys())
         all_columns = ", ".join(columns)
         sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
-        # for each column name in sample_df, strip the leading and trailing  '
         table_desc = sample_df.to_csv(index=False, quoting=2)
 
         self.sample_df = sample_df
@@ -15778,22 +15688,13 @@ Now, your summary:
         self.messages = messages
 
 
-        # Input: "**First** word, and then a **second** one"
-        # Expected Output: ["First", "second"]
 
-        # if text_columns is a superset of table_columns, remove the ** ** for these extra texts
-        # summary = "The report focuses on **Name**, **Age**, **City**, and **Occupation** of the individuals."
-        # table_columns = ["Name", "Age", "City"]
-        # updated summary would be "The report focuses on **Name**, **Age**, **City**, and Occupation of the individuals."
 
-        # Extracts and returns all words enclosed in double asterisks in the given text.
         def extract_words_in_asterisks(text):
             import re
 
-            # Regular expression to find words within double asterisks
             pattern = r'\*\*(.*?)\*\*'
 
-            # Find all matches
             matches = re.findall(pattern, text)
 
             return matches
@@ -15802,29 +15703,19 @@ Now, your summary:
             text_columns_set = set(text_columns)
             table_columns_set = set(table_columns)
 
-            # Check if text_columns is a superset of table_columns
             if text_columns_set.issuperset(table_columns_set):
-                # Find extra columns in text_columns
                 extra_columns = text_columns_set - table_columns_set
                 return list(extra_columns)
             else:
-                # Raise error if text_columns is not a superset of table_columns
                 raise ValueError(f"text_columns is not a superset of table_columns. text_columns: {text_columns}, table_columns: {table_columns}")
 
-        # Remove double asterisks from the extra columns in the summary
         def update_summary(summary, extra_columns):
             for column in extra_columns:
                 summary = summary.replace(f"**{column}**", column)
 
             return summary
 
-        # For now, don't use tests
-        # text_columns = extract_words_in_asterisks(summary)
-        # extra_columns = find_extra_columns(text_columns, table_columns)
         
-        # if len(extra_columns) > 0:
-        #     updated_summary = update_summary(summary, extra_columns)
-        #     summary = updated_summary
 
         return summary
 
@@ -15842,7 +15733,6 @@ Now, your summary:
 
         display(HTML(f"<b>Table Summary</b>:\n{replace_asterisks_with_tags(summary)}"))
 
-        # create a button to edit the summary
         edit_button = widgets.Button(
             description='Edit',
             disabled=False,
@@ -15851,14 +15741,11 @@ Now, your summary:
             icon='edit'
         )
 
-        # add a on_click event to the button, that prints "Not implemented yet"
         def on_edit_clicked(b):
             print("Not implemented yet")
-            # callback(summary)
 
         edit_button.on_click(on_edit_clicked)
 
-        # Define function to handle response
         def on_button_clicked(b):
             clear_output(wait=True)
             print("Submission received.")
@@ -15877,7 +15764,6 @@ Now, your summary:
         display(HBox([edit_button, submit_button]))
         
         if self.viewer:
-            # automatically triggert the on_button_clicked
             on_button_clicked(submit_button)
 
 
@@ -15900,28 +15786,23 @@ class DecideDuplicate(Node):
         document = {"duplicate_count": duplicate_count}
 
         if duplicate_count > 0:
-            # display the duplicated rows and ask for user input
             display_duplicated_rows_html2(sample_duplicate_rows)
 
-            # Function to handle button click event
             def on_button_clicked(b):
                 clear_output(wait=True)
                 if b.description == 'Yes':
-                    # data transformation is under development
                     print("⚠️ This feature is under development.")
                 else:
                     callback(document)
 
-            # Create a 'Yes' button
             yes_button = widgets.Button(
                 description='Yes',
                 disabled=False,
-                button_style='', # 'success', 'info', 'warning', 'danger' or ''
+                button_style='',
                 tooltip='Click to submit Yes',
                 icon='check'
             )
 
-            # Create a 'No' button
             no_button = widgets.Button(
                 description='No',
                 disabled=False,
@@ -15930,15 +15811,12 @@ class DecideDuplicate(Node):
                 icon='times'
             )
 
-            # Set up event handlers
             yes_button.on_click(on_button_clicked)
             no_button.on_click(on_button_clicked)
 
-            # Display the buttons
             display(HBox([yes_button, no_button]))
 
             if self.viewer:
-                # automatically triggert the yes_button
                 on_button_clicked(no_button)
 
 
@@ -16014,21 +15892,18 @@ Return in the following format:
         create_explore_button(query_widget, table_pipeline)
         schema = table_pipeline.get_final_step().get_schema()
 
-        # Initialize an empty list to store row data
         rows_list = []
 
         for col in schema:
             current_type = reverse_data_types[schema[col]]
             target_type = json_code["column_type"][col]
 
-            # Append the row data as a dictionary to the rows_list
             rows_list.append({
                 "column_name": col,
                 "current_type": current_type,
                 "target_type": target_type,
             })
 
-        # Convert the list of dictionaries to a DataFrame
         df = pd.DataFrame(rows_list)
         
         grid = create_data_type_grid(df)
@@ -16036,16 +15911,14 @@ Return in the following format:
         display(grid)
         print("🛠️ Automatical Data Casting will be available soon...")
 
-        # create a button to next
         next_button = widgets.Button(
             description='Next',
             disabled=False,
-            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            button_style='success',
             tooltip='Click to submit',
             icon='check'
         )  
 
-        # Define function to handle response
         def on_button_clicked(b):
             clear_output(wait=True)
             df = extract_grid_data_type(grid)
@@ -16060,14 +15933,12 @@ Return in the following format:
             on_button_clicked(next_button)
 
 
-# write a python function: given a duckdb con, table name, column name, return the percentage of missing value
 def get_missing_percentage(con, table_name, column_name):
     query = f"""
     SELECT COUNT(*) as total_count, COUNT({column_name}) as non_missing_count
     FROM {table_name}
     """
     
-    # Execute the query
     result = run_sql_return_df(con, query)
     total_count = result.iloc[0, 0]
     non_missing_count = result.iloc[0, 1]
@@ -16138,7 +16009,6 @@ patterns: # shall be a short list, mostly jsut one
         return summary
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        # TODO: verify the regex pattern, and improve it based on samples
         callback(run_output)
 
 class DecideRegexForAll(MultipleNode):
@@ -16164,7 +16034,6 @@ class DecideRegexForAll(MultipleNode):
         schema = table_pipeline.get_final_step().get_schema()
         distinct_count = table_pipeline.get_final_step().get_distinct_count()
 
-        # only select string columns, with distinct count > 50
         for col in columns:
             if schema[col] == 'VARCHAR' and distinct_count[col] > 50:
                 self.elements.append(col)
@@ -16196,7 +16065,6 @@ class DecideUnusual(Node):
         column_name = self.para["column_name"]
         sample_size = 20
 
-        # sample the distinct values, but not null
         sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
         
         return column_name, sample_values
@@ -16255,8 +16123,6 @@ class DecideUnusualForAll(MultipleNode):
     def extract(self, item):
         table_pipeline = self.para["table_pipeline"]
         schema = table_pipeline.get_final_step().get_schema()
-        # columns = list(schema.keys())
-        # columns = column which is in data_types['VARCHAR']
         columns = [col for col in schema if schema[col] in data_types['VARCHAR']]
         self.elements = []
         self.nodes = {}
@@ -16282,27 +16148,23 @@ class DecideUnusualForAll(MultipleNode):
         df = pd.DataFrame(data, columns=["Column", "Explanation", "Endorse"])
         
         if len(df) == 0:
-            # print("No disguised missing values found.")
             callback(df.to_json(orient="split"))
             return
         
-        # display the df    
         editable_columns = [False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
         
         print("The following columns have unusual values: ❓")
         display(grid)
       
-        # create a button to Endorse Split
         next_button = widgets.Button(
             description='Submit',
             disabled=False,
-            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
         
-        # Define function to handle response
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="split")
@@ -16362,14 +16224,11 @@ Respond in JSON format:
         return json_code
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        # Ensure run_output is a list
         if not isinstance(run_output, list):
             run_output = []
 
-        # Validate each pair in the list
         cleaned_output = [pair for pair in run_output if isinstance(pair, list) and len(pair) == 2]
 
-        # Call the callback with the cleaned output
         callback(cleaned_output)
 
 
@@ -16399,7 +16258,6 @@ class DecideColumnRange(Node):
         min_max = {}
         for col in numerical_columns:
             min_max_tuple = run_sql_return_df(con, f"SELECT MIN({col}) as min, MAX({col}) as max FROM {table_pipeline}").iloc[0]
-            # min_max[col] -> [min, max]
             min_max[col] = [min_max_tuple["min"], min_max_tuple["max"]]
         
         return table_desc, numerical_columns, min_max
@@ -16452,11 +16310,9 @@ Now, return in the following format:
         create_explore_button(query_widget, table_pipeline)
         schema = table_pipeline.get_final_step().get_schema()
 
-        # Initialize an empty list to store row data
         rows_list = []
 
         for col in schema:
-            # Append the row data as a dictionary to the rows_list
             if col in json_code:
                 rows_list.append({
                     "Column": col,
@@ -16466,7 +16322,6 @@ Now, return in the following format:
                     "Within Range?": "❌ No" if json_code[col]["min"] > min_max[col][0] or json_code[col]["max"] < min_max[col][1] else "✔️ Yes",
                 })
 
-        # Convert the list of dictionaries to a DataFrame
         df = pd.DataFrame(rows_list)
         
         if len(df) == 0:
@@ -16478,16 +16333,14 @@ Now, return in the following format:
         print("😎 We have decided the column range:")
         display(grid)
 
-        # create a button to next
         next_button = widgets.Button(
             description='Next',
             disabled=False,
-            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            button_style='success',
             tooltip='Click to submit',
             icon='check'
         )  
 
-        # Define function to handle response
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="split")
@@ -16541,11 +16394,9 @@ class DecideMissing(Node):
         
         missing_columns, sample_df_str, table_name = extract_output
         
-        # if there are no missing columns, return an empty dictionary
         if len(missing_columns) == 0:
             return {"reasoning": "No missing values found.", "columns_obvious_not_applicable": {}}
 
-        # Assuming extract_output is correctly unpacked and missing_columns is a dictionary
         missing_desc = "\n".join([f'{idx+1}. {col}: {missing_columns[col]}' for idx, (col, desc) in enumerate(missing_columns.items())])
 
         template = f"""You have the following table:
@@ -16595,10 +16446,6 @@ Return in the following format:
 
         create_explore_button(query_widget, table_pipeline)
 
-        # create a df that has 4 columns: column name, missing percentage, missing acceptable, reason
-        # column name and missing percentage are key/value from missing_columns
-        # reason is from json_code["columns_obvious_not_applicable"]
-        # some columns may not have a reason, so make reason an empty string if not found
         rows_list = []
         for col in missing_columns:
             missing_percentage = missing_columns[col]
@@ -16606,7 +16453,6 @@ Return in the following format:
             rows_list.append({
                 "Column": col,
                 
-                # keep two decimal places
                 "NULL (%)": f"{missing_percentage*100:.2f}",
                 "Is NULL Acceptable?": True if reason != "" else False,
                 "Explanation": reason
@@ -16624,16 +16470,14 @@ Return in the following format:
         print("😎 We have identified missing values, and potential causes:")
         display(grid)
         
-        # create a button to Endorse Split
         next_button = widgets.Button(
             description='Submit',
             disabled=False,
-            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
         
-        # Define function to handle response
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="split")
@@ -16668,7 +16512,6 @@ class DecideDMV(Node):
         column_name = self.para["column_name"]
         sample_size = 20
 
-        # sample the distinct values, but not null
         sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
         
         return column_name, sample_values
@@ -16731,12 +16574,7 @@ class DecideDMVforAll(MultipleNode):
             
     def display_after_finish_workflow(self, callback, document):
         clear_output(wait=True)
-        # print(document)
         
-        # given document['Decide Disguised Missing Values'], create a df
-        # first column is the column name
-        # second column is the DMV
-        # skip any columns that document['Decide Disguised Missing Values'][column]['DMV'] is empty or no DMV
         data = []
         if "Decide Disguised Missing Values" in document:
             for key in document["Decide Disguised Missing Values"]:
@@ -16747,13 +16585,11 @@ class DecideDMVforAll(MultipleNode):
                     
                     
         if not data:
-            # print("No disguised missing values found.")
             callback(document)
             return
         
         
         if not data:
-            # print("No disguised missing values found.")
             callback(document)
             return
         
@@ -16763,23 +16599,20 @@ class DecideDMVforAll(MultipleNode):
             callback(df.to_json(orient="split"))
             return
         
-        # display the df    
         editable_columns = [False, True, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True, lists=["Disguised Missing Values"])
         
         print("😎 We have identified disguised missing values:")
         display(grid)
         
-        # create a button to Endorse Split
         next_button = widgets.Button(
             description='Submit',
             disabled=False,
-            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
         
-        # Define function to handle response
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid, lists=["Disguised Missing Values"])
             document = new_df.to_json(orient="split")
@@ -16794,30 +16627,24 @@ class DecideDMVforAll(MultipleNode):
             on_button_clicked(next_button)
 
 def check_column_uniqueness(con, table_name, column_name, allow_null=False):
-    # Construct the query to count distinct values
     if not allow_null:
-        # Counting distinct values including NULL
         query = f"""
         SELECT COUNT(DISTINCT {column_name}) AS distinct_count,
                COUNT(*) AS total_count
         FROM {table_name}
         """
     else:
-        # Counting distinct values excluding NULL
         query = f"""
         SELECT COUNT(DISTINCT {column_name}) AS distinct_count,
                COUNT({column_name}) AS non_null_count
         FROM {table_name}
         """
 
-    # Execute the query
     result = run_sql_return_df(con, query)
     distinct_count = result.iloc[0]['distinct_count']
     
-    # Choose the appropriate total count based on whether NULLs are allowed
     total_count = result.iloc[0]['total_count'] if not allow_null else result.iloc[0]['non_null_count']
 
-    # Return True if all values are unique, False otherwise
     return distinct_count == total_count
 
 
@@ -16858,7 +16685,6 @@ class DecideUnique(Node):
         
         unique_columns, sample_df_str, table_name = extract_output
 
-        # Assuming extract_output is correctly unpacked and unique_columns is a dictionary
         unique_desc = "\n".join([f'{idx+1}. {col}: {unique_columns[col]}' for idx, (col, desc) in enumerate(unique_columns.items())])
 
         template = f"""You have the following table:
@@ -16900,9 +16726,6 @@ Return in the following format:
 
         create_explore_button(query_widget, table_pipeline)
         
-        # create a df that has 3 columns: Column, Is Unique, Should be Unique?, Reason
-        # Column and Is Unique are key/value from unique_columns
-        # Should be Unique? and Reason are from json_code["unique_columns"]
         
         rows_list = []
         for col in unique_columns:
@@ -16916,7 +16739,6 @@ Return in the following format:
             })
         
         df = pd.DataFrame(rows_list)
-        # select df that either "Is Unique" or "Should be Unique?"
         df = df[df["Is Unique"] | df["Should be Unique?"]]
         
         editable_columns = [False, False, True, True]
@@ -16925,16 +16747,14 @@ Return in the following format:
         print("😎 We have identified columns that should be unique:")
         display(grid)
         
-        # create a button to Endorse Split
         next_button = widgets.Button(
             description='Submit',
             disabled=False,
-            button_style='success', # 'success', 'info', 'warning', 'danger' or ''
+            button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
         
-        # Define function to handle response
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="split")
@@ -16975,9 +16795,7 @@ def create_profile_workflow(table_name, con, viewer=True):
     main_workflow.add_to_leaf(CreateTableSummary())
     main_workflow.add_to_leaf(DescribeColumns())
     main_workflow.add_to_leaf(CreateColumnGrouping())
-    # main_workflow.add_to_leaf(DecideRegexForAll())
     main_workflow.add_to_leaf(DecideDataType())
-    # main_workflow.add_to_leaf(DecideDMVforAll())
     main_workflow.add_to_leaf(DecideMissing())
     main_workflow.add_to_leaf(DecideUnique())
     main_workflow.add_to_leaf(DecideUnusualForAll())
@@ -16991,18 +16809,15 @@ def create_profile_workflow(table_name, con, viewer=True):
 
 
 def truncate_text_vectorized(df, max_length=100, col_max_length=10):
-    # Truncate function for a Series of strings
     def truncate_series(series):
         mask = series.str.len() > max_length
         truncated = series[mask].str.slice(0, max_length//2) + '...' + series[mask].str.slice(-max_length//2)
         series[mask] = truncated
         return series
 
-    # Apply truncation to each column that is of object type (typically string)
     for column in df.select_dtypes(include=[object]).columns:
         df[column] = truncate_series(df[column])
 
-    # Truncate column names if needed
     new_columns = []
     for column in df.columns:
         if len(column) > col_max_length:
@@ -17015,16 +16830,7 @@ def truncate_text_vectorized(df, max_length=100, col_max_length=10):
     
     return df
 
-# # Example DataFrame
-# data = {
-#     'VeryLongColumnNameHereA': ['This is a short sentence.', 'This is a much longer sentence that will need to be truncated because it is too long.'],
-#     'AnotherVeryLongColumnNameB': ['Short text', 'Another long text that definitely needs to be truncated due to its length.'],
-# }
-# sample_df = pd.DataFrame(data)
 
-# # Apply truncation
-# truncated_df = truncate_text_vectorized(sample_df, 50, 20)
-# truncated_df
 
 def create_select_html_from_list(list_of_values):
     options = ''.join(f"<option value='{item}'>{item}</option>" for item in list_of_values)
@@ -17032,57 +16838,39 @@ def create_select_html_from_list(list_of_values):
     return dropdown_html
 
 def replace_df_html_col_with_dropdown(df, df_html, col_name):
-    # Parse HTML with BeautifulSoup
     soup = BeautifulSoup(df_html, 'html.parser')
 
-    # Modify specific cells to contain dropdown menus
     for idx, row in df.iterrows():
         dropdown_html = create_select_html_from_list(row[col_name])
         soup.find_all('td')[idx*len(df.columns) + df.columns.get_loc(col_name)].string.replace_with(BeautifulSoup(dropdown_html, 'html.parser'))
 
-    # Output the modified HTML
     modified_html = str(soup)
     return modified_html
 
-# # Sample DataFrame
-# data = {
-#     'Name': ['Alice', 'Bob'],
-#     'Preferences': [['Apple', 'Banana'], ['Carrot', 'Daikon']]
-# }
-# df = pd.DataFrame(data)
 
-# # Convert DataFrame to HTML
-# html_table = df.to_html()
 
-# modified_html = replace_df_html_col_with_dropdown(df, html_table, 'Preferences')
-# display(HTML(modified_html))
 
 
 def build_histogram_inputs(con, column, tablename):
-    # Determine number of bins and range for histogram
     num_bins = 20
     query_min_max = f'SELECT MIN({column}) AS min_val, MAX({column}) AS max_val FROM {tablename};'
     min_val, max_val = con.execute(query_min_max).fetchone()
     
-    # Handle the case where all values are identical
     if min_val == max_val:
         total_count_query = f'SELECT COUNT(*) FROM {tablename};'
         total_count = con.execute(total_count_query).fetchone()[0]
-        return [total_count], min_val, [min_val]  # Single bin centered at the min_val/max_val with total count
+        return [total_count], min_val, [min_val]
     
     bin_width = (max_val - min_val) / num_bins
-    bin_edges = np.linspace(min_val, max_val, num_bins + 1)  # Includes the right edge of the last bin
+    bin_edges = np.linspace(min_val, max_val, num_bins + 1)
     
-    # List to store histogram results
     bin_centers = []
     counts = []
     bin_width = bin_edges[1] - bin_edges[0]
 
-    # Execute a separate query for each bin
     for i in range(num_bins):
         bin_start = bin_edges[i]
         bin_end = bin_edges[i + 1]
-        # Adjust clause for inclusivity on the last bin
         if i == num_bins - 1:
             query = f'SELECT COUNT(*) FROM {tablename} WHERE {column} >= {bin_start} AND {column} <= {bin_end}'
         else:
@@ -17090,7 +16878,6 @@ def build_histogram_inputs(con, column, tablename):
         count = con.execute(query).fetchone()[0]
         bin_center = (bin_start + bin_end) / 2
 
-        # Append results to lists
         bin_centers.append(bin_center)
         counts.append(count)
     return counts, bin_width, bin_centers
@@ -17098,12 +16885,10 @@ def build_histogram_inputs(con, column, tablename):
 
 
 def build_barchat_input(con, column, tablename):
-    # Query to check the number of distinct cities
     count_query = f'SELECT COUNT(DISTINCT {column}) AS distinct_count FROM {tablename} WHERE {column} IS NOT NULL'
     distinct_count_result = con.execute(count_query).fetchone()[0]
 
     if distinct_count_result > 6:
-        # More than 6 distinct values, fetch top 5 and group others as 'Other values'
         fetch_query = f'''
         WITH CityCounts AS (
             SELECT {column}, COUNT(*) AS count
@@ -17127,7 +16912,6 @@ def build_barchat_input(con, column, tablename):
         SELECT * FROM OtherGroup
         '''
     else:
-        # 6 or fewer distinct values, fetch them all normally
         fetch_query = f'''
         SELECT {column}, COUNT(*) AS count
         FROM {tablename}
@@ -17136,43 +16920,26 @@ def build_barchat_input(con, column, tablename):
         ORDER BY count DESC
         '''
 
-    # Execute the query based on the number of distinct values
     result = con.execute(fetch_query).fetchall()
 
-    # Convert the result to a dictionary
     result_dict = {row[0]: row[1] for row in result}
     return result_dict
 
 
-# given a list of attributes, e.g., ['HEALTHCARE_EXPENSES', 'HEALTHCARE_COVERAGE, 'LAT', 'LON', 'LONGITUDE']
-# and a list of list of attributes, e.g., [['LON', 'LAT'], ['LONGITUDE', 'LATITUDE']]
-# return a list of list of attributes, where the lower list has *ALL* attributes in the input list
-# and another list of the original list, with the attributes in the list of list  removed
-# so for above, the output is ['HEALTHCARE_EXPENSES', 'HEALTHCARE_COVERAGE, 'LONGITUDE'], [['LON', 'LAT']]
 def filter_attributes(attributes, groups):
-    # Initialize the output list for groups where all attributes are found in the main list
     retained_groups = []
     
-    # Loop over each group in groups
     for group in groups:
-        # Check if all elements of the group are in attributes
         if all(item in attributes for item in group):
             retained_groups.append(group)
     
-    # Create a flat list of all the attributes that are in retained_groups
     all_retained = set([item for sublist in retained_groups for item in sublist])
     
-    # Remove these attributes from the main attributes list
     filtered_attributes = [attr for attr in attributes if attr not in all_retained]
     
     return filtered_attributes, retained_groups
 
-# # Example usage
-# attributes = ['HEALTHCARE_EXPENSES', 'HEALTHCARE_COVERAGE', 'LAT', 'LON', 'LONGITUDE']
-# groups = [['LON', 'LAT'], ['LONGITUDE', 'LATITUDE']]
 
-# filtered_attributes, retained_groups = filter_attributes(attributes, groups)
-# filtered_attributes, retained_groups
 
 
 def build_map_inputs(con, column, column2, tablename):
@@ -17216,22 +16983,11 @@ class GenerateReport(Node):
         data_type_df = pd.read_json(self.global_document['Data Profiling']['Decide Data Type'], orient="split")
         error_html += f"<h2>Data Type</h2> {data_type_df.to_html()} <br>"
 
-        # DMV_df = pd.read_json(self.global_document['Data Profiling']['Decide Disguised Missing Values For All'], orient="split")
        
-        # if len(DMV_df) > 0:
-        #     DMV_df = DMV_df[DMV_df['Endorse']]
-        #     # remove the Endorse column
-        #     DMV_df = DMV_df.drop(columns=['Endorse'])
 
-        # if len(DMV_df) > 0:
-        #     # # Convert DataFrame to HTML
-        #     html_table = DMV_df.to_html()
-        #     modified_html = replace_df_html_col_with_dropdown(DMV_df, html_table, "Disguised Missing Values")
-        #     error_html += f"<h2>Disguised Missing Value</h2> {modified_html} <br>"
 
         missing_df = pd.read_json(self.global_document['Data Profiling']['Decide Missing Values'], orient="split")
         if len(missing_df) > 0:
-            # for "Is NULL Acceptable?" column, replace True with ✔️ Yes, and false with ❌ No
             missing_df = missing_df.replace({"Is NULL Acceptable?": {True: "✔️ Yes", False: "❌ No"}})
             error_html += f"<h2>Missing Value</h2> {missing_df.to_html()} <br>"
 
@@ -17245,7 +17001,6 @@ class GenerateReport(Node):
         unusual_text_df = pd.read_json(self.global_document['Data Profiling']['Decide Unusual For All'], orient="split")
         if len(unusual_text_df) > 0:
             unusual_text_df = unusual_text_df[unusual_text_df['Endorse']]
-            # remove the Endorse column
             unusual_text_df = unusual_text_df.drop(columns=['Endorse'])
         if len(unusual_text_df) > 0:
             error_html += f"<h2>Unusual Values</h2> {unusual_text_df.to_html()} <br>"
@@ -17267,23 +17022,12 @@ class GenerateReport(Node):
             else:
                 html_content += f'<span class="circle2">✓</span> <b>{column_name} Data Type:</b> {current_datatype}<br>'
                 
-            # # if the column_name is in the DMV_df["Column"]
-            # if len(DMV_df) > 0 and column_name in DMV_df["Column"].values:
-            #     dmvs = DMV_df[DMV_df["Column"] == column_name]["Disguised Missing Values"].iloc[0]
                 
-            #     # if the dmvs are not a list, convert it from a string to a list
-            #     if not isinstance(dmvs, list):
-            #         dmvs = eval(dmvs)
                     
-            #     errors += 1
-            #     dropdown_html = create_select_html_from_list(dmvs)
-            #     html_content += f'<span class="circle">!</span> <b>{column_name} has Disguised Missing Values:</b> {dropdown_html}<br>'
                 
-            # if the column_name is in the missing_df["Column"]
             if len(missing_df) > 0 and column_name in missing_df["Column"].values:
                 missing = missing_df[missing_df["Column"] == column_name]["NULL (%)"].iloc[0]
                 
-                # check "Is NULL Acceptable?"
                 if missing_df[missing_df["Column"] == column_name]["Is NULL Acceptable?"].iloc[0] == "✔️ Yes":
                     explanation = missing_df[missing_df["Column"] == column_name]["Explanation"].iloc[0]
                     html_content += f'<span class="circle2">✓</span> <b>{column_name} has {missing}% Missing Values</b>: {explanation}<br>'
@@ -17291,7 +17035,6 @@ class GenerateReport(Node):
                     errors += 1
                     html_content += f'<span class="circle">!</span> <b>{column_name} has {missing}% Missing Values</b><br>'
                     
-            # if the column_name is in the unique_df["Column"]
             if len(unique_df) > 0 and column_name in unique_df["Column"].values:
                 is_unique = unique_df[unique_df["Column"] == column_name]["Is Unique"].iloc[0]
                 should_unique = unique_df[unique_df["Column"] == column_name]["Should be Unique?"].iloc[0]
@@ -17303,7 +17046,6 @@ class GenerateReport(Node):
                     errors += 1
                     html_content += f'<span class="circle">!</span> <b>{column_name} is not Unique</b> However, it should be unique: {explanation}<br>'
                 
-            # if the column_name is in the numerical_df["Column"]
             if len(numerical_df) > 0 and column_name in numerical_df["Column"].values:
                 within_range = numerical_df[numerical_df["Column"] == column_name]["Within Range?"].iloc[0]
                 
@@ -17314,7 +17056,6 @@ class GenerateReport(Node):
                     explanation = numerical_df[numerical_df["Column"] == column_name]["Explanation"].iloc[0]
                     html_content += f'<span class="circle">!</span> <b>{column_name} has unexpected range:</b> It\'s expected be in: {expected_range}, because: {explanation}. However, its true range is: {true_range}<br>'
             
-            # if the column_name is in the unusual_text_df["Column"]
             if len(unusual_text_df) > 0 and column_name in unusual_text_df["Column"].values:
                 explanation = unusual_text_df[unusual_text_df["Column"] == column_name]["Explanation"].iloc[0]
                 errors += 1
@@ -17329,7 +17070,6 @@ class GenerateReport(Node):
             total_errors = 0
 
             for key, value in d.items():
-                # Generate HTML for the current dictionary key
                 column_html, column_javascript, errors = build_column_html(key, value)
                 html_output += column_html
                 javascript_output += column_javascript
@@ -17563,11 +17303,11 @@ body {{
     padding: 15px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     overflow-y: auto; /* Enable scrolling for the panel */
-    width: 360px;
+    width: 400px;
   }}
 
   .indent {{
-      padding-left: 5px; /* Increase as needed for deeper indents */
+      padding-left: 20px; /* Increase as needed for deeper indents */
       font-size: small;
       display: none;
   }}
@@ -17582,7 +17322,6 @@ body {{
     margin-bottom: 6px; /* Space between card items */
     padding: 3px;
     padding-left: 10px;
-    width: 320px;
   }}
 
   .card-item-collapsed {{
@@ -17692,7 +17431,6 @@ body {{
   }}
 
   th {{
-    position: sticky;
     top: 0;
     background-color: #bebebe; /* Ensure the sticky header has the same background color */
   }}
@@ -17977,34 +17715,25 @@ body {{
 
 
 def ask_save_file(file_name, content):
-    # Ask the user if they want to save the file
     print(f"🤓 Do you want to save the file?")
 
-    # Function to handle save button click
     def save_file_click(b):
         updated_file_name = file_name_input.value
         allow_overwrite = overwrite_checkbox.value
 
-        # Check if file already exists
         if os.path.exists(updated_file_name) and not allow_overwrite:
             print("\x1b[31m" + "Warning: Failed to save. File already exists." + "\x1b[0m")
         else:
-            # write html_content to output.html
             with open(updated_file_name, "w") as file:
                 file.write(content)
             print(f"🎉 File saved successfully as {updated_file_name}")
 
-    # Create a text input field for the file name with the full default value
     file_name_input = Text(value=file_name, description='File Name:')
 
-    # Creating the save button
     save_button = Button(description="Save File")
     save_button.on_click(save_file_click)
 
-    # Overwrite checkbox
     overwrite_checkbox = Checkbox(value=False, description='Allow Overwrite')
 
-    # Display the file name input, overwrite checkbox, and the save button
     display(HBox([file_name_input, overwrite_checkbox]), save_button)
     
-# save_file("output2.html", "hi")
