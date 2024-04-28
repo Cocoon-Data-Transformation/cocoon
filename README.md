@@ -32,7 +32,7 @@ Cocoon Data Profiling is publicly available:
 
 </div>
 
-Cite Cocoon:
+Cite [Cocoon Paper](https://arxiv.org/abs/2404.12552):
 ```
 @article{huang2024cocoon,
   title={Cocoon: Semantic Table Profiling Using Large Language Models},
