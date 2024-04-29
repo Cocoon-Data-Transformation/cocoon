@@ -6,7 +6,7 @@
 
 ## Overview
 
-😎 **Cocoon** uses LLMs to automate data engineering and data science.
+😎 **Cocoon** uses LLMs to augment data engineering and data science.
 
 Cocoon Data Profiling is publicly available:
 - 👉 [**Free Service:** Drop your CSV, and we will email you the profile](https://cocoon-data-transformation.github.io/page/)
