@@ -17303,11 +17303,11 @@ body {{
     padding: 15px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     overflow-y: auto; /* Enable scrolling for the panel */
-    width: 400px;
+    width: 360px;
   }}
 
   .indent {{
-      padding-left: 20px; /* Increase as needed for deeper indents */
+      padding-left: 5px; /* Increase as needed for deeper indents */
       font-size: small;
       display: none;
   }}
@@ -17322,6 +17322,7 @@ body {{
     margin-bottom: 6px; /* Space between card items */
     padding: 3px;
     padding-left: 10px;
+    width: 320px;
   }}
 
   .card-item-collapsed {{
