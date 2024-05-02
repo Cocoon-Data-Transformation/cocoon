@@ -12,7 +12,7 @@ import ipywidgets as widgets
 from IPython.display import *
 from graphviz import Digraph
 from pygments import highlight
-from pygments.lexers import PythonLexer, SqlLexer
+from pygments.lexers import PythonLexer, SqlLexer, YamlLexer
 from pygments.formatters import Terminal256Formatter, HtmlFormatter
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -9940,18 +9940,7 @@ Below are the first 2 rows of the df:
 
     def to_html(self, value_att=None, **kwargs):
         html = ""
-        if hasattr(self, 'gdf'):
-            gdf_html = self.gdf.head(5).to_html()
-            gdf_html = truncate_html_td(gdf_html)
-            html += gdf_html
-        elif hasattr(self, 'df'):
-            df_html = self.df.head(5).to_html()
-            df_html = truncate_html_td(df_html)
-            html += df_html
-        elif hasattr(self, 'np_array'):
-            np_array = self.np_array
-            html += f"<br>NumPy arraay shape: {np_array.shape}<br>"
-            html += "<br>"
+        
 
         html += self.display_html(value_att=value_att)
         return html
@@ -15255,10 +15244,17 @@ class DataProject:
 
 
 def display_duplicated_rows_html2(df):
+    if 'cocoon_count' in df.columns:
+        count_col = 'cocoon_count'
+    elif 'COCOON_COUNT' in df.columns:
+        count_col = 'COCOON_COUNT'
+    else:
+        raise ValueError("Expected column 'cocoon_count' or 'COCOON_COUNT' not found in DataFrame")
+
     html_output = f"<p>🤨 There are {len(df)} groups of duplicated rows.</p>"
     for i, row in df.iterrows():
-        html_output += f"<p>Group {i+1} appear {row['cocoon_count']} times:</p>"
-        row_without_cocoon_count = row.drop(labels=['cocoon_count'])
+        html_output += f"<p>Group {i+1} appear {row[count_col]} times:</p>"
+        row_without_cocoon_count = row.drop(labels=[count_col])
         html_output += row_without_cocoon_count.to_frame().T.to_html(index=False)
 
     if len(df) > 5:
@@ -15297,7 +15293,7 @@ class DescribeColumns(Node):
         clear_output(wait=True)
 
         print("🔍 Checking columns ...")
-        create_progress_bar_with_numbers(2, doc_steps)
+        create_progress_bar_with_numbers(1, doc_steps)
 
         self.input_item = item
 
@@ -15767,6 +15763,7 @@ Now, your summary:
             on_button_clicked(submit_button)
 
 
+
 class DecideDuplicate(Node):
     default_name = 'Decide Duplicate'
     default_description = 'This allows users to decide how to handle duplicated rows.'
@@ -15791,14 +15788,18 @@ class DecideDuplicate(Node):
             def on_button_clicked(b):
                 clear_output(wait=True)
                 if b.description == 'Yes':
-                    print("⚠️ This feature is under development.")
-                else:
-                    callback(document)
+                    new_table_name = f"{self.para['table_pipeline']}_dedup"
+                    
+                    sql_query = f"""SELECT DISTINCT * FROM {table_pipeline}"""
+                    step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+                    step.run_codes()
+                    self.para["table_pipeline"].add_step_to_final(step)
+                callback(document)
 
             yes_button = widgets.Button(
                 description='Yes',
                 disabled=False,
-                button_style='',
+                button_style='success',
                 tooltip='Click to submit Yes',
                 icon='check'
             )
@@ -15806,7 +15807,7 @@ class DecideDuplicate(Node):
             no_button = widgets.Button(
                 description='No',
                 disabled=False,
-                button_style='',
+                button_style='danger',
                 tooltip='Click to submit No',
                 icon='times'
             )
@@ -15814,16 +15815,14 @@ class DecideDuplicate(Node):
             yes_button.on_click(on_button_clicked)
             no_button.on_click(on_button_clicked)
 
-            display(HBox([yes_button, no_button]))
+            display(HBox([no_button, yes_button]))
 
             if self.viewer:
                 on_button_clicked(no_button)
 
 
         else:
-            callback(document)
-
-
+            callback(document)   
 
 class DecideDataType(Node):
     default_name = 'Decide Data Type'
@@ -16382,8 +16381,6 @@ class DecideMissing(Node):
             if missing_percentage > 0:
                 missing_columns[col] = missing_percentage
 
-        
-
         all_columns = ", ".join(columns)
         sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_name} LIMIT {sample_size}")
         sample_df_str = sample_df.to_csv(index=False, quoting=2)    
@@ -16436,8 +16433,6 @@ Return in the following format:
         json_code = run_output
         missing_columns, sample_df_str, table_name = extract_output
         
-
-        
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
         
@@ -16452,7 +16447,6 @@ Return in the following format:
             reason = json_code["columns_obvious_not_applicable"].get(col, "")
             rows_list.append({
                 "Column": col,
-                
                 "NULL (%)": f"{missing_percentage*100:.2f}",
                 "Is NULL Acceptable?": True if reason != "" else False,
                 "Explanation": reason
@@ -16460,6 +16454,11 @@ Return in the following format:
             
         df = pd.DataFrame(rows_list)
         
+        if len(rows_list) == 0:
+            df = pd.DataFrame(columns=["Column", "NULL (%)", "Is NULL Acceptable?", "Explanation"])
+        else:
+            df = pd.DataFrame(rows_list)
+
         if len(df) == 0:
             callback(df.to_json(orient="split"))
             return
@@ -16490,7 +16489,7 @@ Return in the following format:
         
         if self.viewer:
             on_button_clicked(next_button)
-
+            
 class DecideDMV(Node):
     default_name = 'Decide Disguised Missing Values'
     default_description = 'This node allows users to decide how to handle disguised missing values.'
@@ -17737,4 +17736,1243 @@ def ask_save_file(file_name, content):
     overwrite_checkbox = Checkbox(value=False, description='Allow Overwrite')
 
     display(HBox([file_name_input, overwrite_checkbox]), save_button)
+    
+
+
+        
+class CleanUnusual(Node):
+    default_name = 'Clean Unusual'
+    default_description = 'This node allows users to clean the unusual values.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🧹 Cleaning unusual values ...")
+        create_progress_bar_with_numbers(3, doc_steps)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+        unusual_reason = self.para["unusual_reason"]
+
+        show_progress(max_value=total, value=idx)
+
+        column_name = self.para["column_name"]
+
+        sample_size = 100
+    
+
+        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
+        total_distinct_count = count_total_distinct(con, table_pipeline, column_name)
+
+        return column_name, sample_values, unusual_reason, sample_size, total_distinct_count
+
+    def run(self, extract_output, use_cache=True):
+        column_name, sample_values, unusual_reason, sample_size, total_distinct_count = extract_output
+
+        if sample_size < total_distinct_count:
+
+            template = f"""{column_name} has the following distinct values:
+{sample_values.to_csv(index=False, header=False, quoting=2)}
+
+This column is unusual: {unusual_reason}
+
+Task: Reason if it is possible to use a simple projection to the clean values.
+The clause will be filled in the following format: SELECT (Clause?) AS {column_name} ...
+If so, provide the projection clause.
+
+Return in the following format:
+```json
+{{  
+    "explanation": "The problem is ... A simple projection is (not) suffice because ...",
+    "could_clean": true/false,
+    "projection_clause": "{column_name}..."
+}}
+
+```yml
+explanation: |
+    The error is caused by ...
+could_clean: |
+    true/false
+projection_clause: |
+    {column_name}...
+```
+"""
+
+            messages = [{"role": "user", "content": template}]
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+            messages.append(response['choices'][0]['message'])
+            self.messages = messages
+            
+            yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+            summary = yaml.safe_load(yml_code)
+            summary["projection"] = True
+            
+
+        else:
+
+            template = f"""{column_name}  column is unusual: {unusual_reason}
+It has the following values, ordered by frequency:
+{sample_values.to_csv(index=False, header=False, quoting=2)}
+
+Task: First, understand what are the unusual values and why.
+Then, reason if the corrected value is obvious.
+If so, maps old values to correct values to fix the problems.
+If the old values have inconsistent cases, map to the most frequent case.
+If a few old values are meaningless, map to empty string.
+If almost all old values are meaningless, it is not possible to clean.
+
+Return in the following format:
+```yml
+explanation: |
+    The problem is ... The correct values are ...
+could_clean: true/false
+mapping:
+    {sample_values.iloc[0, 0]}: {sample_values.iloc[0, 0]}
+    ...
+```
+"""
+
+            messages = [{"role": "user", "content": template}]
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+            messages.append(response['choices'][0]['message'])
+            self.messages = messages
+            
+            yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+            summary = yaml.safe_load(yml_code)
+            summary["projection"] = False
+            
+
+        return summary, column_name, sample_values, unusual_reason
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        json_code, column_name, sample_values, unusual_reason = run_output
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+
+        html_content = f"⚠️ <b>We've found errors in</b>: {column_name} <br><i>{unusual_reason}</i>"
+        display(HTML(html_content))
+        
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        query_widget = self.item["query_widget"]
+
+        query = create_sample_distinct_query(table_name=table_pipeline, column_name=column_name)
+        create_explore_button(query_widget=query_widget, query=query)
+
+
+        if not json_code["could_clean"]:
+            print("☹️ Cocoon can't clean this for you, as it's too complex...")
+            print("😎 We'll log this for future cleanings and analyses")
+            submit_button = widgets.Button(
+                description='Next',
+                disabled=False,
+                button_style='success',
+                tooltip='Click to submit',
+                icon='check'
+            )
+
+            def on_button_clicked(b):
+                clear_output(wait=True)
+                callback(json_code)
+            
+            submit_button.on_click(on_button_clicked)
+
+            display(submit_button)
+            return
+
+
+        if json_code["projection"]:
+            
+            print("🧐 It is possible to use a simple projection to the clean values.")
+
+            explanation = json_code["explanation"]
+
+            print(f" {ITALIC}{explanation}{END}")
+            text_area = create_text_area(json_code["projection_clause"])
+
+            toggle_button = widgets.Button(
+                description='Reject Clean',
+                disabled=False,
+                button_style='danger',
+                tooltip='Click to reject',
+                icon='check'
+            )
+            def on_reject_button_clicked(b):
+                clear_output(wait=True)
+                json_code["could_clean"] = False
+                callback(json_code)
+
+            toggle_button.on_click(on_reject_button_clicked)
+
+
+            submit_button = widgets.Button(
+                description='Endorse Clean',
+                disabled=False,
+                button_style='success',
+                tooltip='Click to endorse',
+                icon='check'
+            )
+            def on_button_clicked(b):
+                clear_output(wait=True)
+                json_code["could_clean"] = True
+                json_code["projection_clause"] = text_area.value                    
+                callback(json_code)
+            
+            submit_button.on_click(on_button_clicked)
+
+            display(text_area)
+            display(HBox([toggle_button, submit_button]))
+
+        else:
+            html_content = "🧐 We recommend the following transformation of values:<br>"
+            explanation = json_code["explanation"]
+            mapping = json_code["mapping"]
+
+            html_content += f"<i>{explanation}</i>"
+            display(HTML(html_content))
+
+            grid = create_dictionary_grid_remove(mapping, "Old Value", "New Value")
+
+            submit_button = widgets.Button(
+                description='Submit',
+                disabled=False,
+                button_style='success',
+                tooltip='Click to submit',
+                icon='check'
+            )
+
+            def on_button_clicked(b):
+                clear_output(wait=True)
+                old_values_to_remove, non_removed_values = process_grid_changes_remove(grid)
+                json_code["mapping"] = non_removed_values
+                json_code["old_values_to_remove"] = old_values_to_remove
+            
+                callback(json_code)
+
+            submit_button.on_click(on_button_clicked)
+
+            toggle_button = widgets.Button(
+                description='Reject Clean',
+                disabled=False,
+                button_style='danger',
+                tooltip='Click to reject',
+                icon='check'
+            )
+            def on_reject_button_clicked(b):
+                clear_output(wait=True)
+                json_code["could_clean"] = False
+                callback(json_code)
+
+            toggle_button.on_click(on_reject_button_clicked)
+
+            display(grid)
+            display(HBox([toggle_button, submit_button]))
+
+
+class CleanUnusualForAll(MultipleNode):
+    default_name = 'Clean Unusual For All'
+    default_description = 'This node allows users to clean the unusual values for all columns.'
+
+    def construct_node(self, element_name, idx=0, total=0, unusual_reason=""):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        para["unusual_reason"] = unusual_reason
+        node = CleanUnusual(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        document = self.get_sibling_document("Decide Unusual String For All")["Decide String Unusual"]
+
+        columns = list(document.keys())
+        self.elements = []
+        self.nodes = {}
+
+        idx = 0
+        for col in columns:
+            if document[col]["Unusualness"]:
+                unusual_reason = document[col]["Examples"]
+                self.elements.append(col)
+                self.nodes[col] = self.construct_node(col, idx, len(columns), unusual_reason)
+                idx += 1
+
+    def display_after_finish_workflow(self, callback, document):
+        
+        
+
+        clean_unusual = document.get("Clean Unusual", {})
+
+        all_no_clean = True
+
+        for col in clean_unusual:
+            if clean_unusual[col]["could_clean"]:
+                all_no_clean = False
+                break
+
+        if all_no_clean:
+            callback(document)
+            return
+
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        
+        new_table_name = f"{table_pipeline}_cleaned"
+
+        selections = []
+        filters = []
+
+        for col in columns:
+            
+            if col not in clean_unusual:
+                selections.append(col)
+                continue
+                
+            clean_unusual_col = clean_unusual[col]
+
+            if clean_unusual_col["projection"]:
+                if clean_unusual_col["could_use_projection"]:
+                    selections.append(clean_unusual_col["projection_clause"] + " AS " + col)
+                else:
+                    selections.append(col)
+            else:
+                mapping = clean_unusual_col["mapping"]
+                old_values_to_remove = clean_unusual_col.get("old_values_to_remove", [])
+                remove_list_str = "(" + ", ".join([f"'{val}'" for val in old_values_to_remove]) + ")"
+                if old_values_to_remove:
+                    filters.append(f"{col} NOT IN {remove_list_str}")
+
+                selection_str = "CASE\n"
+                for old_value, new_value in mapping.items():
+                    selection_str += f"    WHEN {col} = '{old_value}' THEN '{new_value}'\n"
+                selection_str += f"    ELSE {col}\n"
+                selection_str += "END AS " + col
+                selections.append(selection_str)
+
+        selection_sql = indent_paragraph(",\n".join(selections))
+        where_sql = ""
+        if len(filters) > 0:
+            where_sql = "\nWHERE\n" + indent_paragraph(" AND\n".join(filters) if filters else "")
+
+        sql_query = f"""SELECT
+{selection_sql}
+FROM {table_pipeline}{where_sql}"""     
+        
+        step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+        step.run_codes()
+
+        table_pipeline.add_step_to_final(step)
+
+
+
+        callback(document)
+        
+        
+class HandleMissing(Node):
+    default_name = 'Handle Missing Values'
+    default_description = 'This node allows users to handle missing values.'
+    
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Handling missing values ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        document = self.get_sibling_document("Decide Missing Values")
+        schema = self.para["table_pipeline"].get_final_step().get_schema()
+        
+        return document, schema
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        document, schema = extract_output
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        
+        df = pd.read_json(document, orient="split")
+        
+        
+        df = df[~df["Is NULL Acceptable?"]]
+        
+        if len(df) == 0:
+            df = pd.DataFrame(columns=["Column", "NULL (%)", "Strategy"])
+            document = df.to_json(orient="split")
+            callback(document)
+            return
+        
+        df = df.drop(columns=["Is NULL Acceptable?"])
+        df = df.drop(columns=["Explanation"])
+        
+        print("🧹 The following columns have abnormal missing values. Please select a strategy to handle them.")
+        categories = ["Unchanged", "Drop Column", "Remove Rows"]
+
+        df["Strategy"] = "Unchanged"
+        
+
+        
+        editable_columns = [False, False, True]
+        reset = True
+        category = {
+            'Strategy': categories
+        }
+
+        grid = create_dataframe_grid(df, editable_columns, reset, category)
+        display(grid)
+        
+        print("😎 More missing value handling strategies coming soon...")
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        
+        def create_missing_handling_sql(df, schema, table_name):
+            drop_columns = df[df["Strategy"] == "Drop Column"]["Column"].tolist()
+            remove_rows = df[df["Strategy"] == "Remove Rows"]["Column"].tolist()
+            
+            if len(drop_columns) == len(schema):
+                raise ValueError("All columns are dropped. Please keep at least one column.")
+            
+            if len(remove_rows) == 0 and len(drop_columns) == 0:
+                return ""
+                        
+            select_columns = [col for col in schema if col not in drop_columns]
+            selection_sql = indent_paragraph(',\n'.join(select_columns))
+            sql_query = f"""SELECT
+{selection_sql}
+FROM {table_name}"""
+            
+            where_clause = " AND\n".join([f"{col} IS NOT NULL" for col in remove_rows])
+            
+            if where_clause:
+                sql_query += f"\nWHERE \n{indent_paragraph(where_clause)}"
+            
+            return sql_query
+        
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            table_pipeline = self.para["table_pipeline"]
+            missing_handling_sql = create_missing_handling_sql(new_df, schema, table_pipeline)
+            
+            if missing_handling_sql != "":
+                new_table_name = f"{table_pipeline}_missing_handled"
+                step = SQLStep(table_name=new_table_name, sql_code=missing_handling_sql, con=self.item["con"])
+                step.run_codes()
+                self.para["table_pipeline"].add_step_to_final(step)
+            
+            document = new_df.to_json(orient="split")
+
+            callback(document)
+            
+        next_button.on_click(on_button_clicked)
+        
+        display(next_button)
+        
+        if self.viewer:
+            on_button_clicked(next_button)
+        
+class DecideDataType(Node):
+    default_name = 'Decide Data Type'
+    default_description = 'This node allows users to decide the data type for each column.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Checking data types ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        sample_size = 5
+
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+
+        return sample_df
+
+    def run(self, extract_output, use_cache=True):
+        sample_df = extract_output
+
+        template = f"""You have the following table:
+{sample_df.to_csv(index=False, quoting=2)}
+
+For each column, classify what the column type should be.
+The column type should be one of the following:
+{list(data_types.keys())}
+
+Return in the following format:
+```json
+{{
+    "column_type": {{
+        "column1": "INT",
+        ...
+    }}
+}}
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        schema = table_pipeline.get_final_step().get_schema()
+
+        rows_list = []
+
+        for col in schema:
+            current_type = reverse_data_types[schema[col]]
+            target_type = json_code["column_type"][col]
+
+            rows_list.append({
+                "column_name": col,
+                "current_type": current_type,
+                "target_type": target_type,
+            })
+
+        df = pd.DataFrame(rows_list)
+        
+        grid = create_data_type_grid(df)
+        print("😎 We have recommended the Data Types for Columns:")
+        display(grid)
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            df = extract_grid_data_type(grid)
+            
+            callback(df.to_json(orient="split"))
+
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+        
+        if self.viewer:
+            on_button_clicked(next_button)
+            
+
+transform_hints = {
+    'VARCHAR':{
+        'DATE': {
+            "DuckDB": """Example Clause: 
+strptime('02/03/1992', '%d/%m/%Y')
+strptime('Monday, 2 March 1992 - 08:32:45 PM', '%A, %-d %B %Y - %I:%M:%S %p')""",
+            "Snowflake": """Example Clause: 
+TO_DATE('02/03/1992', 'DD/MM/YYYY')
+TO_TIMESTAMP('Monday, 2 March 1992 - 08:32:45 PM', 'DY, D MONTH YYYY - HH12:MI:SS AM')"""
+        }
+    }
+}
+
+class TransformType(Node):
+    default_name = 'Transform Type'
+    default_description = 'This node allows users to transform the data type for a column.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Transforming data type ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        self.input_item = item
+
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+
+        show_progress(max_value=total, value=idx)
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        current_type = self.para["current_type"]
+        target_type = self.para["target_type"]
+        database_name = get_database_name(con)
+        sample_size = 5
+
+        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
+        
+        hint = ""
+        if current_type in transform_hints:
+            if target_type in transform_hints[current_type]:
+                if database_name in transform_hints[current_type][target_type]:
+                    hint = transform_hints[current_type][target_type][database_name]
+        
+        
+        return column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint
+    
+    def run(self, extract_output, use_cache=True):
+        column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint= extract_output
+        max_iterations = 10
+        self.messages = []
+
+        template = f"""'{column_name}' has the following distinct values (sep by |):
+{sample_values.to_csv(index=False, sep="|", header=False, quoting=1)}
+
+Task: Transform the data type of the column from '{current_type}' to '{target_type}', in a simple SELECT clause.
+Note that we use {database_name} syntax. {hint}
+
+Return the result in yml
+```yml
+reasoning: |
+    To transform, we need to ...
+
+clause: |
+    CAST({column_name} AS {target_type}) AS {column_name}
+```"""
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        reasoning = summary["reasoning"]
+        
+
+        
+        for i in range(max_iterations):
+            def clean_clause(clause):
+
+                if clause.lower().startswith("select"):
+                    clause = clause[6:].strip()
+
+                clause = clause.replace("\n", " ")
+                return  clause
+            
+            clause = summary["clause"]
+            summary["clause"] = clean_clause(clause)
+            
+            try:
+                sql = f"""SELECT {summary['clause']}
+FROM {table_pipeline}"""
+                df = run_sql_return_df(con, sql)
+                break
+            except Exception: 
+                detailed_error_info = get_detailed_error_info()
+                template = f"""You have the following CAST clause:
+{summary['clause']}
+It has an error: {detailed_error_info}
+
+Please correct the CAST clause, but don't change the logic.
+Note that we use {database_name} syntax. {hint}
+Return the result in yml
+```yml
+reasoning: |
+    The error is caused by ...
+
+clause: |
+    CAST({column_name} AS {target_type}) AS {column_name}
+```
+"""
+
+                messages = [{"role": "user", "content": template}]
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+                messages.append(response['choices'][0]['message'])
+                self.messages.append(messages)
+
+                yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+                summary = yaml.safe_load(yml_code)
+        
+        summary["reasoning"] = reasoning
+        return summary
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+    
+    
+class TransformTypeForAll(MultipleNode):
+    default_name = 'Transform Type For All'
+    default_description = 'This node allows users to transform the data type for all columns.'
+
+    def construct_node(self, element_name, current_type="", target_type="", idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        para["current_type"] = current_type
+        para["target_type"] = target_type
+        node = TransformType(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+
+class TransformTypeForAll(MultipleNode):
+    default_name = 'Transform Type For All'
+    default_description = 'This node allows users to transform the data type for all columns.'
+
+    def construct_node(self, element_name, current_type="", target_type="", idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        para["current_type"] = current_type
+        para["target_type"] = target_type
+        node = TransformType(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+
+        document = self.get_sibling_document("Decide Data Type")
+        df =  pd.read_json(document, orient="split")
+        
+        self.elements = []
+        self.nodes = {}
+
+        
+        for idx, row in df.iterrows():
+            column_name = row['Column']
+            current_type = row['Current Type']
+            target_type = row['Target Type']
+            if current_type != target_type:
+                self.elements.append(column_name)
+
+        idx = 0
+        for idx, row in df.iterrows():
+            column_name = row['Column']
+            current_type = row['Current Type']
+            target_type = row['Target Type']
+            if current_type != target_type:
+                self.nodes[column_name] = self.construct_node(column_name, 
+                                                                current_type, target_type,
+                                                              idx, len(self.elements))
+                idx += 1
+
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        data = {
+            'Column Name': [],
+            'Clause': [],
+            'Reasoning': []
+        }
+
+        if "Transform Type" in document:
+            for column_name, details in document["Transform Type"].items():
+                data['Column Name'].append(column_name)
+                data['Clause'].append(details['clause'])
+                data['Reasoning'].append(details['reasoning'])
+
+        df = pd.DataFrame(data)
+
+        if len(df) == 0:
+            callback(document)
+            return
+
+        editable_columns = [False, True, False]
+        grid = create_dataframe_grid(df, editable_columns, reset=True, long_text=["Reasoning"])
+
+        print("😎 We have written the clause to cast the columns:")
+        display(grid)
+
+        query_widget = self.item["query_widget"]
+
+        test_button = widgets.Button(
+            description='Test Cast',
+            disabled=False,
+            button_style='info',
+            tooltip='Click to test',
+            icon='play'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            query = f"SELECT\n"
+            for i, row in new_df.iterrows():
+                column_name = row["Column Name"]
+                clause = row["Clause"]
+                query += f"    {column_name} AS {column_name},\n"
+                query += f"    {clause},\n"
+            query = query[:-2] + f"\nFROM {self.para['table_pipeline']}"
+            query_widget.run_query(query)
+            print("😎 Query submitted. Check out the data widget!")
+        
+        test_button.on_click(on_button_clicked)
+        print("🧪 Please test the cast and ensure the result is as expected.")
+        display(test_button)
+
+        next_button = widgets.Button(
+            description='Endorse Cast',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            affected_columns = new_df["Column Name"].tolist()
+            document["Transform Type"] = new_df.to_json(orient="records")
+            new_table_name = f"{self.para['table_pipeline']}_casted"
+            schema = self.para["table_pipeline"].get_final_step().get_schema()
+            columns = list(schema.keys())
+            non_affected_columns = [col for col in columns if col not in affected_columns]
+
+            sql_query = f"SELECT\n"
+            sql_query += indent_paragraph(",\n".join(non_affected_columns + [f"{row['Clause']}" for i, row in new_df.iterrows()])) 
+            sql_query += f"\nFROM {self.para['table_pipeline']}"
+
+                
+
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+            step.run_codes()
+            self.para["table_pipeline"].add_step_to_final(step)
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+        
+def where_clause_for_space(column_name):
+    return f"{column_name} <> TRIM({column_name})"
+
+class DecideTrim(Node):
+    default_name = 'Decide Trim'
+    default_description = 'This node allows users to decide how to handle leading and trailing spaces.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Deciding Trim ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = []
+
+        for column in schema:
+            if reverse_data_types[schema[column]] == "VARCHAR":
+                where_clause = where_clause_for_space(column)
+                count = run_sql_return_df(con, f"SELECT COUNT(*) FROM {table_pipeline} WHERE {where_clause}").iloc[0, 0]
+                if count > 0:
+                    columns.append(column)
+
+        sample_size = 2
+        sample_df = None
+        if len(columns) > 0:
+            all_columns = ", ".join(columns)
+            sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+
+        return columns, sample_df
+    
+    def run(self, extract_output, use_cache=True):
+        columns, sample_df = extract_output
+
+        if len(columns) == 0:
+            return {}, columns
+
+        template = f"""You have a table, and the following columns have leading or trailing spaces:
+{sample_df.to_csv(index=False, quoting=2)}
+
+Task: Decide whether to keep the leading and trailing spaces.
+Most of the time, they are not meaningful.
+Some special cases are: password, code snippet...
+
+Return in the following format:
+```json
+{{
+    "reasoning": "The columns mean ... The spaces are (not) meaningful...",
+    "columns_to_keep_spaces": ["col1", ...]
+}}
+```"""
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+        self.messages = messages
+
+        return json_code, columns
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        json_code, columns = run_output
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        if len(columns) == 0:
+            callback({})
+            return
+
+        df = pd.DataFrame(columns=["Column Name", "Trim?"])
+
+        df["Column Name"] = columns
+
+        df["Trim?"] = [not (col in json_code["columns_to_keep_spaces"]) for col in columns]
+
+        grid = create_dataframe_grid(df, [False, True], reset=True)
+        print(f"😎 We have found the following columns with leading or trailing spaces, and recommend to {BOLD}trim{END} them:")
+        display(grid)
+
+        query_widget = self.item["query_widget"]
+        table_pipeline = self.para["table_pipeline"]
+
+        columns_str = ", ".join(columns)
+
+        explore_button = widgets.Button(
+            description='Explore',
+            disabled=False,
+            button_style='info',
+            tooltip='Click to explore',
+            icon='search'
+        )
+
+        def on_button_clicked(b):
+            print("😎 Query submitted. Check out the data widget!")
+            query_widget.run_query(f"SELECT {columns_str} FROM {table_pipeline}")
+
+        explore_button.on_click(on_button_clicked)
+
+        display(explore_button)
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            new_df =  grid_to_updated_dataframe(grid)
+
+            new_table_name = f"{self.para['table_pipeline']}_trimmed"
+
+            schema = self.para["table_pipeline"].get_final_step().get_schema()
+            all_columns = list(schema.keys())
+            non_affected_columns = [col for col in all_columns if col not in new_df["Column Name"].tolist()]
+            sql_query = f"SELECT\n"
+
+            columns_to_trim = []
+            columns_not_to_trim = []
+
+            for i, row in new_df.iterrows():
+                column_name = row["Column Name"]
+                trim = row["Trim?"]
+                if trim:
+                    columns_to_trim.append(column_name)
+                else:
+                    columns_not_to_trim.append(column_name)
+
+            sql_query += indent_paragraph(",\n".join(non_affected_columns + \
+                                                     columns_not_to_trim +\
+                                                     [f"TRIM({col}) AS {col}" for col in columns_to_trim]))
+
+            sql_query += f"\nFROM {self.para['table_pipeline']}"
+
+            
+
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+            step.run_codes()
+            self.para["table_pipeline"].add_step_to_final(step)
+
+            callback(new_df.to_json(orient="records"))
+
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+        
+class DecideStringUnusual(Node):
+    default_name = 'Decide String Unusual'
+    default_description = 'This node allows users to decide how to handle unusual values.'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+
+        print("🔍 Understanding unusual values ...")
+        create_progress_bar_with_numbers(3, doc_steps)
+
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+        show_progress(max_value=total, value=idx)
+
+        self.input_item = input_item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        sample_size = 20
+
+        sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
+        
+        return column_name, sample_values
+
+    def run(self, extract_output, use_cache=True):
+        column_name, sample_values = extract_output
+
+        template = f"""{column_name} has the following distinct values:
+{sample_values.to_csv(index=False, header=False, quoting=2)}
+
+Review if there are any unusual values. 
+Look out for, patterns that don't align with the nature of the data.
+Weird characters/typo.
+
+Now, respond in Json:
+```json
+{{
+    "Reaonsing": "The valuses are ... They are unusual/acceptable ...",
+    "Unusualness": true/false,
+    "Examples": "xxx values are unusual because ..." (empty if not unusual) 
+}}
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        messages.append(response['choices'][0]['message'])
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        self.messages = messages
+
+        return json_code
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+
+class DecideStringUnusualForAll(MultipleNode):
+    default_name = 'Decide Unusual String For All'
+    default_description = 'This node allows users to decide how to handle unusual values for all columns.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        node = DecideStringUnusual(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = [col for col in schema if schema[col] in data_types['VARCHAR']]
+        self.elements = []
+        self.nodes = {}
+
+        idx = 0
+        for col in columns:
+            self.elements.append(col)
+            self.nodes[col] = self.construct_node(col, idx, len(columns))
+            idx += 1
+            
+    
+    
+def create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df):
+    full_info = pd.merge(column_desc, miss_df, how='left', left_on='Column', right_on='Column')
+    
+    yml_content = f"""version: 2
+
+models:
+  - name: {table_name}
+    description: "{table_summary}"
+    columns:"""
+    
+    for column in columns:
+        description = full_info.loc[full_info['Column'] == column, 'Summary'].values[0]
+        
+        is_null_acceptable = full_info.loc[full_info['Column'] == column, 'Is NULL Acceptable?'].values[0]
+        tests = "- not_null" if not is_null_acceptable else ""
+        
+        yml_content += f"""
+      - name: {column}
+        description: "{description}"
+        tests:
+          {tests}"""
+
+    return yml_content
+
+
+
+
+
+class WriteStageYMLCode(Node):
+    default_name = 'Write Stage Code'
+    default_description = 'This node allows users to write the code for the stage.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        create_progress_bar_with_numbers(1, self.get_sibling_document('Product Steps'))
+        border_style = """
+<style>
+.border-class {
+    border: 1px solid black;
+    padding: 10px;
+    margin: 10px;
+}
+</style>
+"""
+
+        print("🎉 Congratulations! Below is the stage codes.")
+
+        table_pipeline = self.para["table_pipeline"]
+        old_table_name = table_pipeline.get_source_step().name
+        new_table_name = "stg_" + old_table_name.replace("src_", "")
+
+        sql_query = f"""SELECT * FROM {table_pipeline}"""
+
+        step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+        step.run_codes()
+
+        table_pipeline.add_step_to_final(step)
+
+        tab_data = []
+        
+        formatter = HtmlFormatter(style='default')
+        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+
+        combined_css = css_style + border_style
+        
+        sql_query = table_pipeline.get_codes()
+        input_table = table_pipeline.get_source_step().name
+        sql_query = process_query_to_dbt(sql_query, [input_table])
+
+        highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
+        bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
+        combined_html = combined_css + bordered_content
+        
+        tab_data.append(("sql", combined_html))
+        
+        table_pipeline = self.para["table_pipeline"]
+        table_name = "stg_" + table_pipeline.get_source_step().name
+        table_summary = self.global_document["Data Profiling"]["Create Table Summary"].replace("**","")
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        column_desc = pd.read_json(self.global_document['Data Profiling']["Describe Columns"], orient="split")
+        miss_df = pd.read_json(self.global_document['Data Profiling']["Decide Missing Values"], orient="split")
+
+        yml_content = create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df)
+
+        
+        formatter = HtmlFormatter(style='default')
+        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+
+        highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
+
+        bordered_content = f'<div class="border-class">{highlighted_yml}</div>'
+
+        combined_html = css_style + border_style + bordered_content
+
+        tab_data.append(("yml", combined_html))
+        
+        tabs = create_dropdown_with_content(tab_data) 
+        display(tabs)
+        
+        edit_button = widgets.Button(
+            description='Edit',
+            disabled=False,
+            button_style='danger', 
+            tooltip='Click to edit',
+            icon='edit'
+        )
+
+        def on_edit_button_clicked(b):
+            print("Not implemented yet")
+        
+        edit_button.on_click(on_edit_button_clicked)
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            print("Submission received.")
+            callback({})
+
+        submit_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+
+        display(HBox([edit_button, submit_button]))
+        
+        if self.viewer:
+            on_button_clicked(submit_button)   
+
+def create_stage_workflow(table_name, con, viewer=True):
+    query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+
+    sql_step = SQLStep(table_name=table_name, con=con)
+    pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+
+    para = {"table_pipeline": pipeline}
+
+    main_workflow = Workflow("Data Profiling", 
+                            item = item, 
+                            description="A workflow to stage table",
+                            para = para)
+
+    main_workflow.add_to_leaf(DecideProjection())
+    main_workflow.add_to_leaf(CreateTableSummary())
+    main_workflow.add_to_leaf(DecideDuplicate())
+    main_workflow.add_to_leaf(DescribeColumns())
+    main_workflow.add_to_leaf(DecideMissing())
+    main_workflow.add_to_leaf(HandleMissing())
+    main_workflow.add_to_leaf(DecideDataType())
+    main_workflow.add_to_leaf(TransformTypeForAll())
+    main_workflow.add_to_leaf(DecideTrim())
+    main_workflow.add_to_leaf(DecideStringUnusualForAll())
+    main_workflow.add_to_leaf(CleanUnusualForAll())
+    main_workflow.add_to_leaf(WriteStageYMLCode())
+    
+    return query_widget, main_workflow
     

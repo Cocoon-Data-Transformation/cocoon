@@ -236,9 +236,9 @@ def create_dictionary_grid_remove(input_dict, col1="Key", col2="Value"):
         return reset_value
 
     for i, (key, value) in enumerate(input_dict.items(), start=1):
-        grid[i, 0] = widgets.Label(value=key)
+        grid[i, 0] = widgets.Label(value=str(key))
         
-        text_input = widgets.Text(value=value)
+        text_input = widgets.Text(value=str(value))
         grid[i, 1] = text_input
         
         reset_button = widgets.Button(description="Reset",

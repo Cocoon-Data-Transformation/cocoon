@@ -11,6 +11,15 @@ except ImportError:
 import pandas as pd
 import json
 
+
+def get_database_name(con):
+    if isinstance(con, duckdb.DuckDBPyConnection):
+        return "DuckDB"
+    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+        return "Snowflake"
+    else:
+        raise ValueError(f"Connection type {type(con)} not supported")
+
 def run_sql_return_df(con, sql_query):
     if isinstance(con, duckdb.DuckDBPyConnection):
         return con.execute(sql_query).df()
@@ -19,7 +28,6 @@ def run_sql_return_df(con, sql_query):
     else:
         raise ValueError(f"Connection type {type(con)} not supported")
     
-
 def get_schema_snowflake(con):
     cursor = con.cursor()
     schema_tables = {}
