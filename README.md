@@ -48,7 +48,7 @@
 </details>
 
 
-## Stage: Suggest data cleaning and automatically generate DBT sql/yml
+## (Preview) Stage: Suggest data cleaning and automatically generate DBT sql/yml
 
 - 👉 [**Python Package:** Check out the notebook that supports Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
 
