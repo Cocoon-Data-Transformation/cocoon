@@ -50,7 +50,7 @@
 
 ## (Preview) Stage: Automatically suggest cleaning and generate DBT codes
 
-- 👉 [**Python Package:** Check out the notebook that supports Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
+- 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
 
 Interactive cast the column type and normalize cases
 
