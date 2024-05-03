@@ -66,8 +66,6 @@ We plan to support Data Cleaning, Data Integration, and Data Modeling.
 
 👉 Check out the [3 min demo](https://www.youtube.com/watch?v=nddQ3jIdPCI)
 
-👉 If interested, join the [waitlist](https://forms.gle/njhNd1NHfh3MvD8V9)
-
 
 
 
