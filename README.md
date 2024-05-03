@@ -9,7 +9,7 @@
 ## Profile: Semantically understand your data and detect anomalies
 
 
-- 👉 [**Online Service:** Drop your CSV, and we will email you the profile](https://cocoon-data-transformation.github.io/page/)
+- 👉 [**Online Service:** Drop your CSV and you will get the profile](https://cocoon-data-transformation.github.io/page/)
 - 👉 [**Python Package:** Check out the notebook to interactively profile your table in python](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Profile.ipynb)
 - (Both run the same code; Python package requires LLM API, but is interactive and no size/#col limit)
   
