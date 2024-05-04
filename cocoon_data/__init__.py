@@ -15333,10 +15333,9 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
-
-        self.messages = messages
 
         return json_code
     
@@ -15773,7 +15772,10 @@ class DecideDuplicate(Node):
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
+        print("🔍 Checking duplicated rows ...")
+        
         create_progress_bar_with_numbers(0, doc_steps)
+        self.progress = show_progress(1)
 
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
@@ -15781,6 +15783,8 @@ class DecideDuplicate(Node):
         duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, table_pipeline)
 
         document = {"duplicate_count": duplicate_count}
+        
+        self.progress.value += 1
 
         if duplicate_count > 0:
             display_duplicated_rows_html2(sample_duplicate_rows)
@@ -15872,11 +15876,21 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
-        self.messages = messages
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "column_type" in jc, "The 'column_type' key is missing in the JSON code."),
+            (lambda jc: all(isinstance(col_type, str) for col_type in jc["column_type"].values()), "The column types are not all strings."),
+            (lambda jc: all(col_name in sample_df.columns for col_name in jc["column_type"]), "One or more column names specified in 'column_type' are not present in the sample DataFrame."),
+        ]
 
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
+            
         return json_code
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -16095,10 +16109,9 @@ Now, respond in Json:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
-
-        self.messages = messages
 
         return json_code
     
@@ -16215,10 +16228,9 @@ Respond in JSON format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
-
-        self.messages = messages
 
         return json_code
     
@@ -16420,11 +16432,17 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
-        self.messages = messages
-
+        if not isinstance(json_code, dict) or "reasoning" not in json_code or "columns_obvious_not_applicable" not in json_code:
+            raise ValueError("The returned JSON code does not adhere to the required format.")
+        
+        for col_name in json_code["columns_obvious_not_applicable"]:
+            if col_name not in missing_columns:
+                raise ValueError(f"The column '{col_name}' specified in 'columns_obvious_not_applicable' is not present in the missing columns.")
+            
         return json_code
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -16705,10 +16723,9 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
-
-        self.messages = messages
 
         return json_code
     
@@ -17804,7 +17821,7 @@ projection_clause: |
 """
 
             messages = [{"role": "user", "content": template}]
-            response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
             messages.append(response['choices'][0]['message'])
             self.messages = messages
             
@@ -17838,14 +17855,13 @@ mapping:
 """
 
             messages = [{"role": "user", "content": template}]
-            response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
             messages.append(response['choices'][0]['message'])
             self.messages = messages
             
             yml_code = extract_yml_code(response['choices'][0]['message']["content"])
             summary = yaml.safe_load(yml_code)
-            summary["projection"] = False
-            
+            summary["projection"] = False 
 
         return summary, column_name, sample_values, unusual_reason
     
@@ -17870,6 +17886,7 @@ mapping:
         if not json_code["could_clean"]:
             print("☹️ Cocoon can't clean this for you, as it's too complex...")
             print("😎 We'll log this for future cleanings and analyses")
+            
             submit_button = widgets.Button(
                 description='Next',
                 disabled=False,
@@ -18237,10 +18254,9 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
-
-        self.messages = messages
 
         return json_code
 
@@ -18361,11 +18377,11 @@ Return the result in yml
 reasoning: |
     To transform, we need to ...
 
-clause: |
+cast_clause: |
     CAST({column_name} AS {target_type}) AS {column_name}
 ```"""
         messages = [{"role": "user", "content": template}]
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
         self.messages.append(messages)
 
@@ -18373,29 +18389,27 @@ clause: |
         summary = yaml.safe_load(yml_code)
         reasoning = summary["reasoning"]
         
+        def clean_clause(clause):
 
+            if clause.lower().startswith("SELECT"):
+                clause = clause[6:].strip()
+
+            clause = clause.replace("\n", " ")
+            return  clause
+
+        summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
         
         for i in range(max_iterations):
-            def clean_clause(clause):
-
-                if clause.lower().startswith("select"):
-                    clause = clause[6:].strip()
-
-                clause = clause.replace("\n", " ")
-                return  clause
-            
-            clause = summary["clause"]
-            summary["clause"] = clean_clause(clause)
             
             try:
-                sql = f"""SELECT {summary['clause']}
+                sql = f"""SELECT {summary['cast_clause']}
 FROM {table_pipeline}"""
                 df = run_sql_return_df(con, sql)
                 break
             except Exception: 
                 detailed_error_info = get_detailed_error_info()
                 template = f"""You have the following CAST clause:
-{summary['clause']}
+{summary['cast_clause']}
 It has an error: {detailed_error_info}
 
 Please correct the CAST clause, but don't change the logic.
@@ -18411,12 +18425,13 @@ clause: |
 """
 
                 messages = [{"role": "user", "content": template}]
-                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
                 messages.append(response['choices'][0]['message'])
                 self.messages.append(messages)
 
                 yml_code = extract_yml_code(response['choices'][0]['message']["content"])
                 summary = yaml.safe_load(yml_code)
+                summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
         
         summary["reasoning"] = reasoning
         return summary
@@ -18424,21 +18439,6 @@ clause: |
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         return callback(run_output)
     
-    
-class TransformTypeForAll(MultipleNode):
-    default_name = 'Transform Type For All'
-    default_description = 'This node allows users to transform the data type for all columns.'
-
-    def construct_node(self, element_name, current_type="", target_type="", idx=0, total=0):
-        para = self.para.copy()
-        para["column_name"] = element_name
-        para["column_idx"] = idx
-        para["total_columns"] = total
-        para["current_type"] = current_type
-        para["target_type"] = target_type
-        node = TransformType(para=para, id_para ="column_name")
-        node.inherit(self)
-        return node
 
 class TransformTypeForAll(MultipleNode):
     default_name = 'Transform Type For All'
@@ -18496,7 +18496,7 @@ class TransformTypeForAll(MultipleNode):
         if "Transform Type" in document:
             for column_name, details in document["Transform Type"].items():
                 data['Column Name'].append(column_name)
-                data['Clause'].append(details['clause'])
+                data['Clause'].append(details['cast_clause'])
                 data['Reasoning'].append(details['reasoning'])
 
         df = pd.DataFrame(data)
@@ -18625,12 +18625,23 @@ Return in the following format:
 }}
 ```"""
         messages = [{"role": "user", "content": template}]
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
 
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
-        self.messages = messages
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "reasoning" in jc and "columns_to_keep_spaces" in jc, "The 'reasoning' or 'columns_to_keep_spaces' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["columns_to_keep_spaces"], list), "The 'columns_to_keep_spaces' value is not a list."),
+            (lambda jc: all(col_name in columns for col_name in jc["columns_to_keep_spaces"]), "One or more column names specified in 'columns_to_keep_spaces' are not present in the columns list."),
+        ]
+
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
 
         return json_code, columns
 
@@ -18710,8 +18721,6 @@ Return in the following format:
 
             sql_query += f"\nFROM {self.para['table_pipeline']}"
 
-            
-
             step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
             step.run_codes()
             self.para["table_pipeline"].add_step_to_final(step)
@@ -18767,12 +18776,24 @@ Now, respond in Json:
 ```"""
         
         messages = [{"role": "user", "content": template}]
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "Reasoning" in jc, "The 'Reasoning' key is missing in the JSON code."),
+            (lambda jc: "Unusualness" in jc, "The 'Unusualness' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["Unusualness"], bool), "The value of 'Unusualness' must be a boolean."),
+            (lambda jc: "Examples" in jc, "The 'Examples' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["Examples"], str), "The value of 'Examples' must be a string."),
+        ]
 
-        self.messages = messages
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
 
         return json_code
     
@@ -18805,6 +18826,29 @@ class DecideStringUnusualForAll(MultipleNode):
             self.nodes[col] = self.construct_node(col, idx, len(columns))
             idx += 1
             
+
+
+
+
+
+
+
+            
+
+
+
+            
+            
+            
+
+            
+            
+
+                    
+                        
+
+
+
     
     
 def create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df):
@@ -18830,7 +18874,6 @@ models:
           {tests}"""
 
     return yml_content
-
 
 
 

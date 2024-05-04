@@ -224,7 +224,7 @@ def create_dictionary_grid_remove(input_dict, col1="Key", col2="Value"):
 
     grid[0, 0] = widgets.HTML(value=f'<b>{col1}</b>')
     grid[0, 1] = widgets.HTML(value=f'<b>{col2}</b>')
-    grid[0, 2] = widgets.HTML(value='<b>Remove Rows</b>')
+    grid[0, 2] = widgets.HTML(value='<b>Remove Rows With This Value</b>')
     grid[0, 3] = widgets.HTML(value='<b>Reset</b>') 
 
     def create_reset_function(text_widget, toggle_widget, key):
