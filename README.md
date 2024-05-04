@@ -9,7 +9,7 @@
 ## Profile: Semantically understand your data and detect anomalies
 
 
-- 👉 [**Free Service:** Drop your CSV, and we will email you the profile](https://cocoon-data-transformation.github.io/page/)
+- 👉 [**Online Service:** Drop your CSV and you will get the profile](https://cocoon-data-transformation.github.io/page/)
 - 👉 [**Python Package:** Check out the notebook to interactively profile your table in python](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Profile.ipynb)
 - (Both run the same code; Python package requires LLM API, but is interactive and no size/#col limit)
   
@@ -48,15 +48,23 @@
 </details>
 
 
+## (Preview) Stage: Automatically suggest cleaning and generate DBT codes
 
+- 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
+
+- Interactively cast the column type and normalize cases
+
+<kbd>![](./images/stage_process.gif)</kbd>
+
+- The output is DBT staging sql/yml
+
+<kbd>![](./images/stage_result.gif)</kbd>
 
 ## Future
 
 We plan to support Data Cleaning, Data Integration, and Data Modeling.
 
 👉 Check out the [3 min demo](https://www.youtube.com/watch?v=nddQ3jIdPCI)
-
-👉 If interested, join the [waitlist](https://forms.gle/njhNd1NHfh3MvD8V9)
 
 
 
