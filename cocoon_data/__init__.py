@@ -116,8 +116,12 @@ class QueryWidget:
         
 
 
-def create_data_type_grid(df):
-    type_domain = list(data_types.keys())
+def create_data_type_grid(df, all_data_types = None):
+    
+    if all_data_types is None:
+        type_domain = list(data_types.keys())
+    else:
+        type_domain = all_data_types
 
     def update_match_status(change, match_status_label, current_type):
         match_status_label.value = "✔️ Yes" if change['new'] == current_type else "❌ No"
@@ -15293,7 +15297,9 @@ class DescribeColumns(Node):
         clear_output(wait=True)
 
         print("🔍 Checking columns ...")
+        
         create_progress_bar_with_numbers(1, doc_steps)
+        self.progress = show_progress(1)
 
         self.input_item = item
 
@@ -15344,6 +15350,8 @@ Return in the following format:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
         json_code = run_output
+        
+        self.progress.value += 1
 
         table_pipeline = self.para["table_pipeline"]
         query_widget = self.item["query_widget"]
@@ -15411,7 +15419,7 @@ class DecideProjection(Node):
         num_cols = len(schema)
 
         print(f"🧐 There are {BOLD}{num_cols}{END} columns in the table.")
-        print(f"👨‍⚕️ If you want to {BOLD}exclude{END} any column, please specify them:")
+        print(f"👨‍⚕️ If you want to {UNDERLINE}{BOLD}exclude{END}{END} any column, please specify them:")
 
         column_names = list(schema.keys())
 
@@ -15828,122 +15836,7 @@ class DecideDuplicate(Node):
         else:
             callback(document)   
 
-class DecideDataType(Node):
-    default_name = 'Decide Data Type'
-    default_description = 'This node allows users to decide the data type for each column.'
 
-    def extract(self, item):
-        clear_output(wait=True)
-
-        print("🔍 Checking data types ...")
-        create_progress_bar_with_numbers(2, doc_steps)
-
-        self.input_item = item
-
-        con = self.item["con"]
-        table_pipeline = self.para["table_pipeline"]
-
-
-        schema = table_pipeline.get_final_step().get_schema()
-        columns = list(schema.keys())
-        sample_size = 5
-
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
-
-        return sample_df
-
-    def run(self, extract_output, use_cache=True):
-        sample_df = extract_output
-
-        template = f"""You have the following table:
-{sample_df.to_csv(index=False, quoting=2)}
-
-For each column, classify what the column type should be.
-The column type should be one of the following:
-{list(data_types.keys())}
-
-Return in the following format:
-```json
-{{
-    "column_type": {{
-        "column1": "INT",
-        ...
-    }}
-}}
-```"""
-        
-        messages = [{"role": "user", "content": template}]
-        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
-        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = json.loads(processed_string)
-
-        checks = [
-            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
-            (lambda jc: "column_type" in jc, "The 'column_type' key is missing in the JSON code."),
-            (lambda jc: all(isinstance(col_type, str) for col_type in jc["column_type"].values()), "The column types are not all strings."),
-            (lambda jc: all(col_name in sample_df.columns for col_name in jc["column_type"]), "One or more column names specified in 'column_type' are not present in the sample DataFrame."),
-        ]
-
-        for check, error_message in checks:
-            if not check(json_code):
-                raise ValueError(f"Validation failed: {error_message}")
-            
-        return json_code
-
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        if icon_import:
-            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
-
-        json_code = run_output
-
-        table_pipeline = self.para["table_pipeline"]
-        query_widget = self.item["query_widget"]
-
-        create_explore_button(query_widget, table_pipeline)
-        schema = table_pipeline.get_final_step().get_schema()
-
-        rows_list = []
-
-        for col in schema:
-            current_type = reverse_data_types[schema[col]]
-            target_type = json_code["column_type"][col]
-
-            rows_list.append({
-                "column_name": col,
-                "current_type": current_type,
-                "target_type": target_type,
-            })
-
-        df = pd.DataFrame(rows_list)
-        
-        grid = create_data_type_grid(df)
-        print("😎 We have recommended the Data Types for Columns:")
-        display(grid)
-        print("🛠️ Automatical Data Casting will be available soon...")
-
-        next_button = widgets.Button(
-            description='Next',
-            disabled=False,
-            button_style='success',
-            tooltip='Click to submit',
-            icon='check'
-        )  
-
-        def on_button_clicked(b):
-            clear_output(wait=True)
-            df = extract_grid_data_type(grid)
-            
-            callback(df.to_json(orient="split"))
-
-        next_button.on_click(on_button_clicked)
-
-        display(next_button)
-        
-        if self.viewer:
-            on_button_clicked(next_button)
 
 
 def get_missing_percentage(con, table_name, column_name):
@@ -16264,8 +16157,10 @@ class DecideColumnRange(Node):
         all_columns = ", ".join(columns)
         sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
         table_desc = sample_df.to_csv(index=False, quoting=2)
+        database_name = get_database_name(con)
         
-        numerical_columns = [col for col in schema if schema[col] in data_types['INT'] or schema[col] in data_types['DECIMAL']]
+        numerical_columns = [col for col in schema if get_reverse_type(schema[col], database_name) in ['INT', 'DECIMAL']]
+        
         min_max = {}
         for col in numerical_columns:
             min_max_tuple = run_sql_return_df(con, f"SELECT MIN({col}) as min, MAX({col}) as max FROM {table_pipeline}").iloc[0]
@@ -18215,31 +18110,34 @@ class DecideDataType(Node):
 
         print("🔍 Checking data types ...")
         create_progress_bar_with_numbers(2, doc_steps)
+        self.progress = show_progress(1)
 
         self.input_item = item
 
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
 
-
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
         sample_size = 5
+        
+        database_name = get_database_name(con)
+        all_data_types = list(data_types_database[database_name].keys())
 
         all_columns = ", ".join(columns)
         sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
 
-        return sample_df
+        return sample_df, all_data_types, database_name
 
     def run(self, extract_output, use_cache=True):
-        sample_df = extract_output
+        sample_df, all_data_types, database_name = extract_output
 
         template = f"""You have the following table:
 {sample_df.to_csv(index=False, quoting=2)}
 
 For each column, classify what the column type should be.
 The column type should be one of the following:
-{list(data_types.keys())}
+{all_data_types}
 
 Return in the following format:
 ```json
@@ -18258,6 +18156,17 @@ Return in the following format:
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "column_type" in jc, "The 'column_type' key is missing in the JSON code."),
+            (lambda jc: all(col_type in all_data_types for col_type in jc["column_type"].values()), "The column types are not all strings."),
+            (lambda jc: all(col_name in sample_df.columns for col_name in jc["column_type"]), "One or more column names specified in 'column_type' are not present in the sample DataFrame."),
+        ]
+
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
+            
         return json_code
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -18265,7 +18174,8 @@ Return in the following format:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
         json_code = run_output
-
+        _, all_data_types, database_name = extract_output
+        self.progress.value += 1
         table_pipeline = self.para["table_pipeline"]
         query_widget = self.item["query_widget"]
 
@@ -18275,7 +18185,7 @@ Return in the following format:
         rows_list = []
 
         for col in schema:
-            current_type = reverse_data_types[schema[col]]
+            current_type = get_reverse_type(schema[col], database_name)
             target_type = json_code["column_type"][col]
 
             rows_list.append({
@@ -18286,7 +18196,7 @@ Return in the following format:
 
         df = pd.DataFrame(rows_list)
         
-        grid = create_data_type_grid(df)
+        grid = create_data_type_grid(df, all_data_types = all_data_types)
         print("😎 We have recommended the Data Types for Columns:")
         display(grid)
 
@@ -18311,19 +18221,6 @@ Return in the following format:
         if self.viewer:
             on_button_clicked(next_button)
             
-
-transform_hints = {
-    'VARCHAR':{
-        'DATE': {
-            "DuckDB": """Example Clause: 
-strptime('02/03/1992', '%d/%m/%Y')
-strptime('Monday, 2 March 1992 - 08:32:45 PM', '%A, %-d %B %Y - %I:%M:%S %p')""",
-            "Snowflake": """Example Clause: 
-TO_DATE('02/03/1992', 'DD/MM/YYYY')
-TO_TIMESTAMP('Monday, 2 March 1992 - 08:32:45 PM', 'DY, D MONTH YYYY - HH12:MI:SS AM')"""
-        }
-    }
-}
 
 class TransformType(Node):
     default_name = 'Transform Type'
@@ -18585,12 +18482,15 @@ class DecideTrim(Node):
         create_progress_bar_with_numbers(2, doc_steps)
 
         con = self.item["con"]
+        database_name = get_database_name(con)
+
         table_pipeline = self.para["table_pipeline"]
         schema = table_pipeline.get_final_step().get_schema()
         columns = []
 
         for column in schema:
-            if reverse_data_types[schema[column]] == "VARCHAR":
+            current_type = get_reverse_type(schema[column], database_name)
+            if current_type == "VARCHAR":
                 where_clause = where_clause_for_space(column)
                 count = run_sql_return_df(con, f"SELECT COUNT(*) FROM {table_pipeline} WHERE {where_clause}").iloc[0, 0]
                 if count > 0:
@@ -18816,7 +18716,10 @@ class DecideStringUnusualForAll(MultipleNode):
     def extract(self, item):
         table_pipeline = self.para["table_pipeline"]
         schema = table_pipeline.get_final_step().get_schema()
-        columns = [col for col in schema if schema[col] in data_types['VARCHAR']]
+        con = self.item["con"]
+        database_name = get_database_name(con)
+
+        columns = [col for col in schema if get_reverse_type(schema[col], database_name) =='VARCHAR']
         self.elements = []
         self.nodes = {}
 
@@ -18852,21 +18755,23 @@ class DecideStringUnusualForAll(MultipleNode):
     
     
 def create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df):
-    full_info = pd.merge(column_desc, miss_df, how='left', left_on='Column', right_on='Column')
-    
     yml_content = f"""version: 2
 
 models:
   - name: {table_name}
     description: "{table_summary}"
     columns:"""
-    
+
     for column in columns:
-        description = full_info.loc[full_info['Column'] == column, 'Summary'].values[0]
-        
-        is_null_acceptable = full_info.loc[full_info['Column'] == column, 'Is NULL Acceptable?'].values[0]
-        tests = "- not_null" if not is_null_acceptable else ""
-        
+        description = column_desc.loc[column_desc['Column'] == column, 'Summary'].values[0]
+
+        is_null_acceptable = miss_df.loc[miss_df['Column'] == column, 'Is NULL Acceptable?'].values
+        tests = "- not_null" if not is_null_acceptable or pd.isnull(is_null_acceptable[0]) else ""
+
+        if is_null_acceptable and not is_null_acceptable[0]:
+            explanation = miss_df.loc[miss_df['Column'] == column, 'Explanation'].values[0]
+            description += f"\nMissing Value is Acceptable: {explanation}"
+
         yml_content += f"""
       - name: {column}
         description: "{description}"
@@ -18930,7 +18835,7 @@ class WriteStageYMLCode(Node):
         
         table_pipeline = self.para["table_pipeline"]
         table_name = "stg_" + table_pipeline.get_source_step().name
-        table_summary = self.global_document["Data Profiling"]["Create Table Summary"].replace("**","")
+        table_summary = self.global_document["Data Profiling"]["Create Short Table Summary"].replace("**","")
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
         column_desc = pd.read_json(self.global_document['Data Profiling']["Describe Columns"], orient="split")
@@ -18953,38 +18858,11 @@ class WriteStageYMLCode(Node):
         tabs = create_dropdown_with_content(tab_data) 
         display(tabs)
         
-        edit_button = widgets.Button(
-            description='Edit',
-            disabled=False,
-            button_style='danger', 
-            tooltip='Click to edit',
-            icon='edit'
-        )
 
-        def on_edit_button_clicked(b):
-            print("Not implemented yet")
+
+
+
         
-        edit_button.on_click(on_edit_button_clicked)
-
-        def on_button_clicked(b):
-            clear_output(wait=True)
-            print("Submission received.")
-            callback({})
-
-        submit_button = widgets.Button(
-            description='Submit',
-            disabled=False,
-            button_style='success',
-            tooltip='Click to submit',
-            icon='check'
-        )
-
-        submit_button.on_click(on_button_clicked)
-
-        display(HBox([edit_button, submit_button]))
-        
-        if self.viewer:
-            on_button_clicked(submit_button)   
 
 def create_stage_workflow(table_name, con, viewer=True):
     query_widget = QueryWidget(con)
@@ -19005,7 +18883,7 @@ def create_stage_workflow(table_name, con, viewer=True):
                             para = para)
 
     main_workflow.add_to_leaf(DecideProjection())
-    main_workflow.add_to_leaf(CreateTableSummary())
+    main_workflow.add_to_leaf(CreateShortTableSummary())
     main_workflow.add_to_leaf(DecideDuplicate())
     main_workflow.add_to_leaf(DescribeColumns())
     main_workflow.add_to_leaf(DecideMissing())
@@ -19019,3 +18897,91 @@ def create_stage_workflow(table_name, con, viewer=True):
     
     return query_widget, main_workflow
     
+class CreateShortTableSummary(Node):
+    default_name = 'Create Short Table Summary'
+    default_description = 'This node creates a short summary of the table.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+
+        print("📝 Generating table summary ...")
+        
+        create_progress_bar_with_numbers(1, doc_steps)
+
+        self.progress = show_progress(1)
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        sample_size = 5
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        all_columns = ", ".join(columns)
+        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+
+        self.sample_df = sample_df
+
+        return table_desc, columns
+    
+    def run(self, extract_output, use_cache=True):
+        table_desc, table_columns = extract_output
+
+        template = f"""You have the following table:
+{table_desc}
+        
+- Task: Summarize the table.
+-  Structure: Start with the big picture. Then explain what are the details mentioned, with related columns in ().
+-  Style: Use a few short sentences with very simple words.
+
+Example: 
+The table is about ... It discusses customers (customer_id, customer_name) and their orders (order_id, order_date).
+Now, your summary in a few sentences and < 500 chars:"""
+
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+
+        summary = response['choices'][0]['message']['content']
+        assistant_message = response['choices'][0]['message']
+        messages.append(assistant_message)
+        self.messages = messages
+
+        return summary
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output 
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        self.progress.value += 1
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+
+        print("📝 Here is the summary, please keep it concise:")
+        
+        text_area, char_count_label = create_text_area_with_char_count(summary, max_chars=500)
+        display(VBox([text_area, char_count_label]))
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            print("Submission received.")
+            callback(text_area.value)
+
+        submit_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+
+        display(submit_button)
+        
+        if self.viewer:
+            on_button_clicked(submit_button)

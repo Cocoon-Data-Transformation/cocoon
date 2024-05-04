@@ -1,4 +1,5 @@
 from ipywidgets import *
+import ipywidgets
 import ipywidgets as widgets
 from IPython.display import *
 import pandas as pd
@@ -326,18 +327,19 @@ def collect_updated_dict_from_grid(grid):
 
 
 
-def create_text_area_with_char_count(initial_value):
+def create_text_area_with_char_count(initial_value, max_chars=300):
 
-    text_area = Textarea(layout={'height': '200px', 'width': '600px'},
-                            value=initial_value)
+    text_area = Textarea(layout=Layout(height='200px', width='600px'),
+                            value=initial_value,
+                            style={'description_width': 'initial'})
 
-    char_count_label = Label()
+    char_count_label = ipywidgets.HTML()
 
     def update_char_count(change):
-        if len(text_area.value) < 300:
-            char_count_label.value = f"Characters entered: {len(text_area.value)}"
+        if len(text_area.value) <= max_chars:
+            char_count_label.value = f"<p style='color: #333;'>Characters entered: {len(text_area.value)}</p>"
         else:
-            char_count_label.value = f"Characters entered: {len(text_area.value)} ⚠️ Too long!"
+            char_count_label.value = f"<p style='color: red;'>Characters entered: {len(text_area.value)} ⚠️ Too long!</p>"
 
     text_area.observe(update_char_count, names='value')
 
