@@ -40,7 +40,7 @@ data_types_database = {
         "DATE": ["DATE"],
         "DECIMAL": ["DECIMAL", "NUMERIC", "FLOAT4", "FLOAT", "REAL", "DOUBLE","FLOAT8"],
         "TIME": ["TIME"],
-        "TIMESTAMP": ["DATETIME", "TIMESTAMPTZ", "TIMESTAMP WITH TIME ZONE"],
+        "TIMESTAMP": ["DATETIME", "TIMESTAMP", "TIMESTAMPTZ", "TIMESTAMP WITH TIME ZONE"],
         "VARCHAR": ["CHAR", "BPCHAR", "TEXT", "STRING", "VARCHAR"],
         "ARRAY": ["ARRAY"],
         "INTERVAL": ["INTERVAL"],
