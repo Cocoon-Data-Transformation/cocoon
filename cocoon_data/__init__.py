@@ -18263,8 +18263,8 @@ class TransformType(Node):
         max_iterations = 10
         self.messages = []
 
-        template = f"""'{column_name}' has the following distinct values (sep by |):
-{sample_values.to_csv(index=False, sep="|", header=False, quoting=1)}
+        template = f"""'{column_name}' has the following distinct values:
+{sample_values.to_csv(index=False, header=False, quoting=1)}
 
 Task: Transform the data type of the column from '{current_type}' to '{target_type}', in a simple SELECT clause.
 Note that we use {database_name} syntax. {hint}
@@ -18316,7 +18316,7 @@ Return the result in yml
 reasoning: |
     The error is caused by ...
 
-clause: |
+cast_clause: |
     CAST({column_name} AS {target_type}) AS {column_name}
 ```
 """
