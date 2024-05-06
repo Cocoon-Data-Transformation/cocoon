@@ -18288,7 +18288,7 @@ cast_clause: |
         
         def clean_clause(clause):
 
-            if clause.lower().startswith("SELECT"):
+            if clause.lower().startswith("select"):
                 clause = clause[6:].strip()
 
             clause = clause.replace("\n", " ")
