@@ -6,6 +6,21 @@
 
 😎 **Cocoon** uses LLMs to augment data engineering and data science.
 
+
+## (Preview) Stage: Automatically suggest cleaning and generate DBT codes
+
+- 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
+- 👉 Check out the [1 min demo](https://youtu.be/D7jw43ccOkg)
+
+- Interactively cast the column type and normalize cases
+
+<kbd>![](./images/stage_process.gif)</kbd>
+
+- The output is DBT staging sql/yml
+
+<kbd>![](./images/stage_result.gif)</kbd>
+
+
 ## Profile: Semantically understand your data and detect anomalies
 
 
@@ -46,20 +61,6 @@
 ```
 
 </details>
-
-
-## (Preview) Stage: Automatically suggest cleaning and generate DBT codes
-
-- 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
-- 👉 Check out the [1 min demo](https://youtu.be/D7jw43ccOkg)
-
-- Interactively cast the column type and normalize cases
-
-<kbd>![](./images/stage_process.gif)</kbd>
-
-- The output is DBT staging sql/yml
-
-<kbd>![](./images/stage_result.gif)</kbd>
 
 ## Future
 
