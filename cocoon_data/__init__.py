@@ -16178,16 +16178,17 @@ class DecideColumnRange(Node):
 {table_desc}
 
 The numerical columns in the table are: {numerical_columns}
-Task: based on the understanding of the data, decide the normal range of each numerical column.
+Task: based on the understanding of the data, decide the normal range for numerical columns.
 E.g., for a column "age", the normal range could be 0-150.
+Skip the column if the range is unclear.
 
 Now, return in the following format:
 ```json
 {{
     "{numerical_columns[0]}": {{
+        "explanation": "short in < 10 words",
         "min": 0,
-        "max": 150,
-        "explanation": "short in < 10 words"
+        "max": 150
     }}, ...
 }}
 ```"""
