@@ -15418,24 +15418,20 @@ class DecideProjection(Node):
 
         num_cols = len(schema)
 
-        print(f"🧐 There are {BOLD}{num_cols}{END} columns in the table.")
-        print(f"👨‍⚕️ If you want to {UNDERLINE}{BOLD}exclude{END}{END} any column, please specify them:")
-
+        print(f"🧐 Please select the columns to {UNDERLINE}{BOLD}include{END}{END}.")
+        print(f"😊 Cocoon is currently not robust for >50 columns. Support for wide table is under development.")
+        
         column_names = list(schema.keys())
 
         document = {"selected_columns": []}
 
         def callback_next(selected_indices):
             
-            selected_indices = [i for i in range(num_cols) if i not in selected_indices]
 
             if len(selected_indices) == 0:
                 print("🙁 Please keep at least one column.")
                 return
 
-            if len(selected_indices) > 100:
-                print("""🙁 Cocoon can only handle up to 100 columns now. Please remove more columns.
-😊 Support of wide tables is under development. Please send a feature request!""")
             
             clear_output(wait=True)
             document["selected_columns"] = [column_names[i] for i in selected_indices]
@@ -15449,10 +15445,10 @@ class DecideProjection(Node):
                 table_pipeline.add_step_to_final(step)
             callback(document)
 
-        create_column_selector(column_names, callback_next, default=False)
+        create_column_selector(column_names, callback_next, default=True)
 
         if self.viewer:
-            callback_next([])
+            callback_next(list(range(num_cols)))
 
 class CreateColumnGrouping(Node):
     default_name = 'Create Column Grouping'
