@@ -67,6 +67,7 @@ Screenshot where LLMs help you interactively cast columns and fix cases. The out
 ## (Preview) Fuzzy Join/Standardization: Match table entities and explain the relations
 
 Join could be challenging when a standardized join key is missing (e.g., join by non-standardized names).
+
 We help you find the related ones, and explain how they are related.
 
 <kbd>![](./images/em.gif)</kbd>
