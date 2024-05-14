@@ -64,9 +64,26 @@ Screenshot where LLMs help you interactively cast columns and fix cases. The out
 <kbd>![](./images/stage.gif)</kbd>
 
 
-## (Preview) Fuzzy Join: Match table entities and explain the relations
+## (Preview) Fuzzy Join/Standardization: Match table entities and explain the relations
+
+Join could be challenging when a standardized join key is missing (e.g., join by non-standardized names).
+We help you find the related ones, and explain how they are related.
 
 <kbd>![](./images/em.gif)</kbd>
+
+<details>
+  <summary>Cite Cocoon Fuzzy Join</summary>
+  
+```
+@article{huang2024disambiguate,
+  title={Disambiguate Entity Matching through Relation Discovery with Large Language Models},
+  author={Huang, Zezhou},
+  journal={arXiv preprint arXiv:2403.17344},
+  year={2024}
+}
+```
+
+</details>
 
 ## Future
 
