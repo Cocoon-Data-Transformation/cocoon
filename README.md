@@ -9,6 +9,9 @@
 
 ## Profile: Semantically understand your data and detect anomalies
 
+Profiling is the first step to understanding the table and identifying any anomalies.
+
+Many small decisions require semantic understanding by LLMs. For example, an age of 100 is acceptable, but -1 is impossible!
 
 - 👉 [**Online Service:** Drop your CSV, and the profile will be ready in <10 min](https://cocoon-data-transformation.github.io/page/)
 - 👉 [**Python Package:** Check out the notebook to interactively profile your table in python](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Profile.ipynb)
@@ -51,10 +54,10 @@
 
 ## (Preview) Stage: Automatically suggest cleaning and generate DBT codes
 
+LLMs help you interactively cast columns and fix cases. The output is DBT staging sql/yml.
+
 - 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
 - 👉 Check out the [1 min demo](https://youtu.be/D7jw43ccOkg)
-
-- Interactively cast columns and fix cases. The output is DBT staging sql/yml
 
 <kbd>![](./images/stage.gif)</kbd>
 
