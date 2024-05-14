@@ -63,6 +63,11 @@ Screenshot where LLMs help you interactively cast columns and fix cases. The out
 
 <kbd>![](./images/stage.gif)</kbd>
 
+
+## (Preview) Fuzzy Join: Match table entities and explain the relations
+
+<kbd>![](./images/em.gif)</kbd>
+
 ## Future
 
 We plan to support Data Cleaning, Data Integration, and Data Modeling.
