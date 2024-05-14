@@ -8251,54 +8251,34 @@ else if it is general super class then GENERAL
 else it is irrelavent entity then NOT_RELATED
     E.g., "cloth" is a irrelavent
 
-The list is prioritized. Choose the first one that applies."""
-
-        messages = [{"role": "user", "content": template}]
-
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
-
-        
-
-        reponded_content = response['choices'][0]['message']['content']
-
-        messages=[
-                {"role": "user", 
-                "content": template
-                },
-                {"role": "assistant",
-                "content": reponded_content
-                },
-                {"role": "user", 
-"content": """First, criticize your answer and point out the mistakes.
-For output entities classifed as EXACT_MATCH, are they making additional, potentially incorrect, or fewer assumptions? If so, correct them as ADDITIONAL_ASSUMPTION/CONFLICTED_ASSUMPTION/GENERAL. 
-For output entities classifed as GENERAL, are they making additional, potentially incorrect assumptions? If so, correct them as ADDITIONAL_ASSUMPTION/CONFLICTED_ASSUMPTION.
-For output entities classifed as NOT_RELATED, are the entities similar but only part of the properties are different? If so, correct them as CONFLICTED_ASSUMPTION.
-Next, provide your corrected answer as json:
+The list is prioritized. Choose the first one that applies. Provide your answer as json:
 ```json
-{       
+{{       
         "Input Entity Guess": "...",
-        "EXACT_MATCH": {
-                "entity": [...],
-                "reason": "The input entity is ... which matches ..."
-        },
-        "CONFLICTED_ASSUMPTION": {
-                "entity": [...],
-                "reason": "The (what specific) details are conflicted"
-        },
-        "ADDITIONAL_ASSUMPTION": {
-                "entity": [...],
-                "reason": "The (what specific) details are not mentioned"
-        },
-        "GENERAL": {
-                "entity": [...],
-                "reason": "..."
-        }
-        (DON'T include NOT_RELATED!)
-}
-```
-If no matched entity, return empty entity list and reason string.
-"""},]
+        "EXACT_MATCH": {{
+                "reason": "The input entity is ... which matches ...",
+                "entity": [...] (A list of reference entity names)
 
+        }},
+        "CONFLICTED_ASSUMPTION": {{
+                "reason": "The (what specific) details are conflicted",
+                "entity": [...]
+
+        }},
+        "ADDITIONAL_ASSUMPTION": {{
+                "reason": "The (what specific) details are not mentioned",
+                "entity": [...]
+
+        }},
+        "GENERAL": {{
+                "reason": "How these entites are more general",
+                "entity": [...]
+        }}
+        (DON'T include NOT_RELATED!)
+}}
+```
+"""
+        messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
 
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
@@ -8489,47 +8469,52 @@ def display_entity_matches(df, exclude_columns=['label', 'index_ids', 'embedding
     display(navigation_bar, html_display)
 
 def generate_html_from_json(json_var):
-    html_output = f"<p>&#x1F913; <b>This input entity is about:</b> <i>{json_var['Input Entity Guess']}</i><p>"
-    if json_var['EXACT_MATCH']['entity']:
-        html_output += "<p>&#x1F600; We find <u>exactly matched</u> entities:</p>"
-        html_output += "<ul>"
-        for entity in json_var['EXACT_MATCH']['entity']:
+    
+    html_output = ""
+    
+    if 'Input Entity Guess' in json_var:
+        html_output += f"<p>&#x1F913; <b>This input entity is about:</b> <i>{json_var.get('Input Entity Guess', 'Unknown')}</i></p>"
+
+    exact_matches = json_var.get('EXACT_MATCH', {})
+    if exact_matches.get('entity'):
+        html_output += "<p>&#x1F600; We find <u>exactly matched</u> entities:</p><ul>"
+        for entity in exact_matches['entity']:
             html_output += f"<li>{entity}</li>"
         html_output += "</ul>"
-        if json_var['EXACT_MATCH']['reason']:
-            html_output += f"<p><b>Reason:</b> <i>{json_var['EXACT_MATCH']['reason']}</i></p>"
-        html_output += "</body></html>"
+        if exact_matches.get('reason'):
+            html_output += f"<p><b>Reason:</b> <i>{exact_matches['reason']}</i></p>"
     else:
         html_output += "<p>&#x1F641; We can't find <u>exactly matched</u> entities.</p>"
 
-    if json_var['GENERAL']['entity']:
-        html_output += "<p>&#x1F600; We find entities that are <u>more general</u>:</p>"
-        html_output += "<ul>"
-        for entity in json_var['GENERAL']['entity']:
+    general_matches = json_var.get('GENERAL', {})
+    if general_matches.get('entity'):
+        html_output += "<p>&#x1F600; We find entities that are <u>more general</u>:</p><ul>"
+        for entity in general_matches['entity']:
             html_output += f"<li>{entity}</li>"
         html_output += "</ul>"
-        if json_var['GENERAL']['reason']:
-            html_output += f"<p><b>Reason:</b> <i>{json_var['GENERAL']['reason']}</i></p>"
+        if general_matches.get('reason'):
+            html_output += f"<p><b>Reason:</b> <i>{general_matches['reason']}</i></p>"
 
-    if json_var['ADDITIONAL_ASSUMPTION']['entity']:
-        html_output += "<p>&#x1F600; We find entities but with <u>additional details</u> that need verification:</p>"
-        html_output += "<ul>"
-        for entity in json_var['ADDITIONAL_ASSUMPTION']['entity']:
+    additional_assumptions = json_var.get('ADDITIONAL_ASSUMPTION', {})
+    if additional_assumptions.get('entity'):
+        html_output += "<p>&#x1F600; We find entities but with <u>additional details</u> that need verification:</p><ul>"
+        for entity in additional_assumptions['entity']:
             html_output += f"<li>{entity}</li>"
         html_output += "</ul>"
-        if json_var['ADDITIONAL_ASSUMPTION']['reason']:
-            html_output += f"<p><b>Reason:</b> <i>{json_var['ADDITIONAL_ASSUMPTION']['reason']}</i></p>"
+        if additional_assumptions.get('reason'):
+            html_output += f"<p><b>Reason:</b> <i>{additional_assumptions['reason']}</i></p>"
 
-    if json_var['CONFLICTED_ASSUMPTION']['entity']:
-        html_output += "<p>&#x1F600; We find entities that are <u>similar, but details are different</u>:</p>"
-        html_output += "<ul>"
-        for entity in json_var['CONFLICTED_ASSUMPTION']['entity']:
+    conflicted_assumptions = json_var.get('CONFLICTED_ASSUMPTION', {})
+    if conflicted_assumptions.get('entity'):
+        html_output += "<p>&#x1F600; We find entities that are <u>similar, but details are different</u>:</p><ul>"
+        for entity in conflicted_assumptions['entity']:
             html_output += f"<li>{entity}</li>"
         html_output += "</ul>"
-        if json_var['CONFLICTED_ASSUMPTION']['reason']:
-            html_output += f"<p><b>Reason:</b> <i>{json_var['CONFLICTED_ASSUMPTION']['reason']}</i></p>"
+        if conflicted_assumptions.get('reason'):
+            html_output += f"<p><b>Reason:</b> <i>{conflicted_assumptions['reason']}</i></p>"
 
     return html_output
+
 
 
 
@@ -8579,9 +8564,7 @@ def generate_report(df, exclude_columns=['label', 'index_ids', 'embedding','matc
     middle_html = ""
 
     for i in range(len(df)):
-        input_data_html = df_row_to_column_value(df, idx=i, exclude_columns=exclude_columns).to_html(index=False)
         json_var = df[match_col][i]
-        solution_output_html = generate_html_from_json(json_var)
 
         middle_html += f"""<h1>{i+1}</h1>
 {generate_page(df=df, i=i, exclude_columns=exclude_columns, match_col=match_col)}"""
@@ -8589,7 +8572,7 @@ def generate_report(df, exclude_columns=['label', 'index_ids', 'embedding','matc
     title_html = f'<div style="display: flex; align-items: center;">' \
         f'<img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">' \
         f'<div style="margin: 0; padding: 0;">' \
-        f'<h1 style="margin: 0; padding: 0;">Table Standardization</h1>' \
+        f'<h1 style="margin: 0; padding: 0;">Fuzzy Join</h1>' \
         f'<p style="margin: 0; padding: 0;">Powered by cocoon</p>' \
         f'</div>' \
         f'</div><hr>'
@@ -12178,7 +12161,7 @@ class DataSource(Node):
 
                 df = pd.read_csv(file_path)
 
-                con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
+                run_sql_return_df(con, f"CREATE TABLE {table_name} AS SELECT * FROM df")
 
                 html_content += f"<b>{idx}. {table_name} (<a href=\"{file_path}\">{file_path}</a>)</b>"
                 html_content += wrap_in_scrollable_div(truncate_html_td(df.head(2).to_html()))
@@ -12190,7 +12173,7 @@ class DataSource(Node):
 
         print(f"🤓 We found {idx-1} seed tables. Below are their {BOLD}samples{END}...")
 
-        schema_df = con.execute("describe;").df()
+        schema_df = run_sql_return_df(con, "describe;")
 
         tables = {}
         for _, row in schema_df.iterrows():
@@ -12398,7 +12381,7 @@ def create_union_table(tables):
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         sql_query = run_output
         con = self.input_item["con"]
-        con.execute(robust_create_to_replace(sql_query))
+        run_sql_return_df(con, robust_create_to_replace(sql_query))
 
         input_tables = self.group
         dbt_formatted_query = process_query_to_dbt(sql_query, input_tables)
@@ -12489,7 +12472,7 @@ class SourceDocument(Node):
 
 
 
-        df = con.execute(f"select * from {table_name}").df()
+        df = run_sql_return_df(con, f"select * from {table_name}")
         doc_df = DocumentedData(df, table_name=table_name)
         doc_df.rename_table=False
 
@@ -12654,7 +12637,7 @@ FROM {table_name}"
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         sql_query = run_output['sql']
         con = self.input_item["con"]
-        con.execute(robust_create_to_replace(sql_query))
+        run_sql_return_df(con, robust_create_to_replace(sql_query))
 
         input_table = self.para["element_name"]
         output_table = self.para["element_name"].replace("src", "stg")
@@ -12866,7 +12849,7 @@ class PerformCRUD(Node):
         
         con = item["con"]
         stg_table_name = table_name.replace("src", "stg")
-        df = con.execute(f"select * from {stg_table_name}").df()
+        df = run_sql_return_df(con, f"select * from {stg_table_name}")
         doc_df.table_name = stg_table_name
 
         return op_cols, date_cols, doc_df, df, con
@@ -12987,8 +12970,8 @@ NOT EXISTS ... (for each deletion ops)"
             self.messages.append(messages)
 
             summary["deleted_table"] = json_code
-            con.execute(robust_create_to_replace(json_code['sql']))
-            df = con.execute(f"select * from {deleted_table_name}").df()
+            run_sql_return_df(con, robust_create_to_replace(json_code['sql']))
+            df = run_sql_return_df(con, f"select * from {deleted_table_name}")
 
             input_table = doc_df.table_name
             output_table = deleted_table_name
@@ -13047,7 +13030,7 @@ ORDER BY primary keys"}}
         self.messages.append(messages)
 
         summary["final_table"] = json_code
-        con.execute(robust_create_to_replace(json_code['sql']))
+        run_sql_return_df(con, robust_create_to_replace(json_code['sql']))
 
         input_table = new_name_del
         output_table = new_name_final
@@ -13168,7 +13151,7 @@ class DecideForeignKey(Node):
         table_name = self.para["element_name"]
         source_table = self.para["source_table"]
         con = item["con"]
-        df = con.execute(f"SELECT * FROM {table_name}").df()
+        df = run_sql_return_df(con, f"SELECT * FROM {table_name}")
         doc_df = item["table_document"][source_table]
         basic_summary = doc_df.document['main_entity']["summary"]
 
@@ -13260,7 +13243,7 @@ class PerformNormalization(Node):
         self.table_name = table_name
         source_table = self.para["source_table"]
         con = item["con"]
-        df = con.execute(f"SELECT * FROM {table_name}").df()
+        df = run_sql_return_df(con, f"SELECT * FROM {table_name}")
         doc_df = item["table_document"][source_table]
 
         self.foreign_keys = self.global_document["Data Product"]["Decide Foreign Key For All"]["Decide Foreign Key"][table_name]["foreign_keys"]
@@ -13381,8 +13364,8 @@ FROM {table}"""
                     run_output["normalize"][dimension] = {}
                     run_output["normalize"][dimension]["sql_query"] = [sql_query1, sql_query2]
                     run_output["normalize"][dimension]["new_table_name"] = [new_table_name1, new_table_name2]
-                    con.execute(robust_create_to_replace(sql_query1))
-                    con.execute(robust_create_to_replace(sql_query2))
+                    run_sql_return_df(con, robust_create_to_replace(sql_query1))
+                    run_sql_return_df(con, robust_create_to_replace(sql_query2))
 
                     input_table = self.table_name
                     output_table = new_table_name1
@@ -13518,7 +13501,7 @@ class ClassifyDimFact(Node):
         self.table_name = table_name
         source_table = self.para["source_table"]
         con = item["con"]
-        df = con.execute(f"SELECT * FROM {table_name}").df()
+        df = run_sql_return_df(con, f"SELECT * FROM {table_name}")
         doc_df = item["table_document"][source_table]
 
 
@@ -13670,7 +13653,7 @@ class CreateFactTable(Node):
 
         table_name = self.para["element_name"]
         con = item["con"]
-        df = con.execute(f"SELECT * FROM {table_name}").df()
+        df = run_sql_return_df(con, f"SELECT * FROM {table_name}")
 
 
         return df, table_name, relation_desc
@@ -13717,7 +13700,7 @@ Respond with following format:
         table_name = self.para["element_name"]
         new_table_name = run_output["name"]
         sql_query = f"CREATE TABLE {new_table_name} AS SELECT * FROM {table_name}"
-        con.execute(robust_create_to_replace(sql_query))
+        run_sql_return_df(con, robust_create_to_replace(sql_query))
 
         input_table = table_name
         output_table = new_table_name
@@ -13788,7 +13771,7 @@ class CreateDimensionTable(Node):
 
         table_name = self.para["element_name"]
         con = item["con"]
-        df = con.execute(f"SELECT * FROM {table_name}").df()
+        df = run_sql_return_df(con, f"SELECT * FROM {table_name}")
 
         return df, table_name, nl_descs
 
@@ -13839,7 +13822,7 @@ Respond with following format:
         table_name = self.para["element_name"]
         new_table_name = run_output["name"]
         sql_query = f"CREATE TABLE {new_table_name} AS SELECT * FROM {table_name}"
-        con.execute(robust_create_to_replace(sql_query))
+        run_sql_return_df(con, robust_create_to_replace(sql_query))
 
         input_table = table_name
         output_table = new_table_name
@@ -13955,7 +13938,7 @@ class ProductDocument(Node):
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         con = self.input_item["con"]
         table_name = self.para["element_name"]
-        df = con.execute(f"select * from {table_name}").df()
+        df = run_sql_return_df(con, f"select * from {table_name}")
         doc_df = DocumentedData(df, table_name=table_name)
         doc_df.rename_table=False
         doc_df.start(viewer=True)
@@ -14064,7 +14047,7 @@ class CreateFactMatchDim(Node):
         for idx, (dim_name, table_key) in enumerate(dimension_tables):
             dim_desc += f"{idx+1}. {dim_name}: {table_key}\n"
 
-        df = con.execute(f"SELECT * FROM {fact_name}").df()
+        df = run_sql_return_df(con, f"SELECT * FROM {fact_name}")
 
         return df, fact_name, dim_desc, summary
 
@@ -14213,7 +14196,7 @@ class BuildDataMart(Node):
         self.fact_name = fact_name
 
         def get_table_description(con, table_name, row=2):
-            df = con.execute(f"SELECT * FROM {table_name}").df()
+            df = run_sql_return_df(con, f"SELECT * FROM {table_name}")
             return describe_df_in_natural_language(df, table_name, row)
 
         fact_table_desc = get_table_description(con, fact_name , 2)
@@ -14319,7 +14302,7 @@ class SourceToBusiness(Node):
         num_tables = len(self.global_document["Data Product"]["Group Data Source"])
         table_desc = f"You have the following {num_tables} tables: \n\n"
         for table_name in self.global_document["Data Product"]["Group Data Source"]:
-            df = con.execute(f"SELECT * FROM {table_name}").df()
+            df = run_sql_return_df(con, f"SELECT * FROM {table_name}")
             table_desc += describe_df_in_natural_language(df=df, 
                                         table_name=table_name, 
                                         num_rows_to_show=2)
@@ -15267,26 +15250,54 @@ def display_duplicated_rows_html2(df):
     
     display(HTML(html_output))
 
-
 def create_explore_button(query_widget, table_name=None, query=""):
-    if table_name is not None:
-        query = f"SELECT * FROM {table_name}"
-    explore_button = widgets.Button(
-        description='Explore',
-        disabled=False,
-        button_style='info',
-        tooltip='Click to explore',
-        icon='search'
-    )
+    if isinstance(table_name, list):
+        dropdown = widgets.Dropdown(
+            options=[(name, name) for name in table_name],
+            disabled=False,
+        )
+        
+        explore_button = widgets.Button(
+            description='Explore',
+            disabled=False,
+            button_style='info',
+            tooltip='Click to explore',
+            icon='search'
+        )
+        
+        def on_button_clicked(b):
+            selected_table = dropdown.value
+            if selected_table:
+                query = f"SELECT * FROM {selected_table}"
+                print(f"😎 Query submitted for {selected_table}. Check out the data widget!")
+                query_widget.run_query(query)
+            else:
+                print("Please select a table from the dropdown.")
+        
+        explore_button.on_click(on_button_clicked)
+        
+        display(widgets.HBox([dropdown, explore_button]))
+        return dropdown
+        
+    else:
+        if table_name is not None:
+            query = f"SELECT * FROM {table_name}"
+        explore_button = widgets.Button(
+            description='Explore',
+            disabled=False,
+            button_style='info',
+            tooltip='Click to explore',
+            icon='search'
+        )
 
-    def on_button_clicked(b):
-        print("😎 Query submitted. Check out the data widget!")
-        query_widget.run_query(query)
+        def on_button_clicked(b):
+            print("😎 Query submitted. Check out the data widget!")
+            query_widget.run_query(query)
 
-    explore_button.on_click(on_button_clicked)
+        explore_button.on_click(on_button_clicked)
 
-    display(explore_button)
-
+        display(explore_button)
+        
 
 
 class DescribeColumns(Node):
@@ -15507,52 +15518,19 @@ Conclude with the final result as a multi-level JSON.
 }}
 ```"""
         
-        def extract_attributes(json_var):
-            attributes = []
             
-            def traverse(element):
-                if isinstance(element, dict):
-                    for value in element.values():
-                        traverse(value)
                         
-                elif isinstance(element, list):
-                    for item in element:
-                        if isinstance(item, str):
-                            attributes.append(item)
                         
-                        else:
-                            traverse(item)
                             
 
-            traverse(json_var)
             
-            return attributes
 
-        def validate_attributes(attributes, reference_attributes):
-            error_messages = []
 
-            seen_attributes = set()
-            duplicates = set()
-            for attribute in attributes:
-                if attribute in seen_attributes:
-                    duplicates.add(attribute)
-                seen_attributes.add(attribute)
             
-            if duplicates:
-                error_messages.append("Duplicate attributes: " + ', '.join(duplicates))
 
-            attributes_set = set(attributes)
-            reference_set = set(reference_attributes)
 
-            extra_attributes = attributes_set - reference_set
-            if extra_attributes:
-                error_messages.append("Extra attributes: " + ', '.join(extra_attributes))
 
-            missing_attributes = reference_set - attributes_set
-            if missing_attributes:
-                error_messages.append("Missing attributes: " + ', '.join(missing_attributes) + "\n Are attributes in the leaf as an array [att1, att2]?")
 
-            return '\n'.join(error_messages)
         
         messages =[ {"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
@@ -15565,14 +15543,50 @@ Conclude with the final result as a multi-level JSON.
         json_code = extract_json_code_safe(assistant_message['content'])
         json_var = json.loads(json_code)
         json_var.pop("reasoning", None)
-        attributes = extract_attributes(json_var)
-
-        error = validate_attributes(attributes, column_names)
-
-        if error!= '':
-            raise ValueError(f"Validation failed with the following error(s):\n{error}")
         
-        return json_var
+        
+        def repair_json_attributes(json_var, reference_attributes):
+            seen_attributes = set()
+            reference_set = set(reference_attributes)
+            other_attributes = []
+
+            def traverse(element):
+                if isinstance(element, dict):
+                    for key, value in list(element.items()):
+                        if isinstance(value, list):
+                            new_list = []
+                            for item in value:
+                                if isinstance(item, str):
+                                    if item not in seen_attributes and item in reference_set:
+                                        new_list.append(item)
+                                        seen_attributes.add(item)
+                                else:
+                                    traverse(item)
+                            element[key] = new_list
+                        else:
+                            traverse(value)
+                elif isinstance(element, list):
+                    for i, item in enumerate(list(element)):
+                        if isinstance(item, str):
+                            if item not in seen_attributes and item in reference_set:
+                                seen_attributes.add(item)
+                            else:
+                                element.pop(i)
+                        else:
+                            traverse(item)
+
+            traverse(json_var)
+            
+            missing_attributes = reference_set - seen_attributes
+            if missing_attributes:
+                json_var['Other'] = list(missing_attributes)
+
+            return json_var
+
+        repaired_json = repair_json_attributes(json_var, column_names)
+
+        
+        return repaired_json
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         
@@ -16538,21 +16552,21 @@ class DecideDMVforAll(MultipleNode):
 def check_column_uniqueness(con, table_name, column_name, allow_null=False):
     if not allow_null:
         query = f"""
-        SELECT COUNT(DISTINCT {column_name}) AS distinct_count,
-               COUNT(*) AS total_count
+        SELECT COUNT(DISTINCT {column_name}) AS DISTINCT_COUNT,
+               COUNT(*) AS TOTAL_COUNT
         FROM {table_name}
         """
     else:
         query = f"""
-        SELECT COUNT(DISTINCT {column_name}) AS distinct_count,
-               COUNT({column_name}) AS non_null_count
+        SELECT COUNT(DISTINCT {column_name}) AS DISTINCT_COUNT,
+               COUNT({column_name}) AS NON_NULL_COUNT
         FROM {table_name}
         """
 
     result = run_sql_return_df(con, query)
-    distinct_count = result.iloc[0]['distinct_count']
+    distinct_count = result.iloc[0]['DISTINCT_COUNT']
     
-    total_count = result.iloc[0]['total_count'] if not allow_null else result.iloc[0]['non_null_count']
+    total_count = result.iloc[0]['TOTAL_COUNT'] if not allow_null else result.iloc[0]['NON_NULL_COUNT']
 
     return distinct_count == total_count
 
@@ -16692,7 +16706,7 @@ def create_profile_workflow(table_name, con, viewer=True):
 
     para = {"table_pipeline": pipeline}
 
-    main_workflow = Workflow("Data Profiling", 
+    main_workflow = Workflow("Data Profiling Workflow", 
                             item = item, 
                             description="A workflow to profile dataset",
                             viewer=viewer,
@@ -16762,11 +16776,11 @@ def replace_df_html_col_with_dropdown(df, df_html, col_name):
 def build_histogram_inputs(con, column, tablename):
     num_bins = 20
     query_min_max = f'SELECT MIN({column}) AS min_val, MAX({column}) AS max_val FROM {tablename};'
-    min_val, max_val = con.execute(query_min_max).fetchone()
+    min_val, max_val = run_sql_return_df(con, query_min_max).iloc[0]
     
     if min_val == max_val:
         total_count_query = f'SELECT COUNT(*) FROM {tablename};'
-        total_count = con.execute(total_count_query).fetchone()[0]
+        total_count = run_sql_return_df(con, total_count_query).iloc[0][0]
         return [total_count], min_val, [min_val]
     
     bin_width = (max_val - min_val) / num_bins
@@ -16783,7 +16797,7 @@ def build_histogram_inputs(con, column, tablename):
             query = f'SELECT COUNT(*) FROM {tablename} WHERE {column} >= {bin_start} AND {column} <= {bin_end}'
         else:
             query = f'SELECT COUNT(*) FROM {tablename} WHERE {column} >= {bin_start} AND {column} < {bin_end}'
-        count = con.execute(query).fetchone()[0]
+        count = run_sql_return_df(con, query).iloc[0][0]
         bin_center = (bin_start + bin_end) / 2
 
         bin_centers.append(bin_center)
@@ -16791,15 +16805,17 @@ def build_histogram_inputs(con, column, tablename):
     return counts, bin_width, bin_centers
 
 
+def df_to_list(df):
+    return [tuple(row) for row in df.itertuples(index=False, name=None)]
 
 def build_barchat_input(con, column, tablename):
     count_query = f'SELECT COUNT(DISTINCT {column}) AS distinct_count FROM {tablename} WHERE {column} IS NOT NULL'
-    distinct_count_result = con.execute(count_query).fetchone()[0]
+    distinct_count_result = run_sql_return_df(con, count_query).iloc[0][0]
 
     if distinct_count_result > 6:
         fetch_query = f'''
         WITH CityCounts AS (
-            SELECT {column}, COUNT(*) AS count
+            SELECT CAST({column} AS VARCHAR) AS {column}, COUNT(*) AS count
             FROM {tablename}
             WHERE {column} IS NOT NULL
             GROUP BY {column}
@@ -16828,11 +16844,9 @@ def build_barchat_input(con, column, tablename):
         ORDER BY count DESC
         '''
 
-    result = con.execute(fetch_query).fetchall()
-
+    result = df_to_list(run_sql_return_df(con, fetch_query))
     result_dict = {row[0]: row[1] for row in result}
     return result_dict
-
 
 def filter_attributes(attributes, groups):
     retained_groups = []
@@ -16851,7 +16865,7 @@ def filter_attributes(attributes, groups):
 
 
 def build_map_inputs(con, column, column2, tablename):
-    result = con.execute(f'SELECT {column}, {column2} FROM {tablename} WHERE {column} IS NOT NULL AND {column2} IS NOT NULL LIMIT 100').fetchall()
+    result = run_sql_return_df(con, f'SELECT {column}, {column2} FROM {tablename} WHERE {column} IS NOT NULL AND {column2} IS NOT NULL LIMIT 100')
     result = np.array(result)
     return result.tolist()
 
@@ -16867,53 +16881,53 @@ class GenerateReport(Node):
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         schema = table_pipeline.get_final_step().get_schema()
-        df = con.execute(f"SELECT * FROM {table_pipeline} LIMIT  100").df()
+        df = run_sql_return_df(con, f"SELECT * FROM {table_pipeline} LIMIT  100")
         table_name = table_pipeline
 
         def replace_pattern(text):
             return re.sub(r'\*\*(.*?)\*\*', r'<u>\1</u>', text)
 
-        table_summary = self.global_document['Data Profiling']['Create Table Summary']
+        table_summary = self.get_sibling_document('Create Table Summary')
         table_summary = replace_pattern(table_summary)
         table_summary
 
-        group_json = self.global_document['Data Profiling']['Create Column Grouping']
+        group_json = self.get_sibling_document('Create Column Grouping')
         javascript_content, _, _ = get_tree_javascript(group_json)
 
-        column_df = pd.read_json(self.global_document['Data Profiling']['Describe Columns'], orient="split")
+        column_df = pd.read_json(self.get_sibling_document('Describe Columns'), orient="split")
 
         error_html = ""
-        duplication_count = self.global_document['Data Profiling']['Decide Duplicate']['duplicate_count']
+        duplication_count = self.get_sibling_document('Decide Duplicate')['duplicate_count']
 
         if duplication_count > 0:
             error_html += f"<h2>Duplicate Rows</h2> There are <b>{duplication_count}</b> duplicated rows in the dataset.<br><br>"
 
-        data_type_df = pd.read_json(self.global_document['Data Profiling']['Decide Data Type'], orient="split")
+        data_type_df = pd.read_json(self.get_sibling_document('Decide Data Type'), orient="split")
         error_html += f"<h2>Data Type</h2> {data_type_df.to_html()} <br>"
 
        
 
 
-        missing_df = pd.read_json(self.global_document['Data Profiling']['Decide Missing Values'], orient="split")
+        missing_df = pd.read_json(self.get_sibling_document('Decide Missing Values'), orient="split")
         if len(missing_df) > 0:
             missing_df = missing_df.replace({"Is NULL Acceptable?": {True: "✔️ Yes", False: "❌ No"}})
             error_html += f"<h2>Missing Value</h2> {missing_df.to_html()} <br>"
 
-        unique_df = pd.read_json(self.global_document['Data Profiling']['Decide Unique Columns'], orient="split")
+        unique_df = pd.read_json(self.get_sibling_document('Decide Unique Columns'), orient="split")
         error_html += f"<h2>Column Uniqueness</h2> {unique_df.to_html()} <br>"
 
-        numerical_df = pd.read_json(self.global_document['Data Profiling']['Decide Column Range'], orient="split")
+        numerical_df = pd.read_json(self.get_sibling_document('Decide Column Range'), orient="split")
         if len(numerical_df) > 0:
             error_html += f"<h2>Column Range</h2> {numerical_df.to_html()} <br>"
             
-        unusual_text_df = pd.read_json(self.global_document['Data Profiling']['Decide Unusual For All'], orient="split")
+        unusual_text_df = pd.read_json(self.get_sibling_document('Decide Unusual For All'), orient="split")
         if len(unusual_text_df) > 0:
             unusual_text_df = unusual_text_df[unusual_text_df['Endorse']]
             unusual_text_df = unusual_text_df.drop(columns=['Endorse'])
         if len(unusual_text_df) > 0:
             error_html += f"<h2>Unusual Values</h2> {unusual_text_df.to_html()} <br>"
             
-        lon_lat_groups = self.global_document['Data Profiling']['Decide Longitude Latitude']
+        lon_lat_groups = self.get_sibling_document('Decide Longitude Latitude')
 
         def build_column_details(column_name):
             html_content = ""
@@ -18832,11 +18846,11 @@ class WriteStageYMLCode(Node):
         
         table_pipeline = self.para["table_pipeline"]
         table_name = "stg_" + table_pipeline.get_source_step().name
-        table_summary = self.global_document["Data Profiling"]["Create Short Table Summary"].replace("**","")
+        table_summary = self.get_sibling_document("Create Short Table Summary").replace("**","")
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
-        column_desc = pd.read_json(self.global_document['Data Profiling']["Describe Columns"], orient="split")
-        miss_df = pd.read_json(self.global_document['Data Profiling']["Decide Missing Values"], orient="split")
+        column_desc = pd.read_json(self.get_sibling_document("Describe Columns"), orient="split")
+        miss_df = pd.read_json(self.get_sibling_document("Decide Missing Values"), orient="split")
 
         yml_content = create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df)
 
@@ -18874,7 +18888,7 @@ def create_stage_workflow(table_name, con, viewer=True):
 
     para = {"table_pipeline": pipeline}
 
-    main_workflow = Workflow("Data Profiling", 
+    main_workflow = Workflow("Data Stage", 
                             item = item, 
                             description="A workflow to stage table",
                             para = para)
@@ -18982,3 +18996,284 @@ Now, your summary in a few sentences and < 500 chars:"""
         
         if self.viewer:
             on_button_clicked(submit_button)
+            
+class SelectMainVocabularyTable(Node):
+    default_name = 'Select Main and Vocabulary Table'
+    default_description = 'This step allows you to select the main table and vocabulary table for the fuzzy join.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        con = self.input_item["con"]
+        query_widget = self.item["query_widget"]
+        
+        tables = get_table_names(con)
+        
+        print(f"🧐 There are {len(tables)} tables in your database. You can explore them:")
+        create_explore_button(query_widget, table_name=tables)
+        
+        print(f"🤓 Please select the {BOLD}main table{END} and {BOLD}vocabulary table{END}.")
+        print(f"Each row in the {BOLD}main table{END} will be mapped to vocabulary.")
+        print(f"If unsure, choose the smaller table as the {BOLD}main table{END}.")
+        
+        dropdown = widgets.Dropdown(
+            options=tables,
+            description='Main:',
+            disabled=False,
+        )
+        
+        dropdown_vocabulary = widgets.Dropdown(
+            options=tables,
+            description='Vocabulary:',
+            disabled=False,
+        )
+        
+
+        next_button = widgets.Button(description="Next", button_style='success')
+
+        def on_button_click(b):
+            main_table = dropdown.value
+            vocabulary_table = dropdown_vocabulary.value
+            selected_tables = {"main_table": main_table, "vocabulary_table": vocabulary_table}
+            callback(selected_tables)
+                
+        next_button.on_click(on_button_click)
+        display(VBox([dropdown, dropdown_vocabulary]))
+        display(next_button)
+        
+        
+class DecideFuzzyColumns(Node):
+    default_name = 'Decide Fuzzy Columns'
+    default_description = 'This allows users to select the columns for fuzzy join.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        con = self.item["con"]
+        vocabulary_table = self.get_sibling_document("Select Main and Vocabulary Table")["vocabulary_table"]
+        main_table = self.get_sibling_document("Select Main and Vocabulary Table")["main_table"]
+        
+        vocabulary_schema = get_table_schema(con, vocabulary_table)
+        main_schema = get_table_schema(con, main_table)
+
+        print(f"🔍 Exploring the tables:")
+        query_widget = self.item["query_widget"]
+        create_explore_button(query_widget, table_name=[vocabulary_table, main_table])
+
+        print(f"🧐 Please select the columns for fuzzy match.")
+        print(f"😊 For the vocabulary table: {vocabulary_table}")
+        vocabulary_columns = list(vocabulary_schema.keys())
+        vocabulary_multi_select = create_column_selector_(columns=vocabulary_columns)
+        
+        print(f"😊 For the main table: {main_table}")
+        main_columns = list(main_schema.keys())
+        main_multi_select = create_column_selector_(columns=main_columns)
+        
+        next_button = widgets.Button(description="Next", button_style='success')
+
+        def callback_next(button):
+
+            selected_vocabulary_columns = vocabulary_multi_select.value
+            selected_main_columns = main_multi_select.value
+            
+            if not selected_vocabulary_columns or not selected_main_columns:
+                print("🙁 Please select at least one column for each table.")
+                return
+            
+            selected_columns = {"vocabulary_columns": [vocabulary_columns[i] for i in selected_vocabulary_columns],
+                                "main_columns": [main_columns[i] for i in selected_main_columns]}
+            clear_output(wait=True)            
+            callback(selected_columns)
+            
+        next_button.on_click(callback_next)
+        
+        display(next_button)
+        
+class PrepareFuzzyJoin(Node):
+    default_name = 'Prepare Fuzzy Join'
+    default_description = 'This step allows you to prepare the fuzzy join.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        con = self.item["con"]
+        vocabulary_table = self.get_sibling_document("Select Main and Vocabulary Table")["vocabulary_table"]
+        main_table = self.get_sibling_document("Select Main and Vocabulary Table")["main_table"]
+        selected_columns = self.get_sibling_document("Decide Fuzzy Columns")
+        vocabulary_columns = selected_columns["vocabulary_columns"]
+        main_columns = selected_columns["main_columns"]
+        
+        query = f"SELECT DISTINCT {', '.join(vocabulary_columns)} FROM {vocabulary_table}"
+        vocabulary_df = run_sql_return_df(con, query)
+        vocabulary_df.fillna(' ', inplace=True)
+        vocabulary_df['label'] = vocabulary_df.agg(''.join, axis=1)
+        query = f"SELECT DISTINCT {', '.join(main_columns)} FROM {main_table}"
+        main_df = run_sql_return_df(con, query)
+        main_df.fillna(' ', inplace=True)
+        main_df['label'] = main_df.agg(''.join, axis=1)
+        
+        print(f"🔍 There are {len(vocabulary_df) + len(main_df)} unique vocabularies. We are preparing them...")
+        
+        if len(vocabulary_df) + len(main_df) > 10000:
+            print(f"🤔 The number of unique vocabularies is too many.")
+            print(f"😊 Support for large vocabulary is under development.")
+            return
+        
+        for table, df in [(vocabulary_table, vocabulary_df), (main_table, main_df)]:
+            embedding_file = f"{table}_cocoon_embedding"
+            embed_labels(df, f'./{embedding_file}.csv')
+            embedding_df = pd.read_csv(f'./{embedding_file}.csv')
+            
+        callback({})
+    
+class MatchEntity(Node):
+    default_name = 'Match Entity'
+    default_description = 'This step allows you to match entities.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        con = self.item["con"]
+        vocabulary_table = self.get_sibling_document("Select Main and Vocabulary Table")["vocabulary_table"]
+        main_table = self.get_sibling_document("Select Main and Vocabulary Table")["main_table"]
+        selected_columns = self.get_sibling_document("Decide Fuzzy Columns")
+        vocabulary_columns = selected_columns["vocabulary_columns"]
+        main_columns = selected_columns["main_columns"]
+        
+        vocabulary_df = pd.read_csv(f'./{vocabulary_table}_cocoon_embedding.csv')
+        main_df = pd.read_csv(f'./{main_table}_cocoon_embedding.csv')
+        main_df = main_df.head(10)
+        
+        print(f"🔍 Matching rows... We will only match the first 10 rows for trial.")
+        print(f"😊 Please let us know if you want the complete feature!")
+        index = load_embedding(vocabulary_df, label_embedding='embedding')
+        D, I = df_search(main_df, index)
+        
+        entity_relation_match(input_df = main_df, 
+                            attributes = main_columns,
+                            I = I,
+                            refernece_df = vocabulary_df)
+        
+        html_content = generate_report(main_df)
+        
+        display(HTML(wrap_in_iframe(html_content)))
+        ask_save_file(f"Cocoon_EM_{main_table}.html", html_content)
+        
+
+def create_matching_workflow(con, query_widget=None, viewer=True):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget,
+    }
+
+    para={}
+
+    main_workflow = Workflow("Fuzzy Join Workflow", 
+                            item = item, 
+                            description="A workflow to perform fuzzy join on two tables.",
+                            para=para)
+
+    main_workflow.add_to_leaf(SelectMainVocabularyTable())
+    main_workflow.add_to_leaf(DecideFuzzyColumns())
+    main_workflow.add_to_leaf(PrepareFuzzyJoin())
+    main_workflow.add_to_leaf(MatchEntity())
+    
+    return query_widget, main_workflow
+
+
+class SelectTable(Node):
+    default_name = 'Select Table'
+    default_description = 'This step allows you to select the table to be staged.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        con = self.input_item["con"]
+        query_widget = self.item["query_widget"]
+        
+        tables = get_table_names(con)
+        
+        print(f"🧐 There are {len(tables)} tables in your database.")
+        print(f"🤓 Please select the table to be staged:")
+        
+        dropdown = create_explore_button(query_widget, table_name=tables)
+        
+        next_button = widgets.Button(description="Next", button_style='success')
+
+        def on_button_click(b):
+            table_name = dropdown.value
+            sql_step = SQLStep(table_name=table_name, con=con)
+            pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+            self.para["table_pipeline"] = pipeline
+            
+            callback({"table_name": table_name})
+                
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+        
+def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+
+    main_workflow = Workflow("Data Stage Workflow", 
+                            item = item, 
+                            description="A workflow to stage table",
+                            para = {})
+    
+    main_workflow.add_to_leaf(SelectTable())
+    main_workflow.add_to_leaf(DecideProjection())
+    main_workflow.add_to_leaf(CreateShortTableSummary())
+    main_workflow.add_to_leaf(DecideDuplicate())
+    main_workflow.add_to_leaf(DescribeColumns())
+    main_workflow.add_to_leaf(DecideMissing())
+    main_workflow.add_to_leaf(HandleMissing())
+    main_workflow.add_to_leaf(DecideDataType())
+    main_workflow.add_to_leaf(TransformTypeForAll())
+    main_workflow.add_to_leaf(DecideTrim())
+    main_workflow.add_to_leaf(DecideStringUnusualForAll())
+    main_workflow.add_to_leaf(CleanUnusualForAll())
+    main_workflow.add_to_leaf(WriteStageYMLCode())
+    
+    return query_widget, main_workflow
+
+def create_cocoon_profile_workflow(con, query_widget=None, viewer=False):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+
+    main_workflow = Workflow("Data Profiling Workflow", 
+                            item = item, 
+                            description="A workflow to profile dataset",
+                            viewer=viewer,
+                            para = {})
+
+    main_workflow.add_to_leaf(SelectTable())
+    main_workflow.add_to_leaf(DecideProjection())
+    main_workflow.add_to_leaf(DecideDuplicate())
+    main_workflow.add_to_leaf(CreateTableSummary())
+    main_workflow.add_to_leaf(DescribeColumns())
+    main_workflow.add_to_leaf(CreateColumnGrouping())
+    main_workflow.add_to_leaf(DecideDataType())
+    main_workflow.add_to_leaf(DecideMissing())
+    main_workflow.add_to_leaf(DecideUnique())
+    main_workflow.add_to_leaf(DecideUnusualForAll())
+    main_workflow.add_to_leaf(DecideColumnRange())
+    main_workflow.add_to_leaf(DecideLongitudeLatitude())
+    main_workflow.add_to_leaf(GenerateReport())
+    
+    return query_widget, main_workflow

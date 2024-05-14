@@ -99,3 +99,21 @@ def get_table_schema(conn, table_name):
 
         return schema
 
+def get_table_names(conn):
+    if isinstance(conn, duckdb.DuckDBPyConnection):
+        query = "SHOW TABLES"
+        df = run_sql_return_df(conn, query)
+        df = df[['name']]
+        table_names = df['name'].tolist()
+        return table_names
+
+    elif isinstance(conn, snowflake.connector.connection.SnowflakeConnection):
+        query = "SHOW TABLES"
+        df = run_sql_return_df(conn, query)
+        df = df[['name']]
+        table_names = df['name'].tolist()
+        return table_names
+
+    else:
+        raise ValueError("Unsupported connection type")
+    

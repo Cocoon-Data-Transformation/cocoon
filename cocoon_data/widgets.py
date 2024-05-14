@@ -490,6 +490,56 @@ def create_column_selector(columns, callback, default=False):
 
 
 
+
+def create_column_selector_(columns, default=False):
+    multi_select = widgets.SelectMultiple(
+        options=[(column, i) for i, column in enumerate(columns)],
+        disabled=False,
+        layout={'width': '600px', 'height': '200px'}
+    )
+    
+    instructions_text = "Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, 0 are selected."
+    instructions = widgets.Label(value=instructions_text)
+    
+    def update_instructions(change):
+        selected_count = len(multi_select.value)
+        instructions.value = f"Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, {selected_count} are selected."
+    
+    multi_select.observe(update_instructions, 'value')
+    
+    select_all_button = widgets.Button(description="Select All", button_style='info', icon='check-square')
+    deselect_all_button = widgets.Button(description="Deselect All", button_style='danger', icon='square-o')
+    reverse_selection_button = widgets.Button(description="Reverse Selection", button_style='warning', icon='exchange')
+        
+    def select_all(b):
+        multi_select.value = tuple(range(len(columns)))
+        
+    def deselect_all(b):
+        multi_select.value = ()
+    
+    def reverse_selection(b):
+        current_selection = set(multi_select.value)
+        all_indices = set(range(len(columns)))
+        new_selection = tuple(all_indices - current_selection)
+        multi_select.value = new_selection
+    
+    
+    select_all_button.on_click(select_all)
+    deselect_all_button.on_click(deselect_all)
+    reverse_selection_button.on_click(reverse_selection)
+    
+    buttons = widgets.HBox([select_all_button, deselect_all_button, reverse_selection_button])
+    ui = widgets.VBox([instructions, multi_select, buttons])
+    display(ui)
+    
+    if default:
+        multi_select.value = tuple(range(len(columns)))
+        
+    return multi_select
+
+
+
+
 def create_progress_bar_with_numbers(current, labels):
 
     total = len(labels)
@@ -518,5 +568,37 @@ def color_columns_multiple(df, colors, column_indices_list):
     styled_df = apply_color_to_columns(df.style, colors, column_indices_list)
 
     return styled_df
+
+
+
+
+def create_html_radio_buttons(html_labels):
+    labels_html = [widgets.HTML(value=label) for label in html_labels]
+    
+    checkbox_style = {'description_width': '0px', 'handle_color': 'lightblue'}
+    
+    checkboxes = [widgets.Checkbox(value=False, description='', style=checkbox_style, layout={'width': 'initial'}) for _ in html_labels]
+    
+    checkboxes[0].value = True
+    
+    def on_checkbox_change(change):
+        if change['new']:
+            for checkbox in checkboxes:
+                if checkbox is not change['owner']:
+                    checkbox.value = False
+    
+    for checkbox in checkboxes:
+        checkbox.observe(on_checkbox_change, names='value')
+    
+    radio_buttons_widget = widgets.VBox([widgets.HBox([cb, label], layout=widgets.Layout(align_items='center', margin='0')) for cb, label in zip(checkboxes, labels_html)])
+    
+    return radio_buttons_widget, checkboxes
+
+def get_selected_index(checkboxes):
+    return next((index for index, checkbox in enumerate(checkboxes) if checkbox.value), None)
+
+
+
+
 
 
