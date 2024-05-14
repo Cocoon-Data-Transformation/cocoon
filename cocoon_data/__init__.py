@@ -19277,3 +19277,73 @@ def create_cocoon_profile_workflow(con, query_widget=None, viewer=False):
     main_workflow.add_to_leaf(GenerateReport())
     
     return query_widget, main_workflow
+
+class CocoonBranchStep(Node):
+    default_name = 'Product Steps'
+    default_description = 'This is typically the dicussion result from business analysts and engineers'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        header_html = f'''
+<div style="display: flex; align-items: center;">
+<img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">
+<div style="margin: 0; padding: 0;">
+<h1 style="margin: 0; padding: 0;">Cocoon</h1>
+<p style="margin: 0; padding: 0;">Use LLMs to augment data tasks.</p>
+</div>
+</div><hr>
+🤓 Please select the data task:
+'''
+
+        display(HTML(header_html))
+        
+        html_labels = [
+            "🧹 <b>Stage:</b> Clean and document your source table. The output is DBT SQL/YAML files.",
+            "🔍 <b>Profile:</b> Understand your table and identify anomalies. The output is an HTML profile.",
+            "🔗 <b>Fuzzy Join:</b> Fuzzily match two tables and explain the relation. The output is an HTML report.",
+        ]
+        
+        next_nodes = [
+            "Data Stage Workflow",
+            "Data Profiling Workflow",
+            "Fuzzy Join Workflow"
+        ]
+
+        radio_buttons_widget, checkboxes = create_html_radio_buttons(html_labels)
+
+        display(radio_buttons_widget)
+
+        next_button = widgets.Button(description="Start", button_style='success')
+        
+        def on_button_click(b):
+            selected_index = get_selected_index(checkboxes)
+            callback({"next_node": next_nodes[selected_index]})
+
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+def create_cocoon_workflow(con):
+    query_widget = QueryWidget(con)
+    
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+
+    main_workflow = Workflow("Cocoon Workflow", 
+                            item = item, 
+                            description="This is the main workflow for the Cocoon tool.")
+    
+    branch_node = CocoonBranchStep()
+    main_workflow.add_to_leaf(branch_node)
+    
+    _, stage_workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget)
+    _, profile_workflow = create_cocoon_profile_workflow(con=con, query_widget=query_widget)
+    _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget)
+    
+    main_workflow.register(stage_workflow, parent=branch_node)
+    main_workflow.register(profile_workflow, parent=branch_node)
+    main_workflow.register(fuzzy_join_workflow, parent=branch_node)
+    
+    return query_widget, main_workflow
