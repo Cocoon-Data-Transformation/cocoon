@@ -91,5 +91,8 @@ We help you find the related ones, and explain how they are related.
 
 ## Future
 
-We plan to support Data Cleaning, Data Integration, and Data Modeling.
+We are working on tools to help understand data, break silos and maintain pipelines for the data warehouse. 
 
+These will make discovering tables, generating reports, and making predictions incredibly simple.
+
+Email zh2408@columbia.edu to learn more...
