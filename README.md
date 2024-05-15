@@ -6,7 +6,7 @@
 
 😎 **Cocoon** uses LLMs to augment data engineering and data science.
 
-Cocoon is a lightweight Python Library, that connects to your DB (e.g., Snowflake, DuckDB) for EDA, and writes SQL for data engineering.
+We are currently building a lightweight Python Library, that connects to your DB (e.g., Snowflake, DuckDB) for EDA, and writes SQL for various tasks.
 
 ## Profile: Semantically understand your data and detect anomalies
 
