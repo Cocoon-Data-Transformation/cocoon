@@ -4,9 +4,9 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-😎 **Cocoon** uses LLMs to augment data engineering and data science.
+😎 **Cocoon** uses LLMs to transform raw data into an organized form, ready for analysis.
 
-We are currently building a lightweight Python Library, that connects to your DB (e.g., Snowflake, DuckDB) for EDA, and writes SQL for various tasks.
+It's currently a lightweight Python Library, that connects to your DB (e.g., Snowflake, DuckDB) for EDA, and writes SQL for various tasks.
 
 ## Profile: Semantically understand your data and detect anomalies
 
