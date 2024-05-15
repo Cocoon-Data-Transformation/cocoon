@@ -71,6 +71,8 @@ Join could be challenging when a standardized join key is missing (e.g., join by
 
 We help you find the related ones, and explain how they are related.
 
+- 👉 [**Python Package:** Check out the notebook](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/fuzzy_join.ipynb)
+
 <kbd>![](./images/em.gif)</kbd>
 
 <details>
