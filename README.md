@@ -4,9 +4,11 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-😎 **Cocoon** provides LLM helpers to organize raw data in your data warehouse, ready for analysis.
+😎 **Cocoon** provides LLM agents to organize raw data in your data warehouse, ready for analysis.
 
-It's currently a lightweight Python Library, that connects to your DB (e.g., Snowflake, DuckDB). It interactively helps with various tasks.
+It's currently a lightweight Python Library, that connects to your DB (e.g., Snowflake, DuckDB). 
+
+The agent interactively helps with various tasks for data cleaning, data integration, data modeling, and more.
 
 ## Profile: Semantically understand your data and detect anomalies
 
