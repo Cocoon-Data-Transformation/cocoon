@@ -4,9 +4,9 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-😎 **Cocoon** uses LLMs to transform raw data into an organized form, ready for analysis.
+😎 **Cocoon** provides LLM helpers to organize raw data in your data warehouse, ready for analysis.
 
-It's currently a lightweight Python Library, that connects to your DB (e.g., Snowflake, DuckDB) for EDA, and writes SQL for various tasks.
+It's currently a lightweight Python Library, that connects to your DB (e.g., Snowflake, DuckDB). It interactively helps with various tasks.
 
 ## Profile: Semantically understand your data and detect anomalies
 
