@@ -4,7 +4,19 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-😎 **Cocoon** uses LLMs to augment data engineering and data science.
+😎 **Cocoon** provides LLM agents to organize raw data in your data warehouse, ready for analysis.
+
+
+## Stage: Automatically suggest cleaning and generate DBT codes
+
+
+
+- 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
+- 👉 Check out the [1 min demo](https://youtu.be/D7jw43ccOkg)
+
+Screenshot where LLMs help you interactively cast columns and fix cases. The output is DBT staging sql/yml.
+
+<kbd>![](./images/stage.gif)</kbd>
 
 
 ## Profile: Semantically understand your data and detect anomalies
@@ -52,18 +64,35 @@ Many small decisions require semantic understanding by LLMs. For example, an age
 </details>
 
 
-## (Preview) Stage: Automatically suggest cleaning and generate DBT codes
 
+## (Preview) Fuzzy Join/Column Standardization/Entity Matching
 
+Join could be challenging when a standardized join key is missing (e.g., join by non-standardized names).
 
-- 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
-- 👉 Check out the [1 min demo](https://youtu.be/D7jw43ccOkg)
+We help you find the related ones, and explain how they are related.
 
-Screenshot where LLMs help you interactively cast columns and fix cases. The output is DBT staging sql/yml.
+- 👉 [**Python Package:** Check out the notebook](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/fuzzy_join.ipynb)
 
-<kbd>![](./images/stage.gif)</kbd>
+<kbd>![](./images/em.gif)</kbd>
+
+<details>
+  <summary>Cite Cocoon Fuzzy Join</summary>
+  
+```
+@article{huang2024disambiguate,
+  title={Disambiguate Entity Matching through Relation Discovery with Large Language Models},
+  author={Huang, Zezhou},
+  journal={arXiv preprint arXiv:2403.17344},
+  year={2024}
+}
+```
+
+</details>
 
 ## Future
 
-We plan to support Data Cleaning, Data Integration, and Data Modeling.
+We are working on tools to help understand data, break silos and maintain pipelines for the data warehouse. 
 
+These will make discovering tables, generating reports, and making predictions incredibly simple.
+
+Email zh2408@columbia.edu to learn more...
