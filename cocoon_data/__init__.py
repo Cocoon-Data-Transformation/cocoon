@@ -11461,7 +11461,7 @@ class NestDocument(dict):
 class Node:
     default_name = "Node"
     default_description = "This is the base class for all nodes."
-    retry_times = 1
+    retry_times = 3
 
     def __init__(self, name=None, description=None, viewer=False, para=None, output=None, id_para="element_name"):
         self.name = name if name is not None else self.default_name
@@ -11583,22 +11583,25 @@ class Node:
         print(f"Running {self.name}.")
         return extract_output
     
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {}
+        
+    
     def run_and_retry(self, extract_output):
         try:
             return self.run(extract_output, use_cache=True)
         except Exception as e:
             print(f"Failed to run {self.name}. Retrying...")
             
-            last_e = e
-            
             for i in range(self.retry_times):
                 try:
                     return self.run(extract_output, use_cache=False)
                 except Exception as e:
-                    print(f"Failed to run {self.name}. Retrying...")
-                    last_e = e
-            
-            raise last_e
+                    print(f"😔 Failed to run {self.name}. Retrying...")
+                    write_log(f"The error is: {e}")
+                    
+            print(f"😔 Failed to run {self.name}. Please send us the error log (data_log.txt).")
+            return self.run_but_fail(extract_output, use_cache=False)
             
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         self.run_output = run_output
@@ -15356,6 +15359,10 @@ Return in the following format:
 
         return json_code
     
+    def run_but_fail(self, extract_output, use_cache=True):
+        default_response = {column: column for column in extract_output[2]}
+        return default_response
+    
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
@@ -16350,6 +16357,17 @@ Return in the following format:
                 raise ValueError(f"The column '{col_name}' specified in 'columns_obvious_not_applicable' is not present in the missing columns.")
             
         return json_code
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        missing_columns, sample_df_str, table_name = extract_output
+        
+        if len(missing_columns) == 0:
+            return {"reasoning": "No missing values found. ", "columns_obvious_not_applicable": {}}
+        else:
+            return {
+                "reasoning": "Failed to analyze the data due to an error.",
+                "columns_obvious_not_applicable": {}
+            }
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         
@@ -17769,11 +17787,16 @@ mapping:
             summary = yaml.safe_load(yml_code)
             summary["projection"] = False 
 
-        return summary, column_name, sample_values, unusual_reason
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"explanation": "Fail to run", "could_clean": False}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         
-        json_code, column_name, sample_values, unusual_reason = run_output
+        json_code = run_output
+        column_name, sample_values, unusual_reason, _, _ = extract_output
+        
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
         
@@ -18137,11 +18160,12 @@ class DecideDataType(Node):
 
         all_columns = ", ".join(columns)
         sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        schema = table_pipeline.get_final_step().get_schema()
 
-        return sample_df, all_data_types, database_name
+        return sample_df, all_data_types, database_name, schema
 
     def run(self, extract_output, use_cache=True):
-        sample_df, all_data_types, database_name = extract_output
+        sample_df, all_data_types, database_name, schema = extract_output
 
         template = f"""You have the following table:
 {sample_df.to_csv(index=False, quoting=2)}
@@ -18179,19 +18203,23 @@ Return in the following format:
                 raise ValueError(f"Validation failed: {error_message}")
             
         return json_code
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        _, _, database_name, schema = extract_output
+        return {"column_type": {col: get_reverse_type(schema[col], database_name) for col in schema}}
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
         json_code = run_output
-        _, all_data_types, database_name = extract_output
+        _, all_data_types, database_name, schema = extract_output
         self.progress.value += 1
         table_pipeline = self.para["table_pipeline"]
         query_widget = self.item["query_widget"]
 
         create_explore_button(query_widget, table_pipeline)
-        schema = table_pipeline.get_final_step().get_schema()
+        
 
         rows_list = []
 
@@ -18343,6 +18371,9 @@ cast_clause: |
         
         summary["reasoning"] = reasoning
         return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"reasoning": "Fail to cast", "cast_clause": "Fail to cast"}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         return callback(run_output)
@@ -18554,10 +18585,15 @@ Return in the following format:
             if not check(json_code):
                 raise ValueError(f"Validation failed: {error_message}")
 
-        return json_code, columns
+        return json_code
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"reasoning": "failed", "columns_to_keep_spaces": []}, 
+
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        json_code, columns = run_output
+        json_code = run_output
+        columns, _  = extract_output
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
@@ -18707,6 +18743,9 @@ Now, respond in Json:
                 raise ValueError(f"Validation failed: {error_message}")
 
         return json_code
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"Reaonsing": "Fail to run", "Unusualness": False}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
@@ -18959,6 +18998,9 @@ Now, your summary in a few sentences and < 500 chars:"""
         self.messages = messages
 
         return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return "Please summarize the table"
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         summary = run_output 
@@ -19188,7 +19230,7 @@ def create_matching_workflow(con, query_widget=None, viewer=True):
 
 class SelectTable(Node):
     default_name = 'Select Table'
-    default_description = 'This step allows you to select the table to be staged.'
+    default_description = 'This step allows you to select the table.'
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         clear_output(wait=True)
@@ -19199,7 +19241,7 @@ class SelectTable(Node):
         tables = get_table_names(con)
         
         print(f"🧐 There are {len(tables)} tables in your database.")
-        print(f"🤓 Please select the table to be staged:")
+        print(f"🤓 Please select the table:")
         
         dropdown = create_explore_button(query_widget, table_name=tables)
         
@@ -19301,7 +19343,7 @@ class CocoonBranchStep(Node):
         html_labels = [
             "🧹 <b>Stage:</b> Clean and document your source table. The output is DBT SQL/YAML files.",
             "🔍 <b>Profile:</b> Understand your table and identify anomalies. The output is an HTML profile.",
-            "🔗 <b>Fuzzy Join:</b> Fuzzily match two tables and explain the relation. The output is an HTML report.",
+            "🔗 <b>(Preview) Fuzzy Join:</b> Fuzzily match two tables and explain the relation. The output is an HTML report.",
         ]
         
         next_nodes = [
