@@ -15,6 +15,7 @@ data_types ={
     "GEOMETRY": ["GEOMETRY"]
 }
 
+
 data_types_database = {
     "Snowflake": {
         "INT": ["INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT", "BYTEINT"],
@@ -82,6 +83,13 @@ TO_TIMESTAMP('Monday, 2 March 1992 - 08:32:45 PM', 'DY, D MONTH YYYY - HH12:MI:S
 }
 
 def get_reverse_type(data_type, database):
+    if database == "Snowflake":
+        if data_type.upper().startswith("NUMBER"):
+            if data_type.upper().endswith(", 0)"):
+                return "INT"
+            else:
+                return "DECIMAL"
+    
     data_type = data_type.split('(')[0].upper().strip()
     
     if database not in data_types_database:

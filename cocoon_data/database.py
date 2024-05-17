@@ -91,8 +91,15 @@ def get_table_schema(conn, table_name):
 
         df = run_sql_return_df(conn, query)
         df = df[["table_name", "column_name", "data_type"]]
-        df['simple_data_type'] = df['data_type'].apply(lambda x: json.loads(x)['type'])
+        def determine_data_type(x):
+            data = json.loads(x)
+            if data['type'] == 'FIXED':
+                if data.get('scale', 1) == 0:
+                    return 'INT'
+            return data['type']
 
+        df['simple_data_type'] = df['data_type'].apply(determine_data_type)
+        
         schema = {}
         for _, row in df.iterrows():
             schema[row['column_name']] = row['simple_data_type']
