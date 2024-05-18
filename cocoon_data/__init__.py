@@ -65,6 +65,8 @@ icon_import = False
 MAX_TRIALS = 3
 LOG_MESSAGE_HISTORY = False
 
+cocoon_comment_start = "-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK IF YOU WANT TO LET COCOON MAINTAIN THE CODES\n"
+cocoon_comment_end = "-- COCOON BLOCK END\n"
 
 def yml_from_name(table_name):
 
@@ -11598,7 +11600,13 @@ class Node:
                     return self.run(extract_output, use_cache=False)
                 except Exception as e:
                     print(f"😔 Failed to run {self.name}. Retrying...")
-                    write_log(f"The error is: {e}")
+                     
+                    write_log(f"""
+The node is {self.name}
+The error is: {e}
+The messages are:
+{self.messages}""")
+                    
                     
             print(f"😔 Failed to run {self.name}. Please send us the error log (data_log.txt).")
             return self.run_but_fail(extract_output, use_cache=False)
@@ -12274,13 +12282,14 @@ Now, return in the following format:
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
 
+        assistant_message = response['choices'][0]['message']
+        messages.append(assistant_message)
+        self.messages = messages
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         summary = json.loads(json_code)
 
-        assistant_message = response['choices'][0]['message']
-        messages.append(assistant_message)
         
-        self.messages = messages
 
         return summary
 
@@ -12367,11 +12376,11 @@ def create_union_table(tables):
             messages = [{"role": "user", "content": template}]
 
             response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-            python_code = extract_python_code(response['choices'][0]['message']['content'])
-            exec(python_code, globals())
-
             messages.append(response['choices'][0]['message'])
             self.messages = messages
+            
+            python_code = extract_python_code(response['choices'][0]['message']['content'])
+            exec(python_code, globals())
 
             sql_query = create_union_table(group)
 
@@ -12627,12 +12636,12 @@ FROM {table_name}"
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
 
         return summary
             
@@ -12765,12 +12774,12 @@ Respond with the following format:
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
 
         return summary
 
@@ -12880,12 +12889,12 @@ If it's about relation, the key is all the entity keys.
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages.append(messages)
 
         summary["primary_key"] = json_code["primary_key"]
         primary_key = json_code['primary_key']
@@ -12916,12 +12925,12 @@ For operations like deactivate, classify them as delete.
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages.append(messages)
 
         summary["attributes"] = json_code
 
@@ -12965,12 +12974,12 @@ NOT EXISTS ... (for each deletion ops)"
             messages = [{"role": "user", "content": template}]
 
             response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+            messages.append(response['choices'][0]['message'])
+            self.messages.append(messages)
+            
             json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
             json_code = replace_newline(json_code)
             json_code = json.loads(json_code)
-
-            messages.append(response['choices'][0]['message'])
-            self.messages.append(messages)
 
             summary["deleted_table"] = json_code
             run_sql_return_df(con, robust_create_to_replace(json_code['sql']))
@@ -13025,12 +13034,12 @@ ORDER BY primary keys"}}
 ```"""
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages.append(messages)
 
         summary["final_table"] = json_code
         run_sql_return_df(con, robust_create_to_replace(json_code['sql']))
@@ -13185,12 +13194,13 @@ Respond in the following format:
 
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        
         for message in messages:
             write_log(message['content'])
             write_log("---------------------")
@@ -13312,13 +13322,12 @@ Respond in the following format:
 ```"""
         messages += [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         json_code = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-
-        self.messages = messages
 
         for message in messages:
             write_log(message['content'])
@@ -13537,12 +13546,12 @@ Respond with following format:
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
 
         for message in messages:
             write_log(message['content'])
@@ -13689,12 +13698,12 @@ Respond with following format:
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
 
         return summary
     
@@ -13807,12 +13816,12 @@ Respond with following format:
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = replace_newline(json_code)
-        summary = json.loads(json_code)
-
         messages.append(response['choices'][0]['message'])
         self.messages = messages
+        
+        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = replace_newline(json_code)
+        summary = json.loads(json_code)        
 
         for message in messages:
             write_log(message['content'])
@@ -14080,12 +14089,12 @@ Respond with following format:
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
 
         return summary
 
@@ -14165,12 +14174,12 @@ Respond with following format:
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
 
         return summary
 
@@ -14240,12 +14249,12 @@ Respond with following format:
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
         summary = json.loads(json_code)
-
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
 
         return summary
 
@@ -14331,12 +14340,11 @@ Return the result in yml
         messages = [{"role": "user", "content": template}]
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-
-        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
-
         messages.append(response['choices'][0]['message'])
         self.messages = messages
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
 
         return summary
 
@@ -15064,11 +15072,11 @@ class TransformationSQLPipeline(TransformationPipeline):
             for step_idx  in sorted_step_idx[1:-1]:
                 step = self.steps[step_idx]
                 codes = step.get_codes(target_id=step_idx, mode="AS")
-                with_clauses.append(codes)
+                with_clauses.append(cocoon_comment_start + codes + cocoon_comment_end)
 
             codes = ""
             if len(with_clauses) > 0:
-                codes += "WITH " + ",\n\n".join(with_clauses) + "\n\n"
+                codes += "WITH \n" + ",\n\n".join(with_clauses) + "\n\n"
 
             codes += self.steps[sorted_step_idx[-1]].get_codes(target_id=sorted_step_idx[-1], mode="")
 
@@ -15354,6 +15362,7 @@ Return in the following format:
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
         self.messages = messages
+        
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
@@ -15458,6 +15467,7 @@ class DecideProjection(Node):
                 new_table_name = f"{table_pipeline}_projected"
                 selection_clause = ',\n'.join(document['selected_columns'])
                 sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                sql_query = f"-- Projection: Selecting {len(document['selected_columns'])} out of {num_cols} columns\n" + sql_query
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 step.run_codes()
                 table_pipeline.add_step_to_final(step)
@@ -15541,8 +15551,6 @@ Conclude with the final result as a multi-level JSON.
         
         messages =[ {"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-
-
         assistant_message = response['choices'][0]['message']
         messages.append(assistant_message)
         self.messages = messages
@@ -15820,6 +15828,7 @@ class DecideDuplicate(Node):
                     new_table_name = f"{self.para['table_pipeline']}_dedup"
                     
                     sql_query = f"""SELECT DISTINCT * FROM {table_pipeline}"""
+                    sql_query = f"-- Deduplication: Removed {duplicate_count} duplicated rows\n" + sql_query
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
                     step.run_codes()
                     self.para["table_pipeline"].add_step_to_final(step)
@@ -16020,6 +16029,7 @@ Now, respond in Json:
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
         self.messages = messages
+        
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
@@ -16477,10 +16487,12 @@ Return in json format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
         
-        self.messages = messages
+        
         
         return json_code
     
@@ -17979,6 +17991,8 @@ class CleanUnusualForAll(MultipleNode):
         selections = []
         filters = []
 
+        comment = "-- Clean unusual string values: \n"
+        
         for col in columns:
             
             if col not in clean_unusual:
@@ -17986,6 +18000,8 @@ class CleanUnusualForAll(MultipleNode):
                 continue
                 
             clean_unusual_col = clean_unusual[col]
+            
+            comment += f"-- {col}: {clean_unusual_col.get('explanation', '')}\n"
 
             if clean_unusual_col["projection"]:
                 if clean_unusual_col["could_use_projection"]:
@@ -18014,6 +18030,8 @@ class CleanUnusualForAll(MultipleNode):
         sql_query = f"""SELECT
 {selection_sql}
 FROM {table_pipeline}{where_sql}"""     
+        
+        sql_query = comment + sql_query
         
         step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
         step.run_codes()
@@ -18067,8 +18085,6 @@ class HandleMissing(Node):
 
         df["Strategy"] = "Unchanged"
         
-
-        
         editable_columns = [False, False, True]
         reset = True
         category = {
@@ -18109,6 +18125,13 @@ FROM {table_name}"""
             
             if where_clause:
                 sql_query += f"\nWHERE \n{indent_paragraph(where_clause)}"
+            
+            handling_comments = f"-- Handling missing values: There are {len(df)} columns with unacceptable missing values\n"
+            
+            for index, row in df.iterrows():
+                handling_comments += f"-- {row['Column']} has {row['NULL (%)']} percent missing. Strategy: {row['Strategy']}\n"
+            
+            sql_query = handling_comments + sql_query
             
             return sql_query
         
@@ -18397,7 +18420,7 @@ class TransformTypeForAll(MultipleNode):
     def extract(self, item):
 
         document = self.get_sibling_document("Decide Data Type")
-        df =  pd.read_json(document, orient="split")
+        df = pd.read_json(document, orient="split")
         
         self.elements = []
         self.nodes = {}
@@ -18432,6 +18455,9 @@ class TransformTypeForAll(MultipleNode):
             'Reasoning': []
         }
 
+        decided_column_type = self.get_sibling_document("Decide Data Type")
+        decided_column_type_df = pd.read_json(decided_column_type, orient="split")
+        
         if "Transform Type" in document:
             for column_name, details in document["Transform Type"].items():
                 data['Column Name'].append(column_name)
@@ -18499,6 +18525,17 @@ class TransformTypeForAll(MultipleNode):
             sql_query += f"\nFROM {self.para['table_pipeline']}"
 
                 
+            
+            comment = "-- Column Type Casting: \n"
+            
+            for idx, row in decided_column_type_df.iterrows():
+                column_name = row['Column']
+                current_type = row['Current Type']
+                target_type = row['Target Type']
+                if current_type != target_type:
+                    comment += f"-- {column_name}: from {current_type} to {target_type}\n"
+                    
+            sql_query = comment + sql_query
 
             step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
             step.run_codes()
@@ -18667,6 +18704,8 @@ Return in the following format:
                                                      [f"TRIM({col}) AS {col}" for col in columns_to_trim]))
 
             sql_query += f"\nFROM {self.para['table_pipeline']}"
+            
+            sql_query = f"-- Trim Leading and Trailing Spaces\n" + {sql_query}
 
             step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
             step.run_codes()
@@ -18705,6 +18744,9 @@ class DecideStringUnusual(Node):
 
     def run(self, extract_output, use_cache=True):
         column_name, sample_values = extract_output
+        
+        if len(sample_values) == 0:
+            return {"Reaonsing": "Column is fully missing", "Unusualness": False}
 
         template = f"""{column_name} has the following distinct values:
 {sample_values.to_csv(index=False, header=False, quoting=2)}
@@ -18973,10 +19015,10 @@ class CreateShortTableSummary(Node):
 
         self.sample_df = sample_df
 
-        return table_desc, columns
+        return f"{table_pipeline}", table_desc
     
     def run(self, extract_output, use_cache=True):
-        table_desc, table_columns = extract_output
+        table_name, table_desc = extract_output
 
         template = f"""You have the following table:
 {table_desc}
@@ -19009,12 +19051,12 @@ Now, your summary in a few sentences and < 500 chars:"""
 
         self.progress.value += 1
 
-        table_pipeline = self.para["table_pipeline"]
+        table_name, _ = extract_output
         query_widget = self.item["query_widget"]
 
-        create_explore_button(query_widget, table_pipeline)
+        create_explore_button(query_widget, table_name)
 
-        print("📝 Here is the summary, please keep it concise:")
+        print(f"📝 Here is the summary for {table_name}, please keep it concise:")
         
         text_area, char_count_label = create_text_area_with_char_count(summary, max_chars=500)
         display(VBox([text_area, char_count_label]))
@@ -19051,25 +19093,16 @@ class SelectMainVocabularyTable(Node):
         
         tables = get_table_names(con)
         
-        print(f"🧐 There are {len(tables)} tables in your database. You can explore them:")
-        create_explore_button(query_widget, table_name=tables)
-        
+        print(f"🧐 There are {len(tables)} tables in your database.")
         print(f"🤓 Please select the {BOLD}main table{END} and {BOLD}vocabulary table{END}.")
         print(f"Each row in the {BOLD}main table{END} will be mapped to vocabulary.")
         print(f"If unsure, choose the smaller table as the {BOLD}main table{END}.")
         
-        dropdown = widgets.Dropdown(
-            options=tables,
-            description='Main:',
-            disabled=False,
-        )
+        print(f"{BOLD}Main Table:{END}", flush=True)
+        dropdown =  create_explore_button(query_widget, table_name=tables)
         
-        dropdown_vocabulary = widgets.Dropdown(
-            options=tables,
-            description='Vocabulary:',
-            disabled=False,
-        )
-        
+        print(f"{BOLD}Vocabulary Table:{END}")
+        dropdown_vocabulary = create_explore_button(query_widget, table_name=tables)
 
         next_button = widgets.Button(description="Next", button_style='success')
 
@@ -19080,7 +19113,6 @@ class SelectMainVocabularyTable(Node):
             callback(selected_tables)
                 
         next_button.on_click(on_button_click)
-        display(VBox([dropdown, dropdown_vocabulary]))
         display(next_button)
         
         
@@ -19274,6 +19306,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
                             para = {})
     
     main_workflow.add_to_leaf(SelectTable())
+    main_workflow.add_to_leaf(DecideColumnsPattern())
     main_workflow.add_to_leaf(DecideProjection())
     main_workflow.add_to_leaf(CreateShortTableSummary())
     main_workflow.add_to_leaf(DecideDuplicate())
@@ -19287,6 +19320,28 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
     main_workflow.add_to_leaf(CleanUnusualForAll())
     main_workflow.add_to_leaf(WriteStageYMLCode())
     
+    return query_widget, main_workflow
+
+def create_cocoon_table_transform_workflow(con, query_widget=None, viewer=True):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+
+    main_workflow = Workflow("Single Table Transformation Workflow", 
+                            item = item, 
+                            description="A workflow to transform a table into another table")
+
+    main_workflow.add_to_leaf(SelectSourceTargetTable())
+    main_workflow.add_to_leaf(CreateShortSourceTableSummary())
+    main_workflow.add_to_leaf(CreateShortTargetTableSummary())
+    main_workflow.add_to_leaf(UnderstandSourceToTargetTransform())
+    main_workflow.add_to_leaf(WriteCode())
+    main_workflow.add_to_leaf(DebugCode())
+        
     return query_widget, main_workflow
 
 def create_cocoon_profile_workflow(con, query_widget=None, viewer=False):
@@ -19320,6 +19375,20 @@ def create_cocoon_profile_workflow(con, query_widget=None, viewer=False):
     
     return query_widget, main_workflow
 
+def create_cocoon_dbt_explore_workflow():
+    main_workflow = Workflow("DBT Project Explore Workflow", 
+                         item = {},
+                        description="A workflow to explore a DBT project ")
+
+    main_workflow.add_to_leaf(SpecifyDirectory())
+    main_workflow.add_to_leaf(ProcessDirectory())
+    main_workflow.add_to_leaf(TagTableForAll())
+    main_workflow.add_to_leaf(InputRelationshipForAll())
+    main_workflow.add_to_leaf(BuildFinalLineage())
+    
+    return main_workflow
+
+
 class CocoonBranchStep(Node):
     default_name = 'Product Steps'
     default_description = 'This is typically the dicussion result from business analysts and engineers'
@@ -19341,15 +19410,19 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
-            "🧹 <b>Stage:</b> Clean and document your source table. The output is DBT SQL/YAML files.",
-            "🔍 <b>Profile:</b> Understand your table and identify anomalies. The output is an HTML profile.",
-            "🔗 <b>(Preview) Fuzzy Join:</b> Fuzzily match two tables and explain the relation. The output is an HTML report.",
+            "🧹 <b>Stage:</b> Give us a table, we'll clean it and document your source table in DBT SQL/YAML files.",
+            "🔍 <b>Profile:</b> Give us a table, we'll understand your table and identify anomalies. The output is an HTML profile.",
+            "🔗 <b>(Preview) Fuzzy Join:</b> Give us two tables, we'll fuzzily match them and explain the relation. The output is an HTML report.",
+            "🔧 <b>(Preview) Fuzzy Union/ Table Transform:</b> Give us a source and target table, we will transform/fuzzy union them.",
+            "👓 <b>(Preview) Explore DBT:</b> Give us a DBT project directory, we'll visualize the lineage and interpret each model.",
         ]
         
         next_nodes = [
             "Data Stage Workflow",
             "Data Profiling Workflow",
-            "Fuzzy Join Workflow"
+            "Fuzzy Join Workflow",
+            "Single Table Transformation Workflow",
+            "DBT Project Explore Workflow",
         ]
 
         radio_buttons_widget, checkboxes = create_html_radio_buttons(html_labels)
@@ -19366,12 +19439,14 @@ class CocoonBranchStep(Node):
         display(next_button)
         
 def create_cocoon_workflow(con):
-    query_widget = QueryWidget(con)
     
-    item = {
-        "con": con,
-        "query_widget": query_widget
-    }
+    item = {}
+    query_widget = None
+    
+    if con is not None:
+        query_widget = QueryWidget(con)
+        item["con"] = con
+        item["query_widget"] = query_widget
 
     main_workflow = Workflow("Cocoon Workflow", 
                             item = item, 
@@ -19380,12 +19455,863 @@ def create_cocoon_workflow(con):
     branch_node = CocoonBranchStep()
     main_workflow.add_to_leaf(branch_node)
     
+
     _, stage_workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget)
     _, profile_workflow = create_cocoon_profile_workflow(con=con, query_widget=query_widget)
-    _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget)
+    _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget)    
+    dbt_explore_workflow = create_cocoon_dbt_explore_workflow()
+    _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget)
     
     main_workflow.register(stage_workflow, parent=branch_node)
     main_workflow.register(profile_workflow, parent=branch_node)
     main_workflow.register(fuzzy_join_workflow, parent=branch_node)
+    main_workflow.register(dbt_explore_workflow, parent=branch_node)
+    main_workflow.register(table_transform_workflow, parent=branch_node)
     
     return query_widget, main_workflow
+
+def get_columns_pattern(columns, use_cache=True):
+    template = f"""You have the following columns:
+{columns}
+
+Are there column groups that:
+1. Column names follow the same pattern, but have varying *numbers*, that can be expressed by regular expression pattern with \d. 
+2. Is large with > 10 columns
+E.g., columns "year_1", "year_2", ... follow the pattern: ^year_\d+$
+
+Return the result in yml
+```yml
+reasoning: |
+    The columns follow ... They have varying numbers...
+
+patterns:
+    - ^year_\d+$
+    - ...
+```"""
+
+    messages = [{"role": "user", "content": template}]
+    response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+    messages.append(response['choices'][0]['message'])
+    yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+    summary = yaml.safe_load(yml_code)
+    return summary
+
+
+class DecideColumnsPattern(Node):
+    default_name = 'Decide Columns Pattern'
+    default_description = 'This node allows users to decide the columns pattern.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        print("🔍 Analyzing columns ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+        
+        self.progress = show_progress(1)
+
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        
+        return columns
+    
+    def run(self, extract_output, use_cache=True):
+        columns = extract_output
+        
+        if len(columns) <= 50:
+            return {}
+        
+        print(f"😲 Your table has {len(columns)} columns!")
+        print(f"🧐 Don't worry! We will find if there are some patterns!")
+        
+        columns = sorted(columns)
+
+        start = 0
+        column_group = {}
+
+        def get_columns(pattern, columns):
+            return [col for col in columns if re.match(pattern, col)]
+
+        use_cache = True
+
+        while start < len(columns):
+            
+            
+            summary = get_columns_pattern(columns[start:start+50], use_cache) 
+            use_cache = True
+            
+            if len(summary["patterns"]) > 0:
+                for pattern in summary["patterns"]:
+                    fitted_columns = get_columns(pattern, columns)
+                    if len(fitted_columns) > 0:
+                        column_group[pattern] = fitted_columns
+                        columns = [col for col in columns if col not in fitted_columns]
+                        use_cache = True
+                    else:
+                        use_cache = False 
+                    
+            else:
+                start += 50
+                
+        return column_group
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        self.progress.value += 1
+        
+        column_group = run_output
+        columns = extract_output
+        
+        if not column_group:
+            callback(column_group)
+            return
+        
+        df_group = pd.DataFrame(column_group.items(), columns=["Pattern", "Columns"])
+        df_group["Remove?"] = True
+        editable_columns = [False, True, True]
+        grid = create_dataframe_grid(df_group, editable_columns, reset=True, lists=['Columns'])
+
+        print("😎 We have identified column groups with the same pattern:")
+        print("Cocoon currently struggles with wide tables. We recommend removing them.")
+        display(grid)
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, lists=["Columns"])
+            table_pipeline = self.para["table_pipeline"]
+            con = self.item["con"]
+            
+            columns_to_remove = []
+            for index, row in new_df.iterrows():
+                if row["Remove?"]:
+                    columns_to_remove.extend(row["Columns"])
+            
+            if len(columns_to_remove) > 0:
+                new_table_name = f"{table_pipeline}_removeWideColumns"
+                selected_columns = [col for col in columns if col not in columns_to_remove] 
+            
+                selection_clause = ',\n'.join(selected_columns)
+                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                
+                comment = "-- Remove wide columns with pattern. The regex and columns are:\n"
+                for index, row in new_df.iterrows():
+                    if row["Remove?"]:
+                        if len(row["Columns"]) > 10:
+                            comment += f"-- {row['Pattern']}: {', '.join(row['Columns'][0:10])} ...\n"
+                        else:
+                            comment += f"-- {row['Pattern']}: {', '.join(row['Columns'])}\n"
+                
+                sql_query = f"{comment}{sql_query}"
+                
+                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                step.run_codes()
+                table_pipeline.add_step_to_final(step)
+                
+            document = new_df.to_json(orient="split")
+
+            callback(document)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        next_button.on_click(on_button_clicked)
+        
+        display(next_button)
+
+class SpecifyDirectory(Node):
+    default_name = 'Specify Directory'
+    default_description = 'This step allows you to specify the directory.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        print(f"🧐 Please specify the directory:")
+        
+        directory_widget = widgets.Text(value='', placeholder='Please provide the directory', disabled=False)
+        
+        next_button = widgets.Button(description="Next", button_style='success')
+
+        def on_button_click(b):
+            directory = directory_widget.value
+            
+            if not os.path.exists(directory):
+                print(f"❌ The directory {directory} does not exist.")
+                return
+            
+            callback({"directory": directory})
+                
+        next_button.on_click(on_button_click)
+        display(directory_widget, next_button)
+        
+class ProcessDirectory(Node):
+    default_name = 'Process Directory'
+    default_description = 'This step processes the directory.'
+
+    def extract(self, item):
+        directory = self.get_sibling_document('Specify Directory')["directory"]
+        
+        print(f"🚀 Processing the directory: {directory}")
+        
+        dbt_project = DbtProject()
+        dbt_project.process_dbt_files(directory)
+        
+        self.item["dbt_project"] = dbt_project
+        
+        return dbt_project
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        dbt_project = extract_output
+        
+        print(f"🚀 The directory has been processed successfully. We've found {len(dbt_project.tables)} tables")
+        
+        tables = dbt_project.tables.keys()
+        
+        table_widget = widgets.Dropdown(options=tables, disabled=False)
+        display(table_widget)
+        
+        print("🧐 Next, we will understand these tables!")
+        
+        next_button = widgets.Button(description="Next", button_style='success')
+        next_button.on_click(lambda b: callback({}))
+        display(next_button)
+
+                
+class TagTableForAll(MultipleNode):
+    default_name = 'Tag Table For All'
+    default_description = 'This node tags all the table.'
+    
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["table_name"] = element_name
+        para["table_idx"] = idx
+        para["total_tables"] = total
+        node = TagTable(para=para, id_para="table_name")
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        tables = list(self.item["dbt_project"].tables.keys())
+        self.elements = tables
+        total = len(tables)
+        self.nodes =  {table_name: self.construct_node(table_name, idx, total) for idx, table_name in enumerate(tables)}
+                                            
+
+class TagTable(Node):
+    default_name = 'Tag Table'
+    default_description = 'This node tags the table.'
+
+    def extract(self, item):
+        table_name = self.para["table_name"]
+        dbt_project = self.item["dbt_project"]
+        
+        clear_output(wait=True)
+        print("🔍 Tagging table:", table_name)
+        
+        idx = self.para["table_idx"]
+        total = self.para["total_tables"]
+        show_progress(max_value=total, value=idx)
+        
+        sql_query = dbt_project.tables[table_name].sql_query
+
+        return sql_query
+    
+    def run(self, extract_output, use_cache=True):
+        
+        sql_query = extract_output
+        
+        if sql_query is  None or sql_query == "":
+            return {"Filtering": {"Reasoning": "No SQL query found", "Label": False},
+                    "Cleaning": {"Reasoning": "No SQL query found", "Label": False},
+                    "Featurization": {"Reasoning": "No SQL query found", "Label": False},
+                    "Integration": {"Reasoning": "No SQL query found", "Label": False},
+                    "Other": {"Reasoning": "No SQL query found", "Label": False}}
+        
+        template = f"""## SQL query
+{sql_query}
+
+## Label the dbt script.
+1. Filtering: the script selects (or semi-join) the table based on some criteria. 
+2. Cleaning: the script deduplicate the table, or clean the existing columns by, e.g., trim, standardizing, formating...
+3. Featurization: the script extract new features from the existing columns. E.g., the script extracts whether weekend/weekday from date, or aggregate the table
+4. Integration: the script join and union tables to integrate information. Note that semi-join is not considered as integration
+5. Other: there is other significant tasks performed beyond the above.
+
+## Return a json:
+```json
+{{
+	"Filtering": {{
+		"Reasoning": …
+		"Label": true/false
+    }},
+    ...
+}}
+```
+"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+        
+        def verify_json_result(json_code):
+            expected_labels = ['Filtering', 'Cleaning', 'Featurization', 'Integration', 'Other']
+
+            if not isinstance(json_code, dict):
+                raise ValueError("JSON code should be a dictionary.")
+
+            for label in expected_labels:
+                if label not in json_code:
+                    raise ValueError(f"Key '{label}' is missing.")
+
+                if not isinstance(json_code[label], dict):
+                    raise ValueError(f"'{label}' should be a dictionary.")
+
+                if 'Reasoning' not in json_code[label] or 'Label' not in json_code[label]:
+                    raise ValueError(f"'{label}' must contain 'Reasoning' and 'Label' keys.")
+
+                if not isinstance(json_code[label]['Label'], bool):
+                    raise ValueError(f"'Label' under '{label}' should be a boolean.")
+
+
+            return True
+
+        verify_json_result(json_code)
+        return json_code
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"Filtering": {"Reasoning": "Failed", "Label": False},
+                    "Cleaning": {"Reasoning": "Failed", "Label": False},
+                    "Featurization": {"Reasoning": "Failed", "Label": False},
+                    "Integration": {"Reasoning": "Failed", "Label": False},
+                    "Other": {"Reasoning": "Failed", "Label": False}}
+        
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+    
+
+class InputRelationshipForAll(MultipleNode):
+    default_name = 'Input Relationship For All'
+    default_description = 'This node tags all the table.'        
+        
+    def construct_node(self, element_name, tags = {}, idx=0, total=0):
+        para = self.para.copy()
+        para["table_name"] = element_name
+        para["table_idx"] = idx
+        para["tags"] = tags
+        para["total_tables"] = total
+        node = InputRelationship(para=para, id_para="table_name")
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        tables = list(self.item["dbt_project"].tables.keys())
+        self.elements = tables
+        total = len(tables)
+        tag_map = self.get_sibling_document('Tag Table For All')['Tag Table']
+        self.nodes =  {table_name: self.construct_node(table_name, tag_map[table_name], idx, total) for idx, table_name in enumerate(tables)}
+                                     
+        
+class InputRelationship(Node):
+    default_name = 'Input Relationship'
+    default_description = 'This node understands the input relationship.'
+
+    def extract(self, item):
+        table_name = self.para["table_name"]
+        dbt_project = self.item["dbt_project"]
+        
+        clear_output(wait=True)
+        print("🔍 Understanding table relationship...")
+        
+        idx = self.para["table_idx"]
+        total = self.para["total_tables"]
+        show_progress(max_value=total, value=idx)
+        
+        sql_query = dbt_project.tables[table_name].sql_query
+        input_tables = dbt_project.tables[table_name].referenced_models + dbt_project.tables[table_name].referenced_sources
+        input_tables = sorted(input_tables) 
+        tags = self.para["tags"]
+        
+        return sql_query, input_tables, tags
+    
+    def run(self, extract_output, use_cache=True):
+        sql_query, input_tables, tags = extract_output
+        
+        if sql_query is  None or sql_query == "":
+            return {}
+        
+        purpose_summary = ""
+        for key, value in tags.items():
+            if value["Label"] == True:
+                purpose_summary += f"{key}: {value['Reasoning']}\n"
+
+        output_format = ""
+        for input_table in input_tables:
+            output_format += f"    \"{input_table}\": \"...\",\n"
+        output_format = output_format[:-2]
+        
+        template = f"""## SQL query
+{sql_query}
+
+## SQL query purpose
+{purpose_summary}
+
+## Given the SQL query, summarize how each input table is used:
+E.g., table A is the main table, table B is to enrich table A, table C is to filter table A, etc.
+
+## Return a json:
+```json
+{{
+{output_format}
+}}
+```
+"""
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+        
+        def verify_json_result(json_code):
+            for input_table in input_tables:
+                if input_table not in json_code:
+                    raise ValueError(f"Table {input_table} is not in the json code.")
+        
+        verify_json_result(json_code)
+        return json_code
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+
+class BuildFinalLineage(Node):
+    default_name = 'Build Final Lineage'
+    default_description = 'This node builds the final lineage.'
+
+    def extract(self, item):
+        
+        clear_output(wait=True)
+        print("🚀 Your DBT project has been analyzed:")
+        dbt_project = self.item["dbt_project"]
+        
+        tag_json = self.get_sibling_document('Tag Table For All')['Tag Table']
+        for table_name in tag_json:
+            dbt_project.tables[table_name].add_tag_result(tag_json[table_name])
+            
+        source_purpose_json = self.get_sibling_document('Input Relationship For All')['Input Relationship']
+        for table_name in source_purpose_json:
+            dbt_project.tables[table_name].add_source_purpose(source_purpose_json[table_name])
+            
+        dbt_project.update_tagged_names()
+
+        dbt_project.display()
+        return 
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        pass
+    
+    
+class SelectSourceTargetTable(Node):
+    default_name = 'Select Source and Target Table'
+    default_description = 'This step allows you to select the source and target table for the transformation.'
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        con = self.input_item["con"]
+        query_widget = self.item["query_widget"]
+        
+        tables = get_table_names(con)
+        
+        header_html = f'<div style="display: flex; align-items: center;">' \
+            f'<img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">' \
+            f'<div style="margin: 0; padding: 0;">' \
+            f'<h1 style="margin: 0; padding: 0;">Cocoon</h1>' \
+            f'<p style="margin: 0; padding: 0;">Table Transformation</p>' \
+            f'</div>' \
+            f'</div><hr>'
+
+        display(HTML(header_html))
+
+        html_content = f"""🧐 There are {len(tables)} tables in your database.<br>
+🤓 Please select the <b>Source</b> and <b>Target</b> tables.<br>
+We will transform the Source table to the Target table.<br>
+<b>Source Table:</b>"""
+        display(HTML(html_content))
+        dropdown_source = create_explore_button(query_widget, table_name=tables)
+        display(HTML("<b>Target Table:</b>"))
+        dropdown_target = create_explore_button(query_widget, table_name=tables)
+
+        next_button = widgets.Button(description="Next", button_style='success')
+
+        def on_button_click(b):
+            source_table = dropdown_source.value
+            target_table = dropdown_target.value
+            
+            if source_table == target_table:
+                print("❌ Source and target tables cannot be the same.")
+                return
+            
+            selected_tables = {"source_table": source_table, "target_table": target_table}
+            callback(selected_tables)
+                
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+class CreateShortSourceTableSummary(CreateShortTableSummary):
+    default_name = 'Create Short Source Table Summary'
+    default_description = 'Create a short summary of the source table'
+    
+    def extract(self, input_item):
+        clear_output(wait=True)
+
+        print("📝 Generating table summary ...")
+    
+        self.progress = show_progress(1)
+
+        con = self.item["con"]
+        source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
+        sample_size = 5
+
+        sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+        
+        self.sample_df = sample_df
+
+        return source_table, table_desc
+    
+class CreateShortTargetTableSummary(CreateShortTableSummary):
+    default_name = 'Create Short Target Table Summary'
+    default_description = 'Create a short summary of the target table'
+    
+    def extract(self, input_item):
+        clear_output(wait=True)
+
+        print("📝 Generating table summary ...")
+    
+        self.progress = show_progress(1)
+
+        con = self.item["con"]
+        target_table = self.get_sibling_document('Select Source and Target Table')["target_table"]
+        sample_size = 5
+
+        sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+
+        self.sample_df = sample_df
+
+        return target_table, table_desc
+    
+    
+class UnderstandSourceToTargetTransform(Node):
+    default_name = 'Understand Source to Target Transform'
+    default_description = 'Understand the transformation from source to target table'
+    
+    def extract(self, item):
+        clear_output(wait=True)
+        print("🔍 Verifying the target table...")
+        self.progress = show_progress(1)
+        
+        self.item = item
+        con = self.item["con"]
+        
+        source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
+        target_table = self.get_sibling_document('Select Source and Target Table')["target_table"]
+        
+        source_table_summary = self.get_sibling_document('Create Short Source Table Summary')
+        target_table_summary = self.get_sibling_document('Create Short Target Table Summary')
+        
+        sample_size = 5
+
+        source_sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
+        source_table_desc = source_sample_df.to_csv(index=False, quoting=2)
+        
+        target_sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
+        target_table_desc = target_sample_df.to_csv(index=False, quoting=2)
+        
+        return source_table_desc, source_table_summary, target_table_desc, target_table_summary
+    
+    def run(self, extract_output, use_cache=True):
+        source_table_sample, source_table_description, target_table_sample, target_table_description = extract_output
+        
+        template = f"""You have a source table: {source_table_description}
+{source_table_sample}
+
+And target table: {target_table_description}
+{target_table_sample}
+
+Now, verify if any of the target table columns can be derived from source table through SQL. 
+If so, describe the detailed SQL clause.
+Respond in the following json:
+```json
+{{  
+    "reasoning": "The transformation is (not) possible through SQL for any column. For X column in the target is semantically the same as column Y in the source. So we can tranformed through a mapping/string manipulation/math calculation...",
+    "transformable": true/false,
+}}
+"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        assistant_message = response['choices'][0]['message']
+        messages.append(assistant_message)
+        self.messages = messages
+        
+        
+        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+        summry = json.loads(json_code)
+        
+        return summry
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"reasoning": "There is some issue with this transformation", "transformable": False}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        self.progress.value += 1
+        
+        summary = run_output
+        if summary["transformable"]:
+            print("✔️ The transformation is possible through SQL.")
+        else:
+            print("❌ The transformation doesn't seem to be possible through SQL.")
+            print("Please edit below to provide more information.")
+
+        text_area, char_count_label = create_text_area_with_char_count(summary['reasoning'], max_chars=1000)
+        display(VBox([text_area, char_count_label]))
+        
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+        )
+        
+        def on_next_button_clicked(b):
+            clear_output(wait=True)
+            reason = text_area.value
+            callback(reason)
+        
+        next_button.on_click(on_next_button_clicked)
+        display(next_button)
+        
+        
+class WriteCode(Node):
+    default_name = 'Write Code'
+    default_description = 'Write code for table transformation'
+
+    def extract(self, input_item):
+        
+        print("💻 Writing the codes...")
+        self.progress = show_progress(1)
+        con = self.item["con"]
+        
+        source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
+        target_table = self.get_sibling_document('Select Source and Target Table')["target_table"]
+        
+        sample_size = 5
+
+        source_sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
+        source_table_desc = source_sample_df.to_csv(index=False, quoting=2)
+        
+        target_sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
+        target_table_desc = target_sample_df.to_csv(index=False, quoting=2)
+        
+        transformation_reasoning = self.get_sibling_document('Understand Source to Target Transform')
+        
+        return source_table_desc, target_table_desc, transformation_reasoning
+    
+    def run(self, extract_output, use_cache=True):
+        source_table_sample, target_table_sample, transformation_reasoning = extract_output
+        
+        template = f"""You have a source table: 
+{source_table_sample}
+        
+And target table:
+{target_table_sample}
+
+{transformation_reasoning}
+
+Now, write the SQL clause to transform the source table to the target table.
+
+SELECT {{need_distinct}} {{selection_clause}}
+FROM source_table
+WHERE {{condition_clause}}
+GROUP BY {{group_by_clause}}
+HAVING {{having_clause}}
+
+Respond in the following json:
+```json
+{{  
+    "reasoning": "To transform, we (don't) need aggregation. We select ...",
+    "need_aggregation": true/false,
+    "need_distinct": true/false,
+    "selection_clause": "A as A, B as B, ...", # ignore not transformable columns
+    "condition_clause": "A > 10 AND B < 20", # "" if no condition
+    "group_by_clause": "A, B",  # "" if no group by
+    "having_clause": "COUNT(*) > 1" # "" if no having
+}}
+"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        
+        assistant_message = response['choices'][0]['message']
+        messages.append(assistant_message)
+        self.messages = messages
+        
+        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+        summry = json.loads(json_code)
+
+        
+        return summry
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"reasoning": "There is some issue with this transformation", 
+                "need_aggregation": False,
+                "need_distinct": False,
+                "selection_clause": "*",
+                "condition_clause": "",
+                "group_by_clause": "",
+                "having_clause": ""
+          }
+        
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+
+class DebugCode(Node):
+    default_name = 'Debug Code'
+    default_description = 'Debug the code'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+        
+        display("🐞 Debugging the code...")
+        self.progress = show_progress(1)
+        
+        con = self.item["con"]
+        source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
+        code_clauses = self.get_sibling_document("Write Code")
+        
+        code_clauses = code_clauses.copy()
+        
+        return con, code_clauses, source_table
+    
+    def run(self, extract_output, use_cache=True):
+        
+        con, code_clauses, table_pipeline = extract_output
+        max_iterations = 10
+        self.messages = []
+        
+        for i in range(max_iterations):
+            try:
+                sql = f"""SELECT {code_clauses['selection_clause']}
+FROM {table_pipeline}
+{'WHERE ' + code_clauses['condition_clause'] if code_clauses['condition_clause'] else ''}
+{'' if not code_clauses['group_by_clause'] else 'GROUP BY ' + code_clauses['group_by_clause']}
+{'' if not code_clauses['having_clause'] else 'HAVING ' + code_clauses['having_clause']}"""
+                df = run_sql_return_df(con, sql)
+                code_clauses["output_columns"] = list(df.columns)
+                break
+            except Exception: 
+                detailed_error_info = get_detailed_error_info()
+                json_template =""
+                if "condition_clause" in code_clauses and code_clauses["condition_clause"]:
+                    json_template += f',\n    "condition_clause": "{code_clauses["condition_clause"]}"'
+                if "group_by_clause" in code_clauses and code_clauses["group_by_clause"]:
+                    json_template += f',\n    "group_by_clause": "{code_clauses["group_by_clause"]}"'
+                if "having_clause" in code_clauses and code_clauses["having_clause"]:
+                    json_template += f',\n    "having_clause": "{code_clauses["having_clause"]}"'
+                template = f"""You have the following SQL:
+{sql}
+It has an error: {detailed_error_info}
+
+Please correct the SQL, but don't change the logic. Respond in the following json:
+```json
+{{  
+    "reasoning": "The error is caused by ...",
+    "selection_clause": "{code_clauses['selection_clause']}" (correct it){json_template}
+}}
+"""
+
+                messages = [{"role": "user", "content": template}]
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+                
+                json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+                summry = json.loads(json_code)
+                
+                assistant_message = response['choices'][0]['message']
+                messages.append(assistant_message)
+                self.messages.append(messages)
+                
+                if "selection_clause" in summry:
+                    code_clauses["selection_clause"] = summry["selection_clause"]
+                if "condition_clause" in summry:
+                    code_clauses["condition_clause"] = summry["condition_clause"]
+                if "group_by_clause" in summry:
+                    code_clauses["group_by_clause"] = summry["group_by_clause"]
+                if "having_clause" in summry:
+                    code_clauses["having_clause"] = summry["having_clause"]
+                    
+        return code_clauses
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        print("🎉 We have finished the coding!")
+        
+        _, _, source_table = extract_output
+        
+        formatter = HtmlFormatter(style='default')
+        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+        border_style = """
+        <style>
+        .border-class {
+            border: 1px solid black;
+            padding: 10px;
+            margin: 10px;
+        }
+        </style>
+        """
+        combined_css = css_style + border_style
+        
+        selection_clause = ',\n'.join(run_output['selection_clause'].split(','))
+        
+        sql_query = f"""SELECT 
+{indent_paragraph(selection_clause)}
+FROM {source_table}
+{'WHERE ' + run_output['condition_clause'] if run_output['condition_clause'] else ''}
+{'' if not run_output['group_by_clause'] else 'GROUP BY ' + run_output['group_by_clause']} 
+{'' if not run_output['having_clause'] else 'HAVING ' + run_output['having_clause']}"""
+
+        highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter))
+        bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
+        display(HTML(combined_css + bordered_content))
+        
+        test_button = widgets.Button(
+            description='Test Transform',
+            disabled=False,
+            button_style='info',
+            tooltip='Click to test',
+            icon='play'
+        )
+        query_widget = self.item["query_widget"]
+        def on_button_clicked(b):
+            query_widget.run_query(sql_query)
+            print("😎 Query submitted. Check out the data widget!")
+        
+        test_button.on_click(on_button_clicked)
+        print("🧪 Please test the cast and ensure the result is as expected.")
+        display(test_button)
+        
+        
+        
+        
+        
+             

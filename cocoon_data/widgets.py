@@ -5,6 +5,20 @@ from IPython.display import *
 import pandas as pd
 from html.parser import HTMLParser
 
+text_area_style = """
+<style>
+textarea, input {
+    font-family:  'Verdana', serif;
+    
+}
+:root {
+    --jp-ui-font-size1: 12px;
+}
+</style>
+"""
+
+display(HTML(text_area_style))
+
 def create_list_of_strings(initial_strings):
     def move_string_up(btn):
         index = btn.index
