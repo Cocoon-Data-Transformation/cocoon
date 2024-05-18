@@ -4,7 +4,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-😎 **Cocoon** provides LLM agents to organize raw data in your data warehouse, ready for analysis.
+😎 **Cocoon** provides LLM agents to organize your data warehouse, ready for analysis.
 
 
 ## Stage: Automatically suggest cleaning and generate DBT codes
