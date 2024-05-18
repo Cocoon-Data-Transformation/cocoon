@@ -6,6 +6,13 @@
 
 😎 **Cocoon** provides LLM agents to organize your data warehouse, ready for analysis.
 
+Given a task from the user, Cocoon connects to your data warehouse, explores your data, guides user step-by-step, and automatically build SQL pipeline to complete the task.
+
+<div align="center">
+  <img src="./images/arch.png" alt="Cocoon Logo" />
+</div>
+
+
 ## Profile: Semantically understand your data and detect anomalies
 
 Profiling is the first step to understanding the table and identifying any anomalies.
