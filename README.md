@@ -105,6 +105,8 @@ We help you find the related ones, and explain how they are related.
 
 Give us the source table and the (example of) target table, we help you fuzzy union/transform.
 
+- 👉 [**Python Package:** Check out the notebook](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/fuzzy_union.ipynb)
+
 <kbd>![](./images/fuzzyunion.gif)</kbd>
 
 ## Future
