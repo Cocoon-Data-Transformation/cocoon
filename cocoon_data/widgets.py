@@ -19,18 +19,20 @@ textarea, input {
 
 display(HTML(text_area_style))
 
-def create_list_of_strings(initial_strings):
+def create_list_of_strings(initial_strings, ordered=True):
     def move_string_up(btn):
         index = btn.index
         if index > 0:
-            current_strings[index], current_strings[index-1] = current_strings[index-1], current_strings[index]
-            update_display(current_strings)
+            strings = extract_strings_from_display(display_container)
+            strings[index], strings[index-1] = strings[index-1], strings[index]
+            update_display(strings)
 
     def move_string_down(btn):
         index = btn.index
-        if index < len(current_strings) - 1:
-            current_strings[index], current_strings[index+1] = current_strings[index+1], current_strings[index]
-            update_display(current_strings)
+        strings = extract_strings_from_display(display_container)
+        if index < len(strings) - 1:
+            strings[index], strings[index+1] = strings[index+1], strings[index]
+            update_display(strings)
 
     def update_display(strings):
         display_container.children = tuple(build_widgets(strings) + [reset_btn])
@@ -40,28 +42,28 @@ def create_list_of_strings(initial_strings):
 
     def delete_string(btn):
         index = btn.index
-        del current_strings[index]
-        update_display(current_strings)
+        strings = extract_strings_from_display(display_container)
+        del strings[index]
+        update_display(strings)
 
     def add_string(btn):
         new_string = new_string_input.value.strip()
         if new_string:
-            current_strings.append(new_string)
+            strings = extract_strings_from_display(display_container)
+            strings.append(new_string)
             new_string_input.value = ''
-            update_display(current_strings)
+            update_display(strings)
 
     def reset_list(btn):
-        global current_strings
-        current_strings = initial_strings.copy()
-        update_display(current_strings)
+        update_display(initial_strings)
 
     def build_widgets(strings):
         widgets_list = []
         for index, string in enumerate(strings):
             text_widget = widgets.Text(value=string)
-            delete_btn = widgets.Button(icon='fa-trash', button_style='danger', layout=widgets.Layout(width='32px'))
-            up_btn = widgets.Button(icon='fa-angle-up', button_style='info', layout=widgets.Layout(width='32px'))
-            down_btn = widgets.Button(icon='fa-angle-down', button_style='info', layout=widgets.Layout(width='32px'))
+            delete_btn = widgets.Button(icon='trash', button_style='danger', layout=widgets.Layout(width='32px'))
+            up_btn = widgets.Button(icon='angle-up', button_style='info', layout=widgets.Layout(width='32px'))
+            down_btn = widgets.Button(icon='angle-down', button_style='info', layout=widgets.Layout(width='32px'))
 
             delete_btn.index = up_btn.index = down_btn.index = index
 
@@ -69,7 +71,10 @@ def create_list_of_strings(initial_strings):
             up_btn.on_click(move_string_up)
             down_btn.on_click(move_string_down)
 
-            hbox = widgets.HBox([text_widget, up_btn, down_btn, delete_btn])
+            if ordered:
+                hbox = widgets.HBox([text_widget, up_btn, down_btn, delete_btn])
+            else:
+                hbox = widgets.HBox([text_widget, delete_btn])
             widgets_list.append(hbox)
 
         widgets_list.append(widgets.HBox([new_string_input, add_string_btn]))
@@ -78,16 +83,17 @@ def create_list_of_strings(initial_strings):
     current_strings = initial_strings.copy()
 
     new_string_input = widgets.Text()
-    add_string_btn = widgets.Button(icon='fa-plus-circle', button_style='primary', layout=widgets.Layout(width='32px'))
+    add_string_btn = widgets.Button(icon='plus-circle', button_style='primary', layout=widgets.Layout(width='32px'))
     add_string_btn.on_click(add_string)
 
-    reset_btn = widgets.Button(icon="fa-fast-backward", description='Reset', button_style='warning')
+    reset_btn = widgets.Button(icon="fast-backward", description='Reset', button_style='warning')
     reset_btn.on_click(reset_list)
 
     display_container = widgets.VBox()
     update_display(current_strings)
 
     return display_container
+
 
 
 

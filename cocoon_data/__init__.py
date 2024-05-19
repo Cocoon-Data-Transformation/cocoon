@@ -11637,6 +11637,25 @@ The messages are:
 
         return self.global_document.get_nested(new_path)
 
+
+class ListNode(Node):
+    default_name = "List of Nodes"
+    default_description = "This node dynamically creates a list of run calls."
+    retry_times = 0
+    
+    def run(self, extract_output, use_cache=True):
+        return {}
+    
+    def merge_run_output(self, run_outputs):
+        return run_outputs
+    
+    def run_and_retry(self, extract_outputs):
+        run_outputs = []
+        for extract_output in extract_outputs:
+            run_output = super().run_and_retry(extract_output)
+            run_outputs.append(run_output)
+        return self.merge_run_output(run_outputs)
+    
 class Workflow(Node):
 
     default_name = "Workflow"
@@ -19310,10 +19329,10 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
     main_workflow.add_to_leaf(DecideProjection())
     main_workflow.add_to_leaf(CreateShortTableSummary())
     main_workflow.add_to_leaf(DecideDuplicate())
-    main_workflow.add_to_leaf(DescribeColumns())
-    main_workflow.add_to_leaf(DecideMissing())
+    main_workflow.add_to_leaf(DescribeColumnsList())
+    main_workflow.add_to_leaf(DecideMissingList())
     main_workflow.add_to_leaf(HandleMissing())
-    main_workflow.add_to_leaf(DecideDataType())
+    main_workflow.add_to_leaf(DecideDataTypeList())
     main_workflow.add_to_leaf(TransformTypeForAll())
     main_workflow.add_to_leaf(DecideTrim())
     main_workflow.add_to_leaf(DecideStringUnusualForAll())
@@ -19321,6 +19340,445 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
     main_workflow.add_to_leaf(WriteStageYMLCode())
     
     return query_widget, main_workflow
+
+class DescribeColumnsList(ListNode):
+    default_name = 'Describe Columns'
+    default_description = 'This node allows users to describe the columns of a table.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Checking columns ...")
+        
+        create_progress_bar_with_numbers(1, doc_steps)
+        self.progress = show_progress(1)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        sample_size = 5
+        
+        table_summary = self.get_sibling_document("Create Table Summary")
+        
+        outputs = []
+        
+        columns = sorted(columns)
+        
+        for i in range(0, len(columns), 30):
+            chunk_columns = columns[i:i + 30]
+            sample_df = run_sql_return_df(con, f"SELECT {', '.join(chunk_columns)} FROM {table_pipeline} LIMIT {sample_size}")
+            table_desc = sample_df.to_csv(index=False, quoting=2)
+            outputs.append((table_desc, table_summary, chunk_columns))
+        
+        return outputs
+    
+    def run(self, extract_output, use_cache=True):
+        table_desc, table_summary, column_names = extract_output
+
+        template = f"""You have the following table:
+{table_desc}
+
+{table_summary}
+
+Task: Describe the columns in the table.
+
+Return in the following format:
+```json
+{{
+    "{column_names[0]}": "Short description in < 10 words",
+    ...
+}}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        return json_code
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        default_response = {column: column for column in extract_output[2]}
+        return default_response
+    
+    
+    def merge_run_output(self, run_outputs):
+        merged_output = {}
+        for run_output in run_outputs:
+            merged_output.update(run_output)
+        return merged_output
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+        
+        self.progress.value += 1
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        schema = table_pipeline.get_final_step().get_schema()
+
+        rows_list = []
+
+        for col in schema:
+            rows_list.append({
+                "Column": col,
+                "Summary": json_code[col],
+            })
+
+        df = pd.DataFrame(rows_list)
+        
+        editable_columns = [False, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        print("😎 We have described the columns:")
+        display(grid)
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="split")
+            callback(document)
+
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+        
+        if self.viewer:
+            on_button_clicked(next_button)
+            
+            
+class DecideMissingList(ListNode):
+    default_name = 'Decide Missing Values'
+    default_description = 'This node allows users to decide how to handle missing values.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Checking missing values ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+        
+        self.progress = show_progress(1)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        table_name = table_pipeline.get_final_step().name
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        columns = sorted(columns)
+        sample_size = 5
+        
+        outputs = []
+                
+        for i in range(0, len(columns), 50):
+            chunk_columns = columns[i:i + 50]
+            
+            missing_columns = {}
+            
+            for col in chunk_columns:
+                missing_percentage = get_missing_percentage(con, table_name, col)
+                if missing_percentage > 0:
+                    missing_columns[col] = missing_percentage
+            
+            sample_df = run_sql_return_df(con, f"SELECT {', '.join(chunk_columns)} FROM {table_name} LIMIT {sample_size}")
+            sample_df_str = sample_df.to_csv(index=False, quoting=2)
+            
+            outputs.append((missing_columns, sample_df_str))
+
+        return outputs
+
+    def run(self, extract_output, use_cache=True):
+        
+        missing_columns, sample_df_str = extract_output
+        
+        if len(missing_columns) == 0:
+            return {"reasoning": "No missing values found.", "columns_obvious_not_applicable": {}}
+
+        missing_desc = "\n".join([f'{idx+1}. {col}: {missing_columns[col]}' for idx, (col, desc) in enumerate(missing_columns.items())])
+
+        template = f"""You have the following table:
+{sample_df_str}
+
+The following columns have percentage of missing values:
+{missing_desc}
+
+For each column, decide whether there is an obvious reason for the missing values to be "not applicable"
+E.g., if the column is 'Date of Death', it is "not applicable" for patients still alive.
+Reasons like not not collected, sensitive info, encryted, data corruption, etc. are not considered 'not applicable'.
+
+Return in the following format:
+```json
+{{
+    "reasoning": "X column has an obvious not applicable reason... The rest don't.",
+    "columns_obvious_not_applicable": {{
+        "column_name": "Short specific reason why not applicable, in < 10 words.",
+        ...
+    }}
+}}
+"""
+            
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        if not isinstance(json_code, dict) or "reasoning" not in json_code or "columns_obvious_not_applicable" not in json_code:
+            raise ValueError("The returned JSON code does not adhere to the required format.")
+        
+        for col_name in json_code["columns_obvious_not_applicable"]:
+            if col_name not in missing_columns:
+                raise ValueError(f"The column '{col_name}' specified in 'columns_obvious_not_applicable' is not present in the missing columns.")
+            
+        return json_code
+    
+    def merge_run_output(self, run_outputs):
+        merged_output = {}
+        for run_output in run_outputs:
+            merged_output.update(run_output["columns_obvious_not_applicable"])
+        return {"columns_obvious_not_applicable": merged_output}
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        missing_columns, sample_df_str = extract_output
+        
+        if len(missing_columns) == 0:
+            return {"reasoning": "No missing values found. ", "columns_obvious_not_applicable": {}}
+        else:
+            return {
+                "reasoning": "Failed to analyze the data due to an error.",
+                "columns_obvious_not_applicable": {}
+            }
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        self.progress.value += 1
+        json_code = run_output
+        
+        outputs = extract_output
+        missing_columns = {}
+        
+        for output in outputs:
+            missing_columns.update(output[0])
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+
+        rows_list = []
+        for col in missing_columns:
+            missing_percentage = missing_columns[col]
+            reason = json_code["columns_obvious_not_applicable"].get(col, "")
+            rows_list.append({
+                "Column": col,
+                "NULL (%)": f"{missing_percentage*100:.2f}",
+                "Is NULL Acceptable?": True if reason != "" else False,
+                "Explanation": reason
+            })
+            
+        df = pd.DataFrame(rows_list)
+        
+        if len(rows_list) == 0:
+            df = pd.DataFrame(columns=["Column", "NULL (%)", "Is NULL Acceptable?", "Explanation"])
+        else:
+            df = pd.DataFrame(rows_list)
+
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, False, True, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        
+        print("😎 We have identified missing values, and potential causes:")
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="split")
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+        
+        if self.viewer:
+            on_button_clicked(next_button)
+            
+            
+class DecideDataTypeList(ListNode):
+    default_name = 'Decide Data Type'
+    default_description = 'This node allows users to decide the data type for each column.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Checking data types ...")
+        create_progress_bar_with_numbers(2, doc_steps)
+        self.progress = show_progress(1)
+
+        self.input_item = item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        columns = sorted(columns)
+        sample_size = 5
+        
+        database_name = get_database_name(con)
+        all_data_types = list(data_types_database[database_name].keys())
+        
+        outputs = []
+                
+        for i in range(0, len(columns), 30):
+            chunk_columns = columns[i:i + 30]
+            sample_df = run_sql_return_df(con, f"SELECT {', '.join(chunk_columns)} FROM {table_pipeline} LIMIT {sample_size}")
+            table_desc = sample_df.to_csv(index=False, quoting=2)
+            chunk_schema = {col: schema[col] for col in chunk_columns}
+            outputs.append((table_desc, all_data_types, database_name, chunk_schema))
+
+        return outputs
+
+    def run(self, extract_output, use_cache=True):
+        table_desc, all_data_types, database_name, schema = extract_output
+
+        template = f"""You have the following table:
+{table_desc}
+
+For each column, classify what the column type should be.
+The column type should be one of the following:
+{all_data_types}
+
+Return in the following format:
+```json
+{{
+    "column1": "INT",
+    ...
+}}
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: all(col_type in all_data_types for col_type in jc.values()), "The column types are not all strings."),
+            (lambda jc: all(col_name in schema for col_name in jc), "One or more column names specified in 'column_type' are not present in the sample DataFrame."),
+        ]
+
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
+            
+        return json_code
+    
+    def merge_run_output(self, run_outputs):
+        merged_output = {}
+        for run_output in run_outputs:
+            merged_output.update(run_output)
+        return merged_output
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        _, _, database_name, schema = extract_output
+        return {"column_type": {col: get_reverse_type(schema[col], database_name) for col in schema}}
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+        _, all_data_types, database_name, _ = extract_output[0]
+        
+        schema = {}
+        outputs = extract_output
+        for output in outputs:
+            schema.update(output[3])
+        
+        self.progress.value += 1
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        
+
+        rows_list = []
+
+        for col in schema:
+            current_type = get_reverse_type(schema[col], database_name)
+            target_type = json_code[col]
+
+            rows_list.append({
+                "column_name": col,
+                "current_type": current_type,
+                "target_type": target_type,
+            })
+
+        df = pd.DataFrame(rows_list)
+        
+        grid = create_data_type_grid(df, all_data_types = all_data_types)
+        print("😎 We have recommended the Data Types for Columns:")
+        display(grid)
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            df = extract_grid_data_type(grid)
+            
+            callback(df.to_json(orient="split"))
+
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+        
+        if self.viewer:
+            on_button_clicked(next_button)
+            
 
 def create_cocoon_table_transform_workflow(con, query_widget=None, viewer=True):
     if query_widget is None:
@@ -19511,6 +19969,7 @@ class DecideColumnsPattern(Node):
         table_pipeline = self.para["table_pipeline"]
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
+        columns = sorted(columns)
         
         return columns
     
