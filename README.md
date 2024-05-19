@@ -6,20 +6,22 @@
 
 😎 **Cocoon** provides LLM agents to organize your data warehouse, ready for analysis.
 
+Given a **Data Task** from the user, Cocoon connects to your data warehouse, explores your data, guides user step-by-step, and automatically build SQL pipeline to complete the task.
 
-## Stage: Automatically suggest cleaning and generate DBT codes
+<div align="center">
+  <img src="./images/arch.png" alt="Cocoon Logo" />
+</div>
 
-
-
-- 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
-- 👉 Check out the [1 min demo](https://youtu.be/D7jw43ccOkg)
-
-Screenshot where LLMs help you interactively cast columns and fix cases. The output is DBT staging sql/yml.
-
-<kbd>![](./images/stage.gif)</kbd>
+#### Data Tasks currently available:
+- [Profile: Semantically understand your data and detect anomalies](#profile-semantically-understand-your-data-and-detect-anomalies)
+- [Preview: Staging, Data Cleaning, Data Preparation](#preview-staging-data-cleaning-data-preparation)
+- [Preview: Fuzzy Join, Column Standardization, Entity Matching](#preview-fuzzy-join-column-standardization-entity-matching)
+- [Preview: Fuzzy Union, Table Transformation, Common Data Model](#preview-fuzzy-union-table-transformation-common-data-model)
+- And more to come...
 
 
 ## Profile: Semantically understand your data and detect anomalies
+
 
 Profiling is the first step to understanding the table and identifying any anomalies.
 
@@ -63,9 +65,19 @@ Many small decisions require semantic understanding by LLMs. For example, an age
 
 </details>
 
+## Preview: Staging, Data Cleaning, Data Preparation
 
 
-## (Preview) Fuzzy Join/Column Standardization/Entity Matching
+
+- 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
+- 👉 Check out the [1 min demo](https://youtu.be/D7jw43ccOkg)
+
+Screenshot where LLMs interactively suggest data cleaning (cast columns and fix cases). The output is DBT staging sql/yml.
+
+<kbd>![](./images/stage.gif)</kbd>
+
+
+## Preview: Fuzzy Join, Column Standardization, Entity Matching
 
 Join could be challenging when a standardized join key is missing (e.g., join by non-standardized names).
 
@@ -88,6 +100,14 @@ We help you find the related ones, and explain how they are related.
 ```
 
 </details>
+
+## Preview: Fuzzy Union, Table Transformation, Common Data Model
+
+Give us the source table and the (example of) target table, we help you fuzzy union/transform.
+
+- 👉 [**Python Package:** Check out the notebook](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/fuzzy_union.ipynb)
+
+<kbd>![](./images/fuzzyunion.gif)</kbd>
 
 ## Future
 
