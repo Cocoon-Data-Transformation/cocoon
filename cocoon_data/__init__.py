@@ -16728,6 +16728,9 @@ Return in the following format:
         df = pd.DataFrame(rows_list)
         df = df[df["Is Unique?"] | df["Should Unique?"]]
         
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+        
         editable_columns = [False, False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
         
