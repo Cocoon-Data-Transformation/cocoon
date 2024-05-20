@@ -18522,7 +18522,7 @@ class TransformTypeForAll(MultipleNode):
         df = pd.DataFrame(data)
 
         if len(df) == 0:
-            callback(document)
+            callback(df.to_json(orient="split"))
             return
 
         editable_columns = [False, True, False]
@@ -20897,7 +20897,7 @@ class DecideStringCategoricalForAll(MultipleNode):
         df = pd.DataFrame(data)
 
         if len(df) == 0:
-            callback(document)
+            callback(df.to_json(orient="split"))
             return
 
         editable_columns = [False, True, True, True, True, False]
@@ -20969,7 +20969,7 @@ class DecideStringCategorical(Node):
 Review if the column is categorical with a limited domain of acceptable values (<100) or free text.
 
 
-Now, respond in Json:
+Now, respond in yml:
 ```yml
 explanation: |
     The column means ... The accepted values are ... which (do/do not) have a limited domain
