@@ -16209,8 +16209,8 @@ class DecideColumnRange(Node):
         
         min_max = {}
         for col in numerical_columns:
-            min_max_tuple = run_sql_return_df(con, f"SELECT MIN({col}) as min, MAX({col}) as max FROM {table_pipeline}").iloc[0]
-            min_max[col] = [min_max_tuple["min"], min_max_tuple["max"]]
+            min_max_tuple = run_sql_return_df(con, f"SELECT MIN({col}) as MIN, MAX({col}) as MAX FROM {table_pipeline}").iloc[0]
+            min_max[col] = [min_max_tuple["MIN"], min_max_tuple["MAX"]]
         
         return table_desc, numerical_columns, min_max
     
@@ -16640,6 +16640,7 @@ class DecideUnique(Node):
 
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
+        
         sample_size = 5
 
         unique_columns = {}
@@ -16651,11 +16652,12 @@ class DecideUnique(Node):
         sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_name} LIMIT {sample_size}")
         sample_df_str = sample_df.to_csv(index=False, quoting=2)    
 
-        return unique_columns, sample_df_str, table_name
+        return unique_columns, sample_df_str, table_name, columns
 
     def run(self, extract_output, use_cache=True):
         
-        unique_columns, sample_df_str, table_name = extract_output
+        unique_columns, sample_df_str, table_name, columns = extract_output
+        
 
         unique_desc = "\n".join([f'{idx+1}. {col}: {unique_columns[col]}' for idx, (col, desc) in enumerate(unique_columns.items())])
 
@@ -16681,13 +16683,27 @@ Return in the following format:
         self.messages = messages
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "candidate_key" in jc, "The 'column_type' key is missing in the JSON code."),
+            (lambda jc: all(col_name in columns for col_name in jc["candidate_key"]), "One or more column names specified in 'candidate_key' are not present in the sample DataFrame."),
+        ]
+
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
 
         return json_code
     
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"candidate_key": {}}
+    
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         
+        self.progress.value += 1
         json_code = run_output
-        unique_columns, _, _ = extract_output
+        unique_columns, _, _, _ = extract_output
         
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
@@ -16704,18 +16720,18 @@ Return in the following format:
             reason = json_code["candidate_key"].get(col, "")
             rows_list.append({
                 "Column": col,
-                "Is Unique": is_unique,
-                "Should be Unique?": True if reason != "" else False,
+                "Is Unique?": is_unique,
+                "Should Unique?": True if reason != "" else False,
                 "Explanation": reason
             })
         
         df = pd.DataFrame(rows_list)
-        df = df[df["Is Unique"] | df["Should be Unique?"]]
+        df = df[df["Is Unique?"] | df["Should Unique?"]]
         
         editable_columns = [False, False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
         
-        print("😎 We have identified columns that should be unique:")
+        print("😎 We have identified candidate keys:")
         display(grid)
         
         next_button = widgets.Button(
@@ -16826,42 +16842,63 @@ def build_histogram_inputs(con, column, tablename):
     num_bins = 20
     query_min_max = f'SELECT MIN({column}) AS min_val, MAX({column}) AS max_val FROM {tablename};'
     min_val, max_val = run_sql_return_df(con, query_min_max).iloc[0]
-    
+
     if min_val == max_val:
         total_count_query = f'SELECT COUNT(*) FROM {tablename};'
         total_count = run_sql_return_df(con, total_count_query).iloc[0][0]
         return [total_count], min_val, [min_val]
-    
+
     bin_width = (max_val - min_val) / num_bins
     bin_edges = np.linspace(min_val, max_val, num_bins + 1)
-    
-    bin_centers = []
-    counts = []
-    bin_width = bin_edges[1] - bin_edges[0]
 
+    case_statements = []
     for i in range(num_bins):
         bin_start = bin_edges[i]
         bin_end = bin_edges[i + 1]
         if i == num_bins - 1:
-            query = f'SELECT COUNT(*) FROM {tablename} WHERE {column} >= {bin_start} AND {column} <= {bin_end}'
+            case_statement = f'WHEN {column} >= {bin_start} AND {column} <= {bin_end} THEN {i+1}'
         else:
-            query = f'SELECT COUNT(*) FROM {tablename} WHERE {column} >= {bin_start} AND {column} < {bin_end}'
-        count = run_sql_return_df(con, query).iloc[0][0]
-        bin_center = (bin_start + bin_end) / 2
+            case_statement = f'WHEN {column} >= {bin_start} AND {column} < {bin_end} THEN {i+1}'
+        case_statements.append(case_statement)
 
-        bin_centers.append(bin_center)
-        counts.append(count)
+    case_statement = ' '.join(case_statements)
+
+    query = f'''
+    WITH BINS AS (
+        SELECT CAST(ROW_NUMBER() OVER (ORDER BY NULL) AS INTEGER) AS BIN
+        FROM {tablename}
+        LIMIT {num_bins}
+    )
+    SELECT
+        BINS.BIN,
+        COALESCE(counts.count, 0) AS COUNT
+    FROM BINS
+    LEFT JOIN (
+        SELECT
+            CASE {case_statement} ELSE NULL END AS BIN,
+            COUNT(*) AS COUNT
+        FROM {tablename}
+        GROUP BY BIN
+    ) COUNTS ON BINS.BIN = COUNTS.BIN
+    ORDER BY BINS.BIN;
+    '''
+
+    result_df = run_sql_return_df(con, query)
+
+    counts = result_df['COUNT'].tolist()
+    bin_centers = [(bin_edges[i] + bin_edges[i+1]) / 2 for i in range(num_bins)]
+
     return counts, bin_width, bin_centers
-
 
 def df_to_list(df):
     return [tuple(row) for row in df.itertuples(index=False, name=None)]
 
-def build_barchat_input(con, column, tablename):
+
+def build_barchat_input(con, column, tablename, limit=6):
     count_query = f'SELECT COUNT(DISTINCT {column}) AS distinct_count FROM {tablename} WHERE {column} IS NOT NULL'
     distinct_count_result = run_sql_return_df(con, count_query).iloc[0][0]
 
-    if distinct_count_result > 6:
+    if distinct_count_result > limit:
         fetch_query = f'''
         WITH CityCounts AS (
             SELECT CAST({column} AS VARCHAR) AS {column}, COUNT(*) AS count
@@ -16873,7 +16910,7 @@ def build_barchat_input(con, column, tablename):
         TopCities AS (
             SELECT {column}, count
             FROM CityCounts
-            LIMIT 5
+            LIMIT {limit-1}
         ),
         OtherGroup AS (
             SELECT 'Other values' AS {column}, SUM(count) AS count
@@ -17007,8 +17044,8 @@ class GenerateReport(Node):
                     html_content += f'<span class="circle">!</span> <b>{column_name} has {missing}% Missing Values</b><br>'
                     
             if len(unique_df) > 0 and column_name in unique_df["Column"].values:
-                is_unique = unique_df[unique_df["Column"] == column_name]["Is Unique"].iloc[0]
-                should_unique = unique_df[unique_df["Column"] == column_name]["Should be Unique?"].iloc[0]
+                is_unique = unique_df[unique_df["Column"] == column_name]["Is Unique?"].iloc[0]
+                should_unique = unique_df[unique_df["Column"] == column_name]["Should Unique?"].iloc[0]
                 explanation = unique_df[unique_df["Column"] == column_name]["Explanation"].iloc[0]
                 
                 if is_unique and should_unique:
@@ -17758,13 +17795,6 @@ The clause will be filled in the following format: SELECT (Clause?) AS {column_n
 If so, provide the projection clause.
 
 Return in the following format:
-```json
-{{  
-    "explanation": "The problem is ... A simple projection is (not) suffice because ...",
-    "could_clean": true/false,
-    "projection_clause": "{column_name}..."
-}}
-
 ```yml
 explanation: |
     The error is caused by ...
@@ -18020,7 +18050,8 @@ class CleanUnusualForAll(MultipleNode):
                 
             clean_unusual_col = clean_unusual[col]
             
-            comment += f"-- {col}: {clean_unusual_col.get('explanation', '')}\n"
+            explanation_value = clean_unusual_col.get('explanation', '').replace('\n', ' ')
+            comment += f"-- {col}: {explanation_value}\n"
 
             if clean_unusual_col["projection"]:
                 if clean_unusual_col["could_use_projection"]:
@@ -18100,9 +18131,14 @@ class HandleMissing(Node):
         df = df.drop(columns=["Explanation"])
         
         print("🧹 The following columns have abnormal missing values. Please select a strategy to handle them.")
-        categories = ["Unchanged", "Drop Column", "Remove Rows"]
-
-        df["Strategy"] = "Unchanged"
+        
+        UNCHANGE = "🔄 Unchanged"
+        DROP_COLUMN = "🗑️ Drop Column"
+        REMOVE_ROWS = "🧹 Remove Rows"
+        
+        categories = [UNCHANGE, DROP_COLUMN, REMOVE_ROWS]
+        
+        df["Strategy"] = np.where(df["NULL (%)"] > 90, DROP_COLUMN, UNCHANGE)
         
         editable_columns = [False, False, True]
         reset = True
@@ -18125,8 +18161,8 @@ class HandleMissing(Node):
         
         
         def create_missing_handling_sql(df, schema, table_name):
-            drop_columns = df[df["Strategy"] == "Drop Column"]["Column"].tolist()
-            remove_rows = df[df["Strategy"] == "Remove Rows"]["Column"].tolist()
+            drop_columns = df[df["Strategy"] == DROP_COLUMN]["Column"].tolist()
+            remove_rows = df[df["Strategy"] == REMOVE_ROWS]["Column"].tolist()
             
             if len(drop_columns) == len(schema):
                 raise ValueError("All columns are dropped. Please keep at least one column.")
@@ -18865,30 +18901,38 @@ class DecideStringUnusualForAll(MultipleNode):
 
     
     
-def create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df):
+def create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df=None, unique_df=None, categorical_df=None):
     yml_content = f"""version: 2
-
 models:
   - name: {table_name}
     description: "{table_summary}"
     columns:"""
-
     for column in columns:
         description = column_desc.loc[column_desc['Column'] == column, 'Summary'].values[0]
-
-        is_null_acceptable = miss_df.loc[miss_df['Column'] == column, 'Is NULL Acceptable?'].values
-        tests = "- not_null" if not is_null_acceptable or pd.isnull(is_null_acceptable[0]) else ""
-
-        if is_null_acceptable and not is_null_acceptable[0]:
-            explanation = miss_df.loc[miss_df['Column'] == column, 'Explanation'].values[0]
-            description += f"\nMissing Value is Acceptable: {explanation}"
-
+        tests = []
+        if miss_df is not None:
+            is_null_acceptable = miss_df.loc[miss_df['Column'] == column, 'Is NULL Acceptable?'].values
+            if is_null_acceptable.size == 0 or pd.isnull(is_null_acceptable[0]):
+                tests.append("not_null")
+            if is_null_acceptable.size > 0 and not is_null_acceptable[0]:
+                explanation = miss_df.loc[miss_df['Column'] == column, 'Explanation'].values[0]
+                description += f"\\nMissing Value is Acceptable: {explanation}"
+        if unique_df is not None:
+            is_unique = unique_df.loc[unique_df['Column'] == column, 'Is Unique?'].values
+            if is_unique.size > 0 and is_unique[0]:
+                tests.append("unique")
+        if categorical_df is not None:
+            is_categorical = categorical_df.loc[categorical_df['Column'] == column, 'Is Categorical?'].values
+            if is_categorical.size > 0 and is_categorical[0]:
+                accepted_values = categorical_df.loc[categorical_df['Column'] == column, 'Domain'].values[0]
+                if not isinstance(accepted_values, list):
+                    accepted_values = ast.literal_eval(accepted_values)
+                tests.append(f"accepted_values:\n{indent_paragraph('values: [' + ', '.join(accepted_values) + ']', spaces=8)}")
         yml_content += f"""
       - name: {column}
         description: "{description}"
         tests:
-          {tests}"""
-
+{indent_paragraph(chr(10).join(f"- {test}" for test in tests), spaces=10)}"""
     return yml_content
 
 
@@ -18921,10 +18965,9 @@ class WriteStageYMLCode(Node):
         new_table_name = "stg_" + old_table_name.replace("src_", "")
 
         sql_query = f"""SELECT * FROM {table_pipeline}"""
-
         step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
         step.run_codes()
-
+        
         table_pipeline.add_step_to_final(step)
 
         tab_data = []
@@ -18945,15 +18988,28 @@ class WriteStageYMLCode(Node):
         tab_data.append(("sql", combined_html))
         
         table_pipeline = self.para["table_pipeline"]
-        table_name = "stg_" + table_pipeline.get_source_step().name
+        table_name = new_table_name
         table_summary = self.get_sibling_document("Create Short Table Summary").replace("**","")
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
+        
         column_desc = pd.read_json(self.get_sibling_document("Describe Columns"), orient="split")
         miss_df = pd.read_json(self.get_sibling_document("Decide Missing Values"), orient="split")
-
-        yml_content = create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df)
-
+        
+        unique_document = self.get_sibling_document("Decide Unique Columns")
+        if unique_document == {}:
+            unique_df = None
+        else:
+            unique_df = pd.read_json(unique_document, orient="split")
+            
+        categorical_document = self.get_sibling_document('Decide If Categorical For All')
+        if categorical_document == {}:
+            categorical_df = None
+        else:
+            categorical_df = pd.read_json(categorical_document, orient="split")
+            categorical_df["Domain"] = np.where(categorical_df["Current Domain complete?"], categorical_df["Current Domain"], categorical_df["If Incomplete: True Domain (Sep By ,)"].str.split(","))
+            
+        yml_content = create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df, unique_df, categorical_df)
         
         formatter = HtmlFormatter(style='default')
         css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
@@ -19335,8 +19391,11 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
     main_workflow.add_to_leaf(DecideDataTypeList())
     main_workflow.add_to_leaf(TransformTypeForAll())
     main_workflow.add_to_leaf(DecideTrim())
+    main_workflow.add_to_leaf(DecideUnique())
     main_workflow.add_to_leaf(DecideStringUnusualForAll())
     main_workflow.add_to_leaf(CleanUnusualForAll())
+    main_workflow.add_to_leaf(DecideStringCategoricalForAll())
+    
     main_workflow.add_to_leaf(WriteStageYMLCode())
     
     return query_widget, main_workflow
@@ -20774,3 +20833,175 @@ FROM {source_table}
         
         
              
+             
+             
+            
+class DecideStringCategoricalForAll(MultipleNode):
+    default_name = 'Decide If Categorical For All'
+    default_description = 'This node allows users to decide if a string column should be free text or categorical.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        node = DecideStringCategorical(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        con = self.item["con"]
+        database_name = get_database_name(con)
+
+        columns = [col for col in schema if get_reverse_type(schema[col], database_name) =='VARCHAR']
+        self.elements = []
+        self.nodes = {}
+
+        idx = 0
+        for col in columns:
+            self.elements.append(col)
+            self.nodes[col] = self.construct_node(col, idx, len(columns))
+            idx += 1
+            
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+
+        create_progress_bar_with_numbers(2, doc_steps)
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        
+        data = {
+            'Column': [],
+            'Is Categorical?': [],
+            'Current Domain': [],
+            'Current Domain complete?': [],
+            'If Incomplete: True Domain (Sep By ,)': [],
+            'Explanation': []
+        }
+
+        if 'Decide If Categorical' in document:
+            for column_name, details in document['Decide If Categorical'].items():
+                if details['categorical']:
+                    data['Column'].append(column_name)
+                    data['Is Categorical?'].append(True)
+                    data['Current Domain'].append(details['domain'])
+                    data['Current Domain complete?'].append(details['domain_complete'])
+                    data['If Incomplete: True Domain (Sep By ,)'].append(",".join(details.get('domain_acceptable', details['domain'])))
+                    data['Explanation'].append(details['explanation'])
+
+        df = pd.DataFrame(data)
+
+        if len(df) == 0:
+            callback(document)
+            return
+
+        editable_columns = [False, True, True, True, True, False]
+        reset = True
+        lists = ['Current Domain']
+        long_text = ['Explanation']
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists, long_text=long_text)
+
+        print("😎 We have detected categorical columns. Please verify its domain:")
+        display(grid)
+
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
+            document = new_df.to_json(orient="split")
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+            
+class DecideStringCategorical(Node):
+    default_name = 'Decide If Categorical'
+    default_description = 'This node allows users to decide if a string column should be free text or categorical.'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+
+        print("🔍 Detecting categorical attributes...")
+        create_progress_bar_with_numbers(3, doc_steps)
+
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+        show_progress(max_value=total, value=idx)
+
+        self.input_item = input_item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        sample_size = 50
+
+        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
+        total_distinct_count = count_total_distinct(con, table_pipeline, column_name)
+
+        return column_name, sample_values, sample_size, total_distinct_count
+
+
+    def run(self, extract_output, use_cache=True):
+        column_name, sample_values, sample_size, total_distinct_count = extract_output
+        
+        if len(sample_values) == 0:
+            return {"explanation": "Column is fully missing", "categorical": False}
+        
+        if sample_size < total_distinct_count:
+            return {"explanation": "The column has too many distinct values.", "categorical": False}
+
+        template = f"""{column_name} has the following distinct values:
+{sample_values.to_csv(index=False, header=False, quoting=2)}
+
+Review if the column is categorical with a limited domain of acceptable values (<100) or free text.
+
+
+Now, respond in Json:
+```yml
+explanation: |
+    The column means ... The accepted values are ... which (do/do not) have a limited domain
+categorical: true/false
+domain_complete: true/false # if categorical is true, are the current distinct values the full domain?
+domain_acceptable: [value1, value2, ...] # if domain_complete is false, list the full domain; otherwise, leave empty
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "explanation" in jc, "The 'explanation' key is missing in the JSON code."),
+            (lambda jc: "categorical" in jc, "The 'categorical' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["categorical"], bool), "The value of 'categorical' must be a boolean."),
+        ]
+
+        for check, error_message in checks:
+            if not check(summary):
+                raise ValueError(f"Validation failed: {error_message}")
+        
+        summary["domain"] = sample_values[column_name].tolist()
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"explanation": "Fail to run", "categorical": False}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)

@@ -5,6 +5,97 @@ from matplotlib_venn import venn2
 import seaborn as sns
 import base64
 from graphviz import Digraph
+from matplotlib.ticker import EngFormatter
+
+def eng_formatter_with_precision(precision):
+    def _formatter(x, pos):
+        eng = EngFormatter(places=precision, sep="\N{THIN SPACE}")
+        return eng.format_eng(x)
+    return _formatter
+
+def plot_distribution_numerical(con, table_name, column_name):
+    """
+    This function takes a database connection, table name, and a column name as input.
+    It plots a vertical histogram for the numeric column and returns it as a base64-encoded PNG string.
+    """
+    counts, bin_width, bin_centers = build_histogram_inputs(con, column_name, table_name)
+
+    sns.set_style("whitegrid")
+    plt.figure(figsize=(4, 2))
+
+    hist_plot = plt.bar(bin_centers, counts, width=bin_width, align='center', color="#5DADE2", edgecolor="black")
+
+    plt.gca().xaxis.set_major_formatter(eng_formatter_with_precision(precision=1))
+    plt.xticks(bin_centers[::6])
+
+    for rect in hist_plot:
+        height = rect.get_height()
+        plt.text(rect.get_x() + rect.get_width() / 2, height, f'{int(height)}', ha='center', va='bottom', fontsize=8)
+
+    plt.ylabel('Frequency')
+    plt.xlabel(column_name)
+
+    plt.subplots_adjust(top=0.9)
+
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=300)
+    plt.close()
+    buf.seek(0)
+
+    image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    return image_base64
+
+
+def plot_distribution_category(con, table_name, column_name):
+
+    result_dict = build_barchat_input(con, column_name, table_name, limit=11)
+    result_dict = modify_data_dict(result_dict, limit=30)
+    
+    plt.figure(figsize=(4, 2))
+    
+    categories = list(result_dict.keys())
+    counts = list(result_dict.values())
+    
+    bar_plot = sns.barplot(y=categories, x=counts, color="#5DADE2", edgecolor="black")
+    
+    if 'Other values' in categories:
+        other_index = categories.index('Other values')
+        bar_plot.patches[other_index].set_facecolor('orange')
+    
+    for index, value in enumerate(counts):
+        bar_plot.text(value, index, f'{value}', color='black', va='center', fontsize=8)
+    
+    plt.xlabel(column_name)
+    
+    plt.tight_layout()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=300)
+    plt.close()
+    buf.seek(0)
+    
+    image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    
+    return image_base64
+
+def modify_data_dict(data_dict, limit=30):
+    modified_dict = {}
+    for label, value in data_dict.items():
+        new_label = (str(label)[:limit] + "...") if len(str(label)) > limit else str(label)
+        
+        if new_label in modified_dict:
+            if isinstance(modified_dict[new_label], list):
+                modified_dict[new_label].append(value)
+            else:
+                modified_dict[new_label] = [modified_dict[new_label], value]
+        else:
+            modified_dict[new_label] = value
+    
+    return modified_dict
+  
 
 def plot_venn_percentage(array1, array2, name1, name2):
 
