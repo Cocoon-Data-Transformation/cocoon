@@ -6,7 +6,7 @@
 
 😎 **Cocoon** provides LLM agents to organize your data warehouse, ready for analysis.
 
-Given a **Data Task** from the user, Cocoon connects to your data warehouse, explores your data, guides user step-by-step, and automatically build SQL pipeline to complete the task.
+Given a **Data Task** from the user, Cocoon connects to your data warehouse, explores your data, guides user step-by-step, and automatically builds SQL pipeline to complete the task.
 
 <div align="center">
   <img src="./images/arch.png" alt="Cocoon Logo" />
