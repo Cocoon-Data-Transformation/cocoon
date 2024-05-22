@@ -17826,8 +17826,8 @@ It has the following values, ordered by frequency:
 
 Task: First, understand what are the unusual values and why.
 Then, reason if the corrected value is obvious.
-If so, maps old values to correct values to fix the problems.
-If the old values have inconsistent cases, map to the most frequent case.
+If so, maps old values to the correct values to fix the problems.
+E.g., if the old values have inconsistent patters/typos, map to the most frequent case.
 If a few old values are meaningless, map to empty string.
 If almost all old values are meaningless, it is not possible to clean.
 
@@ -17973,7 +17973,7 @@ mapping:
                 disabled=False,
                 button_style='danger',
                 tooltip='Click to reject',
-                icon='check'
+                icon='close'
             )
             def on_reject_button_clicked(b):
                 clear_output(wait=True)
@@ -18095,7 +18095,7 @@ FROM {table_pipeline}{where_sql}"""
 
         callback(document)
         
-        
+            
 class HandleMissing(Node):
     default_name = 'Handle Missing Values'
     default_description = 'This node allows users to handle missing values.'
@@ -19398,7 +19398,6 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
     main_workflow.add_to_leaf(DecideStringUnusualForAll())
     main_workflow.add_to_leaf(CleanUnusualForAll())
     main_workflow.add_to_leaf(DecideStringCategoricalForAll())
-    
     main_workflow.add_to_leaf(WriteStageYMLCode())
     
     return query_widget, main_workflow
@@ -19443,15 +19442,16 @@ class DescribeColumnsList(ListNode):
 
         template = f"""You have the following table:
 {table_desc}
-
 {table_summary}
 
-Task: Describe the columns in the table.
+Tasks: 
+(1) Describe the columns in the table.
+(2) If the original column name is not descriptive, provide a new name. Otherwise, keep the original name.
 
 Return in the following format:
 ```json
 {{
-    "{column_names[0]}": "Short description in < 10 words",
+    "{column_names[0]}": ["Short description in < 10 words", "new_column_name"],
     ...
 }}
 ```"""
@@ -19469,7 +19469,6 @@ Return in the following format:
     def run_but_fail(self, extract_output, use_cache=True):
         default_response = {column: column for column in extract_output[2]}
         return default_response
-    
     
     def merge_run_output(self, run_outputs):
         merged_output = {}
@@ -19496,32 +19495,79 @@ Return in the following format:
         for col in schema:
             rows_list.append({
                 "Column": col,
-                "Summary": json_code[col],
+                "Summary": json_code[col][0],
+                "New Name": json_code[col][1],
+                "Renamed?": "✔️ Yes" if json_code[col][1] != col else "❌ No"
             })
 
         df = pd.DataFrame(rows_list)
         
-        editable_columns = [False, True]
+        editable_columns = [False, True, True, False]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
         print("😎 We have described the columns:")
         display(grid)
 
         next_button = widgets.Button(
-            description='Next',
+            description='Accept Rename',
             disabled=False,
             button_style='success',
             tooltip='Click to submit',
             icon='check'
         )  
+        
+        reject_button = widgets.Button(
+            description='Reject Rename',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='close'
+        )
+        
+        def on_button_clicked2(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="split")
+            callback(document)
+            
 
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
+            
+            renamed = (new_df["Column"] != new_df["New Name"]).any()
+            
+            if renamed:
+                if new_df["New Name"].duplicated().any():
+                    print(f"⚠️ Please provide unique names for the columns.")
+                    return
+
+                new_table_name = f"{table_pipeline}_renamed"
+                comment = f"-- Rename: Renaming columns\n"
+                selection_clauses = []
+                
+                for index, row in new_df.iterrows():
+                    old_name = row["Column"]
+                    new_name = row["New Name"]
+                    new_name = clean_column_name(new_name)
+                    if old_name != new_name:
+                        comment += f"-- {old_name} -> {new_name}\n"
+                        selection_clauses.append(f"{old_name} AS {new_name}")
+                    else:
+                        selection_clauses.append(f"{old_name}")
+                
+                selection_clause = ',\n'.join(selection_clauses)
+                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                sql_query = comment + sql_query
+                con = self.item["con"]
+                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                step.run_codes()
+                table_pipeline.add_step_to_final(step)
+            
             document = new_df.to_json(orient="split")
             callback(document)
 
         next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
 
-        display(next_button)
+        display(HBox([reject_button, next_button]))
         
         if self.viewer:
             on_button_clicked(next_button)
