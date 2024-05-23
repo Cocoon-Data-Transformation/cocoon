@@ -16246,9 +16246,28 @@ Now, return in the following format:
 
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: all(isinstance(key, str) for key in jc.keys()), "Not all keys in the dictionary are strings."),
+            (lambda jc: all(key in numerical_columns for key in jc.keys()), "The dictionary contains keys that are not in the numerical_columns list."),
+            (lambda jc: all(isinstance(value, dict) for value in jc.values()), "Not all values in the dictionary are dictionaries."),
+            (lambda jc: all("explanation" in value and "min" in value and "max" in value for value in jc.values()), "Not all inner dictionaries contain 'explanation', 'min', and 'max' keys."),
+            (lambda jc: all(isinstance(value["explanation"], str) for value in jc.values()), "Not all 'explanation' values are strings."),
+            (lambda jc: all(isinstance(value["min"], (int, float)) for value in jc.values()), "Not all 'min' values are numbers (int or float)."),
+            (lambda jc: all(isinstance(value["max"], (int, float)) for value in jc.values()), "Not all 'max' values are numbers (int or float)."),
+            (lambda jc: all(value["min"] <= value["max"] for value in jc.values()), "Not all 'min' values are less than or equal to their corresponding 'max' values."),
+        ]
+        
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
 
         
         return json_code
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         if icon_import:
@@ -16488,18 +16507,22 @@ class DecideDMV(Node):
 
     def run(self, extract_output, use_cache=True):
         column_name, sample_values = extract_output
+        
+        if len(sample_values) == 0:
+            return {"reasoning": "Column is fully missing", "DMV": []}
 
         template = f"""{column_name} has the following distinct values:
 {sample_values.to_csv(index=False, header=False, quoting=2)}
 
-From these values, detect disguised missing values: values that are not null but should be considered as missing.
+From these values, detect disguised missing values, which means "missing" or "not available".
+Note that some values are simply typos. Disregard them.
+Values like "0" are not disguised missing values.
 
 Return in json format:
 ```json
 {{
     "reasoning": "xxx values are disguised missing values because ...",
-    "DMV": ["N/A", "-1", ...], (empty if no disguised missing values)
-    "explanation": "if has DMV, short explanation in <10 words"
+    "DMV": ["N/A", "-1", ...] (empty if no disguised missing values)
 }}
 ```"""
 
@@ -16511,12 +16534,14 @@ Return in json format:
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
         
-        
-        
         return json_code
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"reasoning": "No disguised missing values found.", "DMV": []}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
+
 
 class DecideDMVforAll(MultipleNode):
     default_name = 'Decide Disguised Missing Values For All'
@@ -16534,7 +16559,11 @@ class DecideDMVforAll(MultipleNode):
     def extract(self, item):
         table_pipeline = self.para["table_pipeline"]
         schema = table_pipeline.get_final_step().get_schema()
-        columns = list(schema.keys())
+        
+        con = self.item["con"]
+        database_name = get_database_name(con)
+        columns = [col for col in schema if get_reverse_type(schema[col], database_name) =='VARCHAR']
+        
         self.elements = []
         self.nodes = {}
         
@@ -16552,51 +16581,106 @@ class DecideDMVforAll(MultipleNode):
             for key in document["Decide Disguised Missing Values"]:
                 if document["Decide Disguised Missing Values"][key]["DMV"]:
                     data.append([key, document["Decide Disguised Missing Values"][key]["DMV"], 
-                                document["Decide Disguised Missing Values"][key]["explanation"], 
-                                True,])
+                                True,
+                                ",".join(document["Decide Disguised Missing Values"][key]["DMV"])])
                     
-                    
-        if not data:
-            callback(document)
-            return
         
-        
-        if not data:
-            callback(document)
-            return
-        
-        df = pd.DataFrame(data, columns=["Column", "Disguised Missing Values", "Explanation", "Endorse"])
+        df = pd.DataFrame(data, columns=["Column", "Disguised Missing Values", "Impute to NULL?", "Values to NULL (Sep By ,)"])
         
         if len(df) == 0:
             callback(df.to_json(orient="split"))
             return
         
         editable_columns = [False, True, True, True]
-        grid = create_dataframe_grid(df, editable_columns, reset=True, lists=["Disguised Missing Values"])
+        lists = ["Disguised Missing Values"]
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists)
         
-        print("😎 We have identified disguised missing values:")
+        print("😎 We have identified disguised missing values!")
+        print("Please review and enter the values that will be imputed to NULL.")
         display(grid)
         
         next_button = widgets.Button(
-            description='Submit',
+            description='Accept to NULL',
             disabled=False,
             button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
         
-        def on_button_clicked(b):
-            new_df =  grid_to_updated_dataframe(grid, lists=["Disguised Missing Values"])
+        reject_button = widgets.Button(
+            description='Reject',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='close'
+        )
+            
+        def on_button_clicked2(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
+            new_df["Impute to NULL?"] = False
             document = new_df.to_json(orient="split")
+            callback(document)
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
+            
+            has_non_empty_values = new_df["Impute to NULL?"].any()
+            
+            if has_non_empty_values:
+                table_pipeline = self.para["table_pipeline"]
+                new_table_name = f"{table_pipeline}_null"
+                comment = f"-- NULL Imputation: Impute Null to Disguised Missing Values\n"
+                selection_clauses = []
+                
+                schema = table_pipeline.get_final_step().get_schema()
+                columns = set(schema.keys())
+        
+                for index, row in new_df.iterrows():
+                    if not row["Impute to NULL?"]:
+                        continue
+                    
+                    col = row["Column"]
+                    
+                    columns.remove(col)
+                    
+                    to_remove_values = row["Values to NULL (Sep By ,)"]
+                    
+                    to_remove_values = to_remove_values.split(",")
 
+                    selection_str = "CASE\n"
+                    for to_remove_value in to_remove_values:
+                        to_remove_value = to_remove_value.replace("''", "'").replace("'", "''")
+                        selection_str += f"    WHEN {col} = '{to_remove_value}' THEN NULL\n"
+                        
+                    comment += f"-- {col}: {to_remove_values}\n"
+                    selection_str += f"    ELSE {col}\n"
+                    selection_str += "END AS " + col
+                    selection_clauses.append(selection_str)
+                
+                for col in columns:
+                    selection_clauses.append(col)
+                
+                selection_clause = ',\n'.join(selection_clauses)
+                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                sql_query = comment + sql_query
+                con = self.item["con"]
+                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                step.run_codes()
+                table_pipeline.add_step_to_final(step)
+            
+            
+            document = new_df.to_json(orient="split")
             callback(document)
         
         next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
 
-        display(next_button)
+        display(HBox([reject_button,next_button]))
         
         if self.viewer:
             on_button_clicked(next_button)
+            
 
 def check_column_uniqueness(con, table_name, column_name, allow_null=False):
     if not allow_null:
@@ -17750,8 +17834,6 @@ def ask_save_file(file_name, content):
     display(HBox([file_name_input, overwrite_checkbox]), save_button)
     
 
-
-        
 class CleanUnusual(Node):
     default_name = 'Clean Unusual'
     default_description = 'This node allows users to clean the unusual values.'
@@ -17923,7 +18005,7 @@ mapping:
 
 
             submit_button = widgets.Button(
-                description='Endorse Clean',
+                description='Accept Clean',
                 disabled=False,
                 button_style='success',
                 tooltip='Click to endorse',
@@ -17951,7 +18033,7 @@ mapping:
             grid = create_dictionary_grid_remove(mapping, "Old Value", "New Value")
 
             submit_button = widgets.Button(
-                description='Submit',
+                description='Accept Clean',
                 disabled=False,
                 button_style='success',
                 tooltip='Click to submit',
@@ -18018,9 +18100,6 @@ class CleanUnusualForAll(MultipleNode):
                 idx += 1
 
     def display_after_finish_workflow(self, callback, document):
-        
-        
-
         clean_unusual = document.get("Clean Unusual", {})
 
         all_no_clean = True
@@ -18070,6 +18149,8 @@ class CleanUnusualForAll(MultipleNode):
 
                 selection_str = "CASE\n"
                 for old_value, new_value in mapping.items():
+                    old_value = old_value.replace("''", "'").replace("'", "''")
+                    new_value = new_value.replace("''", "'").replace("'", "''")
                     selection_str += f"    WHEN {col} = '{old_value}' THEN '{new_value}'\n"
                 selection_str += f"    ELSE {col}\n"
                 selection_str += "END AS " + col
@@ -18094,7 +18175,6 @@ FROM {table_pipeline}{where_sql}"""
 
 
         callback(document)
-        
             
 class HandleMissing(Node):
     default_name = 'Handle Missing Values'
@@ -18911,23 +18991,23 @@ models:
     description: "{table_summary}"
     columns:"""
     for column in columns:
-        description = column_desc.loc[column_desc['Column'] == column, 'Summary'].values[0]
+        description = column_desc.loc[column_desc['New Name'].str.lower() == column.lower(), 'Summary'].values[0]
         tests = []
         if miss_df is not None:
-            is_null_acceptable = miss_df.loc[miss_df['Column'] == column, 'Is NULL Acceptable?'].values
+            is_null_acceptable = miss_df.loc[miss_df['Column'].str.lower() == column.lower(), 'Is NULL Acceptable?'].values
             if is_null_acceptable.size == 0 or pd.isnull(is_null_acceptable[0]):
                 tests.append("not_null")
             if is_null_acceptable.size > 0 and not is_null_acceptable[0]:
-                explanation = miss_df.loc[miss_df['Column'] == column, 'Explanation'].values[0]
+                explanation = miss_df.loc[miss_df['Column'].str.lower() == column.lower(), 'Explanation'].values[0]
                 description += f"\\nMissing Value is Acceptable: {explanation}"
         if unique_df is not None:
-            is_unique = unique_df.loc[unique_df['Column'] == column, 'Is Unique?'].values
+            is_unique = unique_df.loc[unique_df['Column'].str.lower() == column.lower(), 'Is Unique?'].values
             if is_unique.size > 0 and is_unique[0]:
                 tests.append("unique")
         if categorical_df is not None:
-            is_categorical = categorical_df.loc[categorical_df['Column'] == column, 'Is Categorical?'].values
+            is_categorical = categorical_df.loc[categorical_df['Column'].str.lower() == column.lower(), 'Is Categorical?'].values
             if is_categorical.size > 0 and is_categorical[0]:
-                accepted_values = categorical_df.loc[categorical_df['Column'] == column, 'Domain'].values[0]
+                accepted_values = categorical_df.loc[categorical_df['Column'].str.lower() == column.lower(), 'Domain'].values[0]
                 if not isinstance(accepted_values, list):
                     accepted_values = ast.literal_eval(accepted_values)
                 tests.append(f"accepted_values:\n{indent_paragraph('values: [' + ', '.join(accepted_values) + ']', spaces=8)}")
@@ -18997,22 +19077,36 @@ class WriteStageYMLCode(Node):
         columns = list(schema.keys())
         
         column_desc = pd.read_json(self.get_sibling_document("Describe Columns"), orient="split")
-        miss_df = pd.read_json(self.get_sibling_document("Decide Missing Values"), orient="split")
+        
+        miss_document = self.get_sibling_document("Decide Missing Values")
+
+        if miss_document == {} or len(miss_document) == 0:
+            miss_df = None
+        else:
+            miss_df = pd.read_json(miss_document, orient="split")
+            if len(miss_df) == 0:
+                miss_df = None
         
         unique_document = self.get_sibling_document("Decide Unique Columns")
         if unique_document == {}:
             unique_df = None
         else:
             unique_df = pd.read_json(unique_document, orient="split")
+            if len(unique_df) == 0:
+                unique_df = None
             
         categorical_document = self.get_sibling_document('Decide If Categorical For All')
         if categorical_document == {}:
             categorical_df = None
         else:
             categorical_df = pd.read_json(categorical_document, orient="split")
-            categorical_df["Domain"] = np.where(categorical_df["Current Domain complete?"], categorical_df["Current Domain"], categorical_df["If Incomplete: True Domain (Sep By ,)"].str.split(","))
-            
-        yml_content = create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df, unique_df, categorical_df)
+            if len(categorical_df) > 0:
+                categorical_df["Domain"] = np.where(categorical_df["Current Domain complete?"], categorical_df["Current Domain"], categorical_df["If Incomplete: True Domain (Sep By ,)"].str.split(","))
+            else:
+                categorical_df = None
+                
+        yml_content = create_dbt_schema_yml(table_name, table_summary, columns, 
+                                            column_desc, miss_df, unique_df, categorical_df)
         
         formatter = HtmlFormatter(style='default')
         css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
@@ -19032,6 +19126,9 @@ class WriteStageYMLCode(Node):
 
 
 
+        
+        
+        
         
 
 def create_stage_workflow(table_name, con, viewer=True):
@@ -19367,8 +19464,8 @@ class SelectTable(Node):
                 
         next_button.on_click(on_button_click)
         display(next_button)
-        
-        
+         
+
 def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
     if query_widget is None:
         query_widget = QueryWidget(con)
@@ -19389,18 +19486,20 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
     main_workflow.add_to_leaf(CreateShortTableSummary())
     main_workflow.add_to_leaf(DecideDuplicate())
     main_workflow.add_to_leaf(DescribeColumnsList())
-    main_workflow.add_to_leaf(DecideMissingList())
-    main_workflow.add_to_leaf(HandleMissing())
     main_workflow.add_to_leaf(DecideDataTypeList())
     main_workflow.add_to_leaf(TransformTypeForAll())
     main_workflow.add_to_leaf(DecideTrim())
     main_workflow.add_to_leaf(DecideUnique())
     main_workflow.add_to_leaf(DecideStringUnusualForAll())
     main_workflow.add_to_leaf(CleanUnusualForAll())
+    main_workflow.add_to_leaf(DecideDMVforAll())
+    main_workflow.add_to_leaf(DecideMissingList())
+    main_workflow.add_to_leaf(HandleMissing())
     main_workflow.add_to_leaf(DecideStringCategoricalForAll())
     main_workflow.add_to_leaf(WriteStageYMLCode())
     
     return query_widget, main_workflow
+
 
 class DescribeColumnsList(ListNode):
     default_name = 'Describe Columns'
@@ -19446,7 +19545,7 @@ class DescribeColumnsList(ListNode):
 
 Tasks: 
 (1) Describe the columns in the table.
-(2) If the original column name is not descriptive, provide a new name. Otherwise, keep the original name.
+(2) If the original column name is not descriptive, provide a new name (unique across others). Otherwise, keep the original name.
 
 Return in the following format:
 ```json
@@ -19463,11 +19562,24 @@ Return in the following format:
         
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
+    
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: all(key in column_names for key in jc.keys()), "The dictionary contains keys that are not in the column_names list."),
+            (lambda jc: all(isinstance(value, list) and len(value) == 2 for value in jc.values()), "Not all values in the dictionary are lists with exactly 2 elements."),
+            (lambda jc: all(isinstance(value[0], str) for value in jc.values()), "Not all column descriptions are strings."),
+            (lambda jc: all(isinstance(value[1], str) for value in jc.values()), "Not all new column names are strings."),
+            (lambda jc: len(set(value[1] for value in jc.values())) == len(jc), "New column names are not unique."),
+        ]
 
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
+            
         return json_code
 
     def run_but_fail(self, extract_output, use_cache=True):
-        default_response = {column: column for column in extract_output[2]}
+        default_response = {column: [column, column] for column in extract_output[2]}
         return default_response
     
     def merge_run_output(self, run_outputs):
@@ -19525,6 +19637,7 @@ Return in the following format:
         
         def on_button_clicked2(b):
             new_df =  grid_to_updated_dataframe(grid)
+            new_df["New Name"] = new_df["Column"]
             document = new_df.to_json(orient="split")
             callback(document)
             
@@ -19536,8 +19649,11 @@ Return in the following format:
             
             if renamed:
                 if new_df["New Name"].duplicated().any():
-                    print(f"⚠️ Please provide unique names for the columns.")
+                    print(f"⚠️ Please provide unique names for the columns. The following columns have duplicated names:")
+                    duplicate_names = new_df[new_df["New Name"].duplicated()]
+                    print(", ".join(duplicate_names["New Name"].tolist()))
                     return
+
 
                 new_table_name = f"{table_pipeline}_renamed"
                 comment = f"-- Rename: Renaming columns\n"
@@ -20120,6 +20236,9 @@ class DecideColumnsPattern(Node):
                 start += 50
                 
         return column_group
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         
