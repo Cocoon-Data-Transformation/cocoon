@@ -79,7 +79,72 @@ strptime('Monday, 2 March 1992 - 08:32:45 PM', '%A, %-d %B %Y - %I:%M:%S %p')"""
 TO_DATE('02/03/1992', 'DD/MM/YYYY')
 TO_TIMESTAMP('Monday, 2 March 1992 - 08:32:45 PM', 'DY, D MONTH YYYY - HH12:MI:SS AM')""",
         },
-    }
+        'BOOL': {
+            "DuckDB": """Example Clause:
+CASE WHEN col = 'no' THEN false ELSE true END""",
+            "Snowflake": """Example Clause:
+CASE WHEN col = 'no' THEN false ELSE true END""",
+        },
+        'ARRAY': {
+            "DuckDB": """Example Clause:
+from_json(json('[1,2,3]'),'["INT"]')
+SPLIT('127.0.0.1', '.')""",
+            "Snowflake": """Example Clause:
+PARSE_JSON('["Apple", "Pear","Chicken"]')
+SPLIT('127.0.0.1', '.')""",
+        },
+        'JSON': {
+            "DuckDB": """Example Clause:
+from_json(json('[1,2,3]'),'["INT"]')
+SPLIT('127.0.0.1', '.')""",
+        },
+        'MAP': {
+            "Snowflake": """Example Clause:
+PARSE_JSON('["Apple", "Pear","Chicken"]')
+SPLIT('127.0.0.1', '.')""",
+        },
+    },
+    
+    'INT':{
+        'DATE': {
+            "DuckDB": """Example Clause:
+strptime(CAST(19920302 AS VARCHAR), '%Y%m%d')""",
+            "Snowflake": """Example Clause:
+TO_DATE(TO_CHAR(19920302), 'YYYYMMDD')""",
+        },
+        'TIME': {
+            "DuckDB": """Example Clause:
+strptime(CAST(13245 AS VARCHAR), '%H%M%S')""",
+            "Snowflake": """Example Clause:
+TO_TIME(TO_CHAR(13245), 'HHMISS')""",
+        },
+        'TIMESTAMP': {
+            "DuckDB": """Example Clause:
+strptime(CAST(199203020832 AS VARCHAR), '%Y%m%d%H%M')""",
+            "Snowflake": """Example Clause:
+TO_TIMESTAMP(TO_CHAR(19920302083200), 'YYYYMMDDHH24MISS')""",
+        },
+    },
+    'DECIMAL':{
+        'DATE': {
+            "DuckDB": """Example Clause:
+strptime(CAST(19920302 AS VARCHAR), '%Y%m%d')""",
+            "Snowflake": """Example Clause:
+TO_DATE(TO_CHAR(19920302), 'YYYYMMDD')""",
+        },
+        'TIME': {
+            "DuckDB": """Example Clause:
+strptime(CAST(13245 AS VARCHAR), '%H%M%S')""",
+            "Snowflake": """Example Clause:
+TO_TIME(TO_CHAR(13245), 'HHMISS')""",
+        },
+        'TIMESTAMP': {
+            "DuckDB": """Example Clause:
+strptime(CAST(199203020832 AS VARCHAR), '%Y%m%d%H%M')""",
+            "Snowflake": """Example Clause:
+TO_TIMESTAMP(TO_CHAR(19920302083200), 'YYYYMMDDHH24MISS')""",
+        },
+    },
 }
 
 def get_reverse_type(data_type, database):

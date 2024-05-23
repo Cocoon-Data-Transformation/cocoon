@@ -15091,11 +15091,12 @@ class TransformationSQLPipeline(TransformationPipeline):
             for step_idx  in sorted_step_idx[1:-1]:
                 step = self.steps[step_idx]
                 codes = step.get_codes(target_id=step_idx, mode="AS")
-                with_clauses.append(cocoon_comment_start + codes + cocoon_comment_end)
+                with_clauses.append(codes)
 
-            codes = ""
+            codes = cocoon_comment_start
             if len(with_clauses) > 0:
                 codes += "WITH \n" + ",\n\n".join(with_clauses) + "\n\n"
+            codes += cocoon_comment_end
 
             codes += self.steps[sorted_step_idx[-1]].get_codes(target_id=sorted_step_idx[-1], mode="")
 
@@ -15112,6 +15113,10 @@ class TransformationSQLPipeline(TransformationPipeline):
                 
             return "\n\n".join(table_clauses)
             
+            
+            
+
+
             
 
     def __repr__(self):
@@ -15496,6 +15501,9 @@ class DecideProjection(Node):
 
         if self.viewer:
             callback_next(list(range(num_cols)))
+            
+        if "viewer" in self.para and self.para["viewer"]:
+            callback_next(list(range(num_cols)))
 
 class CreateColumnGrouping(Node):
     default_name = 'Create Column Grouping'
@@ -15876,6 +15884,9 @@ class DecideDuplicate(Node):
 
             if self.viewer:
                 on_button_clicked(no_button)
+                
+            if "viewer" in self.para and self.para["viewer"]:
+                on_button_clicked(no_button)            
 
 
         else:
@@ -16596,8 +16607,9 @@ class DecideDMVforAll(MultipleNode):
         reset = True
         grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists)
         
-        print("😎 We have identified disguised missing values!")
+        print("😎 We have identified disguised missing values (DMV)!")
         print("Please review and enter the values that will be imputed to NULL.")
+        print("⚠️ Empty DMV is because of empty string.")
         display(grid)
         
         next_button = widgets.Button(
@@ -16678,7 +16690,7 @@ class DecideDMVforAll(MultipleNode):
 
         display(HBox([reject_button,next_button]))
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
             
 
@@ -16822,12 +16834,26 @@ Return in the following format:
         display(grid)
         
         next_button = widgets.Button(
-            description='Submit',
+            description='Accept Unique',
             disabled=False,
             button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
+        
+        reject_button = widgets.Button(
+            description='Reject Trim',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='times'
+        )
+        
+        def on_button_clicked2(b):
+            clear_output(wait=True)
+            new_df =  grid_to_updated_dataframe(grid)
+            new_df["Should Unique?"] = False
+            callback(new_df.to_json(orient="records"))
         
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
@@ -16836,10 +16862,11 @@ Return in the following format:
             callback(document)
         
         next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
 
-        display(next_button)
+        display(HBox([reject_button, next_button]))
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
 
 
@@ -17810,6 +17837,32 @@ body {{
     
 
 
+def ask_save_files(labels, file_names, contents):
+    file_path_inputs = [Text(value=file_name, description=label) for label, file_name in zip(labels, file_names)]
+
+    overwrite_checkbox = Checkbox(value=False, description='Allow Overwrite')
+
+    def save_files_click(b):
+        for file_path_input, label, content in zip(file_path_inputs, labels, contents):
+            file_path = file_path_input.value
+            allow_overwrite = overwrite_checkbox.value
+
+            if os.path.exists(file_path) and not allow_overwrite:
+                print(f"⚠️ Warning: Failed to save {label}. File already exists.")
+            else:
+                with open(file_path, "w") as file:
+                    file.write(content)
+                print(f"🎉 File saved successfully as {file_path}")
+
+    save_button = Button(description="Save Files")
+    save_button.on_click(save_files_click)
+
+    display(VBox(file_path_inputs+[overwrite_checkbox]), save_button)
+    
+    return overwrite_checkbox, save_button, save_files_click
+    
+
+    
 def ask_save_file(file_name, content):
     print(f"🤓 Do you want to save the file?")
 
@@ -17897,6 +17950,8 @@ projection_clause: |
             
             yml_code = extract_yml_code(response['choices'][0]['message']["content"])
             summary = yaml.safe_load(yml_code)
+            
+            summary["could_clean"] = False
             summary["projection"] = True
             
 
@@ -17957,6 +18012,7 @@ mapping:
         query = create_sample_distinct_query(table_name=table_pipeline, column_name=column_name)
         create_explore_button(query_widget=query_widget, query=query)
 
+        json_code["unusual_reason"] = unusual_reason
 
         if not json_code["could_clean"]:
             print("☹️ Cocoon can't clean this for you, as it's too complex...")
@@ -17977,6 +18033,9 @@ mapping:
             submit_button.on_click(on_button_clicked)
 
             display(submit_button)
+            
+            if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+                on_button_clicked(submit_button)
             return
 
 
@@ -18066,6 +18125,9 @@ mapping:
 
             display(grid)
             display(HBox([toggle_button, submit_button]))
+            
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(submit_button)
 
 
 class CleanUnusualForAll(MultipleNode):
@@ -18136,7 +18198,7 @@ class CleanUnusualForAll(MultipleNode):
             comment += f"-- {col}: {explanation_value}\n"
 
             if clean_unusual_col["projection"]:
-                if clean_unusual_col["could_use_projection"]:
+                if clean_unusual_col["could_clean"]:
                     selections.append(clean_unusual_col["projection_clause"] + " AS " + col)
                 else:
                     selections.append(col)
@@ -18158,6 +18220,7 @@ class CleanUnusualForAll(MultipleNode):
 
         selection_sql = indent_paragraph(",\n".join(selections))
         where_sql = ""
+        
         if len(filters) > 0:
             where_sql = "\nWHERE\n" + indent_paragraph(" AND\n".join(filters) if filters else "")
 
@@ -18235,13 +18298,26 @@ class HandleMissing(Node):
         print("😎 More missing value handling strategies coming soon...")
         
         next_button = widgets.Button(
-            description='Submit',
+            description='Accept Handling',
             disabled=False,
             button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
         
+        reject_button = widgets.Button(
+            description='Reject Handling',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='times'
+        )
+        
+        def reject_button_click(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            new_df["Strategy"] = UNCHANGE
+            document = new_df.to_json(orient="split")
+            callback(document)
         
         def create_missing_handling_sql(df, schema, table_name):
             drop_columns = df[df["Strategy"] == DROP_COLUMN]["Column"].tolist()
@@ -18290,10 +18366,11 @@ FROM {table_name}"""
             callback(document)
             
         next_button.on_click(on_button_clicked)
+        reject_button.on_click(reject_button_click)
         
-        display(next_button)
+        display(HBox([reject_button, next_button]))
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
         
 class DecideDataType(Node):
@@ -18585,7 +18662,7 @@ class TransformTypeForAll(MultipleNode):
     def display_after_finish_workflow(self, callback, document):
         clear_output(wait=True)
 
-        create_progress_bar_with_numbers(2, doc_steps)
+        create_progress_bar_with_numbers(1, doc_steps)
 
         data = {
             'Column Name': [],
@@ -18685,6 +18762,9 @@ class TransformTypeForAll(MultipleNode):
 
         display(next_button)
         
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(next_button)
+        
 def where_clause_for_space(column_name):
     return f"{column_name} <> TRIM({column_name})"
 
@@ -18695,7 +18775,7 @@ class DecideTrim(Node):
     def extract(self, item):
         clear_output(wait=True)
 
-        print("🔍 Deciding Trim ...")
+        print("🔍 Deciding Trim for leading/tailing white spaces...")
         create_progress_bar_with_numbers(2, doc_steps)
 
         con = self.item["con"]
@@ -18801,59 +18881,82 @@ Return in the following format:
 
         def on_button_clicked(b):
             print("😎 Query submitted. Check out the data widget!")
-            query_widget.run_query(f"SELECT {columns_str} FROM {table_pipeline}")
+            query_widget.run_query(f"SELECT DISTINCT {columns_str} FROM {table_pipeline}")
 
         explore_button.on_click(on_button_clicked)
 
         display(explore_button)
 
         next_button = widgets.Button(
-            description='Next',
+            description='Accept Trim',
             disabled=False,
             button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
+        
+        reject_button = widgets.Button(
+            description='Reject Trim',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='times'
+        )
+        
+        def on_button_clicked2(b):
+            clear_output(wait=True)
+            new_df =  grid_to_updated_dataframe(grid)
+            new_df["Trim?"] = False
+            callback(new_df.to_json(orient="records"))
+            
 
         def on_button_clicked(b):
             clear_output(wait=True)
             new_df =  grid_to_updated_dataframe(grid)
-
-            new_table_name = f"{self.para['table_pipeline']}_trimmed"
-
-            schema = self.para["table_pipeline"].get_final_step().get_schema()
-            all_columns = list(schema.keys())
-            non_affected_columns = [col for col in all_columns if col not in new_df["Column Name"].tolist()]
-            sql_query = f"SELECT\n"
-
-            columns_to_trim = []
-            columns_not_to_trim = []
-
-            for i, row in new_df.iterrows():
-                column_name = row["Column Name"]
-                trim = row["Trim?"]
-                if trim:
-                    columns_to_trim.append(column_name)
-                else:
-                    columns_not_to_trim.append(column_name)
-
-            sql_query += indent_paragraph(",\n".join(non_affected_columns + \
-                                                     columns_not_to_trim +\
-                                                     [f"TRIM({col}) AS {col}" for col in columns_to_trim]))
-
-            sql_query += f"\nFROM {self.para['table_pipeline']}"
             
-            sql_query = f"-- Trim Leading and Trailing Spaces\n" + {sql_query}
+            if new_df["Trim?"].any():
+                sql_pipeline = self.para["table_pipeline"]
 
-            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
-            step.run_codes()
-            self.para["table_pipeline"].add_step_to_final(step)
+                new_table_name = f"{sql_pipeline}_trimmed"
+
+                schema = self.para["table_pipeline"].get_final_step().get_schema()
+                all_columns = list(schema.keys())
+                non_affected_columns = [col for col in all_columns if col not in new_df["Column Name"].tolist()]
+                sql_query = f"SELECT\n"
+
+                columns_to_trim = []
+                columns_not_to_trim = []
+
+                for i, row in new_df.iterrows():
+                    column_name = row["Column Name"]
+                    trim = row["Trim?"]
+                    if trim:
+                        columns_to_trim.append(column_name)
+                    else:
+                        columns_not_to_trim.append(column_name)
+
+                sql_query += indent_paragraph(",\n".join(non_affected_columns + \
+                                                        columns_not_to_trim +\
+                                                        [f"TRIM({col}) AS {col}" for col in columns_to_trim]))
+
+                sql_query += f"\nFROM {sql_pipeline}"
+                
+                sql_query = f"-- Trim Leading and Trailing Spaces\n" + sql_query
+
+                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+                step.run_codes()
+                sql_pipeline.add_step_to_final(step)
 
             callback(new_df.to_json(orient="records"))
 
         next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
 
-        display(next_button)
+        display(HBox([reject_button, next_button]))
+        
+        
+        if "viewer" in self.para and self.para["viewer"]:
+            on_button_clicked(next_button)
         
 class DecideStringUnusual(Node):
     default_name = 'Decide String Unusual'
@@ -18889,16 +18992,15 @@ class DecideStringUnusual(Node):
         template = f"""{column_name} has the following distinct values:
 {sample_values.to_csv(index=False, header=False, quoting=2)}
 
-Review if there are any unusual values. 
-Look out for, patterns that don't align with the nature of the data.
-Weird characters/typo.
+Review if there are any weird characters/typo.
+Look out for patterns that don't align with the nature of the data.
 
 Now, respond in Json:
 ```json
 {{
     "Reaonsing": "The valuses are ... They are unusual/acceptable ...",
     "Unusualness": true/false,
-    "Examples": "xxx values are unusual because ..." (empty if not unusual) 
+    "Examples": "xxx values are unusual because ..." (<20 words, empty if not unusual) 
 }}
 ```"""
         
@@ -18984,7 +19086,8 @@ class DecideStringUnusualForAll(MultipleNode):
 
     
     
-def create_dbt_schema_yml(table_name, table_summary, columns, column_desc, miss_df=None, unique_df=None, categorical_df=None):
+def create_dbt_schema_yml(table_name, table_summary, columns, column_desc, 
+                          miss_df=None, unique_df=None, categorical_df=None, unusual_df=None):
     yml_content = f"""version: 2
 models:
   - name: {table_name}
@@ -18993,29 +19096,50 @@ models:
     for column in columns:
         description = column_desc.loc[column_desc['New Name'].str.lower() == column.lower(), 'Summary'].values[0]
         tests = []
+        cocoon_meta = {}
+        
         if miss_df is not None:
             is_null_acceptable = miss_df.loc[miss_df['Column'].str.lower() == column.lower(), 'Is NULL Acceptable?'].values
-            if is_null_acceptable.size == 0 or pd.isnull(is_null_acceptable[0]):
+            if is_null_acceptable.size == 0 or not is_null_acceptable[0]:
                 tests.append("not_null")
-            if is_null_acceptable.size > 0 and not is_null_acceptable[0]:
+            else:
                 explanation = miss_df.loc[miss_df['Column'].str.lower() == column.lower(), 'Explanation'].values[0]
-                description += f"\\nMissing Value is Acceptable: {explanation}"
+                cocoon_meta["missing_acceptable"] = explanation
+                
+        if unusual_df is not None:
+            unusual_reason  = unusual_df.loc[unusual_df['Column'].str.lower() == column.lower(), 'Explanation'].values
+            if unusual_reason.size != 0:
+                cocoon_meta["unusal_values"] = unusual_reason[0]
+                      
         if unique_df is not None:
             is_unique = unique_df.loc[unique_df['Column'].str.lower() == column.lower(), 'Is Unique?'].values
             if is_unique.size > 0 and is_unique[0]:
                 tests.append("unique")
+                
         if categorical_df is not None:
             is_categorical = categorical_df.loc[categorical_df['Column'].str.lower() == column.lower(), 'Is Categorical?'].values
             if is_categorical.size > 0 and is_categorical[0]:
                 accepted_values = categorical_df.loc[categorical_df['Column'].str.lower() == column.lower(), 'Domain'].values[0]
                 if not isinstance(accepted_values, list):
                     accepted_values = ast.literal_eval(accepted_values)
-                tests.append(f"accepted_values:\n{indent_paragraph('values: [' + ', '.join(accepted_values) + ']', spaces=8)}")
+                tests.append(f"accepted_values:\n{indent_paragraph('values: [' + ', '.join(accepted_values) + ']', spaces=4)}")
+        
+        
         yml_content += f"""
       - name: {column}
-        description: "{description}"
+        description: "{description}\""""
+
+        if tests:
+            yml_content += f"""
         tests:
 {indent_paragraph(chr(10).join(f"- {test}" for test in tests), spaces=10)}"""
+
+        if cocoon_meta:
+            cocoon_meta_yaml = yaml.dump(cocoon_meta, default_flow_style=False).strip()
+            yml_content += f"""
+        cocoon_meta:
+{indent_paragraph(cocoon_meta_yaml, spaces=10)}"""
+
     return yml_content
 
 
@@ -19105,8 +19229,20 @@ class WriteStageYMLCode(Node):
             else:
                 categorical_df = None
                 
+        unusual_df = None
+        
+        unusual_document = self.get_sibling_document('Decide Unusual String For All').get("Clean Unusual", {})
+        unusual_map = {}
+        
+        for col in unusual_document:
+            if not clean_unusual[col]["could_clean"]:
+                unusual_map[col] = clean_unusual[col]["unusual_reason"]
+                
+        if len(unusual_map) > 0:
+            unusual_df = pd.DataFrame({"Column": list(unusual_map.keys()), "Explanation": list(unusual_map.values())})
+                
         yml_content = create_dbt_schema_yml(table_name, table_summary, columns, 
-                                            column_desc, miss_df, unique_df, categorical_df)
+                                            column_desc, miss_df, unique_df, categorical_df,unusual_df )
         
         formatter = HtmlFormatter(style='default')
         css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
@@ -19129,6 +19265,20 @@ class WriteStageYMLCode(Node):
         
         
         
+        labels = ["SQL", "YAML"]
+        file_names = [f"{new_table_name}.sql", 
+                      f"{new_table_name}.yml",]
+        contents = [
+            sql_query,
+            yml_content,
+        ]
+
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            overwrite_checkbox.value = True
+            
+            save_files_click(save_button)  
         
 
 def create_stage_workflow(table_name, con, viewer=True):
@@ -19253,8 +19403,9 @@ Now, your summary in a few sentences and < 500 chars:"""
 
         display(submit_button)
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
+            
             
 class SelectMainVocabularyTable(Node):
     default_name = 'Select Main and Vocabulary Table'
@@ -19464,9 +19615,13 @@ class SelectTable(Node):
                 
         next_button.on_click(on_button_click)
         display(next_button)
+        
+        if "table_name" in self.para and "viewer" in self.para and self.para["viewer"]:
+            dropdown.value = self.para["table_name"]
+            on_button_click(next_button)
          
 
-def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
+def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None):
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -19478,7 +19633,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=True):
     main_workflow = Workflow("Data Stage Workflow", 
                             item = item, 
                             description="A workflow to stage table",
-                            para = {})
+                            para = {"viewer": viewer, "table_name": table_name})
     
     main_workflow.add_to_leaf(SelectTable())
     main_workflow.add_to_leaf(DecideColumnsPattern())
@@ -19558,7 +19713,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -19685,7 +19840,7 @@ Return in the following format:
 
         display(HBox([reject_button, next_button]))
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
             
             
@@ -19764,7 +19919,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
@@ -19859,7 +20014,7 @@ Return in the following format:
 
         display(next_button)
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
             
             
@@ -19919,7 +20074,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
@@ -19983,12 +20138,26 @@ Return in the following format:
         display(grid)
 
         next_button = widgets.Button(
-            description='Next',
+            description='Accept Cast',
             disabled=False,
             button_style='success',
             tooltip='Click to submit',
             icon='check'
         )  
+        
+        reject_button = widgets.Button(
+            description='Reject Cast',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='close'
+        )
+        
+        def on_button_clicked2(b):
+            clear_output(wait=True)
+            df = extract_grid_data_type(grid)
+            df["target_type"] = df["current_type"]
+            callback(df.to_json(orient="split"))
 
         def on_button_clicked(b):
             clear_output(wait=True)
@@ -19997,10 +20166,11 @@ Return in the following format:
             callback(df.to_json(orient="split"))
 
         next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
 
-        display(next_button)
+        display(HBox([reject_button, next_button]))
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
             
 
@@ -20296,16 +20466,34 @@ class DecideColumnsPattern(Node):
             callback(document)
         
         next_button = widgets.Button(
-            description='Submit',
+            description='Accept Remove',
             disabled=False,
             button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
         
-        next_button.on_click(on_button_clicked)
+        reject_button = widgets.Button(
+            description='Reject Remove',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='close'
+        )
         
-        display(next_button)
+        def on_button_clicked2(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            new_df["Remove?"] = False
+            document = new_df.to_json(orient="split")
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
+        
+        display(HBox([reject_button, next_button]))
+        
+        if "viewer" in self.para and self.para["viewer"]:
+            on_button_clicked(next_button)
 
 class SpecifyDirectory(Node):
     default_name = 'Specify Directory'
@@ -21078,12 +21266,26 @@ class DecideStringCategoricalForAll(MultipleNode):
         display(grid)
 
         next_button = widgets.Button(
-            description='Submit',
+            description='Accept',
             disabled=False,
             button_style='success',
             tooltip='Click to submit',
             icon='check'
         )
+        
+        reject_button = widgets.Button(
+            description='Reject',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='close'
+        )
+        
+        def on_reject_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
+            new_df['Is Categorical?'] = False
+            document = new_df.to_json(orient="split")
+            callback(document)
         
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
@@ -21092,8 +21294,12 @@ class DecideStringCategoricalForAll(MultipleNode):
             callback(document)
         
         next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_reject_button_clicked)
 
-        display(next_button)
+        display(HBox([reject_button, next_button]))
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(next_button)
             
 class DecideStringCategorical(Node):
     default_name = 'Decide If Categorical'
