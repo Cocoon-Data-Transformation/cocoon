@@ -5,7 +5,6 @@ import json
 import re
 import uuid
 import numpy as np
-import networkx as nx
 import matplotlib.patches as patches
 from ipywidgets import *
 import ipywidgets as widgets
@@ -1588,31 +1587,6 @@ def display_workflow(nodes, edges, edge_labels=None, highlight_nodes=None, highl
 
 
 
-
-
-
-
-def visualize_graph(tables, edges):
-    G = nx.Graph()
-    G.add_nodes_from(tables)
-    G.add_edges_from(edges)
-
-    pos = nx.spring_layout(G)
-
-    nx.draw_networkx_nodes(G, pos, node_color='lightgreen',node_size=1200, edgecolors='forestgreen', linewidths=1)
-
-    nx.draw_networkx_edges(G, pos, edge_color='forestgreen', width=1)
-
-    node_labels = {node:node for node in G.nodes()}
-    nx.draw_networkx_labels(G, pos, node_labels, font_size=6)
-
-    edge_labels = nx.get_edge_attributes(G, 'label')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='forestgreen')
-
-    plt.axis('off')
-    plt.gca().set_facecolor('lightgrey')
-    plt.gca().grid(which='major', color='white', linestyle='-', linewidth=0.5)
-    plt.show()
 
 
 
@@ -15046,6 +15020,7 @@ class SQLStep(TransformationStep):
 
     def display(self):
         print(self.name)
+        print(self.sql_code)
 
     def edit_widget(self, callbackfunc=None):
         self.display()
@@ -18574,7 +18549,6 @@ cast_clause: |
         summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
         
         for i in range(max_iterations):
-            
             try:
                 sql = f"""SELECT {summary['cast_clause']}
 FROM {table_pipeline}"""
@@ -18606,12 +18580,16 @@ cast_clause: |
                 yml_code = extract_yml_code(response['choices'][0]['message']["content"])
                 summary = yaml.safe_load(yml_code)
                 summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
+                
+        if i == max_iterations - 1:
+            return self.run_but_fail(extract_output, use_cache)
         
         summary["reasoning"] = reasoning
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        return {"reasoning": "Fail to cast", "cast_clause": "Fail to cast"}
+        column_name, _, _, _, _, _, _, _ = extract_output
+        return {"reasoning": "Fail to cast", "cast_clause": f"{column_name} AS {column_name}"}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         return callback(run_output)
