@@ -17,6 +17,7 @@ Given a **Data Task** from the user, Cocoon connects to your data warehouse, exp
 - [Preview: Staging, Data Cleaning, Data Preparation](#preview-staging-data-cleaning-data-preparation)
 - [Preview: Fuzzy Join, Column Standardization, Entity Matching](#preview-fuzzy-join-column-standardization-entity-matching)
 - [Preview: Fuzzy Union, Table Transformation, Common Data Model](#preview-fuzzy-union-table-transformation-common-data-model)
+- [Preview: Data Model, Data Vault](#preview-data-model-data-vault)
 - And more to come...
 
 
@@ -108,6 +109,13 @@ Give us the source table and the (example of) target table, we help you fuzzy un
 - 👉 [**Python Package:** Check out the notebook](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/fuzzy_union.ipynb)
 
 <kbd>![](./images/fuzzyunion.gif)</kbd>
+
+
+## Preview: Data Model, Data Vault
+
+Give us a database, we design the data model/data vault
+
+<kbd>![](./images/model.gif)</kbd>
 
 ## Future
 
