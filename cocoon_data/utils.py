@@ -1,6 +1,8 @@
 import sys
 import traceback
 import re
+from jinja2 import Template
+import ast
 
 def get_detailed_error_info():
     """
@@ -38,7 +40,7 @@ def replace_newline(input_string):
     return modified_string
 
 def write_log(message: str):
-    log_file = open('data_log.txt', 'a')
+    log_file = open('error_log.txt', 'a')
     log_file.write(message + '\n')
     log_file.close()
     
@@ -57,31 +59,38 @@ def clean_table_name(table_name):
 
 def clean_column_name(column_name):
     reserved_words = {
-        "ADD", "ALL", "ALTER", "AND", "ANY", "AS", "ASC", "AUTHORIZATION", "BACKUP",
-        "BEGIN", "BETWEEN", "BREAK", "BROWSE", "BULK", "BY", "CASCADE", "CASE",
-        "CHECK", "CHECKPOINT", "CLOSE", "CLUSTERED", "COALESCE", "COLLATE",
-        "COLUMN", "COMMIT", "COMPUTE", "CONSTRAINT", "CONTAINS", "CONTINUE",
-        "CONVERT", "CREATE", "CROSS", "CURRENT", "CURRENT_DATE", "CURRENT_TIME",
-        "CURRENT_TIMESTAMP", "CURRENT_USER", "CURSOR", "DATABASE", "DBCC",
-        "DEALLOCATE", "DECLARE", "DEFAULT", "DELETE", "DENY", "DESC", "DISK",
-        "DISTINCT", "DISTRIBUTED", "DOUBLE", "DROP", "DUMP", "ELSE", "END", "ERRLVL",
-        "ESCAPE", "EXCEPT", "EXEC", "EXECUTE", "EXISTS", "EXIT", "EXTERNAL", "FETCH",
-        "FILE", "FILLFACTOR", "FOR", "FOREIGN", "FREETEXT", "FROM", "FULL", "FUNCTION",
-        "GOTO", "GRANT", "GROUP", "HAVING", "HOLDLOCK", "IDENTITY", "IDENTITY_INSERT",
-        "IDENTITYCOL", "IF", "IN", "INDEX", "INNER", "INSERT", "INTERSECT", "INTO",
-        "IS", "JOIN", "KEY", "KILL", "LEFT", "LIKE", "LINENO", "LOAD", "MERGE", "NATIONAL",
-        "NOCHECK", "NONCLUSTERED", "NOT", "NULL", "NULLIF", "OF", "OFF", "OFFSETS", "ON",
-        "OPEN", "OPENDATASOURCE", "OPENQUERY", "OPENROWSET", "OPENXML", "OPTION", "OR",
-        "ORDER", "OUTER", "OVER", "PERCENT", "PIVOT", "PLAN", "PRECISION", "PRIMARY",
-        "PRINT", "PROC", "PROCEDURE", "PUBLIC", "RAISERROR", "READ", "READTEXT", "RECONFIGURE",
-        "REFERENCES", "REPLICATION", "RESTORE", "RESTRICT", "RETURN", "REVERT", "REVOKE",
-        "RIGHT", "ROLLBACK", "ROWCOUNT", "ROWGUIDCOL", "RULE", "SAVE", "SCHEMA", "SECURITYAUDIT",
-        "SELECT", "SEMANTICKEYPHRASETABLE", "SEMANTICSIMILARITYDETAILSTABLE", "SEMANTICSIMILARITYTABLE",
-        "SESSION_USER", "SET", "SETUSER", "SHUTDOWN", "SOME", "STATISTICS", "SYSTEM_USER", "TABLE",
-        "TABLESAMPLE", "TEXTSIZE", "THEN", "TO", "TOP", "TRAN", "TRANSACTION", "TRIGGER", "TRUNCATE",
-        "TRY_CONVERT", "TSEQUAL", "UNION", "UNIQUE", "UNPIVOT", "UPDATE", "UPDATETEXT", "USE",
-        "USER", "VALUES", "VARYING", "VIEW", "WAITFOR", "WHEN", "WHERE", "WHILE", "WITH", "WITHIN GROUP",
-        "WRITETEXT"
+        "ABSOLUTE", "ACTION", "ADA", "ADD", "ALL", "ALLOCATE", "ALTER", "AND", "ANY", "ARE", "AS", "ASC",
+        "ASSERTION", "AT", "AUTHORIZATION", "AVG", "BACKUP", "BEGIN", "BETWEEN", "BIT", "BIT_LENGTH", "BOTH",
+        "BREAK", "BROWSE", "BULK", "BY", "CASCADE", "CASCADED", "CASE", "CAST", "CATALOG", "CHAR", "CHAR_LENGTH",
+        "CHARACTER", "CHARACTER_LENGTH", "CHECK", "CHECKPOINT", "CLOSE", "CLUSTERED", "COALESCE", "COLLATE",
+        "COLLATION", "COLUMN", "COMMIT", "COMPUTE", "CONNECT", "CONNECTION", "CONSTRAINT", "CONSTRAINTS",
+        "CONTAINS", "CONTAINSTABLE", "CONTINUE", "CONVERT", "CORRESPONDING", "COUNT", "CREATE", "CROSS",
+        "CURRENT", "CURRENT_DATE", "CURRENT_TIME", "CURRENT_TIMESTAMP", "CURRENT_USER", "CURSOR", "DATABASE",
+        "DATE", "DAY", "DBCC", "DEALLOCATE", "DEC", "DECIMAL", "DECLARE", "DEFAULT", "DEFERRABLE", "DEFERRED",
+        "DELETE", "DENY", "DESC", "DESCRIBE", "DESCRIPTOR", "DIAGNOSTICS", "DISCONNECT", "DISK", "DISTINCT",
+        "DISTINCTROW", "DISTRIBUTED", "DOMAIN", "DOUBLE", "DROP", "DUMP", "ELSE", "END", "END-EXEC", "ERRLVL",
+        "ESCAPE", "EXCEPT", "EXCEPTION", "EXEC", "EXECUTE", "EXISTS", "EXIT", "EXTERNAL", "EXTRACT", "FALSE",
+        "FETCH", "FILE", "FILLFACTOR", "FIRST", "FLOAT", "FOR", "FOREIGN", "FORTRAN", "FOUND", "FREETEXT",
+        "FREETEXTTABLE", "FROM", "FULL", "FUNCTION", "GENERAL", "GET", "GLOBAL", "GO", "GOTO", "GRANT", "GROUP",
+        "HAVING", "HOLDLOCK", "HOUR", "IDENTITY", "IDENTITY_INSERT", "IDENTITYCOL", "IF", "IMMEDIATE", "IN",
+        "INCLUDE", "INDEX", "INDICATOR", "INITIALLY", "INNER", "INPUT", "INSENSITIVE", "INSERT", "INT",
+        "INTEGER", "INTERSECT", "INTERVAL", "INTO", "IS", "ISOLATION", "JOIN", "KEY", "KILL", "LANGUAGE",
+        "LAST", "LEADING", "LEFT", "LEVEL", "LIKE", "LIMIT", "LINENO", "LOAD", "LOCAL", "LOWER", "MATCH",
+        "MAX", "MIN", "MINUTE", "MIRROREXIT", "MODIFIES", "MODULE", "MONTH", "NAMES", "NATIONAL", "NATURAL",
+        "NCHAR", "NEXT", "NO", "NOCHECK", "NONCLUSTERED", "NONE", "NOT", "NULL", "NULLIF", "NUMERIC", "OCTET_LENGTH",
+        "OF", "OFF", "OFFSETS", "ON", "ONLY", "OPEN", "OPENDATASOURCE", "OPENQUERY", "OPENROWSET", "OPENXML",
+        "OPTION", "OR", "ORDER", "OUTER", "OUTPUT", "OVER", "OVERLAPS", "PAD", "PARTIAL", "PASCAL", "PERCENT",
+        "PIVOT", "PLAN", "POSITION", "PRECISION", "PREPARE", "PRESERVE", "PRIMARY", "PRINT", "PRIOR", "PRIVILEGES",
+        "PROC", "PROCEDURE", "PUBLIC", "RAISERROR", "READ", "READTEXT", "REAL", "RECONFIGURE", "REFERENCES",
+        "RELATIVE", "REPLICATION", "RESTORE", "RESTRICT", "RETURN", "REVOKE", "RIGHT", "ROLLBACK", "ROWCOUNT",
+        "ROWGUIDCOL", "ROWS", "RULE", "SAVE", "SCHEMA", "SCROLL", "SECOND", "SECTION", "SELECT", "SEQUENCE",
+        "SESSION", "SESSION_USER", "SET", "SETUSER", "SIZE", "SMALLINT", "SOME", "SPACE", "SQL", "SQLCA", "SQLCODE",
+        "SQLERROR", "SQLSTATE", "SQLWARNING", "STATISTICS", "SYSTEM_USER", "TABLE", "TEMPORARY", "THEN", "TIME",
+        "TIMESTAMP", "TIMEZONE_HOUR", "TIMEZONE_MINUTE", "TO", "TOP", "TRAILING", "TRAN", "TRANSACTION", "TRANSLATE",
+        "TRANSLATION", "TRIGGER", "TRIM", "TRUE", "TRUNCATE", "TSEQUAL", "UNION", "UNIQUE", "UNKNOWN", "UNNEST",
+        "UPDATE", "UPDATETEXT", "UPPER", "USAGE", "USE", "USER", "USING", "VALUE", "VALUES", "VARCHAR", "VARIABLE",
+        "VARYING", "VIEW", "WAITFOR", "WHEN", "WHENEVER", "WHERE", "WHILE", "WITH", "WORK", "WRITE", "WRITETEXT",
+        "YEAR", "ZONE"
     }
     
     if column_name.upper() in reserved_words:
@@ -99,3 +108,14 @@ def print_history(history):
     for chat in history:
         print(chat['content'])
         print("---------------------")
+        
+def evaluate_jinja(template_string):
+    
+    template = Template(template_string)
+
+    rendered_template = template.render()
+
+    result = ast.literal_eval(rendered_template)
+
+    return result
+

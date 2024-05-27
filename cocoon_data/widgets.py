@@ -19,78 +19,28 @@ textarea, input {
 
 display(HTML(text_area_style))
 
-def create_list_of_strings(initial_strings, ordered=True):
-    def move_string_up(btn):
-        index = btn.index
-        if index > 0:
-            strings = extract_strings_from_display(display_container)
-            strings[index], strings[index-1] = strings[index-1], strings[index]
-            update_display(strings)
 
-    def move_string_down(btn):
-        index = btn.index
-        strings = extract_strings_from_display(display_container)
-        if index < len(strings) - 1:
-            strings[index], strings[index+1] = strings[index+1], strings[index]
-            update_display(strings)
-
-    def update_display(strings):
-        display_container.children = tuple(build_widgets(strings) + [reset_btn])
-
-    def update_display(strings):
-        display_container.children = tuple(build_widgets(strings) + [reset_btn])
-
-    def delete_string(btn):
-        index = btn.index
-        strings = extract_strings_from_display(display_container)
-        del strings[index]
-        update_display(strings)
-
-    def add_string(btn):
-        new_string = new_string_input.value.strip()
-        if new_string:
-            strings = extract_strings_from_display(display_container)
-            strings.append(new_string)
-            new_string_input.value = ''
-            update_display(strings)
+def create_list_of_strings(initial_strings, ordered=True, allowed_tags=[], allow_duplicates=False, reset=True):
 
     def reset_list(btn):
-        update_display(initial_strings)
+        tags_input.value = initial_strings
 
-    def build_widgets(strings):
-        widgets_list = []
-        for index, string in enumerate(strings):
-            text_widget = widgets.Text(value=string)
-            delete_btn = widgets.Button(icon='trash', button_style='danger', layout=widgets.Layout(width='32px'))
-            up_btn = widgets.Button(icon='angle-up', button_style='info', layout=widgets.Layout(width='32px'))
-            down_btn = widgets.Button(icon='angle-down', button_style='info', layout=widgets.Layout(width='32px'))
+    tags_input = widgets.TagsInput(
+        value=initial_strings,
+        allowed_tags=allowed_tags,
+        allow_duplicates=allow_duplicates,
+    )
+    
+    if reset:
+        reset_btn = widgets.Button(icon="fast-backward", description='Reset', button_style='warning',
+                                layout=widgets.Layout(width='100px'))
+        reset_btn.on_click(reset_list)
 
-            delete_btn.index = up_btn.index = down_btn.index = index
-
-            delete_btn.on_click(delete_string)
-            up_btn.on_click(move_string_up)
-            down_btn.on_click(move_string_down)
-
-            if ordered:
-                hbox = widgets.HBox([text_widget, up_btn, down_btn, delete_btn])
-            else:
-                hbox = widgets.HBox([text_widget, delete_btn])
-            widgets_list.append(hbox)
-
-        widgets_list.append(widgets.HBox([new_string_input, add_string_btn]))
-        return widgets_list
-
-    current_strings = initial_strings.copy()
-
-    new_string_input = widgets.Text()
-    add_string_btn = widgets.Button(icon='plus-circle', button_style='primary', layout=widgets.Layout(width='32px'))
-    add_string_btn.on_click(add_string)
-
-    reset_btn = widgets.Button(icon="fast-backward", description='Reset', button_style='warning')
-    reset_btn.on_click(reset_list)
-
-    display_container = widgets.VBox()
-    update_display(current_strings)
+        display_container = widgets.VBox()
+        tags_input.value = initial_strings
+        display_container.children = (tags_input, reset_btn)
+    else:
+        display_container = tags_input
 
     return display_container
 
@@ -98,14 +48,33 @@ def create_list_of_strings(initial_strings, ordered=True):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+
 def extract_strings_from_display(container):
-    extracted_strings = []
-    
-    for child in container.children[:-2]:
-        text_widget = child.children[0]
-        extracted_strings.append(text_widget.value)
-    
-    return extracted_strings
+    tags_input = container.children[0]
+    return tags_input.value
 
 
 
@@ -148,6 +117,8 @@ def grid_to_updated_dataframe(grid, reset=True, lists=[]):
                 value = widget.value
             elif isinstance(widget, widgets.Dropdown):
                 value = widget.value
+            elif isinstance(widget, widgets.TagsInput):
+                value = widget.value
             else:
                 value = None
             
@@ -159,36 +130,42 @@ def grid_to_updated_dataframe(grid, reset=True, lists=[]):
     
     return updated_df
 
-def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists= [], long_text = []):
-
+def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists= [], editable_list={}, long_text = []):
     rows = len(df) + 1
     columns = len(df.columns) + (1 if reset else 0)
+
     grid = widgets.GridspecLayout(rows, columns, width='100%')
 
     for j, col_name in enumerate(df.columns):
         grid[0, j] = widgets.HTML(value=f'<b>{col_name}</b>')
-    
+
     if reset:
         grid[0, -1] = widgets.HTML(value='<b>Reset</b>')
-    
+
     row_widgets = []
 
     def highlight_change(change):
         change.owner.layout.border = '1px solid #fc5656'
-
 
     for i, (index, row) in enumerate(df.iterrows()):
         widgets_in_row = []
         for j, col_name in enumerate(df.columns):
             value = row[col_name]
             widget = None
-            
+
             if col_name in category:
                 widget = widgets.Dropdown(options=category[col_name], value=value)
             elif col_name in lists:
                 widget = widgets.Dropdown(options=value)
+            elif col_name in editable_list:
+                widget = widgets.TagsInput(
+                    value=value,
+                    allowed_tags=editable_list[col_name]['allowed_tags'],
+                    allow_duplicates=editable_list[col_name]['allow_duplicates'],
+                    layout=widgets.Layout(min_width='300px')
+                )
             elif col_name in long_text:
-                widget = widgets.Button(description='Hover over me', 
+                widget = widgets.Button(description='Hover over me',
                       button_style='',
                       tooltip=value,
                       icon='fa-commenting-o')
@@ -218,22 +195,32 @@ def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists=
                     for k, cell in enumerate(df.iloc[row_index]):
                         widget = row_widgets[row_index][k]
                         value = cell
+
                         if isinstance(widget, widgets.FloatText):
                             widget.value = float(value)
                         elif isinstance(widget, widgets.Checkbox):
                             widget.value = bool(value)
                         elif isinstance(widget, widgets.Dropdown):
                             widget.value = value
+                        elif isinstance(widget, widgets.TagsInput):
+                            widget.value = value
                         elif isinstance(widget, widgets.Text):
                             widget.value = str(value)
-                        
+
                         widget.layout.border = ''
+
                 return handler
 
             reset_button.on_click(create_reset_handler(i))
             grid[i+1, -1] = reset_button
 
     return grid
+
+
+
+
+
+
 
 
 
@@ -592,14 +579,15 @@ def color_columns_multiple(df, colors, column_indices_list):
 
 
 
-def create_html_radio_buttons(html_labels):
+def create_html_radio_buttons(html_labels, disabled = False):
     labels_html = [widgets.HTML(value=label) for label in html_labels]
     
     checkbox_style = {'description_width': '0px', 'handle_color': 'lightblue'}
     
-    checkboxes = [widgets.Checkbox(value=False, description='', style=checkbox_style, layout={'width': 'initial'}) for _ in html_labels]
+    checkboxes = [widgets.Checkbox(value=False, description='', disabled=disabled, style=checkbox_style, layout={'width': 'initial'}) for _ in html_labels]
     
-    checkboxes[0].value = True
+    if not disabled:
+        checkboxes[0].value = True
     
     def on_checkbox_change(change):
         if change['new']:
@@ -619,6 +607,75 @@ def get_selected_index(checkboxes):
 
 
 
+
+
+
+
+
+def extract_df_from_display(display_container, last_row=False):
+    data = []
+    last_idx = -2 if not last_row else -1
+
+    columns = [label.value for label in display_container.children[0].children[:-1]]
+
+    for hbox in display_container.children[1:last_idx]:
+        row_data = [widget.value for widget in hbox.children[:-1]]
+        data.append(row_data)
+
+    return pd.DataFrame(data, columns=columns)
+
+def create_df_strings(initial_df, can_be_empty=[]):
+    if not can_be_empty:
+        can_be_empty = [False] * len(initial_df.columns)
+
+    def update_display(strings_df):
+        header_widgets = [widgets.Text(value=str(col), disabled=True) for col in strings_df.columns]
+        header_widgets.append(widgets.Label(value=''))
+        header_box = widgets.HBox(header_widgets)
+        display_container.children = tuple([header_box] + build_widgets(strings_df) + [reset_btn])
+
+    def delete_row(btn):
+        index = btn.index
+        strings_df = extract_df_from_display(display_container)
+        strings_df = strings_df.drop(strings_df.index[index])
+        strings_df = strings_df.reset_index(drop=True)
+        update_display(strings_df)
+
+    def add_row(btn):
+        strings_df = extract_df_from_display(display_container, last_row=True)
+        last_row_values = strings_df.iloc[-1]
+        for i, value in enumerate(last_row_values):
+            if not can_be_empty[i] and value == "":
+                return
+        update_display(strings_df)
+
+    def reset_list(btn):
+        update_display(initial_df)
+
+    def build_widgets(strings_df):
+        widgets_list = []
+        for index, row in strings_df.iterrows():
+            text_widgets = [widgets.Text(value=str(cell)) for cell in row]
+            delete_btn = widgets.Button(icon='trash', button_style='danger', layout=widgets.Layout(width='32px'))
+            delete_btn.index = index
+            delete_btn.on_click(delete_row)
+            hbox = widgets.HBox(text_widgets + [delete_btn])
+            widgets_list.append(hbox)
+        new_string_input = {col: widgets.Text() for col in initial_df.columns}
+        add_row_btn = widgets.Button(icon='plus-circle', button_style='primary', layout=widgets.Layout(width='32px'))
+        add_row_btn.on_click(add_row)
+        widgets_list.append(widgets.HBox(list(new_string_input.values()) + [add_row_btn]))
+        return widgets_list
+
+    current_df = initial_df.copy()
+    new_string_input = {col: widgets.Text() for col in initial_df.columns}
+    add_row_btn = widgets.Button(icon='plus-circle', button_style='primary', layout=widgets.Layout(width='32px'))
+    add_row_btn.on_click(add_row)
+    reset_btn = widgets.Button(icon="fast-backward", description='Reset', button_style='warning')
+    reset_btn.on_click(reset_list)
+    display_container = widgets.VBox()
+    update_display(current_df)
+    return display_container
 
 
 

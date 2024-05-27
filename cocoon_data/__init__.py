@@ -997,14 +997,6 @@ def json_to_html(json_code):
 
 
 
-def wrap_in_iframe(html_code, width=800, height=400):
-
-    escaped_html = html_code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#039;")
-
-    iframe_code = f"<iframe srcdoc=\"{escaped_html}\" width=\"{width}\" height=\"{height}\" frameborder=\"0\"></iframe>"
-
-    return iframe_code
-
 def plot_missing_values_html(df):
     missing_percent = df.isnull().mean() * 100
     missing_percent = missing_percent[missing_percent > 0]
@@ -11582,7 +11574,7 @@ The messages are:
 {self.messages}""")
                     
                     
-            print(f"😔 Failed to run {self.name}. Please send us the error log (data_log.txt).")
+            print(f"😔 Failed to run {self.name}. Please send us the error log (error_log.txt).")
             return self.run_but_fail(extract_output, use_cache=False)
             
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -15202,6 +15194,9 @@ class DataProject:
     def describe_project(self):
         description = ""
         for idx, (table, attributes) in enumerate(self.tables.items()):
+            if isinstance(attributes, dict):
+                attributes = list(attributes.keys())
+            
             if len(attributes) < 10:
                 description += f"{idx+1}. {table}: {attributes}\n"
             else:
@@ -16024,7 +16019,7 @@ E.g., age X21b
 Now, respond in Json:
 ```json
 {{
-    "Reaonsing": "The valuses are ... They are unusual/acceptable ...",
+    "Reasoning": "The valuses are ... They are unusual/acceptable ...",
     "Unusualness": true/false,
     "Explanation": "xxx values are unusual because ..." # if unusual, short in 10 words
 }}
@@ -16496,9 +16491,10 @@ class DecideDMV(Node):
         
         if len(sample_values) == 0:
             return {"reasoning": "Column is fully missing", "DMV": []}
+        
+        sample_values_list = sample_values[column_name].values.tolist()
 
-        template = f"""{column_name} has the following distinct values:
-{sample_values.to_csv(index=False, header=False, quoting=2)}
+        template = f"""{column_name} has the following distinct values: {sample_values_list}
 
 From these values, detect disguised missing values, which means "missing" or "not available".
 Note that some values are simply typos. Disregard them.
@@ -16519,6 +16515,17 @@ Return in json format:
         
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "reasoning" in jc and isinstance(jc["reasoning"], str), "The 'reasoning' key is missing or its value is not a string."),
+            (lambda jc: "DMV" in jc and isinstance(jc["DMV"], list), "The 'DMV' key is missing or its value is not a list."),
+            (lambda jc: all(dmv in sample_values_list for dmv in jc["DMV"]), f"Some DMV values are not present in the sample_values. sample_values: {sample_values_list}, DMV: {json_code['DMV']}"),    
+        ]
+
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
         
         return json_code
     
@@ -16801,6 +16808,7 @@ Return in the following format:
         
         if len(df) == 0:
             callback(df.to_json(orient="split"))
+            return
         
         editable_columns = [False, False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
@@ -18172,26 +18180,27 @@ class CleanUnusualForAll(MultipleNode):
             explanation_value = clean_unusual_col.get('explanation', '').replace('\n', ' ')
             comment += f"-- {col}: {explanation_value}\n"
 
-            if clean_unusual_col["projection"]:
-                if clean_unusual_col["could_clean"]:
-                    selections.append(clean_unusual_col["projection_clause"] + " AS " + col)
-                else:
-                    selections.append(col)
+            if not clean_unusual_col["could_clean"]:
+                selections.append(col)
             else:
-                mapping = clean_unusual_col["mapping"]
-                old_values_to_remove = clean_unusual_col.get("old_values_to_remove", [])
-                remove_list_str = "(" + ", ".join([f"'{val}'" for val in old_values_to_remove]) + ")"
-                if old_values_to_remove:
-                    filters.append(f"{col} NOT IN {remove_list_str}")
+                if clean_unusual_col["projection"]:
+                    selections.append(clean_unusual_col["projection_clause"] + " AS " + col)
+                        
+                else:
+                    mapping = clean_unusual_col["mapping"]
+                    old_values_to_remove = clean_unusual_col.get("old_values_to_remove", [])
+                    remove_list_str = "(" + ", ".join([f"'{val}'" for val in old_values_to_remove]) + ")"
+                    if old_values_to_remove:
+                        filters.append(f"{col} NOT IN {remove_list_str}")
 
-                selection_str = "CASE\n"
-                for old_value, new_value in mapping.items():
-                    old_value = old_value.replace("''", "'").replace("'", "''")
-                    new_value = new_value.replace("''", "'").replace("'", "''")
-                    selection_str += f"    WHEN {col} = '{old_value}' THEN '{new_value}'\n"
-                selection_str += f"    ELSE {col}\n"
-                selection_str += "END AS " + col
-                selections.append(selection_str)
+                    selection_str = "CASE\n"
+                    for old_value, new_value in mapping.items():
+                        old_value = old_value.replace("''", "'").replace("'", "''")
+                        new_value = new_value.replace("''", "'").replace("'", "''")
+                        selection_str += f"    WHEN {col} = '{old_value}' THEN '{new_value}'\n"
+                    selection_str += f"    ELSE {col}\n"
+                    selection_str += "END AS " + col
+                    selections.append(selection_str)
 
         selection_sql = indent_paragraph(",\n".join(selections))
         where_sql = ""
@@ -18204,7 +18213,6 @@ class CleanUnusualForAll(MultipleNode):
 FROM {table_pipeline}{where_sql}"""     
         
         sql_query = comment + sql_query
-        
         step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
         step.run_codes()
 
@@ -18965,7 +18973,7 @@ class DecideStringUnusual(Node):
         column_name, sample_values = extract_output
         
         if len(sample_values) == 0:
-            return {"Reaonsing": "Column is fully missing", "Unusualness": False}
+            return {"Reasoning": "Column is fully missing", "Unusualness": False}
 
         template = f"""{column_name} has the following distinct values:
 {sample_values.to_csv(index=False, header=False, quoting=2)}
@@ -18976,7 +18984,7 @@ Look out for patterns that don't align with the nature of the data.
 Now, respond in Json:
 ```json
 {{
-    "Reaonsing": "The valuses are ... They are unusual/acceptable ...",
+    "Reasoning": "The valuses are ... They are unusual/acceptable ...",
     "Unusualness": true/false,
     "Examples": "xxx values are unusual because ..." (<20 words, empty if not unusual) 
 }}
@@ -19005,7 +19013,7 @@ Now, respond in Json:
         return json_code
     
     def run_but_fail(self, extract_output, use_cache=True):
-        return {"Reaonsing": "Fail to run", "Unusualness": False}
+        return {"Reasoning": "Fail to run", "Unusualness": False}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
@@ -19083,6 +19091,8 @@ models:
             else:
                 explanation = miss_df.loc[miss_df['Column'].str.lower() == column.lower(), 'Explanation'].values[0]
                 cocoon_meta["missing_acceptable"] = explanation
+        else:
+            tests.append("not_null")
                 
         if unusual_df is not None:
             unusual_reason  = unusual_df.loc[unusual_df['Column'].str.lower() == column.lower(), 'Explanation'].values
@@ -19203,7 +19213,7 @@ class WriteStageYMLCode(Node):
         else:
             categorical_df = pd.read_json(categorical_document, orient="split")
             if len(categorical_df) > 0:
-                categorical_df["Domain"] = np.where(categorical_df["Current Domain complete?"], categorical_df["Current Domain"], categorical_df["If Incomplete: True Domain (Sep By ,)"].str.split(","))
+                categorical_df["Domain"] = np.where(categorical_df["Current Domain Complete?"], categorical_df["Current Domain"], categorical_df["If Incomplete: True Domain (Sep By ,)"].str.split(","))
             else:
                 categorical_df = None
                 
@@ -19581,6 +19591,17 @@ class SelectTable(Node):
         
         dropdown = create_explore_button(query_widget, table_name=tables)
         
+        print(f"🤓 Please select the mode:")
+        mode_selector = widgets.RadioButtons(
+            options=[
+                ('🧐 Table Provider: We will interatively ask your feedback for each step', 'Table Provider'),        
+                ('👀 Table Viewer: Sit back and grab a coffee. We will provide our best guess.', 'Table Viewer'),
+            ],
+            layout={'width': 'max-content'},
+            style={'description_width': 'initial'}
+        )
+        display(mode_selector)
+        
         next_button = widgets.Button(description="Next", button_style='success')
 
         def on_button_click(b):
@@ -19588,6 +19609,10 @@ class SelectTable(Node):
             sql_step = SQLStep(table_name=table_name, con=con)
             pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
             self.para["table_pipeline"] = pipeline
+            
+            selected_mode = mode_selector.value
+            if selected_mode == 'Table Viewer':
+                self.para["viewer"] =  True
             
             callback({"table_name": table_name})
                 
@@ -19633,6 +19658,31 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
     
     return query_widget, main_workflow
 
+def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False):
+
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+
+    main_workflow = Workflow("Data Vault Workflow", 
+                            item = item, 
+                            description="A workflow to build data vault",
+                            para = {"viewer": viewer, "data_project": DataProject()})
+
+    main_workflow.add_to_leaf(SelectTables())
+    main_workflow.add_to_leaf(StageTablesForAll())
+    main_workflow.add_to_leaf(SourceProjectStoryUnderstand())
+    main_workflow.add_to_leaf(DecideHubs())
+    main_workflow.add_to_leaf(DecideReferenceTables())
+    main_workflow.add_to_leaf(DecideTableHubRelationForAll())
+    main_workflow.add_to_leaf(SynthesizeLinks())
+    main_workflow.add_to_leaf(ConstructDataVaultViz())
+    
+    return main_workflow
 
 class DescribeColumnsList(ListNode):
     default_name = 'Describe Columns'
@@ -19708,7 +19758,7 @@ Return in the following format:
         for check, error_message in checks:
             if not check(json_code):
                 raise ValueError(f"Validation failed: {error_message}")
-            
+        
         return json_code
 
     def run_but_fail(self, extract_output, use_cache=True):
@@ -19778,6 +19828,8 @@ Return in the following format:
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             
+            new_df["New Name"] = new_df["New Name"].apply(clean_column_name)
+            
             renamed = (new_df["Column"] != new_df["New Name"]).any()
             
             if renamed:
@@ -19795,7 +19847,7 @@ Return in the following format:
                 for index, row in new_df.iterrows():
                     old_name = row["Column"]
                     new_name = row["New Name"]
-                    new_name = clean_column_name(new_name)
+                    
                     if old_name != new_name:
                         comment += f"-- {old_name} -> {new_name}\n"
                         selection_clauses.append(f"{old_name} AS {new_name}")
@@ -20240,11 +20292,17 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
-            "🧹 <b>Stage:</b> Give us a table, we'll clean it and document your source table in DBT SQL/YAML files.",
-            "🔍 <b>Profile:</b> Give us a table, we'll understand your table and identify anomalies. The output is an HTML profile.",
-            "🔗 <b>(Preview) Fuzzy Join:</b> Give us two tables, we'll fuzzily match them and explain the relation. The output is an HTML report.",
-            "🔧 <b>(Preview) Fuzzy Union/ Table Transform:</b> Give us a source and target table, we will transform/fuzzy union them.",
-            "👓 <b>(Preview) Explore DBT:</b> Give us a DBT project directory, we'll visualize the lineage and interpret each model.",
+        "🧹 <b>Stage/Clean:</b> Give us a table, we'll understand, clean, and document it. The output is a Data Pipeline in DBT SQL/YAML files.",
+        "🔍 <b>Profile:</b> Give us a table, we'll understand your table and identify anomalies. The output is an HTML report.",
+        "🔗 <b>(Preview) Fuzzy Join/Entity Matching:</b> Give us two tables, we'll fuzzily match them and explain the relation. The output is an HTML report.",
+        "🔧 <b>(Preview) Fuzzy Union/Schema Matching:</b> Give us two tables, we'll fuzzily union them. The output is a Data Pipeline.",
+        "📊 <b>(Preview) Data Modeling (ERD/Data Vault):</b> Give us a set of tables, we'll model them into a data vault. The output is a YAML file.",
+        "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a Data Pipeline (DBT project), we'll interactively interpret each step.",
+        ]
+        coming_labels = [
+        "🛠️ <b>(Coming Soon) Pipeline Maintenance:</b> Give us a broken Data Pipeline, we'll run it, debug errors, and recommend repairs.",
+        "🔄 <b>(Coming Soon) Reverse ETL/Common Data Model:</b> Give us a modeled database and a target database, we'll transform your database.",
+        "📈 <b>(Coming Soon) Metrics/Aggregation + Filtering:</b> Give us a modeled database, we'll construct queries for business intelligence.",
         ]
         
         next_nodes = [
@@ -20252,12 +20310,15 @@ class CocoonBranchStep(Node):
             "Data Profiling Workflow",
             "Fuzzy Join Workflow",
             "Single Table Transformation Workflow",
+            "Data Vault Workflow",
             "DBT Project Explore Workflow",
         ]
 
         radio_buttons_widget, checkboxes = create_html_radio_buttons(html_labels)
+        
+        radio_buttons_widget2, _ = create_html_radio_buttons(coming_labels, disabled=True)
 
-        display(radio_buttons_widget)
+        display(VBox([radio_buttons_widget, radio_buttons_widget2]))
 
         next_button = widgets.Button(description="Start", button_style='success')
         
@@ -21213,19 +21274,24 @@ class DecideStringCategoricalForAll(MultipleNode):
             'Column': [],
             'Is Categorical?': [],
             'Current Domain': [],
-            'Current Domain complete?': [],
+            'Current Domain Complete?': [],
             'If Incomplete: True Domain (Sep By ,)': [],
             'Explanation': []
         }
 
         if 'Decide If Categorical' in document:
             for column_name, details in document['Decide If Categorical'].items():
-                if details['categorical']:
+                if details['can_enumerate']:
                     data['Column'].append(column_name)
                     data['Is Categorical?'].append(True)
                     data['Current Domain'].append(details['domain'])
-                    data['Current Domain complete?'].append(details['domain_complete'])
-                    data['If Incomplete: True Domain (Sep By ,)'].append(",".join(details.get('domain_acceptable', details['domain'])))
+                    data['Current Domain Complete?'].append(details['current_full'])
+                    if details['current_full']:
+                        domain_list = [str(item) for item in details['domain']]
+                        data['If Incomplete: True Domain (Sep By ,)'].append(",".join(domain_list))
+                    else:
+                        domain_list = [str(item) for item in details['full_domain']]
+                        data['If Incomplete: True Domain (Sep By ,)'].append(",".join(domain_list))
                     data['Explanation'].append(details['explanation'])
 
         df = pd.DataFrame(data)
@@ -21310,24 +21376,28 @@ class DecideStringCategorical(Node):
         column_name, sample_values, sample_size, total_distinct_count = extract_output
         
         if len(sample_values) == 0:
-            return {"explanation": "Column is fully missing", "categorical": False}
+            return {"explanation": "Column is fully missing", "can_enumerate": False}
         
         if sample_size < total_distinct_count:
-            return {"explanation": "The column has too many distinct values.", "categorical": False}
+            return {"explanation": "The column has too many distinct values.", "can_enumerate": False}
 
         template = f"""{column_name} has the following distinct values:
 {sample_values.to_csv(index=False, header=False, quoting=2)}
 
-Review if the column is categorical with a limited domain of acceptable values (<100) or free text.
-
+Review if the column is categorical with a limited domain of acceptable values that you CAN enumerate.
+If so, enumerate the FULL domain with Jinja template. E.g.,
+[{{% for i in range(1, 10) %}}'x_{{{{ i }}}}'{{% if not loop.last %}},{{% endif %}}{{% endfor %}}]
+['cat', 'dog', 'fish']
 
 Now, respond in yml:
 ```yml
 explanation: |
-    The column means ... The accepted values are ... which (do/do not) have a limited domain
-categorical: true/false
-domain_complete: true/false # if categorical is true, are the current distinct values the full domain?
-domain_acceptable: [value1, value2, ...] # if domain_complete is false, list the full domain; otherwise, leave empty
+    The column means ... The domain contains... 
+    The full domain follows ... pattern. It cannot/can be fully enumerated by Jinja that ...
+can_enumerate: true/false
+current_full: true/false # if categorical is true, are the current distinct values already the full domain? 
+full_domain: | # Jinja template that creates a list, to the best of you knowledge, WITHOUT referencing any var
+    [{{% for i in range(1, 10) %}}'x_{{{{ i }}}}'{{% if not loop.last %}},{{% endif %}}{{% endfor %}}]
 ```"""
 
         messages = [{"role": "user", "content": template}]
@@ -21341,8 +21411,12 @@ domain_acceptable: [value1, value2, ...] # if domain_complete is false, list the
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
             (lambda jc: "explanation" in jc, "The 'explanation' key is missing in the JSON code."),
-            (lambda jc: "categorical" in jc, "The 'categorical' key is missing in the JSON code."),
-            (lambda jc: isinstance(jc["categorical"], bool), "The value of 'categorical' must be a boolean."),
+            (lambda jc: "can_enumerate" in jc, "The 'can_enumerate' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["can_enumerate"], bool), "The value of 'can_enumerate' must be a boolean."),
+            (lambda jc: "current_full" in jc if jc["can_enumerate"] else True, "The 'current_full' key is missing when 'can_enumerate' is True."),
+            (lambda jc: isinstance(jc["current_full"], bool) if "current_full" in jc else True, "The value of 'current_full' must be a boolean."),
+            (lambda jc: "full_domain" in jc if jc.get("current_full") is False and jc["can_enumerate"] else True, "The 'full_domain' key is missing when 'current_full' is False and 'can_enumerate' is True."),
+            (lambda jc: isinstance(jc["full_domain"], str) if "full_domain" in jc else True, "The value of 'full_domain' must be a string."),
         ]
 
         for check, error_message in checks:
@@ -21350,10 +21424,1029 @@ domain_acceptable: [value1, value2, ...] # if domain_complete is false, list the
                 raise ValueError(f"Validation failed: {error_message}")
         
         summary["domain"] = sample_values[column_name].tolist()
+        
+        if "full_domain" in summary:
+            full_domain = summary["full_domain"]
+            full_domain = evaluate_jinja(full_domain)
+            if not isinstance(full_domain, list):
+                raise ValueError("The 'full_domain' must be a list.")
+            summary["full_domain"] = full_domain
+        
+        if "full_domain" in summary and len(summary["full_domain"]) == 0 :
+            summary["current_full"] = True
+            
+        if len(summary["full_domain"]) > 100:
+            summary["can_enumerate"] = False
+            summary["explanation"] += "The domain is too large to enumerate."
+            del summary["full_domain"]
+            del summary["current_full"]
+            
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        return {"explanation": "Fail to run", "categorical": False}
+        return {"explanation": "Fail to run", "can_enumerate": False}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
+        
+        
+class SelectTables(Node):
+    default_name = 'Select Tables'
+    default_description = 'This step allows you to select multiple tables.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        con = self.input_item["con"]
+        query_widget = self.item["query_widget"]
+        
+        tables = get_table_names(con)
+        
+        print(f"🧐 There are {len(tables)} tables in your database. You can explore them:")
+        dropdown = create_explore_button(query_widget, table_name=tables)
+        
+        print(f"🤓 Please select the tables:")
+        multi_select = create_column_selector_(columns=tables, default=True)
+        
+        next_button = widgets.Button(description="Next", button_style='success')
+
+        def on_button_click(b):
+            selected_tables = multi_select.value
+            data_project = self.para["data_project"]
+            for table_id in selected_tables:
+                table_name = tables[table_id]
+                data_project.add_table(table_name, get_table_schema(con, table_name))
+                
+            callback({"selected_tables": selected_tables})
+                
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+
+class StageTablesForAll(MultipleNode):
+    default_name = 'Stage Tables For All'
+    default_description = 'This node stages the tables for all selected tables.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["table_name"] = element_name
+        para["table_idx"] = idx
+        para["total_tables"] = total
+        
+        if self.item is not None:
+            con = self.item.get("con", None)
+        else:
+            con = None
+        
+        para["viewer"] = True
+        sql_step = SQLStep(table_name=element_name, con=con)
+        pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+        para["table_pipeline"] = pipeline
+        
+        node = CreateShortTableSummary(para=para, id_para ="table_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Understanding the tables...")
+
+        self.input_item = item
+        data_project = self.para["data_project"]
+        selected_tables = self.get_sibling_document('Select Tables')["selected_tables"]
+        self.elements = []
+        self.nodes = {}
+
+        idx = 0
+        for table_id in selected_tables:
+            table_name = get_table_names(self.input_item["con"])[table_id]
+            self.elements.append(table_name)
+            self.nodes[table_name] = self.construct_node(table_name, idx, len(selected_tables))
+            idx += 1
+
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+    
+        callback(document)
+
+
+class SourceProjectStoryUnderstand(Node):
+    default_name = 'Source Project Understand'
+    default_description = 'This understands the source tables and dbt project'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        create_progress_bar_with_numbers(0, self.get_sibling_document('Product Steps'))
+
+        print("🤓 Generating the story of the project ...")
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+
+        
+        table_summary_document = self.get_sibling_document('Stage Tables For All')
+        description = ""
+        
+        if "Create Short Table Summary" in table_summary_document:
+            for table_name in table_summary_document["Create Short Table Summary"]:
+                table_summary = table_summary_document["Create Short Table Summary"][table_name]
+                description += f"{table_name}: {table_summary}\n"
+        
+        tables = data_project.list_tables()
+
+        return description, tables
+
+    def run(self, extract_output, use_cache=True):
+        description, tables = extract_output
+        template = f"""You have tables:
+{description}
+Desribe the story behind the tables, in a short sequence (1-10) of steps, each as simple SVO sentences (~5 words). 
+Focus on the big picture. It's fine to skip some unimportant tables. Use consistent terms (e.g., customer/user may mean the same). 
+Please disregard the system side of the tables (e.g., DONT: data are collected, stored in s3, used for analysis)
+
+Return in the following format:
+```json
+{{
+    "reasoning": "The tables are ... First, this happens. Then, that happens",
+    "story": [ 
+        "Customer buys items in the store",
+        "Customer returns items",
+        ...
+    ]
+}}
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = replace_newline(json_code)
+        summary = json.loads(json_code)
+
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"story": []}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        self.progress.value += 1
+        
+        _, tables = extract_output
+        query_widget = self.input_item["query_widget"]
+        
+        dropdown =  create_explore_button(query_widget, table_name=tables)
+        
+        print("🎉 Based on the table, we've generated the story!")
+        print("😊 We will use it to understand the project. Please correct it but keep it simple:")
+        display_container = create_list_of_strings(summary["story"])
+        display(display_container)
+
+        next_button = widgets.Button(description="Next Step", button_style='success')
+
+        def on_button_click(b):
+            with self.output_context():
+                summary = {}
+                current_strings_displayed = extract_strings_from_display(display_container)
+                if len(current_strings_displayed) == 0:
+                    print("⚠️ Please provide a story with at least one line")
+                    return 
+
+                summary["story"] = current_strings_displayed
+                data_project = self.para["data_project"]
+                data_project.set_story(summary["story"])
+                callback(summary)
+
+        next_button.on_click(on_button_click)
+
+        display(next_button)
+        
+class DecideHubs(Node):
+    default_name = 'Decide Hubs'
+    default_description = 'This step allows you to decide the hubs.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+
+        print("🤓 Deciding the important concepts...")
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+
+        description = data_project.describe_project()
+        tables = data_project.list_tables()
+        story = data_project.get_story()
+
+        return description, tables, story
+    
+    def run(self, extract_output, use_cache=True):
+        description, tables, story = extract_output
+        story_text = ",\n".join(story)
+        template = f"""You have a list of tables:
+{description}
+
+Based on the story:
+{story_text}
+
+Please recommend the hubs for the data vault:
+1. The hubs are the core concepts appear in *MANY* tables. E.g., Customer, Product
+2. Time, location are not hubs.
+
+Return in the following format:
+```json
+{{
+    "reasoning": "The stories are ... XX appears in many tables, and is not time/location",
+    "hubs": {{
+        "Product": "Product that are produced and sold", # short desc in < 10 words 
+    }}
+}}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = replace_newline(json_code)
+        summary = json.loads(json_code)
+
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"hubs": []}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        self.progress.value += 1
+        
+        _, tables, story = extract_output
+        query_widget = self.input_item["query_widget"]
+        
+        dropdown =  create_explore_button(query_widget, table_name=tables)
+        
+        html_content = f"""🎉 We've recommended the hubs, based on the story:<b>"""
+        display(HTML(html_content))
+        
+        display_container = create_list_of_strings(story, reset=False)
+        display(display_container)
+        
+        html_content = f"""😊 These would be the core concept. Please refine them, but keep them short and simple.<br>
+⚠️ Please don't create hubs for time/location. We will treat them differently."""
+        
+        display(HTML(html_content))
+
+        data = {
+            'Hub': [],
+            'Description': [],
+        }
+        
+        for hub, desc in summary["hubs"].items():
+            data['Hub'].append(hub)
+            data['Description'].append(desc)
+            
+        initial_df = pd.DataFrame(data)
+        can_be_empty= [False, True]
+        df_widget = create_df_strings(initial_df, can_be_empty=can_be_empty)
+        display(df_widget)
+
+        next_button = widgets.Button(description="Next Step", button_style='success')
+
+        def on_button_click(b):
+            df_new = extract_df_from_display(df_widget)
+            
+            if len(df_new) == 0:
+                print("⚠️ Please add at least 1 hub.")
+                return
+            
+            document = df_new.to_json(orient="split")
+            callback(document)
+
+        next_button.on_click(on_button_click)
+
+        display(next_button)
+
+class DecideSingleMultiple(Node):
+    default_name = 'Decide Single/Multiple'
+    default_description = 'This step allows you to decide whether each table is related to a single hub or multiple hubs.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+
+        print("🤓 Analyzing tables based on the hubs...")
+        
+        self.progress = show_progress(1)
+        
+        data_project = self.para["data_project"]
+        description = data_project.describe_project()
+        tables = data_project.list_tables()
+        story = data_project.get_story()
+        hubs = self.get_sibling_document('Decide Hubs')["hubs"]
+        
+        return description, tables, story, hubs
+    
+    def run(self, extract_output, use_cache=True):
+        description, tables, story, hubs = extract_output
+        story_text = ",\n".join(story)
+        template = f"""You have a list of tables:
+{description}
+
+Based on the story:
+{story_text}
+
+And the hubs:
+{hubs}
+
+Please decide whether each table is related to multiple hubs (potentially for links).
+Return in the following format:
+```json
+{{
+    {tables[0]}: ["it is about ..., and is related to ...", # < 20 words 
+                  True/False # if it is related to multiple hubs
+                  ], 
+    ...
+}}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = replace_newline(json_code)
+        summary = json.loads(json_code)
+
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        description, tables, story, hubs = extract_output
+        return {table: ["", False] for table in tables}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        self.progress.value += 1
+        
+        _, tables, story, _ = extract_output
+        query_widget = self.input_item["query_widget"]
+        
+        dropdown =  create_explore_button(query_widget, table_name=tables)
+        
+        print("🎉 Based on the story and hubs, we've decided how each table is related!")
+        print("😊 Please refine the relationship for each table, but keep it simple.")
+        
+        
+        data = {
+            'Column': [],
+            'Relation to Hubs': [],
+            'Related to Many Hubs?': [],
+
+        }
+        
+        for table in tables:
+            data['Column'].append(table)
+            data['Related to Many Hubs?'].append(summary[table][1])
+            data['Relation to Hubs'].append(summary[table][0])
+            
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, True, True]
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset)
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset)
+            document = new_df.to_json(orient="split")
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+
+
+
+class DecideTableHubRelationForAll(MultipleNode):
+    default_name = 'Decide Table Hub Relation For All'
+    default_description = 'This node allows users to decide the relation between tables and hubs.'
+
+    def construct_node(self, element_name, idx=0, total=0, hubs=[]):
+        para = self.para.copy()
+        para["table_name"] = element_name
+        para["table_idx"] = idx
+        para["total_tables"] = total
+        para["hubs"] = hubs
+        node = DecideTableHubRelation(para=para, id_para ="table_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        print("🔍 Deciding the relation between tables and hubs...")
+
+        self.input_item = item
+
+        data_project = self.para["data_project"]
+        tables = data_project.list_tables()
+        
+        reference_tables_document = self.get_sibling_document('Decide Reference Tables')
+        reference_tables_df = pd.read_json(reference_tables_document, orient="split")
+        reference_tables = reference_tables_df[reference_tables_df["Is Reference Table?"] == True]["Table"].tolist()
+        
+        tables = [table for table in tables if table not in reference_tables]
+        
+        hubs = self.get_sibling_document('Decide Hubs')
+        self.elements = []
+        self.nodes = {}
+
+        idx = 0
+        for table in tables:
+            self.elements.append(table)
+            self.nodes[table] = self.construct_node(table, idx, len(tables), hubs)
+            idx += 1
+            
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        
+        tables = self.para["data_project"].list_tables()
+        query_widget = self.item["query_widget"]
+        
+        dropdown =  create_explore_button(query_widget, table_name=tables)
+        
+        hub_document = document.get('Decide Table Hub Relation', {})
+        
+        data = {
+            'Table': [],
+            'Related Hubs': [],
+            'Explanation': [],
+        }
+
+        for table_name, details in hub_document.items():
+            data['Table'].append(table_name)
+            data['Related Hubs'].append(list(details["contain_hubs"].keys()))
+            data['Explanation'].append(details["description"])
+            
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        hub_document = self.get_sibling_document('Decide Hubs')
+        hub_df = pd.read_json(hub_document, orient="split")
+        hubs = hub_df["Hub"].tolist()
+        
+        editable_columns = [False, True, True, True]
+        reset = True
+        long_text = []
+        
+        editable_list = {
+            'Related Hubs': {
+                'allowed_tags': hubs,
+                'allow_duplicates': False
+            }
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, long_text=long_text, editable_list=editable_list)
+        
+        
+        hub_desc = ", ".join(hubs)
+        print(f"🤓 The hubs are: {hub_desc}")
+        
+        print("😎 We have decided the relation between tables and hubs. Please verify:")
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset)
+            
+            document = new_df.to_json(orient="split")
+            callback(document)
+            
+        next_button.on_click(on_button_clicked)
+        display(next_button)
+
+        
+class DecideTableHubRelation(Node):
+    default_name = 'Decide Table Hub Relation'
+    default_description = 'This node allows users to decide the relation between a table and hubs.'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+
+        print("🔍 Deciding the relation between a table and hubs...")
+        
+        idx = self.para["table_idx"]
+        total = self.para["total_tables"]
+        show_progress(max_value=total, value=idx)
+        
+        table_name = self.para["table_name"]
+        con = self.item["con"]
+        
+        hub_document = self.para["hubs"]
+        hub_df = pd.read_json(hub_document, orient="split")
+        hub_desc = hub_df.apply(lambda x: f"{x['Hub']}: {x['Description']}", axis=1).tolist()
+        hub_desc = "\n".join([f"{i+1}. {desc}" for i, desc in enumerate(hub_desc)])
+        
+        hubs = hub_df["Hub"].tolist()
+        
+        sample_size = 5
+        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        table_desc = sample_df.to_csv(index=False, quoting=2)
+
+        return table_name, table_desc, hub_desc, hubs
+
+    def run(self, extract_output, use_cache=True):
+        table_name, table_desc, hub_desc, hubs = extract_output
+
+        template = f"""You have a source table {table_name}:
+{table_desc}
+
+And the hubs: 
+{hub_desc}
+
+This source table contains attribbutes about which hubs, listed above?
+If it contains multiple hubs, describe how the hubs are related, in simple SVO sentences (~5 words) where each hub is mentioned.
+
+Now, respond in yml:
+```yml
+explanation: |
+    Among the {len(hubs)} hubs given, the table directly contains ...
+contain_hubs: 
+    hub_name: [list of attributes directly related to the hub]
+    ...
+description: A do B, C do D... # leave empty if contain_hubs < 2
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "explanation" in jc, "The 'explanation' key is missing in the JSON code."),
+            (lambda jc: "contain_hubs" in jc, "The 'contain_hubs' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["contain_hubs"], dict), "The value of 'contain_hubs' must be a dictionary."),
+            (lambda jc: all([hub in hubs for hub in jc["contain_hubs"].keys()]), "The hubs in contain_hubs should be in the hubs"),
+        ]
+
+        for check, error_message in checks:
+            if not check(summary):
+                raise ValueError(f"Validation failed: {error_message}")
+            
+        summary["contain_hubs"] = {k: v for k, v in summary["contain_hubs"].items() if len(v) > 0}
+        
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"explanation": "Fail to run", "contain_hubs": {}, "description": ""}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+
+class DecideReferenceTables(Node):
+    default_name = 'Decide Reference Tables'
+    default_description = 'This step allows you to decide the reference tables.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+
+        print("🤓 Deciding the reference tables...")
+        
+        self.progress = show_progress(1)
+        
+        data_project = self.para["data_project"]
+        
+        table_summary_document = self.get_sibling_document('Stage Tables For All')
+        description = ""
+        
+        if "Create Short Table Summary" in table_summary_document:
+            for table_name in table_summary_document["Create Short Table Summary"]:
+                table_summary = table_summary_document["Create Short Table Summary"][table_name]
+                description += f"{table_name}: {table_summary}\n"
+                
+        tables = data_project.list_tables()
+        story = data_project.get_story()
+        hub_document = self.get_sibling_document('Decide Hubs')
+        hub_df = pd.read_json(hub_document, orient="split")
+        hubs = hub_df["Hub"].tolist()
+        
+        return description, tables, story, hubs
+    
+    def run(self, extract_output, use_cache=True):
+        description, tables, story, hubs = extract_output
+        story_text = ",\n".join(story)
+        template = f"""You have a list of tables:
+{description}
+
+Reference tables are hub-like tabls but for non-business concepts.
+E.g., Locations, Codes (e.g. Airport Short Codes), Categories (e.g., Item category codes), Calendar dates
+Finad all the reference tables. Respond in yml:
+
+```yml
+explanation: |
+    The tables are ... They are reference tables because ...
+reference_tables: 
+    table_name1: explanation in < 5 words
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "explanation" in jc, "The 'explanation' key is missing in the JSON code."),
+            (lambda jc: "reference_tables" in jc, "The 'reference_tables' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["reference_tables"], dict), "The value of 'reference_tables' must be a dictionary."),
+        ]
+        
+        for check, error_message in checks:
+            if not check(summary):
+                raise ValueError(f"Validation failed: {error_message}")
+            
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"explanation": "Fail to run", "reference_tables": {}}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        self.progress.value += 1
+        
+        _, tables, story, _ = extract_output
+        query_widget = self.input_item["query_widget"]
+        
+        dropdown =  create_explore_button(query_widget, table_name=tables)
+        
+        print("🤓 Reference tables store codes with non-business concepts (e.g., Time/Location/Category).")
+        print("😊 Please verify the reference tables:")
+        
+        data = {
+            'Table': [],
+            "Is Reference Table?": [],
+            'Explanation': [],
+        }
+        
+        for table in tables:
+            data['Table'].append(table)
+            data['Is Reference Table?'].append(table in summary["reference_tables"])
+            data['Explanation'].append(summary["reference_tables"].get(table, ""))
+            
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, True, True]
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset)
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset)
+            document = new_df.to_json(orient="split")
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+
+
+class SynthesizeLinks(Node):
+    default_name = 'Synthesize Links'
+    default_description = 'This step synthesizes the links between tables.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+
+        print("🤓 Synthesizing the links between tables...")
+        
+        self.progress = show_progress(1)
+        
+        data_project = self.para["data_project"]
+        description = data_project.describe_project()
+        tables = data_project.list_tables()
+        hub_document = self.get_sibling_document('Decide Hubs')
+        hub_df = pd.read_json(hub_document, orient="split")
+        hub_desc = hub_df.apply(lambda x: f"{x['Hub']}: {x['Description']}", axis=1).tolist()
+        hub_desc = "\n".join(hub_desc)
+        
+        links_document = self.get_sibling_document('Decide Table Hub Relation For All')
+        links_df = pd.read_json(links_document, orient="split")
+        
+        links_df = links_df[links_df["Related Hubs"].apply(lambda x: len(x) > 1)]
+        
+        return description, tables, hub_desc, links_df
+    
+    def run(self, extract_output, use_cache=True):
+        description, tables, hub_desc, links_df = extract_output
+        
+        template = f"""You have a list of tables:
+{description}
+
+And the hubs: {hub_desc}
+
+The following tables link multiple hubs:
+{links_df.to_csv(index=False)}
+
+Identify if there are multiple redundant tables (links) for the similar purpose (clarified with SVO).
+
+Return in yml:
+```yml
+explanation: |
+    The links are ... They serve the similar purpose because they both record ...
+similar_links:
+    Customer buys Product: # simple SVO that mentioedn related all hubs
+        tables: [table1, table2, ...] # tables are link these hubs based on the purpose
+    ...
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "explanation" in jc, "The 'explanation' key is missing in the JSON code."),
+            (lambda jc: "similar_links" in jc, "The 'similar_links' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["similar_links"], dict), "The value of 'similar_links' must be a dictionary."),
+        ]
+        
+        for check, error_message in checks:
+            if not check(summary):
+                raise ValueError(f"Validation failed: {error_message}")
+            
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"explanation": "Fail to run", "similar_links": {}}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        self.progress.value += 1
+        
+        _, tables, _, links_df = extract_output
+        query_widget = self.input_item["query_widget"]
+        
+        dropdown =  create_explore_button(query_widget, table_name=tables)
+        
+        data = {
+            'Purpose': [],
+            'Tables': [],
+            'Could be Unioned?': [],
+            'Explanation': [],
+        }
+        
+        for purpose, details in summary["similar_links"].items():
+            data['Purpose'].append(purpose)
+            data['Tables'].append(",".join(details["tables"]))
+            data['Could be Unioned?'].append(True)
+            data['Explanation'].append("")
+            
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        print("🤔 We have found tables that link hubs in a similar way. ")
+        print("😊 Please verify if these can be unioned, and explain why:")
+        
+        editable_columns = [False, False, True, True]
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset)
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset)
+            document = new_df.to_json(orient="split")
+
+            callback(document)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)    
+    
+    
+
+class ConstructDataVaultViz(Node):
+    default_name = 'Construct Data Vault Viz'
+    default_description = 'This step constructs the data vault visualization.'
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        data_project = self.para["data_project"]
+        tables = data_project.list_tables()
+        
+        hub_document = self.get_sibling_document('Decide Hubs')
+        hub_df = pd.read_json(hub_document, orient="split")
+        hubs = hub_df["Hub"].tolist()
+        
+        table_hub_relation = self.get_sibling_document('Decide Table Hub Relation For All')
+        table_hub_relation_df = pd.read_json(table_hub_relation, orient="split")
+        
+        
+        synthethized_links = self.get_sibling_document('Synthesize Links')
+        synthethized_links_df = pd.read_json(synthethized_links, orient="split")
+        
+        
+        synthethized_links_df["Related Hubs"] = None
+        
+        to_remove_tables = []
+        for idx, row in synthethized_links_df.iterrows():
+            tables = row["Tables"].split(",")
+            related_hubs = set()
+            
+            for table in tables:
+                related_hubs.update(table_hub_relation_df[table_hub_relation_df["Table"] == table]["Related Hubs"].values[0])
+                to_remove_tables.append(table)
+            
+            synthethized_links_df.at[idx, "Related Hubs"] = list(related_hubs)
+            
+        table_hub_relation_df = table_hub_relation_df[~table_hub_relation_df["Table"].isin(to_remove_tables)]
+        
+
+
+
+        
+        links = []
+        satellites = []
+        hub_link_edges = {}
+        link_satellite_edges = {}
+        hub_satellite_edges = {}
+
+        for idx, row in table_hub_relation_df.iterrows():
+
+
+            related_hubs = row["Related Hubs"]
+            table = row["Table"]
+            explanation = row["Explanation"]
+            
+            if len(related_hubs) == 0:
+                continue
+
+            if len(related_hubs) > 1:
+                
+                if explanation not in links:
+                    links.append(explanation)
+                    link_satellite_edges[links.index(explanation)] = []
+                    hub_link_edges[links.index(explanation)] = []
+
+                hubs_idx = [hubs.index(hub) for hub in related_hubs]
+
+                if table not in satellites:
+                    satellites.append(table)
+
+                link_satellite_edges[links.index(explanation)].append(satellites.index(table))
+
+                hub_link_edges[links.index(explanation)].extend(hubs_idx)
+            
+            else:
+                hub = related_hubs[0]
+
+                if table not in satellites:
+                    satellites.append(table)
+                    
+                hub_idx = hubs.index(hub)
+                
+                if hub_idx not in hub_satellite_edges:
+                    hub_satellite_edges[hub_idx] = []
+
+                hub_satellite_edges[hubs.index(hub)].append(satellites.index(table))
+        
+        for idx, row in synthethized_links_df.iterrows():
+            purpose = row["Purpose"]
+            tables = row["Tables"].split(",")
+
+            if purpose not in links:
+                links.append(purpose)
+                link_satellite_edges[links.index(purpose)] = []
+                hub_link_edges[links.index(purpose)] = []
+
+            hubs_idx = [hubs.index(hub) for hub in row["Related Hubs"]]
+
+            for table in tables:
+                if table not in satellites:
+                    satellites.append(table)
+
+                link_satellite_edges[links.index(purpose)].append(satellites.index(table))
+
+            hub_link_edges[links.index(purpose)].extend(hubs_idx)
+
+
+        print("🎉 We have designed the data vault. Please verify the visualization:")
+        
+        
+        hubs = [f"Hub: {hub}" for hub in hubs]
+        
+        links = [f"Link: {link}" for link in links]
+
+        def create_graph(show_satellites):
+            if show_satellites:
+                html_content = create_graph_data(hubs, links, satellites, hub_link_edges, link_satellite_edges, hub_satellite_edges)
+            else:
+                html_content = create_graph_data(hubs, links, [], hub_link_edges, {}, {})
+            
+            return html_content
+
+        checkbox = widgets.Checkbox(
+            value=False,
+            description='Show Satellites',
+            disabled=False,
+            indent=False
+        )
+
+        graph_widget = widgets.HTML()
+
+        def on_checkbox_change(change):
+            html_content = create_graph(change['new'])
+            graph_widget.value = html_content
+
+        checkbox.observe(on_checkbox_change, names='value')
+
+        display(checkbox)
+        display(graph_widget)
+
+        on_checkbox_change({'new': checkbox.value})
+        

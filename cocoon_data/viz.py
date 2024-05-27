@@ -6,6 +6,18 @@ import seaborn as sns
 import base64
 from graphviz import Digraph
 from matplotlib.ticker import EngFormatter
+import networkx as nx
+from IPython.display import HTML
+
+
+
+def wrap_in_iframe(html_code, width=800, height=400):
+
+    escaped_html = html_code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#039;")
+
+    iframe_code = f"<iframe srcdoc=\"{escaped_html}\" width=\"{width}\" height=\"{height}\" frameborder=\"0\"></iframe>"
+
+    return iframe_code
 
 def eng_formatter_with_precision(precision):
     def _formatter(x, pos):
@@ -217,6 +229,135 @@ def create_bar_chart_viz_html(data_dict):
 </html>
 """
     return bar_chart_html
+
+
+
+
+def generate_draggable_graph_html_color(data, svg_height=300, svg_width=1000):
+    graph_data = json.dumps(data)
+    graph_html = f"""<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+  .links line {{
+    stroke: #aaa;
+    stroke-width: 2px;
+  }}
+
+  .nodetext {{
+    text-anchor: middle;
+    alignment-baseline: middle;
+  }}
+
+  html {{
+      font-family: sans-serif;
+      font-size: 12px;
+  }}
+</style>
+<script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+<svg id="session1" width="{svg_width}" height="{svg_height}"></svg>
+
+<script>
+  var svg = d3.select("#session1"),
+      width = +svg.attr("width"),
+      height = +svg.attr("height");
+
+  var graph = {graph_data};
+
+  var nodeWidth = 100;
+  var nodeHeight = 30;
+
+  var simulation = d3.forceSimulation()
+      .force("link", d3.forceLink().id(function(d) {{ return d.id; }}))
+      .force("charge", d3.forceManyBody().strength(-180))
+      .force("center", d3.forceCenter(width / 2, height / 2));
+
+  var link = svg.append("g")
+      .attr("class", "links")
+      .selectAll("line")
+      .data(graph.links)
+      .enter().append("line");
+
+  var node = svg.append("g")
+      .attr("class", "nodes")
+      .selectAll("g")
+      .data(graph.nodes)
+      .enter().append("g")
+      .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+  // Append the rectangles first
+  node.append("rect")
+      .attr("width", 60) // Temporary default width
+      .attr("height", nodeHeight)
+      .attr("stroke", function(d) {{ return d.border_color; }}) // Set the border color based on the node's border_color property
+      .attr("fill", function(d) {{ return d.fill_color; }}); // Set the fill color based on the node's fill_color property
+
+  // Then append the text
+  var texts = node.append("text")
+      .attr("class", "nodetext")
+      .attr("x", 30) // Temporary x position, half of the default width
+      .attr("y", nodeHeight / 2)
+      .text(function(d) {{ return d.id; }});
+
+  // Update the width of the rectangles and reposition the text
+  node.each(function(d, i) {{
+      var rect = d3.select(this).select("rect");
+      var text = d3.select(this).select("text");
+
+      var textLength = text.node().getComputedTextLength();
+      var newWidth = textLength + 20; // Adjust padding as needed
+
+      // Update rect width
+      rect.attr("width", newWidth);
+
+      // Update text position
+      text.attr("x", newWidth / 2);
+  }});
+
+  simulation
+      .nodes(graph.nodes)
+      .on("tick", ticked);
+
+  simulation.force("link")
+      .links(graph.links)
+      .distance(100);
+
+  function ticked() {{
+    link
+        .attr("x1", function(d) {{ return Math.max(0,Math.min(width, d.source.x)); }})
+        .attr("y1", function(d) {{ return Math.max(0,Math.min(height, d.source.y)); }})
+        .attr("x2", function(d) {{ return Math.max(0,Math.min(width, d.target.x)); }})
+        .attr("y2", function(d) {{ return Math.max(0,Math.min(height, d.target.y)); }});
+    node
+        .attr("transform", function(d) {{
+            var x = Math.max(0, Math.min(width, d.x)) - this.getBBox().width / 2;
+            var y = Math.max(0, Math.min(height, d.y)) - this.getBBox().height / 2;
+            return "translate(" + x + "," + y + ")";
+        }});
+  }}
+
+  function dragstarted(d) {{
+    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }}
+
+  function dragged(d) {{
+    d.fx = Math.max(0, Math.min(width - nodeWidth, d3.event.x));
+    d.fy = Math.max(0, Math.min(height - nodeHeight, d3.event.y));
+  }}
+
+  function dragended(d) {{
+    if (!d3.event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }}
+</script>
+"""
+    return graph_html
+
 
 
 
@@ -624,6 +765,168 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
     return scrollable_html
 
 
+
+
+
+
+
+
+
+def visualize_graph(tables, edges):
+    G = nx.Graph()
+    G.add_nodes_from(tables)
+    G.add_edges_from(edges)
+
+    pos = nx.spring_layout(G)
+
+    nx.draw_networkx_nodes(G, pos, node_color='lightgreen',node_size=1200, edgecolors='forestgreen', linewidths=1)
+
+    nx.draw_networkx_edges(G, pos, edge_color='forestgreen', width=1)
+
+    node_labels = {node:node for node in G.nodes()}
+    nx.draw_networkx_labels(G, pos, node_labels, font_size=6)
+
+    edge_labels = nx.get_edge_attributes(G, 'label')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_color='forestgreen')
+
+    plt.axis('off')
+    plt.gca().set_facecolor('lightgrey')
+    plt.gca().grid(which='major', color='white', linestyle='-', linewidth=0.5)
+    plt.show()
+
+
+
+
+
+def visualize_data_vault(hubs, links, satellites, hub_link_edges, link_satellite_edges, hub_satellite_edges):
+    G = nx.Graph()
+
+    hubs = [f"Hub\n{hub}" for hub in hubs]
+
+    links = [f"Link\n{link}" for link in links]
+
+    satellites = [f"Satellite\n{satellite}" for satellite in satellites]
+
+    G.add_nodes_from(hubs, color='#FF4136', node_shape='s', node_size=160)
+
+    G.add_nodes_from(links, color='#0074D9', node_shape='s', node_size=180)
+
+    G.add_nodes_from(satellites, color='#111111', node_shape='s', node_size=240)
+
+    for link_idx, hub_indices in hub_link_edges.items():
+        for hub_idx in hub_indices:
+            G.add_edge(links[link_idx], hubs[hub_idx])
+
+    for link_idx, satellite_indices in link_satellite_edges.items():
+        for satellite_idx in satellite_indices:
+            G.add_edge(links[link_idx], satellites[satellite_idx])
+
+    for hub_idx, satellite_indices in hub_satellite_edges.items():
+        for satellite_idx in satellite_indices:
+            G.add_edge(hubs[hub_idx], satellites[satellite_idx])
+
+    pos = nx.spring_layout(G, iterations=200)
+
+    scale = 2
+    for node in pos:
+        pos[node] = (pos[node][0] * scale, pos[node][1] * scale)
+
+    
+    num_nodes = len(G.nodes())
+    height = 3 + num_nodes // 5
+    fig, ax = plt.subplots(figsize=(6, 5))
+
+    node_colors = [G.nodes[n]['color'] for n in G.nodes()]
+    node_shapes = [G.nodes[n]['node_shape'] for n in G.nodes()]
+    node_sizes = [G.nodes[n]['node_size'] for n in G.nodes()]
+
+    def custom_rectangle(x, y, width, height):
+        return np.array([[x - width/2, y - height/2],
+                         [x + width/2, y - height/2],
+                         [x + width/2, y + height/2],
+                         [x - width/2, y + height/2],
+                         [x - width/2, y - height/2]])
+
+    nx.draw_networkx(G, pos, edge_color='#CCCCCC', width=0.8, ax=ax, with_labels=False, node_size=0)
+
+    for node in G.nodes():
+        x, y = pos[node]
+        node_color = G.nodes[node]['color']
+        node_size = G.nodes[node]['node_size']
+        width = np.sqrt(node_size) / 25
+        height = width / 2
+        node_shape = custom_rectangle(x, y, width, height)
+        ax.add_patch(plt.Polygon(node_shape, closed=True, edgecolor=node_color, facecolor='white', linewidth=0.8))
+
+    nx.draw_networkx_labels(G, pos, font_size=6, ax=ax)
+
+    ax.set_facecolor('white')
+
+    x_coords = [pos[node][0] for node in G.nodes()]
+    y_coords = [pos[node][1] for node in G.nodes()]
+    x_min, x_max = min(x_coords), max(x_coords)
+    y_min, y_max = min(y_coords), max(y_coords)
+
+    x_range = x_max - x_min + 1
+    y_range = y_max - y_min + 0.5
+
+    x_center = (x_min + x_max) / 2
+    y_center = (y_min + y_max) / 2
+
+    max_range = max(x_range, y_range)
+    aspect_ratio = 1
+
+    x_lim_min = x_center - max_range / 2
+    x_lim_max = x_center + max_range / 2
+    y_lim_min = y_center - (max_range / aspect_ratio) / 2
+    y_lim_max = y_center + (max_range / aspect_ratio) / 2
+
+    ax.set_xlim([x_lim_min, x_lim_max])
+    ax.set_ylim([y_lim_min, y_lim_max])
+
+    ax.set_axis_off()
+
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+
+
+
+
+
+
+def create_graph_data(hubs, links, satellites, hub_link_edges, link_satellite_edges, hub_satellite_edges):
+    graph_data = {"nodes": [], "links": []}
+
+    for hub in hubs:
+        graph_data["nodes"].append({"id": hub, "border_color": "red", "fill_color": "lightpink"})
+
+    for link in links:
+        graph_data["nodes"].append({"id": link, "border_color": "blue", "fill_color": "lightblue"})
+
+    for satellite in satellites:
+        graph_data["nodes"].append({"id": satellite, "border_color": "black", "fill_color": "white"})
+
+    for link_index, hub_indices in hub_link_edges.items():
+        for hub_index in hub_indices:
+            graph_data["links"].append({"source": hubs[hub_index], "target": links[link_index]})
+
+    for link_index, satellite_indices in link_satellite_edges.items():
+        for satellite_index in satellite_indices:
+            graph_data["links"].append({"source": links[link_index], "target": satellites[satellite_index]})
+
+    for hub_index, satellite_indices in hub_satellite_edges.items():
+        for satellite_index in satellite_indices:
+            graph_data["links"].append({"source": hubs[hub_index], "target": satellites[satellite_index]})
+
+    svg_height=300 + 10 * len(graph_data["nodes"])
+    svg_width=700
+
+    html_content = generate_draggable_graph_html_color(graph_data, svg_height=svg_height, svg_width=svg_width)
+    return wrap_in_iframe(html_content, width=svg_width+20, height=svg_height+20)
 
 
 
