@@ -19682,7 +19682,7 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False):
     main_workflow.add_to_leaf(SynthesizeLinks())
     main_workflow.add_to_leaf(ConstructDataVaultViz())
     
-    return main_workflow
+    return query_widget, main_workflow
 
 class DescribeColumnsList(ListNode):
     default_name = 'Describe Columns'
@@ -20352,12 +20352,14 @@ def create_cocoon_workflow(con):
     _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget)    
     dbt_explore_workflow = create_cocoon_dbt_explore_workflow()
     _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget)
+    _, data_vault_workflow = create_cocoon_data_vault_workflow(con=con, query_widget=query_widget)
     
     main_workflow.register(stage_workflow, parent=branch_node)
     main_workflow.register(profile_workflow, parent=branch_node)
     main_workflow.register(fuzzy_join_workflow, parent=branch_node)
     main_workflow.register(dbt_explore_workflow, parent=branch_node)
     main_workflow.register(table_transform_workflow, parent=branch_node)
+    main_workflow.register(data_vault_workflow, parent=branch_node)
     
     return query_widget, main_workflow
 
