@@ -115,6 +115,9 @@ Give us the source table and the (example of) target table, we help you fuzzy un
 
 Give us a database, we design the data model/data vault
 
+- 👉 [**Python Package:** Check out the notebook](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Model.ipynb)
+
+
 <kbd>![](./images/model.gif)</kbd>
 
 ## Future
