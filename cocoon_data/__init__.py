@@ -21700,13 +21700,13 @@ Return in the following format:
         
         dropdown =  create_explore_button(query_widget, table_name=tables)
         
-        html_content = f"""🎉 We've recommended the hubs, based on the story:<b>"""
-        display(HTML(html_content))
         
-        display_container = create_list_of_strings(story, reset=False)
-        display(display_container)
         
-        html_content = f"""😊 These would be the core concept. Please refine them, but keep them short and simple.<br>
+        story_html = f"<ol>{''.join([f'<li>{s}</li>' for s in story])}</ol>"
+        
+        html_content = f"""🎉 We've recommended the hubs, based on the story:<br>
+{story_html}
+😊 These would be the core concept. Please refine them, but keep them short and simple.<br>
 ⚠️ Please don't create hubs for time/location. We will treat them differently."""
         
         display(HTML(html_content))
@@ -21959,7 +21959,11 @@ class DecideTableHubRelationForAll(MultipleNode):
         )
         
         def on_button_clicked(b):
-            new_df =  grid_to_updated_dataframe(grid, reset=reset)
+            try:
+                new_df =  grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            except Exception as e:
+                print(f"{str(e)}")
+                return
             
             document = new_df.to_json(orient="split")
             callback(document)
