@@ -152,8 +152,8 @@ def grid_to_updated_dataframe(grid, reset=True, lists=[], editable_list={}):
             column_name = column_names[j]
 
             if column_name in lists:
-                value = widget.options
-            if column_name in editable_list:
+                value = list(widget.options)
+            elif column_name in editable_list:
                 value = widget.value
                 value = ast.literal_eval(value)
                 if not isinstance(value, list):
