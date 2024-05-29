@@ -15,8 +15,8 @@ Given a **Data Task** from the user, Cocoon connects to your data warehouse, exp
 #### Data Tasks currently available:
 - [Profile: Semantically understand your data and detect anomalies](#profile-semantically-understand-your-data-and-detect-anomalies)
 - [Preview: Staging, Data Cleaning, Data Preparation](#preview-staging-data-cleaning-data-preparation)
-- [Preview: Fuzzy Join, Column Standardization, Entity Matching](#preview-fuzzy-join-column-standardization-entity-matching)
-- [Preview: Fuzzy Union, Table Transformation, Common Data Model](#preview-fuzzy-union-table-transformation-common-data-model)
+- [Preview: Entity Matching, Fuzzy Join, Column Standardization](#preview-fuzzy-join-column-standardization-entity-matching)
+- [Preview: Table Transformation, Fuzzy Union, Common Data Model](#preview-fuzzy-union-table-transformation-common-data-model)
 - [Preview: Data Model, Data Vault](#preview-data-model-data-vault)
 - And more to come...
 
