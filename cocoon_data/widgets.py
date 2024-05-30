@@ -250,7 +250,8 @@ def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists=
                         elif isinstance(widget, widgets.Checkbox):
                             widget.value = bool(value)
                         elif isinstance(widget, widgets.Dropdown):
-                            widget.value = value
+                            if value  in widget.options:
+                                widget.value = value
                         elif isinstance(widget, widgets.Text):
                             widget.value = str(value)
 

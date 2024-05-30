@@ -124,3 +124,46 @@ def get_table_names(conn):
     else:
         raise ValueError("Unsupported connection type")
     
+
+
+def generate_count_distinct_query(table_name, attributes):
+    select_clauses = []
+    
+    for attribute in attributes:
+        select_clause = f"COUNT(DISTINCT {attribute})/COUNT(*) AS {attribute}"
+        select_clauses.append(select_clause)
+    
+    query = f"SELECT {', '.join(select_clauses)} \nFROM {table_name}"
+    
+    return query
+
+
+
+
+def generate_group_ratio_query(table_name, group_by, attributes):
+    subquery_select_clauses = []
+    main_select_clauses = []
+
+    for attribute in attributes:
+        subquery_select_clause = f"COUNT(DISTINCT({attribute}))/COUNT(*) AS {attribute}"
+        subquery_select_clauses.append(subquery_select_clause)
+
+        main_select_clause = f"AVG({attribute}) AS {attribute}"
+        main_select_clauses.append(main_select_clause)
+
+    subquery_select = ", ".join(subquery_select_clauses)
+    main_select = ", ".join(main_select_clauses)
+
+    query = f"""
+    SELECT {main_select}
+    FROM (
+        SELECT {group_by}, {subquery_select}, COUNT(*) AS COCOON_COUNT
+        FROM {table_name}
+        GROUP BY {group_by}
+        HAVING COCOON_COUNT > 5
+    ) AS subquery;
+    """
+
+    return query
+
+

@@ -63,7 +63,7 @@ except:
 icon_import = False
 MAX_TRIALS = 3
 LOG_MESSAGE_HISTORY = False
-
+DEBUG_MODE = False
 cocoon_comment_start = "-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK IF YOU WANT TO LET COCOON MAINTAIN THE CODES\n"
 cocoon_comment_end = "-- COCOON BLOCK END\n"
 
@@ -11561,12 +11561,15 @@ class Node:
         except Exception as e:
             print(f"Failed to run {self.name}. Retrying...")
             
+            if DEBUG_MODE:
+                raise e
+            
             for i in range(self.retry_times):
                 try:
                     return self.run(extract_output, use_cache=False)
                 except Exception as e:
                     print(f"😔 Failed to run {self.name}. Retrying...")
-                     
+                    
                     write_log(f"""
 The node is {self.name}
 The error is: {e}
@@ -11599,6 +11602,12 @@ The messages are:
 
     def get_sibling_document(self, sibling_name):
         new_path = self.path[:-1]
+        new_path.append(sibling_name)
+
+        return self.global_document.get_nested(new_path)
+    
+    def get_multi_node_parent_sibling_document(self, sibling_name):
+        new_path = self.path[:-3]
         new_path.append(sibling_name)
 
         return self.global_document.get_nested(new_path)
@@ -15326,7 +15335,7 @@ class DescribeColumns(Node):
         columns = list(schema.keys())
         sample_size = 5
         
-        table_summary = self.get_sibling_document("Create Table Summary")
+        table_summary = self.get_sibling_document("Create Short Source Table Summary")
 
         all_columns = ", ".join(columns)
         sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
@@ -15852,12 +15861,8 @@ class DecideDuplicate(Node):
 
             display(HBox([no_button, yes_button]))
 
-            if self.viewer:
-                on_button_clicked(no_button)
-                
-            if "viewer" in self.para and self.para["viewer"]:
-                on_button_clicked(no_button)            
-
+            if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+                on_button_clicked(yes_button)         
 
         else:
             callback(document)   
@@ -16825,7 +16830,7 @@ Return in the following format:
         )
         
         reject_button = widgets.Button(
-            description='Reject Trim',
+            description='Reject Unique',
             disabled=False,
             button_style='danger',
             tooltip='Click to submit',
@@ -17946,18 +17951,18 @@ It has the following values, ordered by frequency:
 
 Task: First, understand what are the unusual values and why.
 Then, reason if the corrected value is obvious.
-If so, maps old values to the correct values to fix the problems.
+If so, maps those unusual old values to the correct ones to fix the problems.
 E.g., if the old values have inconsistent patters/typos, map to the most frequent case.
 If a few old values are meaningless, map to empty string.
-If almost all old values are meaningless, it is not possible to clean.
+If almost all old values are meaningless, could_clean is false (and skip mapping)
 
 Return in the following format:
 ```yml
 explanation: |
     The problem is ... The correct values are ...
 could_clean: true/false
-mapping:
-    {sample_values.iloc[0, 0]}: {sample_values.iloc[0, 0]}
+mapping: 
+    '{sample_values.iloc[0, 0]}': '{sample_values.iloc[0, 0]}' # unusual_old_value : correct_value
     ...
 ```
 """
@@ -18556,6 +18561,9 @@ cast_clause: |
 
         summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
         
+        if database_name == "DuckDB" and current_type == "VARCHAR":
+            summary["cast_clause"] = unescape_regex(summary["cast_clause"])
+        
         for i in range(max_iterations):
             try:
                 sql = f"""SELECT {summary['cast_clause']}
@@ -19109,7 +19117,10 @@ models:
             if is_categorical.size > 0 and is_categorical[0]:
                 accepted_values = categorical_df.loc[categorical_df['Column'].str.lower() == column.lower(), 'Domain'].values[0]
                 if not isinstance(accepted_values, list):
-                    accepted_values = ast.literal_eval(accepted_values)
+                    if accepted_values.startswith("[") and accepted_values.endswith("]"):
+                        accepted_values = ast.literal_eval(accepted_values)
+                    else:
+                        accepted_values = accepted_values.split(",")
                 tests.append(f"accepted_values:\n{indent_paragraph('values: [' + ', '.join(accepted_values) + ']', spaces=4)}")
         
         
@@ -19333,7 +19344,7 @@ class CreateShortTableSummary(Node):
     def run(self, extract_output, use_cache=True):
         table_name, table_desc = extract_output
 
-        template = f"""You have the following table:
+        template = f"""You have the table '{table_name}' with samples:
 {table_desc}
         
 - Task: Summarize the table.
@@ -19705,7 +19716,7 @@ class DescribeColumnsList(ListNode):
         columns = list(schema.keys())
         sample_size = 5
         
-        table_summary = self.get_sibling_document("Create Table Summary")
+        table_summary = self.get_sibling_document("Create Short Table Summary")
         
         outputs = []
         
@@ -21389,7 +21400,7 @@ class DecideStringCategorical(Node):
 Review if the column is categorical with a limited domain of acceptable values that you CAN enumerate.
 If so, enumerate the FULL domain with Jinja template. E.g.,
 [{{% for i in range(1, 10) %}}'x_{{{{ i }}}}'{{% if not loop.last %}},{{% endif %}}{{% endfor %}}]
-['cat', 'dog', 'fish']
+['cat', 'dog', 'fish', 'mom\\'s hat'] # note how to escape!
 
 Now, respond in yml:
 ```yml
@@ -21429,10 +21440,15 @@ full_domain: | # Jinja template that creates a list, to the best of you knowledg
         
         if "full_domain" in summary:
             full_domain = summary["full_domain"]
-            full_domain = evaluate_jinja(full_domain)
-            if not isinstance(full_domain, list):
-                raise ValueError("The 'full_domain' must be a list.")
-            summary["full_domain"] = full_domain
+            if full_domain.strip() == "":
+                full_domain = []
+            elif full_domain.strip().startswith("#"):
+                full_domain = []
+            else:
+                full_domain = evaluate_jinja(full_domain)
+                if not isinstance(full_domain, list):
+                    raise ValueError("The 'full_domain' must be a list.")
+                summary["full_domain"] = full_domain
         
         if "full_domain" in summary and len(summary["full_domain"]) == 0 :
             summary["current_full"] = True
@@ -22456,3 +22472,192 @@ class ConstructDataVaultViz(Node):
 
         on_checkbox_change({'new': checkbox.value})
         
+
+
+class DecideFunctionalDependencyForAll(MultipleNode):
+    default_name = 'Decide If Functional Dependency For All'
+    default_description = 'This node allows users to decide if there is a functional dependency between two columns.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        node = DecideFunctionalDependency(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        table_name = table_pipeline.get_final_step().name
+        all_columns = list(schema.keys())
+        con = self.item["con"]
+        
+        sql_query = generate_count_distinct_query(table_name, all_columns)
+
+        distinct_count_df = run_sql_return_df(con, sql_query)
+
+        distinct_count_df = distinct_count_df.loc[:, (distinct_count_df.iloc[0] < 0.1) & (distinct_count_df.iloc[0] > 0)]
+        columns = distinct_count_df.columns
+        
+        self.elements = []
+        self.nodes = {}
+
+        idx = 0
+        for col in columns:
+            self.elements.append(col)
+            self.nodes[col] = self.construct_node(col, idx, len(columns))
+            idx += 1
+            
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        
+        data = {
+            'Column Name': [],
+            'Decide Columns': [],
+            'Explanation': []
+        }
+        
+        if "Decide If Functional Dependency" in document:
+            for column_name, details in document["Decide If Functional Dependency"].items():
+                data['Column Name'].append(column_name)
+                data['Decide Columns'].append(details['decide_columns'])
+                data['Explanation'].append(details['explanation'])
+                
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, True, False]
+        reset = True
+        long_text = ['Explanation']
+        editable_list = {
+            'Related Hubs': {
+                'allowed_tags': [],
+                'allow_duplicates': False
+            }
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, long_text=long_text, editable_list=editable_list)
+        
+        print("😎 We have identified the column functional dependency")
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Endorse',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            document = new_df.to_json(orient="records")
+            callback(document)
+            
+        next_button.on_click(on_button_clicked)
+        
+        display(next_button)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(next_button) 
+    
+
+class DecideFunctionalDependency(Node):
+    default_name = 'Decide If Functional Dependency'
+    default_description = 'This node allows users to decide if there is a functional dependency between two columns.'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+
+        print("🔍 Detecting functional dependencies...")
+        
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+        show_progress(max_value=total, value=idx)
+
+        self.input_item = input_item
+
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        table_name = table_pipeline.get_final_step().name
+        column_name = self.para["column_name"]
+        all_columns = list(table_pipeline.get_final_step().get_schema().keys())
+        table_summary = self.get_multi_node_parent_sibling_document("Create Short Table Summary")
+        
+        decide_column_candidates = []
+        decide_columns = [c for c in all_columns if c != column_name]
+
+        if len(decide_columns) > 0:
+            sql_query = generate_group_ratio_query(table_name, column_name, decide_columns)
+            ratio_df = run_sql_return_df(con, sql_query)
+            
+            ratio_df = ratio_df.loc[:, ratio_df.iloc[0] <= 0.2]
+            decide_column_candidates = list(ratio_df.columns)
+            
+            
+        table_desc = ""
+        
+        if len(decide_column_candidates) > 0:
+            sample_size = 5
+            all_columns_str = ", ".join(all_columns)
+            sample_df = run_sql_return_df(con, f"SELECT {all_columns_str} FROM {table_name} ORDER BY {column_name} LIMIT {sample_size} ")
+            table_desc = sample_df.to_csv(index=False, quoting=2)
+
+        
+        return column_name, decide_column_candidates, table_summary, table_desc
+
+
+    def run(self, extract_output, use_cache=True):
+        column_name, decide_column_candidates, table_summary, table_desc = extract_output
+        
+        if len(decide_column_candidates) == 0:
+            return {"explanation": "No candidates", "decide_columns": []}
+
+        template = f"""You have a table, with a sample:
+{table_desc}
+
+{table_summary}
+
+For column '{column_name}', here is a list of columns that could have functional dependency: '{column_name}' -> {decide_column_candidates}
+Reason about what each column means and whether the FD is semantically sensible for each column.
+E.g., 'city' -> 'country', but not 'country'-> 'city'.
+
+Respond in yml:
+```yml
+explanation: |
+    '{column_name}' means ... When we know '{column_name}', we know ...
+decide_columns: [column1, column2, ...]
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: "explanation" in jc, "The 'explanation' key is missing in the JSON code."),
+        ]
+
+        for check, error_message in checks:
+            if not check(summary):
+                raise ValueError(f"Validation failed: {error_message}")
+        
+        if "decide_columns" not in summary:
+            summary["decide_columns"] = []
+        
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"explanation": "Fail to run", "decide_columns": []}
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
