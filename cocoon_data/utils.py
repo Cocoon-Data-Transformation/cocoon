@@ -39,6 +39,21 @@ def replace_newline(input_string):
 
     return modified_string
 
+
+def unescape_regex(string):
+    characters = [
+        "d", "t", "b", "r", "f", "D", "w", "W", "s", "S", "B", ".",
+        "(", ")", "[", "]", "{", "}", "|", "?", "*", "+", "^", "$"
+    ]
+    
+    for char in characters:
+        escaped_char = "\\\\" + char
+        if escaped_char in string:
+            string = string.replace(escaped_char, "\\" + char)
+    
+    return string
+
+
 def write_log(message: str):
     log_file = open('error_log.txt', 'a')
     log_file.write(message + '\n')
@@ -114,8 +129,31 @@ def evaluate_jinja(template_string):
     template = Template(template_string)
 
     rendered_template = template.render()
-
+    print(rendered_template)
+    rendered_template = escape_single_quotes(rendered_template)
+    print(rendered_template)
     result = ast.literal_eval(rendered_template)
 
     return result
+
+
+
+def escape_single_quotes(input_string):
+    input_string = input_string.strip("[\n]")
+    
+    items = re.split(r",\s*\n?", input_string)
+    
+    escaped_items = []
+    for item in items:
+        item = item.strip("' ")
+        
+        escaped_item = item.replace("'", "\\'")
+        
+        escaped_items.append(f"'{escaped_item}'")
+    
+    output_string = "[" + ", ".join(escaped_items) + "]"
+    
+    return output_string
+
+
 

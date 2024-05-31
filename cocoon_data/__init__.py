@@ -82,39 +82,61 @@ def yml_from_name(table_name):
 class QueryWidget:
     def __init__(self, con):
         self.con = con
-        self.label = widgets.Label(value='Enter your SQL query:')
-        self.sql_input = widgets.Textarea(value='SELECT * FROM my_table\n\n\n\n', 
-                                          placeholder='Type something', 
-                                          description='', 
-                                          disabled=False, 
-                                          layout={'width': '100%', 'height': '100px'})
-        self.error_msg = widgets.HTML(value='')
-        self.result_display = widgets.HTML()
-        self.submit_button = widgets.Button(description="Submit Query", button_style='success')
-        self.vbox = widgets.VBox([self.label, self.sql_input, self.submit_button, self.error_msg, self.result_display])
+        self.tables = get_table_names(con)
+        database_name = get_database_name(con)
         
+        if self.tables:
+            table_label = widgets.HTML(value=f"<b>Database</b>: {database_name}, <b>Tables</b>:")
+            table_dropdown = widgets.Dropdown(
+                options=self.tables,
+                value=self.tables[0],
+                layout=widgets.Layout(width='150px')
+            )
+            table_dropdown.observe(self.on_table_change, names='value')
+            self.dropdown_label = HBox([table_label, table_dropdown])
+            self.sql_input = widgets.Textarea(value=f'SELECT * FROM {self.tables[0]}',
+                                              disabled=False,
+                                              layout={'width': '96%', 'height': '100px'})
+        else:
+            self.dropdown_label = widgets.HTML(value="There are no tables in your database.")
+            self.sql_input = widgets.Textarea(value='SELECT * FROM your_table_name',
+                                              disabled=False,
+                                              layout={'width': '96%', 'height': '100px'})
+        
+        self.error_msg = widgets.HTML(value='')
+        self.result_display = widgets.HTML(layout=widgets.Layout(max_width='96%', overflow='auto'))
+        self.submit_button = widgets.Button(description="Submit Query", button_style='success', icon='check')
+        layout = Layout(display='flex', justify_content='space-between', width='96%')
+
+        database_and_submit = HBox([self.dropdown_label, self.submit_button], layout=layout)
+
+        self.vbox = widgets.VBox([self.sql_input, database_and_submit, self.error_msg, self.result_display])
         self.submit_button.on_click(self.run_query_from_button)
-    
+   
+    def on_table_change(self, change):
+        selected_table = change['new']
+        self.sql_input.value = f'SELECT * FROM {selected_table}'
+   
     def run_query(self, sql_query):
         sample_size = 100
         self.sql_input.value = sql_query
         modified_query = f"SELECT * FROM ({sql_query}) LIMIT {sample_size}"
         try:
             result = run_sql_return_df(self.con, modified_query)
-            self.error_msg.value = f'The query was successful. We only show the first {sample_size} rows.'
-            self.result_display.value = wrap_in_scrollable_div(result.to_html(), height="400px")
+            self.error_msg.value = f"<div style='color: green;'>The query was successful. We only show the first {sample_size} rows.</div>"
+            self.result_display.value = f'<div style="width: 80%; min-width: 0px; max-height: 400px;">{result.to_html()}</div>'
         except Exception as e:
             self.error_msg.value = f"<div style='color: red;'>{str(e)}</div>"
             self.result_display.value = ''
-    
+   
     def run_query_from_button(self, b):
         self.run_query(self.sql_input.value)
-    
+   
     def display(self):
         display(self.vbox)
 
 
-        
+
 
 
 def create_data_type_grid(df, all_data_types = None):
@@ -18589,7 +18611,7 @@ cast_clause: |
 """
 
                 messages = [{"role": "user", "content": template}]
-                response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=(i == 0))
                 messages.append(response['choices'][0]['message'])
                 self.messages.append(messages)
 

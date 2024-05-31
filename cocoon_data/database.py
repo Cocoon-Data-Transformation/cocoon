@@ -145,7 +145,7 @@ def generate_group_ratio_query(table_name, group_by, attributes):
     main_select_clauses = []
 
     for attribute in attributes:
-        subquery_select_clause = f"COUNT(DISTINCT({attribute}))/COUNT(*) AS {attribute}"
+        subquery_select_clause = f"ENTROPY({attribute}) AS {attribute}"
         subquery_select_clauses.append(subquery_select_clause)
 
         main_select_clause = f"AVG({attribute}) AS {attribute}"
