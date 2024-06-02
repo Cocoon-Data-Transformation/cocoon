@@ -1101,7 +1101,9 @@ def get_tree_javascript(data):
         def calculate_length(path):
             return sum(len(step) for step in path) * ch_size + (len(path) - 1) * gap_size
 
-        def traverse(node, path=[]):
+        def traverse(node, path=None):
+            if path is None:
+                path = []
             if isinstance(node, dict):
                 for key, value in node.items():
                     yield from traverse(value, path + [key])
@@ -6754,7 +6756,9 @@ DONT change the function name, first line and the return clause.
         title, message = give_title(self.explanation)
         self.name = title
 
-    def get_codes(self, target_id=0, source_ids=[]):
+    def get_codes(self, target_id=0, source_ids=None):
+        if source_ids is None:
+            source_ids = []
         source_ids_str = ", ".join([f"df_{source_id}" for source_id in source_ids])
         return self.codes + "\n\n" + f"df_{target_id} = transform({source_ids_str})\n\n"
 
@@ -6942,7 +6946,10 @@ class SourceStep(TransformationStep):
 
         display(return_button)
     
-    def get_codes(self, target_id=0, source_ids=[]):
+    def get_codes(self, target_id=0, source_ids=None):
+        if source_ids is None:
+            source_ids = []
+            
         if self.doc_df.file_path is None:
             return f"df_{str(target_id)} = pd.read_csv(ADD_YOUR_SOURCE_FILE_PATH_HERE) \n\n"
         else:
@@ -7268,7 +7275,10 @@ class SourceShapeStep(GeoShapeStep):
 
         display(return_button)
 
-    def get_codes(self, target_id=0, source_ids=[]):
+    def get_codes(self, target_id=0, source_ids=None):
+        if source_ids is None:
+            source_ids = []
+            
         if hasattr(self, 'gdf'):
             return f"df_{str(target_id)} = gpd.read_file(ADD_YOUR_SOURCE_FILE_PATH_HERE) \n\n"
         elif hasattr(self, 'raster_path'):
@@ -8034,7 +8044,7 @@ def get_unique_labels_with_ids(df, label = 'label'):
     return label_id_df
 
 
-def df_row_to_column_value(df, idx=0, exclude_columns=[]):
+def df_row_to_column_value(df, idx=0, exclude_columns=None):
     """
     Create a DataFrame of [column, value] pairs from a specified row index,
     excluding specified columns.
@@ -8047,7 +8057,10 @@ def df_row_to_column_value(df, idx=0, exclude_columns=[]):
     Returns:
     - A new DataFrame with two columns: 'Column' and 'Value'.
     """
-
+    
+    if exclude_columns is None:
+        exclude_columns = []
+        
     df_reduced = df.drop(columns=exclude_columns, errors='ignore')
 
     if idx not in df_reduced.index:
@@ -8508,7 +8521,9 @@ def generate_html_from_json(json_var):
 
 
 
-def generate_page_clusters(df, clusters, i=0, js=[], exclude_columns=['label', 'index_ids', 'embedding', 'matches'], match_col='matches'):
+def generate_page_clusters(df, clusters, i=0, js=None, exclude_columns=['label', 'index_ids', 'embedding', 'matches'], match_col='matches'):
+    if js is None:
+        js = []
     input_data_html = df_row_to_column_value(df, idx=i, exclude_columns=exclude_columns).to_html(index=False)
     similar_data_html = ""
     for j in clusters[i]:
@@ -8831,12 +8846,15 @@ def CRS_select(callbackfunc=None):
 
 
 
-def lightweight_copy(df, columns_to_copy=[]):
+def lightweight_copy(df, columns_to_copy=None):
     
     
     
     
     
+    if columns_to_copy is None:
+        columns_to_copy = []
+        
     new_df = pd.DataFrame(index=df.index, columns=df.columns)
     
     for col in df.columns:
@@ -11453,11 +11471,12 @@ class Node:
     default_description = "This is the base class for all nodes."
     retry_times = 3
 
-    def __init__(self, name=None, description=None, viewer=False, para=None, output=None, id_para="element_name"):
+    def __init__(self, name=None, description=None, viewer=False, item=None, para=None, output=None, id_para="element_name"):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
 
         self.para = para if para is not None else {}
+        self.item = item
         self.viewer = viewer
 
         self.nodes = {self.name: self}
@@ -11501,7 +11520,9 @@ class Node:
             self.para = parent.para
 
         self.viewer = parent.viewer
-        self.item = parent.item
+        
+        if not self.item:
+            self.item = parent.item
 
     def set_global_document(self, value):
         self.global_document.set_nested(self.path, value)
@@ -11544,7 +11565,10 @@ class Node:
 
             
 
-    def display(self, call_back_list=[]):
+    def display(self, call_back_list=None):
+        
+        if call_back_list is None:
+            call_back_list = []
         
         display(HTML(self.to_html()))
 
@@ -11710,6 +11734,16 @@ class Workflow(Node):
 
         new_node.inherit(self)
         new_node.remove_global_document()
+        
+    def add_as_root(self, node):
+        nodes, edges = list(self.nodes.keys()), self.edges 
+        
+        if len(nodes) == 0:
+            self.register(node)
+            return
+        
+        self.register(node, children=[self.root_node])
+            
 
     def add_to_leaf(self, node):
         nodes, edges = list(self.nodes.keys()), self.edges 
@@ -11727,16 +11761,21 @@ class Workflow(Node):
         else:
             raise ValueError("No leaf node found. Please manually add the node.")        
 
-    def register(self, node, parent=None):
+    def register(self, node, parent=None, children=None):
+        
+        if children is None:
+            children = []
+            
         if isinstance(parent, Node):
             parent = parent.name
 
         if node.name in self.nodes:
             raise ValueError(f"Node {node.name} is already registered.")
-
-        self.nodes[node.name] = node
-        node.inherit(self)
-
+        
+        for child in children:
+            if child not in self.nodes:
+                raise ValueError(f"Child node {child} not found.")
+        
         if parent:
             if parent not in self.nodes:
                 raise ValueError(f"Parent node {parent} not found.")
@@ -11745,10 +11784,13 @@ class Workflow(Node):
             else:
                 self.edges[parent] = [node.name]
         else:
-            if self.root_node is not None:
+            if self.root_node is not None and self.root_node not in children:
                 raise ValueError("A root node is already registered. Only one root node is allowed.")
             self.root_node = node.name
-            self.edges[node.name] = []
+    
+        self.nodes[node.name] = node
+        node.inherit(self)
+        self.edges[node.name] = children
 
     def start_workflow(self, meta_info = None):
         if self.root_node is None:
@@ -11815,7 +11857,10 @@ class Workflow(Node):
         display(HTML(f"<h3>Flow Diagram</h3>"))
         display_workflow(nodes, edges)
         
-    def display(self, call_back_list=[]):
+    def display(self, call_back_list=None):
+        
+        if call_back_list is None:
+            call_back_list = []
 
         display(HTML(self.to_html()))
         
@@ -11972,7 +12017,10 @@ class MultipleNode(Workflow):
         display(HTML(f"<h3>Flow Diagram</h3>"))
         display_workflow_with_unit(nodes, edges, unit=self.unit)
 
-    def display(self, call_back_list=[]):
+    def display(self, call_back_list=None):
+        
+        if call_back_list is None:
+            call_back_list = []
 
         display(HTML(self.to_html()))
         
@@ -15059,7 +15107,11 @@ class SQLStep(TransformationStep):
 
         display(return_button)
     
-    def get_codes(self, target_id=0, source_ids=[], mode=""):
+    def get_codes(self, target_id=0, source_ids=None, mode=""):
+        
+        if source_ids is None:
+            source_ids = []
+            
         modes = ["", "TABLE", "VIEW", "AS"]
 
         if mode not in modes:
@@ -15168,6 +15220,7 @@ def indent_paragraph(paragraph, spaces=4):
 class DataProject:
     def __init__(self):
         self.tables = {}
+        self.table_object = {}
 
         self.links = {}
 
@@ -15199,6 +15252,10 @@ class DataProject:
         else:
             self.tables[table_name] = attributes
 
+    def add_tables_with_con(self, table_names, con):
+        for table_name in table_names:
+            self.add_table(table_name, get_table_schema(con, table_name))
+                
     def get_columns(self, table_name):
         if table_name in self.tables:
             return self.tables[table_name]
@@ -15496,6 +15553,7 @@ class DecideProjection(Node):
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 step.run_codes()
                 table_pipeline.add_step_to_final(step)
+
             callback(document)
 
         create_column_selector(column_names, callback_next, default=True)
@@ -16517,21 +16575,21 @@ class DecideDMV(Node):
         column_name, sample_values = extract_output
         
         if len(sample_values) == 0:
-            return {"reasoning": "Column is fully missing", "DMV": []}
+            return {"reasoning": "Column is fully missing", "null_values": []}
         
         sample_values_list = sample_values[column_name].values.tolist()
 
         template = f"""{column_name} has the following distinct values: {sample_values_list}
 
-From these values, detect disguised missing values, which means "missing" or "not available".
+From these values, detect values that should be NULL. E.g., "missing", "empty", "not available" or empty string ("").
 Note that some values are simply typos. Disregard them.
-Values like "0" are not disguised missing values.
+Values like "0" are not DMV.
 
 Return in json format:
 ```json
 {{
     "reasoning": "xxx values are disguised missing values because ...",
-    "DMV": ["N/A", "-1", ...] (empty if no disguised missing values)
+    "null_values": ["N/A", "-1", ...] (empty if no disguised missing values)
 }}
 ```"""
 
@@ -16546,8 +16604,8 @@ Return in json format:
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
             (lambda jc: "reasoning" in jc and isinstance(jc["reasoning"], str), "The 'reasoning' key is missing or its value is not a string."),
-            (lambda jc: "DMV" in jc and isinstance(jc["DMV"], list), "The 'DMV' key is missing or its value is not a list."),
-            (lambda jc: all(dmv in sample_values_list for dmv in jc["DMV"]), f"Some DMV values are not present in the sample_values. sample_values: {sample_values_list}, DMV: {json_code['DMV']}"),    
+            (lambda jc: "null_values" in jc and isinstance(jc["null_values"], list), "The 'DMV' key is missing or its value is not a list."),
+            (lambda jc: all(dmv in sample_values_list for dmv in jc["null_values"]), f"Some DMV values are not present in the sample_values. sample_values: {sample_values_list}, DMV: {json_code['null_values']}"),    
         ]
 
         for check, error_message in checks:
@@ -16557,7 +16615,7 @@ Return in json format:
         return json_code
     
     def run_but_fail(self, extract_output, use_cache=True):
-        return {"reasoning": "No disguised missing values found.", "DMV": []}
+        return {"reasoning": "No disguised missing values found.", "null_values": []}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
@@ -16599,10 +16657,10 @@ class DecideDMVforAll(MultipleNode):
         data = []
         if "Decide Disguised Missing Values" in document:
             for key in document["Decide Disguised Missing Values"]:
-                if document["Decide Disguised Missing Values"][key]["DMV"]:
-                    data.append([key, document["Decide Disguised Missing Values"][key]["DMV"], 
+                if document["Decide Disguised Missing Values"][key]["null_values"]:
+                    data.append([key, document["Decide Disguised Missing Values"][key]["null_values"], 
                                 True,
-                                ",".join(document["Decide Disguised Missing Values"][key]["DMV"])])
+                                ",".join(document["Decide Disguised Missing Values"][key]["null_values"])])
                     
         
         df = pd.DataFrame(data, columns=["Column", "Disguised Missing Values", "Impute to NULL?", "Values to NULL (Sep By ,)"])
@@ -16732,7 +16790,7 @@ class DecideUnique(Node):
     def extract(self, item):
         clear_output(wait=True)
 
-        print("🔍 Checking uniqueness ...")
+        display(HTML("🔍 Checking uniqueness ..."))
         create_progress_bar_with_numbers(2, doc_steps)
         
         self.progress = show_progress(1)
@@ -16840,7 +16898,7 @@ Return in the following format:
         editable_columns = [False, False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
         
-        print("😎 We have identified candidate keys:")
+        print("😎 We have identified columns should be unique. Please verify:")
         display(grid)
         
         next_button = widgets.Button(
@@ -16868,6 +16926,12 @@ Return in the following format:
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="split")
+            
+            table_object = self.para["table_object"]
+            for index, row in new_df.iterrows():
+                if row["Should Unique?"]:
+                    table_object.uniqueness[row["Column"]] = row["Explanation"]
+                    
 
             callback(document)
         
@@ -16880,6 +16944,38 @@ Return in the following format:
             on_button_clicked(next_button)
 
 
+class DecideUniqueContinue(DecideUnique):
+     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        self.progress.value += 1
+        json_code = run_output
+        unique_columns, _, _, _ = extract_output
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        
+        
+        rows_list = []
+        for col in unique_columns:
+            is_unique = unique_columns[col]
+            reason = json_code["candidate_key"].get(col, "")
+            rows_list.append({
+                "Column": col,
+                "Is Unique?": is_unique,
+                "Should Unique?": True if reason != "" else False,
+                "Explanation": reason
+            })
+        
+        df = pd.DataFrame(rows_list)
+        df = df[df["Is Unique?"] | df["Should Unique?"]]
+        
+        callback(df.to_json(orient="split"))
+        
 
 def create_profile_workflow(table_name, con, viewer=True):
         
@@ -17057,6 +17153,96 @@ def build_barchat_input(con, column, tablename, limit=6):
     result = df_to_list(run_sql_return_df(con, fetch_query))
     result_dict = {row[0]: row[1] for row in result}
     return result_dict
+
+
+def plot_distribution_category(con, table_name, column_name):
+
+    result_dict = build_barchat_input(con, column_name, table_name, limit=11)
+    result_dict = modify_data_dict(result_dict, limit=30)
+    
+    plt.figure(figsize=(4, 2))
+    
+    categories = list(result_dict.keys())
+    counts = list(result_dict.values())
+    
+    bar_plot = sns.barplot(y=categories, x=counts, color="#5DADE2", edgecolor="black")
+    
+    if 'Other values' in categories:
+        other_index = categories.index('Other values')
+        bar_plot.patches[other_index].set_facecolor('orange')
+    
+    for index, value in enumerate(counts):
+        bar_plot.text(value, index, f'{value}', color='black', va='center', fontsize=8)
+    
+    plt.xlabel(column_name)
+    
+    plt.tight_layout()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=300)
+    plt.close()
+    buf.seek(0)
+    
+    image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+    
+    return image_base64
+
+def modify_data_dict(data_dict, limit=30):
+    modified_dict = {}
+    for label, value in data_dict.items():
+        new_label = (str(label)[:limit] + "...") if len(str(label)) > limit else str(label)
+        
+        if new_label in modified_dict:
+            if isinstance(modified_dict[new_label], list):
+                modified_dict[new_label].append(value)
+            else:
+                modified_dict[new_label] = [modified_dict[new_label], value]
+        else:
+            modified_dict[new_label] = value
+    
+    return modified_dict
+  
+
+def eng_formatter_with_precision(precision):
+    def _formatter(x, pos):
+        eng = EngFormatter(places=precision, sep="\N{THIN SPACE}")
+        return eng.format_eng(x)
+    return _formatter
+
+def plot_distribution_numerical(con, table_name, column_name):
+    """
+    This function takes a database connection, table name, and a column name as input.
+    It plots a vertical histogram for the numeric column and returns it as a base64-encoded PNG string.
+    """
+    counts, bin_width, bin_centers = build_histogram_inputs(con, column_name, table_name)
+
+    sns.set_style("whitegrid")
+    plt.figure(figsize=(4, 2))
+
+    hist_plot = plt.bar(bin_centers, counts, width=bin_width, align='center', color="#5DADE2", edgecolor="black")
+
+    plt.gca().xaxis.set_major_formatter(eng_formatter_with_precision(precision=1))
+    plt.xticks(bin_centers[::6])
+
+    for rect in hist_plot:
+        height = rect.get_height()
+        plt.text(rect.get_x() + rect.get_width() / 2, height, f'{int(height)}', ha='center', va='bottom', fontsize=8)
+
+    plt.ylabel('Frequency')
+    plt.xlabel(column_name)
+
+    plt.subplots_adjust(top=0.9)
+
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=300)
+    plt.close()
+    buf.seek(0)
+
+    image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    return image_base64
 
 def filter_attributes(attributes, groups):
     retained_groups = []
@@ -18028,6 +18214,9 @@ mapping:
             print("☹️ Cocoon can't clean this for you, as it's too complex...")
             print("😎 We'll log this for future cleanings and analyses")
             
+            table_object = self.para["table_object"]
+            table_object.unusualness[column_name] = json_code["unusual_reason"]
+            
             submit_button = widgets.Button(
                 description='Next',
                 disabled=False,
@@ -18515,8 +18704,14 @@ class TransformType(Node):
 
     def extract(self, item):
         clear_output(wait=True)
+        
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        current_type = self.para["current_type"]
+        target_type = self.para["target_type"]
 
-        print("🔍 Transforming data type ...")
+        display(HTML(f"🔍 Transforming data type {table_pipeline}: {column_name}"))
         create_progress_bar_with_numbers(2, doc_steps)
 
         self.input_item = item
@@ -18526,11 +18721,7 @@ class TransformType(Node):
 
         show_progress(max_value=total, value=idx)
 
-        con = self.item["con"]
-        table_pipeline = self.para["table_pipeline"]
-        column_name = self.para["column_name"]
-        current_type = self.para["current_type"]
-        target_type = self.para["target_type"]
+        
         database_name = get_database_name(con)
         sample_size = 5
 
@@ -19008,8 +19199,10 @@ class DecideStringUnusual(Node):
         template = f"""{column_name} has the following distinct values:
 {sample_values.to_csv(index=False, header=False, quoting=2)}
 
-Review if there are any weird characters/typo.
-Look out for patterns that don't align with the nature of the data.
+Review if there are
+1. Any weird characters/typo (e.g., "cofffee")
+2. Redundant/Inconsistent representations of the same coencept (e.g., "New York" and "NY")
+If so, report them as unusual values.
 
 Now, respond in Json:
 ```json
@@ -19110,7 +19303,7 @@ models:
     description: "{table_summary}"
     columns:"""
     for column in columns:
-        description = column_desc.loc[column_desc['New Name'].str.lower() == column.lower(), 'Summary'].values[0]
+        description = column_desc.loc[column_desc["New Column Name"].str.lower() == column.lower(), 'Summary'].values[0]
         tests = []
         cocoon_meta = {}
         
@@ -19217,53 +19410,15 @@ class WriteStageYMLCode(Node):
         
         table_pipeline = self.para["table_pipeline"]
         table_name = new_table_name
-        table_summary = self.get_sibling_document("Create Short Table Summary").replace("**","")
+       
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
         
-        column_desc = pd.read_json(self.get_sibling_document("Describe Columns"), orient="split")
+        table_object = self.para["table_object"]
+        table_object.columns = columns
+        table_object.table_name = table_name
         
-        miss_document = self.get_sibling_document("Decide Missing Values")
-
-        if miss_document == {} or len(miss_document) == 0:
-            miss_df = None
-        else:
-            miss_df = pd.read_json(miss_document, orient="split")
-            if len(miss_df) == 0:
-                miss_df = None
-        
-        unique_document = self.get_sibling_document("Decide Unique Columns")
-        if unique_document == {}:
-            unique_df = None
-        else:
-            unique_df = pd.read_json(unique_document, orient="split")
-            if len(unique_df) == 0:
-                unique_df = None
-            
-        categorical_document = self.get_sibling_document('Decide If Categorical For All')
-        if categorical_document == {}:
-            categorical_df = None
-        else:
-            categorical_df = pd.read_json(categorical_document, orient="split")
-            if len(categorical_df) > 0:
-                categorical_df["Domain"] = np.where(categorical_df["Current Domain Complete?"], categorical_df["Current Domain"], categorical_df["If Incomplete: True Domain (Sep By ,)"].str.split(","))
-            else:
-                categorical_df = None
-                
-        unusual_df = None
-        
-        unusual_document = self.get_sibling_document('Decide Unusual String For All').get("Clean Unusual", {})
-        unusual_map = {}
-        
-        for col in unusual_document:
-            if not clean_unusual[col]["could_clean"]:
-                unusual_map[col] = clean_unusual[col]["unusual_reason"]
-                
-        if len(unusual_map) > 0:
-            unusual_df = pd.DataFrame({"Column": list(unusual_map.keys()), "Explanation": list(unusual_map.values())})
-                
-        yml_content = create_dbt_schema_yml(table_name, table_summary, columns, 
-                                            column_desc, miss_df, unique_df, categorical_df,unusual_df )
+        yml_content = table_object.create_dbt_schema_yml()
         
         formatter = HtmlFormatter(style='default')
         css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
@@ -19281,8 +19436,6 @@ class WriteStageYMLCode(Node):
         
 
 
-
-
         
         
         
@@ -19293,13 +19446,34 @@ class WriteStageYMLCode(Node):
             sql_query,
             yml_content,
         ]
-
+        
+        if "dbt_directory" in self.para:
+            file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
+            
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        
+        
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            callback({})
+
+        submit_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+
+        display(submit_button)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             overwrite_checkbox.value = True
-            
             save_files_click(save_button)  
+            
+            on_button_clicked(submit_button)
         
 
 def create_stage_workflow(table_name, con, viewer=True):
@@ -19334,6 +19508,7 @@ def create_stage_workflow(table_name, con, viewer=True):
     main_workflow.add_to_leaf(WriteStageYMLCode())
     
     return query_widget, main_workflow
+
     
 class CreateShortTableSummary(Node):
     default_name = 'Create Short Table Summary'
@@ -19405,11 +19580,14 @@ Now, your summary in a few sentences and < 500 chars:"""
         print(f"📝 Here is the summary for {table_name}, please keep it concise:")
         
         text_area, char_count_label = create_text_area_with_char_count(summary, max_chars=500)
-        display(VBox([text_area, char_count_label]))
+        layout = Layout(display='flex', justify_content='space-between', width='100%')
+        display(HBox([text_area, char_count_label], layout=layout))
 
         def on_button_clicked(b):
             clear_output(wait=True)
             print("Submission received.")
+            table_object = self.para["table_object"]
+            table_object.table_summary = text_area.value
             callback(text_area.value)
 
         submit_button = widgets.Button(
@@ -19652,12 +19830,12 @@ class SelectTable(Node):
         next_button.on_click(on_button_click)
         display(next_button)
         
-        if "table_name" in self.para and "viewer" in self.para and self.para["viewer"]:
+        if "table_name" in self.para and  self.para["table_name"] is not None:
             dropdown.value = self.para["table_name"]
             on_button_click(next_button)
          
 
-def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None):
+def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None, para={}):
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -19665,31 +19843,39 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
         "con": con,
         "query_widget": query_widget
     }
+    
+    workflow_para = {"viewer": viewer, 
+                     "table_name": table_name,
+                     "table_object": Table()}
+    for key, value in para.items():
+        workflow_para[key] = value
 
     main_workflow = Workflow("Data Stage Workflow", 
                             item = item, 
                             description="A workflow to stage table",
-                            para = {"viewer": viewer, "table_name": table_name})
+                            para = workflow_para)
     
     main_workflow.add_to_leaf(SelectTable())
     main_workflow.add_to_leaf(DecideColumnsPattern())
     main_workflow.add_to_leaf(DecideProjection())
-    main_workflow.add_to_leaf(CreateShortTableSummary())
+    main_workflow.add_to_leaf(CreateShortTableSummaryContinue())
+    main_workflow.add_to_leaf(DescribeColumnsListAndTableSummary())
     main_workflow.add_to_leaf(DecideDuplicate())
-    main_workflow.add_to_leaf(DescribeColumnsList())
     main_workflow.add_to_leaf(DecideDataTypeList())
     main_workflow.add_to_leaf(TransformTypeForAll())
     main_workflow.add_to_leaf(DecideTrim())
-    main_workflow.add_to_leaf(DecideUnique())
     main_workflow.add_to_leaf(DecideStringUnusualForAll())
     main_workflow.add_to_leaf(CleanUnusualForAll())
     main_workflow.add_to_leaf(DecideDMVforAll())
     main_workflow.add_to_leaf(DecideMissingList())
     main_workflow.add_to_leaf(HandleMissing())
+    main_workflow.add_to_leaf(DecideUnique())
     main_workflow.add_to_leaf(DecideStringCategoricalForAll())
     main_workflow.add_to_leaf(WriteStageYMLCode())
     
     return query_widget, main_workflow
+
+
 
 def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False):
 
@@ -19824,7 +20010,7 @@ Return in the following format:
             rows_list.append({
                 "Column": col,
                 "Summary": json_code[col][0],
-                "New Name": json_code[col][1],
+                "New Column Name": json_code[col][1],
                 "Renamed?": "✔️ Yes" if json_code[col][1] != col else "❌ No"
             })
 
@@ -19853,23 +20039,34 @@ Return in the following format:
         
         def on_button_clicked2(b):
             new_df =  grid_to_updated_dataframe(grid)
-            new_df["New Name"] = new_df["Column"]
+            new_df["New Column Name"] = new_df["Column"]
             document = new_df.to_json(orient="split")
+            get_column_desc_from_df(new_df)
             callback(document)
             
 
+        def get_column_desc_from_df(df):
+            table_object = self.para["table_object"]
+            column_desc = {}
+            for index, row in df.iterrows():
+                table_object.column_desc[row["New Column Name"]] = row["Summary"]
+
+        
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             
-            new_df["New Name"] = new_df["New Name"].apply(clean_column_name)
+            new_df["New Column Name"] = new_df["New Column Name"].apply(clean_column_name)
             
-            renamed = (new_df["Column"] != new_df["New Name"]).any()
+            
+            get_column_desc_from_df(new_df)
+            
+            renamed = (new_df["Column"] != new_df["New Column Name"]).any()
             
             if renamed:
-                if new_df["New Name"].duplicated().any():
+                if new_df["New Column Name"].duplicated().any():
                     print(f"⚠️ Please provide unique names for the columns. The following columns have duplicated names:")
-                    duplicate_names = new_df[new_df["New Name"].duplicated()]
-                    print(", ".join(duplicate_names["New Name"].tolist()))
+                    duplicate_names = new_df[new_df["New Column Name"].duplicated()]
+                    print(", ".join(duplicate_names["New Column Name"].tolist()))
                     return
 
 
@@ -19879,7 +20076,7 @@ Return in the following format:
                 
                 for index, row in new_df.iterrows():
                     old_name = row["Column"]
-                    new_name = row["New Name"]
+                    new_name = row["New Column Name"]
                     
                     if old_name != new_name:
                         comment += f"-- {old_name} -> {new_name}\n"
@@ -19905,7 +20102,7 @@ Return in the following format:
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
-            
+
             
 class DecideMissingList(ListNode):
     default_name = 'Decide Missing Values'
@@ -19914,7 +20111,7 @@ class DecideMissingList(ListNode):
     def extract(self, item):
         clear_output(wait=True)
 
-        print("🔍 Checking missing values ...")
+        display(HTML("🔍 Checking missing values ..."))
         create_progress_bar_with_numbers(2, doc_steps)
         
         self.progress = show_progress(1)
@@ -20071,6 +20268,14 @@ Return in the following format:
             new_df =  grid_to_updated_dataframe(grid)
             document = new_df.to_json(orient="split")
 
+            table_object = self.para["table_object"]
+            for index, row in new_df.iterrows():
+                col = row["Column"]
+                missing_acceptable = row["Is NULL Acceptable?"]
+                explanation = row["Explanation"]
+                if missing_acceptable:
+                    table_object.missing_acceptable[col] = explanation
+            
             callback(document)
         
         next_button.on_click(on_button_clicked)
@@ -21307,10 +21512,8 @@ class DecideStringCategoricalForAll(MultipleNode):
         
         data = {
             'Column': [],
-            'Is Categorical?': [],
-            'Current Domain': [],
-            'Current Domain Complete?': [],
-            'If Incomplete: True Domain (Sep By ,)': [],
+            'Should Categorical?': [],
+            'Domain (Sep By ,)': [],
             'Explanation': []
         }
 
@@ -21318,15 +21521,13 @@ class DecideStringCategoricalForAll(MultipleNode):
             for column_name, details in document['Decide If Categorical'].items():
                 if details['can_enumerate']:
                     data['Column'].append(column_name)
-                    data['Is Categorical?'].append(True)
-                    data['Current Domain'].append(details['domain'])
-                    data['Current Domain Complete?'].append(details['current_full'])
+                    data['Should Categorical?'].append(True)
                     if details['current_full']:
                         domain_list = [str(item) for item in details['domain']]
-                        data['If Incomplete: True Domain (Sep By ,)'].append(",".join(domain_list))
+                        data['Domain (Sep By ,)'].append(",".join(domain_list))
                     else:
                         domain_list = [str(item) for item in details['full_domain']]
-                        data['If Incomplete: True Domain (Sep By ,)'].append(",".join(domain_list))
+                        data['Domain (Sep By ,)'].append(",".join(domain_list))
                     data['Explanation'].append(details['explanation'])
 
         df = pd.DataFrame(data)
@@ -21335,7 +21536,7 @@ class DecideStringCategoricalForAll(MultipleNode):
             callback(df.to_json(orient="split"))
             return
 
-        editable_columns = [False, True, True, True, True, False]
+        editable_columns = [False, True, True, False]
         reset = True
         lists = ['Current Domain']
         long_text = ['Explanation']
@@ -21362,7 +21563,7 @@ class DecideStringCategoricalForAll(MultipleNode):
         
         def on_reject_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
-            new_df['Is Categorical?'] = False
+            new_df['Should Categorical?'] = False
             document = new_df.to_json(orient="split")
             callback(document)
         
@@ -21370,6 +21571,13 @@ class DecideStringCategoricalForAll(MultipleNode):
             new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
             document = new_df.to_json(orient="split")
 
+            table_object = self.para["table_object"]
+            for idx, row in new_df.iterrows():
+                column = row['Column']
+                if row['Should Categorical?']:
+                    table_object.category[column] = row['Domain (Sep By ,)'].split(',')
+                    
+            
             callback(document)
         
         next_button.on_click(on_button_clicked)
@@ -21379,15 +21587,120 @@ class DecideStringCategoricalForAll(MultipleNode):
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
+
+
+class DecideStringCategoricalForAllContinue(DecideStringCategoricalForAll):
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+
+        create_progress_bar_with_numbers(2, doc_steps)
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        
+        data = {
+            'Column': [],
+            'Is Categorical?': [],
+            'Domain (Sep By ,)': [],
+            'Explanation': []
+        }
+
+        if 'Decide If Categorical' in document:
+            for column_name, details in document['Decide If Categorical'].items():
+                if details['can_enumerate']:
+                    data['Column'].append(column_name)
+                    data['Is Categorical?'].append(True)
+                    if details['current_full']:
+                        domain_list = [str(item) for item in details['domain']]
+                        data['Domain (Sep By ,)'].append(",".join(domain_list))
+                    else:
+                        domain_list = [str(item) for item in details['full_domain']]
+                        data['Domain (Sep By ,)'].append(",".join(domain_list))
+                    data['Explanation'].append(details['explanation'])
+
+        df = pd.DataFrame(data)
+
+        callback(df.to_json(orient="split"))
+
+        
+class VerifyTests(Node):
+    default_name = 'Verify Tests'
+    default_description = 'Verify the tests'
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        unique_df = pd.read_json(self.get_sibling_document('Decide Unique Columns'), orient="split")
+        
+        unique_editable_columns = [False, False, True, True]
+        unique_grid = create_dataframe_grid(unique_df, unique_editable_columns, reset=True)
+        
+        print("😎 We have identified columns that should be unique. Please verify:")
+        display(unique_grid)
+        
+        category_df = pd.read_json(self.get_sibling_document('Decide If Categorical For All'), orient="split")
+        category_editable_columns = [False, True, True, False]
+        category_reset = True
+        category_lists = ['Current Domain']
+        category_long_text = ['Explanation']
+        category_grid = create_dataframe_grid(category_df, category_editable_columns, 
+                                     reset=category_reset, lists=category_lists, 
+                                     long_text=category_long_text)
+
+        print("😎 We have identified columns that should be categorical. Please verify:")
+        display(category_grid)
+        
+        next_button = widgets.Button(
+            description='Accept Unique',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            summary = {}
+            unique_df =  grid_to_updated_dataframe(unique_grid)
+            summary["uniqueness"] = unique_df.to_json(orient="split")
             
+            table_object = self.para["table_object"]
+            
+            for index, row in unique_df.iterrows():
+                if row["Should Unique?"]:
+                    table_object.uniqueness[row["Column"]] = row["Explanation"]
+            
+            category_df =  grid_to_updated_dataframe(category_grid, 
+                                                     reset=category_reset, 
+                                                     lists=category_lists)
+            summary["category"] = category_df.to_json(orient="split")
+            
+            for idx, row in category_df.iterrows():
+                column = row['Column']
+                table_object.category[column] = row['Domain (Sep By ,)'].split(',')
+            callback(summary)
+        
+        next_button.on_click(on_button_clicked)
+
+        display(next_button)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(next_button)
+        
+        
+    
 class DecideStringCategorical(Node):
     default_name = 'Decide If Categorical'
     default_description = 'This node allows users to decide if a string column should be free text or categorical.'
 
     def extract(self, input_item):
         clear_output(wait=True)
-
-        print("🔍 Detecting categorical attributes...")
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        
+        display(HTML(f"🔍 Detecting categorical attributes {table_pipeline}: {column_name}"))
         create_progress_bar_with_numbers(3, doc_steps)
 
         idx = self.para["column_idx"]
@@ -21396,9 +21709,7 @@ class DecideStringCategorical(Node):
 
         self.input_item = input_item
 
-        con = self.item["con"]
-        table_pipeline = self.para["table_pipeline"]
-        column_name = self.para["column_name"]
+        
         sample_size = 50
 
         sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
@@ -21901,7 +22212,10 @@ class DecideTableHubRelationForAll(MultipleNode):
     default_name = 'Decide Table Hub Relation For All'
     default_description = 'This node allows users to decide the relation between tables and hubs.'
 
-    def construct_node(self, element_name, idx=0, total=0, hubs=[]):
+    def construct_node(self, element_name, idx=0, total=0, hubs=None):
+        if hubs is None:
+            hubs = []
+            
         para = self.para.copy()
         para["table_name"] = element_name
         para["table_idx"] = idx
@@ -22683,3 +22997,585 @@ decide_columns: [column1, column2, ...]
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
+        
+        
+
+class SourceProjectStoryUnderstanding(Node):
+    default_name = 'Source Project Understand'
+    default_description = 'This understands the source tables and dbt project'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        create_progress_bar_with_numbers(0, self.get_sibling_document('Product Steps'))
+
+        display(HTML("🤓 Generating the story of the project ..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+
+        description = data_project.describe_project()
+        
+        table_summary_document = self.get_sibling_document('Stage Tables For All')
+        
+        
+        tables = data_project.list_tables()
+
+        return description, tables
+
+    def run(self, extract_output, use_cache=True):
+        description, tables = extract_output
+        template = f"""You have tables:
+{description}
+
+First, identify the core concepts, which appear frequently in the table names or columns. Give a short descriptio  (~5 words).
+Then, desribe the story connects these concepts, in a short sequence (1-10) of steps, each as simple SVO sentences (~5 words). 
+
+Focus on the big picture. It's fine to skip some unimportant tables.
+If there are synomyms, keep them in the brackets. E.g., Customers (Users) buy Items (Products)
+Please disregard the system side of the tables (DONT: data are collected, stored in s3, used for analysis)/
+
+Return in the following format:
+```json
+{{
+    "reasoning": "The tables are ... The core concepts are ...",
+    "core_concepts": {{
+        "Customers (Users)": "Individuals need the service",
+        ... 
+    }}
+    "story": [ 
+        "Customers (Users) buy Items (Products)",
+        "Customers (Users) returns Items (Products)",
+        ...
+    ]
+}}
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+        
+        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = replace_newline(json_code)
+        summary = json.loads(json_code)
+
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"story": []}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        
+        
+        
+
+
+
+        def on_button_click(b):
+            
+
+            data_project = self.para["data_project"]
+            data_project.set_story(summary["story"])
+            callback(summary)
+
+        on_button_click(None) 
+        
+
+
+class SourceTableUnderstand(Node):
+    default_name = 'Source Table Understand'
+    default_description = 'This understands the source tables'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        create_progress_bar_with_numbers(0, self.get_sibling_document('Product Steps'))
+
+        print("🤓 Understanding the source tables ...")
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+
+        table_description = data_project.describe_project()
+        story = data_project.get_story()
+        story_description = "\n".join([f"{idx+1}. {story}" for idx, story in enumerate(story)])
+        tables = data_project.list_tables()
+        
+        
+        return tables, story_description, table_description,
+
+    def run(self, extract_output, use_cache=True):
+        tables, story_description, table_description = extract_output
+
+        template = f"""You have a list of tables:
+{table_description}
+
+The tables are for the following story:
+{story_description}
+
+Now, for each table, please first describe what it is.
+Then decide if its relation to table is clear. If so, how?
+Relation is a short sentence < 10 words.
+
+Return in the following format:
+```json
+{{
+    "{tables[0]}: {{
+        "description": "This table stores user address, where user is likely the customer",
+        "relation_clear": true/false,
+        "relation": "Customer address for delivery" # if relation_clear is true
+    }}
+    ...
+}}```"""
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = replace_newline(json_code)
+        summary = json.loads(json_code)
+
+        messages.append(response['choices'][0]['message'])
+        self.messages = messages
+
+        return summary, tables, story_description
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+
+        summary, tables, story_description = run_output
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        self.progress.value += 1
+
+        dropdown = widgets.Dropdown(
+            options=tables,
+            disabled=False,
+        )
+
+        explore_button = widgets.Button(
+            description='Explore',
+            disabled=False,
+            button_style='info',
+            tooltip='Click to explore',
+            icon='search'
+        )
+
+
+        query_widget = self.item["query_widget"]
+
+        def on_explore_button_clicked(b):
+            selected_table = dropdown.value
+
+            print("😎 Query submitted. Check out the data widget!")
+            query_widget.run_query(f"SELECT * FROM {selected_table}")
+
+        explore_button.on_click(on_explore_button_clicked)
+
+        display(HBox([dropdown, explore_button]))
+        
+        data_project = self.para["data_project"]
+        story = data_project.get_story()
+        
+        print("🎉 Based on the table, we've generated the project story:")
+        
+        text_area, char_count_label = create_text_area_with_char_count("\n".join(story), max_chars=500)
+        layout = Layout(display='flex', justify_content='space-between', width='100%')
+        display(HBox([text_area, char_count_label], layout=layout))
+
+        print("🎉 Here are the table descriptions, and how they fit in the story:")
+
+        table_desc = summary
+
+
+        
+        data = {
+            'Table': [],
+            'Description': [],
+        }
+        
+        for table in table_desc:
+            data['Table'].append(table)
+            data['Description'].append(table_desc[table]["description"])
+            
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, True]
+        reset = True
+        long_text = []
+        editable_list = {
+        }
+        
+                
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, long_text=long_text, editable_list=editable_list)
+        display(grid)
+
+        print("🤓 Please edit above, but keep it short and simple!")
+
+        next_button = widgets.Button(description="Next Step", button_style='success')
+
+        def on_button_click(b):
+            summary = {}
+            
+            current_strings_displayed = text_area.value
+            current_strings_displayed = current_strings_displayed.split("\n")
+            
+            if len(current_strings_displayed) == 0:
+                print("⚠️ Please provide a story with at least one line")
+                return 
+
+            summary["story"] = current_strings_displayed
+            
+            data_project = self.para["data_project"]
+            data_project.set_story(summary["story"])
+            
+            df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            document = df.to_json(orient="records")
+            summary["table_desc"] = document
+            
+            callback(document)
+
+        next_button.on_click(on_button_click)
+
+        display(next_button)
+        
+
+class Table:
+    def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_acceptable=None, unusualness=None, category=None, uniqueness=None):
+        self.table_name = table_name
+        self.table_summary = table_summary
+        self.columns = columns or []
+        self.column_desc = column_desc or {}
+        self.missing_acceptable = missing_acceptable or {}
+        self.unusualness = unusualness or {}
+        self.category = category or {}
+        self.uniqueness = uniqueness or {}
+
+    def create_dbt_schema_yml(self):
+        yml_content = f"""version: 2
+models:
+  - name: {self.table_name}
+    description: "{self.table_summary}"
+    columns:"""
+
+        for column in self.columns:
+            columndesc_key = next((key for key in self.column_desc if key.lower() == column.lower()), None)
+            description = self.column_desc[columndesc_key] if columndesc_key else ""
+            tests = []
+            cocoon_meta = {}
+
+            missing_acceptable_key = next((key for key in self.missing_acceptable if key.lower() == column.lower()), None)
+            if missing_acceptable_key:
+                explanation = self.missing_acceptable[missing_acceptable_key]
+                if not explanation:
+                    tests.append("not_null")
+                else:
+                    cocoon_meta["missing_acceptable"] = explanation
+            else:
+                tests.append("not_null")
+
+            unusualness_key = next((key for key in self.unusualness if key.lower() == column.lower()), None)
+            if unusualness_key:
+                unusual_reason = self.unusualness[unusualness_key]
+                if unusual_reason:
+                    cocoon_meta["unusal_values"] = unusual_reason
+
+            uniqueness_key = next((key for key in self.uniqueness if key.lower() == column.lower()), None)
+            if uniqueness_key:
+                unique_reason = self.uniqueness[uniqueness_key]
+                if unique_reason:
+                    tests.append("unique")
+                    cocoon_meta["uniqueness"] = unique_reason
+
+            category_key = next((key for key in self.category if key.lower() == column.lower()), None)
+            if category_key:
+                accepted_values = self.category[category_key]
+                if accepted_values:
+                    if not isinstance(accepted_values, list):
+                        if accepted_values.startswith("[") and accepted_values.endswith("]"):
+                            accepted_values = ast.literal_eval(accepted_values)
+                        else:
+                            accepted_values = accepted_values.split(",")
+                    tests.append(f"accepted_values:\n{indent_paragraph('values: [' + ', '.join(accepted_values) + ']', spaces=4)}")
+
+            yml_content += f"""
+      - name: {column}
+        description: "{description}\""""
+
+            if tests:
+                yml_content += f"""
+        tests:
+{indent_paragraph(chr(10).join(f"- {test}" for test in tests), spaces=10)}"""
+
+            if cocoon_meta:
+                cocoon_meta_yaml = yaml.dump(cocoon_meta, default_flow_style=False).strip()
+                yml_content += f"""
+        cocoon_meta:
+{indent_paragraph(cocoon_meta_yaml, spaces=10)}"""
+
+        return yml_content
+    
+    def add_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
+        if column_name not in self.columns:
+            self.columns.append(column_name)
+        if description is not None:
+            self.column_desc[column_name] = description
+        if missing_desc is not None:
+            self.missing_acceptable[column_name] = missing_desc
+        if unusual_desc is not None:
+            self.unusualness[column_name] = unusual_desc
+        if categories is not None:
+            self.category[column_name] = categories
+
+    def remove_column(self, column_name):
+        if column_name in self.columns:
+            self.columns.remove(column_name)
+        self.column_desc.pop(column_name, None)
+        self.missing_acceptable.pop(column_name, None)
+        self.unusualness.pop(column_name, None)
+        self.category.pop(column_name, None)
+
+    def update_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
+        if column_name in self.columns:
+            if description is not None:
+                self.column_desc[column_name] = description
+            if missing_desc is not None:
+                self.missing_acceptable[column_name] = missing_desc
+            if unusual_desc is not None:
+                self.unusualness[column_name] = unusual_desc
+            if categories is not None:
+                self.category[column_name] = categories
+
+    def __repr__(self):
+        return f"Table(table_summary={self.table_summary}, columns={self.columns})"
+    
+    
+class DescribeColumnsListAndTableSummary(DescribeColumnsList):
+    default_name = 'Describe Columns'
+    default_description = 'This node allows users to describe the columns of a table.'
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+        
+        self.progress.value += 1
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        schema = table_pipeline.get_final_step().get_schema()
+        
+        table_summary = self.get_sibling_document('Create Short Table Summary')
+        
+        print(f"📝 Here is the table summary. Please keep it concise:")
+        text_area, char_count_label = create_text_area_with_char_count(table_summary, max_chars=500)
+        layout = Layout(display='flex', justify_content='space-between', width='100%')
+        display(HBox([text_area, char_count_label], layout=layout))
+
+        rows_list = []
+
+        for col in schema:
+            rows_list.append({
+                "Column": col,
+                "Summary": json_code[col][0],
+                "New Column Name": json_code[col][1],
+                "Renamed?": "✔️ Yes" if json_code[col][1] != col else "❌ No"
+            })
+
+        df = pd.DataFrame(rows_list)
+        
+        editable_columns = [False, True, True, False]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        print("📝 Here are the summary for each column.")
+        display(grid)
+
+        next_button = widgets.Button(
+            description='Accept Rename',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+        
+        reject_button = widgets.Button(
+            description='Reject Rename',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='close'
+        )
+        
+        def on_button_clicked2(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            new_df["New Column Name"] = new_df["Column"]
+            document = new_df.to_json(orient="split")
+            get_column_desc_from_df(new_df)
+            get_table_summary_from_text()
+            callback(document)
+            
+
+        def get_column_desc_from_df(df):
+            table_object = self.para["table_object"]
+            column_desc = {}
+            for index, row in df.iterrows():
+                table_object.column_desc[row["New Column Name"]] = row["Summary"]
+                
+        def get_table_summary_from_text():
+            table_object = self.para["table_object"]
+            table_object.table_summary = text_area.value
+
+        
+        def on_button_clicked(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            
+            new_df["New Column Name"] = new_df["New Column Name"].apply(clean_column_name)
+            
+            get_column_desc_from_df(new_df)
+            get_table_summary_from_text()
+            
+            renamed = (new_df["Column"] != new_df["New Column Name"]).any()
+            
+            if renamed:
+                if new_df["New Column Name"].duplicated().any():
+                    print(f"⚠️ Please provide unique names for the columns. The following columns have duplicated names:")
+                    duplicate_names = new_df[new_df["New Column Name"].duplicated()]
+                    print(", ".join(duplicate_names["New Column Name"].tolist()))
+                    return
+
+
+                new_table_name = f"{table_pipeline}_renamed"
+                comment = f"-- Rename: Renaming columns\n"
+                selection_clauses = []
+                
+                for index, row in new_df.iterrows():
+                    old_name = row["Column"]
+                    new_name = row["New Column Name"]
+                    
+                    if old_name != new_name:
+                        comment += f"-- {old_name} -> {new_name}\n"
+                        selection_clauses.append(f"{old_name} AS {new_name}")
+                    else:
+                        selection_clauses.append(f"{old_name}")
+                
+                selection_clause = ',\n'.join(selection_clauses)
+                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                sql_query = comment + sql_query
+                con = self.item["con"]
+                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                step.run_codes()
+                table_pipeline.add_step_to_final(step)
+            
+            document = new_df.to_json(orient="split")
+            callback(document)
+
+        next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
+
+        display(HBox([reject_button, next_button]))
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(next_button)
+            
+        
+class CreateShortTableSummaryContinue(CreateShortTableSummary):
+    default_name = 'Create Short Table Summary'
+    default_description = 'This node creates a short summary of the table.'
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output 
+        self.progress.value += 1
+        
+        callback(summary)
+
+class StageProgress(Node):
+    default_name = 'Stage Progress'
+    default_description = 'This shows the progress of staging'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+
+        document = ["Source", "Clean", "Integrate", "Model"]
+
+        table_name = self.para['table_name']
+        idx = self.para["table_idx"]
+        all_tables = self.para["all_tables"]
+
+        print(f"🧐 We will clean the tables ... Next table is {BOLD}{table_name}{END} ...")
+
+        df = pd.DataFrame(all_tables, columns=["table"])
+
+        df["status"] = "🕒"
+        df.loc[:idx, "status"] = "✅"
+        df.loc[idx, "status"] = "🚀"
+
+        display(df)
+
+
+        next_button = widgets.Button(description="Next",
+                                    button_style='success')
+        
+        
+        html_mode_content = """<h3>To proceed, there are two modes </h3>
+<ul>
+<li><b>💬 Interactive Mode</b>: We will interatively ask your feedback for each step</li>
+<li><b>⚡ Express Mode</b>: Sit back and grab a coffee. We will provide our best guess.</li>
+</ul>
+"""
+
+        display(HTML(html_mode_content))
+
+        
+        interactive_next_button = widgets.Button(description="Interactive Next", 
+                                     button_style='success',
+                                     icon='check')
+
+        express_next_button = widgets.Button(description="Express Next",
+                                        button_style='info',
+                                        icon='bolt')
+        
+        express_all_button = widgets.Button(description="Express All",
+                                        button_style='warning',
+                                        icon='fast-forward')
+        
+        
+        
+        def on_interactive_next_button_click(b):
+            with self.output_context():
+                callback({})
+        
+        def on_express_next_button_click(b):
+            with self.output_context():
+                self.para["viewer"] = True
+                callback({})
+                
+        def on_express_all_button_click(b):
+            with self.output_context():
+                self.para["viewer"] = True
+                self.para["stage_viewer"][0] = True
+                callback({})
+                
+        interactive_next_button.on_click(on_interactive_next_button_click)
+        express_next_button.on_click(on_express_next_button_click)
+        express_all_button.on_click(on_express_all_button_click)
+          
+        display(HBox([interactive_next_button, express_next_button, express_all_button]))
+        
+        if self.para["stage_viewer"][0]:
+            self.para["viewer"] = True
+            callback({})
+            return

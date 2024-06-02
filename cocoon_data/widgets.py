@@ -384,23 +384,45 @@ def collect_updated_dict_from_grid(grid):
 
 def create_text_area_with_char_count(initial_value, max_chars=300):
 
-    text_area = Textarea(layout=Layout(height='200px', width='600px'),
-                            value=initial_value,
-                            style={'description_width': 'initial'})
+    text_area = Textarea(layout=Layout(height='100px', width='80%'),
+                            value=initial_value)
 
     char_count_label = ipywidgets.HTML()
 
     def update_char_count(change):
         if len(text_area.value) <= max_chars:
-            char_count_label.value = f"<p style='color: #333;'>Characters entered: {len(text_area.value)}</p>"
+            char_count_label.value = f"Characters entered: {len(text_area.value)}"
         else:
-            char_count_label.value = f"<p style='color: red;'>Characters entered: {len(text_area.value)} ⚠️ Too long!</p>"
+            char_count_label.value = f"Characters entered: {len(text_area.value)}<br> <div style='color: red;'>⚠️ Too long!</div>"
 
     text_area.observe(update_char_count, names='value')
 
     update_char_count(None)
 
     return text_area, char_count_label
+
+
+
+def create_editable_text(initial_text):
+    text = widgets.HTML(value="<pre>" + initial_text + "</pre>")
+    edit_button = widgets.Button(description='Edit',
+                                button_style='danger', 
+                                icon='pencil',
+                                layout=widgets.Layout(width='100px'))
+    
+    vbox = widgets.VBox([text, edit_button])
+    container = widgets.VBox([vbox])
+
+    def on_edit_clicked(b):
+        text_area, char_count_label = create_text_area_with_char_count(initial_text, max_chars=500)
+        layout = Layout(display='flex', justify_content='space-between', width='100%')
+        hbox = HBox([text_area, char_count_label], layout=layout)
+        container.children = [hbox]
+
+    edit_button.on_click(on_edit_clicked)
+
+    return container
+
 
 
 def create_text_area(initial_value):

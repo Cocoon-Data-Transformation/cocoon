@@ -19,95 +19,51 @@ def wrap_in_iframe(html_code, width=800, height=400):
 
     return iframe_code
 
-def eng_formatter_with_precision(precision):
-    def _formatter(x, pos):
-        eng = EngFormatter(places=precision, sep="\N{THIN SPACE}")
-        return eng.format_eng(x)
-    return _formatter
 
-def plot_distribution_numerical(con, table_name, column_name):
-    """
-    This function takes a database connection, table name, and a column name as input.
-    It plots a vertical histogram for the numeric column and returns it as a base64-encoded PNG string.
-    """
-    counts, bin_width, bin_centers = build_histogram_inputs(con, column_name, table_name)
+def plot_venn_percentage_by_stats(only1, only2, overlap, name1, name2):
 
-    sns.set_style("whitegrid")
-    plt.figure(figsize=(4, 2))
-
-    hist_plot = plt.bar(bin_centers, counts, width=bin_width, align='center', color="#5DADE2", edgecolor="black")
-
-    plt.gca().xaxis.set_major_formatter(eng_formatter_with_precision(precision=1))
-    plt.xticks(bin_centers[::6])
-
-    for rect in hist_plot:
-        height = rect.get_height()
-        plt.text(rect.get_x() + rect.get_width() / 2, height, f'{int(height)}', ha='center', va='bottom', fontsize=8)
-
-    plt.ylabel('Frequency')
-    plt.xlabel(column_name)
-
-    plt.subplots_adjust(top=0.9)
-
-    plt.tight_layout()
-
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=300)
-    plt.close()
-    buf.seek(0)
-
-    image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-
-    return image_base64
-
-
-def plot_distribution_category(con, table_name, column_name):
-
-    result_dict = build_barchat_input(con, column_name, table_name, limit=11)
-    result_dict = modify_data_dict(result_dict, limit=30)
+    plt.figure(figsize=(3, 2))
     
-    plt.figure(figsize=(4, 2))
-    
-    categories = list(result_dict.keys())
-    counts = list(result_dict.values())
-    
-    bar_plot = sns.barplot(y=categories, x=counts, color="#5DADE2", edgecolor="black")
-    
-    if 'Other values' in categories:
-        other_index = categories.index('Other values')
-        bar_plot.patches[other_index].set_facecolor('orange')
-    
-    for index, value in enumerate(counts):
-        bar_plot.text(value, index, f'{value}', color='black', va='center', fontsize=8)
-    
-    plt.xlabel(column_name)
-    
-    plt.tight_layout()
-    
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=300)
-    plt.close()
-    buf.seek(0)
-    
-    image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-    
-    return image_base64
+    total_elements = only1 + only2 + overlap
 
-def modify_data_dict(data_dict, limit=30):
-    modified_dict = {}
-    for label, value in data_dict.items():
-        new_label = (str(label)[:limit] + "...") if len(str(label)) > limit else str(label)
+    if total_elements == 0:
+        overlap = 0
+        only_set1 = 0
+        only_set2 = 0
+    else:
+        overlap =  overlap/ total_elements * 100
+        only_set1 = only1 / total_elements * 100
+        only_set2 = only2 / total_elements * 100
+
+    font_size=8
+    
+    venn_diagram = venn2(subsets=(only_set1, only_set2, overlap), set_labels=(name1, name2))
+
+    for patch in venn_diagram.patches:
+        if patch: 
+            patch.set_alpha(0.5)
+
+    if only_set1 > 0:
+        venn_diagram.get_label_by_id('10').set_text(f'{round(only_set1, 1)}%')
+        venn_diagram.get_label_by_id('10').set_fontsize(font_size)
+    else:
+        venn_diagram.get_label_by_id('10').set_text('')
+    if only_set2 > 0:
+        venn_diagram.get_label_by_id('01').set_text(f'{round(only_set2, 1)}%')
+        venn_diagram.get_label_by_id('01').set_fontsize(font_size)
+    else:
+        venn_diagram.get_label_by_id('01').set_text('')
+    if overlap > 0 and venn_diagram.get_label_by_id('11'):
+        venn_diagram.get_label_by_id('11').set_text(f'{round(overlap, 1)}%')
+        venn_diagram.get_label_by_id('11').set_fontsize(font_size)
+    else:
+        venn_diagram.get_label_by_id('11').set_text('')
+
+    for label in venn_diagram.set_labels:
+        label.set_fontsize(font_size)
         
-        if new_label in modified_dict:
-            if isinstance(modified_dict[new_label], list):
-                modified_dict[new_label].append(value)
-            else:
-                modified_dict[new_label] = [modified_dict[new_label], value]
-        else:
-            modified_dict[new_label] = value
-    
-    return modified_dict
-  
+    plt.show()
+
 
 def plot_venn_percentage(array1, array2, name1, name2):
 
@@ -234,6 +190,16 @@ def create_bar_chart_viz_html(data_dict):
 
 
 def generate_draggable_graph_html_color(data, svg_height=300, svg_width=1000):
+    
+    if "nodes" not in data or "links" not in data:
+        raise ValueError("The data dictionary must contain 'nodes' and 'links' keys")
+    
+    for node in data["nodes"]:
+        if "border_color" not in node:
+            node["border_color"] = "black"
+        if "fill_color" not in node:
+            node["fill_color"] = "white"
+    
     graph_data = json.dumps(data)
     graph_html = f"""<!DOCTYPE html>
 <meta charset="utf-8">

@@ -18,8 +18,7 @@ def get_database_name(con):
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         return "Snowflake"
     else:
-        raise ValueError(f"Connection type {type(con)} not supported")
-
+        return "Unknown"
 def run_sql_return_df(con, sql_query):
     if isinstance(con, duckdb.DuckDBPyConnection):
         return con.execute(sql_query).df()
@@ -65,8 +64,7 @@ def get_schema(con):
         return tables
         
     else:
-        raise ValueError(f"Connection type {type(con)} not supported")
-   
+        return {}
 def get_table_schema(conn, table_name):
 
     if isinstance(conn, duckdb.DuckDBPyConnection):
@@ -122,7 +120,7 @@ def get_table_names(conn):
         return table_names
 
     else:
-        raise ValueError("Unsupported connection type")
+        return []
     
 
 
@@ -166,4 +164,58 @@ def generate_group_ratio_query(table_name, group_by, attributes):
 
     return query
 
+
+
+def generate_queries_for_overlap(table1, attributes1, table2, attributes2, con):
+    select_clause1 = ", ".join(f"{table1}.{attr}" for attr in attributes1)
+    select_clause2 = ", ".join(f"{table2}.{attr}" for attr in attributes2)
+
+    query1 = f"""
+        SELECT COUNT(*)
+        FROM (
+            SELECT DISTINCT {select_clause1}
+            FROM {table1}
+            LEFT JOIN (
+                SELECT DISTINCT {select_clause2}
+                FROM {table2}
+                WHERE {' OR '.join(f'{table2}.{attr2} IS NOT NULL' for attr2 in attributes2)}
+            ) t2 ON {' AND '.join(f'{table1}.{attr1} = t2.{attr2}' for attr1, attr2 in zip(attributes1, attributes2))}
+            WHERE {' AND '.join(f't2.{attr2} IS NULL' for attr2 in attributes2)}
+                AND {' OR '.join(f'{table1}.{attr1} IS NOT NULL' for attr1 in attributes1)}
+        )
+    """
+    only1 = run_sql_return_df(con, query1).iloc[0, 0]
+
+    query2 = f"""
+        SELECT COUNT(*)
+        FROM (
+            SELECT DISTINCT {select_clause2}
+            FROM {table2}
+            LEFT JOIN (
+                SELECT DISTINCT {select_clause1}
+                FROM {table1}
+                WHERE {' OR '.join(f'{table1}.{attr1} IS NOT NULL' for attr1 in attributes1)}
+            ) t1 ON {' AND '.join(f'{table2}.{attr2} = t1.{attr1}' for attr1, attr2 in zip(attributes1, attributes2))}
+            WHERE {' AND '.join(f't1.{attr1} IS NULL' for attr1 in attributes1)}
+                AND {' OR '.join(f'{table2}.{attr2} IS NOT NULL' for attr2 in attributes2)}
+        )
+    """
+    only2 = run_sql_return_df(con, query2).iloc[0, 0]
+
+    query3 = f"""
+        SELECT COUNT(*)
+        FROM (
+            SELECT DISTINCT {select_clause1}
+            FROM {table1}
+            INNER JOIN (
+                SELECT DISTINCT {select_clause2}
+                FROM {table2}
+                WHERE {' OR '.join(f'{table2}.{attr2} IS NOT NULL' for attr2 in attributes2)}
+            ) t2 ON {' AND '.join(f'{table1}.{attr1} = t2.{attr2}' for attr1, attr2 in zip(attributes1, attributes2))}
+            WHERE {' OR '.join(f'{table1}.{attr1} IS NOT NULL' for attr1 in attributes1)}
+        )
+    """
+    overlap = run_sql_return_df(con, query3).iloc[0, 0]
+
+    return only1, only2, overlap
 
