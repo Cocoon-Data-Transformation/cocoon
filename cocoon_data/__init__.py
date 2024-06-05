@@ -15514,7 +15514,7 @@ Return in the following format:
 
         display(next_button)
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
         
         
@@ -15759,7 +15759,7 @@ Conclude with the final result as a multi-level JSON.
 
         display(HBox([edit_button, submit_button]))
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
         
     
@@ -15891,7 +15891,7 @@ Now, your summary:
 
         display(HBox([edit_button, submit_button]))
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
 
 
@@ -17000,29 +17000,30 @@ def create_profile_workflow(table_name, con, viewer=True):
     sql_step = SQLStep(table_name=table_name, con=con)
     pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
 
-    para = {"table_pipeline": pipeline}
+    para = {"table_pipeline": pipeline, 
+            "viewer": viewer,
+            "table_object": Table()}
 
-    main_workflow = Workflow("Data Profiling Workflow", 
+    main_workflow = Workflow("Data Profiling", 
                             item = item, 
                             description="A workflow to profile dataset",
                             viewer=viewer,
                             para = para)
 
-    main_workflow.add_to_leaf(DecideProjection())
-    main_workflow.add_to_leaf(DecideDuplicate())
-    main_workflow.add_to_leaf(CreateTableSummary())
-    main_workflow.add_to_leaf(DescribeColumns())
-    main_workflow.add_to_leaf(CreateColumnGrouping())
-    main_workflow.add_to_leaf(DecideDataType())
-    main_workflow.add_to_leaf(DecideMissing())
-    main_workflow.add_to_leaf(DecideUnique())
-    main_workflow.add_to_leaf(DecideUnusualForAll())
-    main_workflow.add_to_leaf(DecideColumnRange())
-    main_workflow.add_to_leaf(DecideLongitudeLatitude())
-    main_workflow.add_to_leaf(GenerateReport())
+    main_workflow.add_to_leaf(DecideProjection(viewer=True))
+    main_workflow.add_to_leaf(DecideDuplicate(viewer=True))
+    main_workflow.add_to_leaf(CreateTableSummary(viewer=True))
+    main_workflow.add_to_leaf(DescribeColumns(viewer=True))
+    main_workflow.add_to_leaf(CreateColumnGrouping(viewer=True))
+    main_workflow.add_to_leaf(DecideDataType(viewer=True))
+    main_workflow.add_to_leaf(DecideMissing(viewer=True))
+    main_workflow.add_to_leaf(DecideUnique(viewer=True))
+    main_workflow.add_to_leaf(DecideUnusualForAll(viewer=True))
+    main_workflow.add_to_leaf(DecideColumnRange(viewer=True))
+    main_workflow.add_to_leaf(DecideLongitudeLatitude(viewer=True))
+    main_workflow.add_to_leaf(GenerateReport(viewer=True))
     
     return query_widget, main_workflow
-
 
 
 
@@ -20448,7 +20449,9 @@ def create_cocoon_profile_workflow(con, query_widget=None, viewer=False):
 
     item = {
         "con": con,
-        "query_widget": query_widget
+        "query_widget": query_widget,
+        "table_object": Table(),
+        "viewer": viewer
     }
 
     main_workflow = Workflow("Data Profiling Workflow", 
