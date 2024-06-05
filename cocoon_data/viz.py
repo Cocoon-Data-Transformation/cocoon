@@ -21,11 +21,12 @@ def wrap_in_iframe(html_code, width=800, height=400):
 
 
 def plot_venn_percentage_by_stats(only1, only2, overlap, name1, name2):
-
-    plt.figure(figsize=(3, 2))
-    
+    # Set the figure size
+    fig, ax = plt.subplots(figsize=(3, 2))
+   
+    # Calculate the total elements for percentage calculation
     total_elements = only1 + only2 + overlap
-
+    # Calculate the percentage for each section of the Venn diagram
     if total_elements == 0:
         overlap = 0
         only_set1 = 0
@@ -34,15 +35,15 @@ def plot_venn_percentage_by_stats(only1, only2, overlap, name1, name2):
         overlap =  overlap/ total_elements * 100
         only_set1 = only1 / total_elements * 100
         only_set2 = only2 / total_elements * 100
-
     font_size=8
-    
-    venn_diagram = venn2(subsets=(only_set1, only_set2, overlap), set_labels=(name1, name2))
-
+   
+    # Create a Venn diagram with percentages
+    venn_diagram = venn2(subsets=(only_set1, only_set2, overlap), set_labels=(name1, name2), ax=ax)
+    # Adjust transparency
     for patch in venn_diagram.patches:
-        if patch: 
+        if patch:
             patch.set_alpha(0.5)
-
+    # Customize the labels to show percentages and set font size
     if only_set1 > 0:
         venn_diagram.get_label_by_id('10').set_text(f'{round(only_set1, 1)}%')
         venn_diagram.get_label_by_id('10').set_fontsize(font_size)
@@ -58,12 +59,20 @@ def plot_venn_percentage_by_stats(only1, only2, overlap, name1, name2):
         venn_diagram.get_label_by_id('11').set_fontsize(font_size)
     else:
         venn_diagram.get_label_by_id('11').set_text('')
-
     for label in venn_diagram.set_labels:
         label.set_fontsize(font_size)
-        
-    plt.show()
-
+       
+    # Save the plot to a BytesIO object
+    buffer = io.BytesIO()
+    plt.tight_layout()
+    plt.savefig(buffer, format='png')
+    plt.close(fig)  # Close the figure to prevent it from being displayed
+    buffer.seek(0)
+   
+    # Encode the image as base64
+    image_base64 = base64.b64encode(buffer.getvalue()).decode()
+   
+    return image_base64
 
 def plot_venn_percentage(array1, array2, name1, name2):
 

@@ -116,6 +116,7 @@ class QueryWidget:
     def on_table_change(self, change):
         selected_table = change['new']
         self.sql_input.value = f'SELECT * FROM {selected_table}'
+        self.run_query_from_button(None)
    
     def run_query(self, sql_query):
         sample_size = 100
@@ -717,7 +718,7 @@ def display_and_ask_removal(df, missing_column_indices):
 
     df_sample = color_columns(df.head(), 'lightgreen', missing_column_indices)
     display(HTML(wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
-    display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
+    display(HTML(f"<p>🧐 Select the columns you want to remove:</p>"))
 
 
 
@@ -743,7 +744,7 @@ def display_duplicated_columns_html(df, duplicate_column_indices):
     display(HTML(html_output))
     display(HTML(wrap_in_scrollable_div(truncate_html_td(styled_df.to_html()))))
 
-    display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
+    display(HTML(f"<p>🧐 Select the columns you want to remove:</p>"))
 
 
 def find_duplicate_column_indices(df):
@@ -824,7 +825,7 @@ def display_xy_duplicated_columns_html(df, duplicate_column_indices):
     display(HTML(html_output))
     display(HTML(wrap_in_scrollable_div(truncate_html_td(styled_df.to_html()))))
 
-    display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
+    display(HTML(f"<p>🧐 Select the columns you want to remove:</p>"))
 
 
 
@@ -852,14 +853,16 @@ def display_index_and_ask_removal(df, missing_column_indices):
     display(HTML(html_output))
     display(HTML(wrap_in_scrollable_div(truncate_html_td(df_sample.to_html()))))
 
-    display(HTML("<p>🧐 Select the columns you want to remove:</p>"))
+    display(HTML(f"<p>🧐 Select the columns you want to remove:</p>"))
 
 
 
 
 
-doc_steps = ["Sanity", "Table", "Missing", "Unusual"]
+doc_steps = ["Table", "Column", "Missing", "Tests"]
 geo_integration_steps = ["Process", "CRS", "Integration"] 
+model_steps = ["Database", "Table", "Integration"]
+transform_steps = ["Table Understand", "Table Transform"]
 
 
 
@@ -5140,7 +5143,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
 
     def display_database(self):
         database_description = replace_asterisks_with_tags(self.database_description)
-        display(HTML("<h1>OMOP CDM</h1>" + database_description))
+        display(HTML(f"<h1>OMOP CDM</h1>" + database_description))
         visualize_graph(self.tables, self.edges)
 
     def write_log(self, message: str):
@@ -5465,7 +5468,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         if summary["1:1"]:
             next_step(target_table)
         else:
-            display(HTML("☹️ <b>Source doesn't have 1-1 row mapping with Target:</b> " + summary["reason"]))
+            display(HTML(f"☹️ <b>Source doesn't have 1-1 row mapping with Target:</b> " + summary["reason"]))
             print("😊 M-N row mapping is under development. Please send a feature request!")
         
 
@@ -5481,7 +5484,7 @@ The **LOCATION**, **CARE_SITE**, and **PROVIDER** tables offer contextual data, 
         source_table_description = self.doc_df.document["table_summary"]["summary"]
         source_table_description = replace_asterisks_with_tags(source_table_description)
 
-        display(HTML("<b>Source table</b> " + source_table_description))
+        display(HTML(f"<b>Source table</b> " + source_table_description))
                     
 
         if json_code:
@@ -10761,9 +10764,9 @@ class GeoDataCleaning(DataCleaning):
     
     def display(self):
         self.pipeline.display(call_back=self.display)
-        display(HTML("<hr> <h3>🤓 Result Data</h3>"))
+        display(HTML(f"<hr> <h3>🤓 Result Data</h3>"))
         self.final_shape.__repr__()
-        display(HTML("<hr> <h3>🧹 Data Transformation</h3>"))
+        display(HTML(f"<hr> <h3>🧹 Data Transformation</h3>"))
         data_type = self.final_shape.get_type()
 
         boxes = []
@@ -11471,7 +11474,8 @@ class Node:
     default_description = "This is the base class for all nodes."
     retry_times = 3
 
-    def __init__(self, name=None, description=None, viewer=False, item=None, para=None, output=None, id_para="element_name"):
+    def __init__(self, name=None, description=None, viewer=False, item=None, 
+                 para=None, output=None, id_para="element_name", class_para = {}):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
 
@@ -11489,6 +11493,7 @@ class Node:
         self.init_path()
 
         self.output = output
+        self.class_para = class_para
     
     @contextmanager
     def output_context(self):
@@ -11518,8 +11523,6 @@ class Node:
 
         if not self.para:
             self.para = parent.para
-
-        self.viewer = parent.viewer
         
         if not self.item:
             self.item = parent.item
@@ -11544,9 +11547,9 @@ class Node:
 
     def display_document(self):
         if self.global_document is not None:
-            display(HTML("<h3>Document</h3>" + render_json_in_iframe_with_max_height(self.global_document)))
+            display(HTML(f"<h3>Document</h3>" + render_json_in_iframe_with_max_height(self.global_document)))
         else:
-            display(HTML("<h3>Document</h3><p>Document is empty.</p>"))
+            display(HTML(f"<h3>Document</h3><p>Document is empty.</p>"))
 
     def display_messages(self):
         if len(self.messages) > 0:
@@ -11555,12 +11558,12 @@ class Node:
                 def create_html_content(page_no):
                     html_content = generate_dialogue_html(self.messages[page_no])
                     return wrap_in_scrollable_div(html_content, height="500px")
-                display(HTML("<h3>Message History</h3>"))
+                display(HTML(f"<h3>Message History</h3>"))
                 display_pages(len(self.messages), create_html_content)
 
             else:
                 html_content = generate_dialogue_html(self.messages)
-                display(HTML("<h3>Message History</h3>" 
+                display(HTML(f"<h3>Message History</h3>" 
                             + wrap_in_scrollable_div(html_content, height="500px")))
 
             
@@ -11682,7 +11685,8 @@ class Workflow(Node):
     default_name = "Workflow"
     default_description = "This is the base class for all workflows."
 
-    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, output=None, id_para="element_name"):
+    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, 
+                 output=None, id_para="element_name", class_para={}):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
         self.nodes = {}
@@ -11700,6 +11704,7 @@ class Workflow(Node):
         self.init_path()
 
         self.output = output
+        self.class_para = class_para
 
 
     def extract(self, item):
@@ -11826,9 +11831,25 @@ class Workflow(Node):
         
         children = self.edges.get(node_name, [])
         
-        if len(children) == 0:
+        def finish_this_workflow():
             this_document = self.get_global_document()
             self.finish_workflow(this_document)
+            
+        if "next_node" in document:
+            next_node = document.get("next_node")
+
+            if next_node == "COCOON_END_WORKFLOW":
+                finish_this_workflow()
+            
+            elif next_node and next_node in children:
+                print(f"Proceeding to the specified next node: {next_node}")
+                self.execute_node(next_node)
+                
+            else:
+                raise ValueError(f"Node {node_name} specified an invalid 'next_node'.")
+        
+        elif len(children) == 0:
+            finish_this_workflow()
 
         elif len(children) == 1:
             next_node = children[0]
@@ -11836,14 +11857,7 @@ class Workflow(Node):
             self.execute_node(next_node)
 
         else:
-            next_node = document.get("next_node")
-
-            if next_node and next_node in children:
-                print(f"Proceeding to the specified next node: {next_node}")
-                self.execute_node(next_node)
-                
-            else:
-                raise ValueError(f"Node {node_name} has multiple possible next nodes. 'next_node' must be specified in the document.")
+            raise ValueError(f"Node {node_name} has multiple possible next nodes. 'next_node' must be specified in the document.")
     
     def finish_workflow(self, document=None):
         print(f"Workflow {self.name} completed.")
@@ -11897,7 +11911,7 @@ class Workflow(Node):
             button3.on_click(on_button_clicked3)
 
             if len(nodes) == 0:
-                display(HTML("<p>The workflow is empty.</p>"))
+                display(HTML(f"<p>The workflow is empty.</p>"))
                 
                 if len(call_back_list) > 0:
                     display(button3)
@@ -12256,7 +12270,7 @@ class DataSource(Node):
             column_name = row['column_names']
             tables[table_name] = column_name
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -12300,7 +12314,7 @@ class BusinessWorkflow(Node):
                       create_html_content=partial(create_html_content_project, 
                                                   document["title"], document["descriptions"]))
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -12383,7 +12397,7 @@ Now, return in the following format:
         print("😎 Next we will write codes to load source ...")
                 
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -12525,7 +12539,7 @@ class SourceCodeWritingForAll(MultipleNode):
         print("🎉 The SQL codes to load the src have been written ...")
         display(tabs)
         print("😎 Next we will document each src table ...")
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -12604,7 +12618,7 @@ class SourceDocumentForAll(MultipleNode):
             options=document["Source Document"].keys(),
         )
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -12789,7 +12803,7 @@ class BasicStageForAll(MultipleNode):
         print("🎉 The SQL codes to stage the tables have been written!")
         display(tabs)
         print("😎 Next we will analyze the CRUD tables...")
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -12893,7 +12907,7 @@ class DecideCRUDForAll(MultipleNode):
         else:
             print("🤓 No CRUD/overwriting tables have been identified.")
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -13201,7 +13215,7 @@ class PerformCRUDForAll(MultipleNode):
             tabs = create_dropdown_with_content(tab_data)
             display(tabs)
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -13548,7 +13562,7 @@ class PerformNormalizationForAll(MultipleNode):
             tabs = create_dropdown_with_content(tabs)
             display(tabs)
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -13684,7 +13698,7 @@ class ClassifyDimFactForAll(MultipleNode):
 
         display(df)
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -13998,7 +14012,7 @@ class CreateDimensionTableForAll(MultipleNode):
                 create_html_content=partial(create_html_content_project, 
                                             title, new_descriptions))
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -14058,7 +14072,7 @@ class ProductDocumentForAll(MultipleNode):
             options=document["Product Document"].keys(),
         )
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
         
         def on_button_click(b):
             with self.output_context():
@@ -14428,7 +14442,7 @@ Return the result in yml
 
         print("🤓 Next we will dive deep into each table ...")
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -14500,7 +14514,7 @@ class BuildDataMartForAll(MultipleNode):
         display(tabs)
 
         print(f"Congratulations! You've successfully created the data products, ready for dashboards, ad hoc queries, or LLM applications. 🌟")
-        next_button = widgets.Button(description="Next Step", button_style='success')\
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')\
     
         def on_button_click(b):
             with self.output_context():
@@ -15527,8 +15541,6 @@ class DecideProjection(Node):
 
         num_cols = len(schema)
 
-        print(f"🧐 Please select the columns to {UNDERLINE}{BOLD}include{END}{END}.")
-        print(f"😊 Cocoon is currently not robust for >50 columns. Support for wide table is under development.")
         
         column_names = list(schema.keys())
 
@@ -15555,14 +15567,16 @@ class DecideProjection(Node):
                 table_pipeline.add_step_to_final(step)
 
             callback(document)
-
+            
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            callback_next(list(range(num_cols)))
+            return
+            
+            
+        display(HTML(f"🧐 Please select the columns to <b>include</b>.<br> 😊 Cocoon is currently not robust for >50 columns. Support for wide table is under development."))
         create_column_selector(column_names, callback_next, default=True)
 
-        if self.viewer:
-            callback_next(list(range(num_cols)))
-            
-        if "viewer" in self.para and self.para["viewer"]:
-            callback_next(list(range(num_cols)))
+
 
 class CreateColumnGrouping(Node):
     default_name = 'Create Column Grouping'
@@ -16579,17 +16593,17 @@ class DecideDMV(Node):
         
         sample_values_list = sample_values[column_name].values.tolist()
 
-        template = f"""{column_name} has the following distinct values: {sample_values_list}
+        template = f"""Column {column_name} has {len(sample_values_list)} distinct values: {sample_values_list}
 
-From these values, detect values that should be NULL. E.g., "missing", "empty", "not available" or empty string ("").
+From these {len(sample_values_list)} values, is there any values that semantically mean "missing"?
+E.g., Values like "missing", "empty", "not available" or empty string ("").
 Note that some values are simply typos. Disregard them.
-Values like "0" are not DMV.
 
 Return in json format:
 ```json
 {{
     "reasoning": "xxx values are disguised missing values because ...",
-    "null_values": ["N/A", "-1", ...] (empty if no disguised missing values)
+    "null_values": ["N/A", "-1", ...] (empty if no values mean missing)
 }}
 ```"""
 
@@ -16789,17 +16803,15 @@ class DecideUnique(Node):
 
     def extract(self, item):
         clear_output(wait=True)
-
-        display(HTML("🔍 Checking uniqueness ..."))
-        create_progress_bar_with_numbers(2, doc_steps)
         
-        self.progress = show_progress(1)
-
-        self.input_item = item
-
-        con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         table_name = table_pipeline.get_final_step().name
+
+        display(HTML(f"🔍 Checking uniqueness for <i>{table_name}</i>..."))
+        create_progress_bar_with_numbers(3, doc_steps)
+        self.progress = show_progress(1)
+
+        con = self.item["con"]
 
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
@@ -16898,9 +16910,6 @@ Return in the following format:
         editable_columns = [False, False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
         
-        print("😎 We have identified columns should be unique. Please verify:")
-        display(grid)
-        
         next_button = widgets.Button(
             description='Accept Unique',
             disabled=False,
@@ -16932,16 +16941,18 @@ Return in the following format:
                 if row["Should Unique?"]:
                     table_object.uniqueness[row["Column"]] = row["Explanation"]
                     
-
             callback(document)
         
         next_button.on_click(on_button_clicked)
         reject_button.on_click(on_button_clicked2)
-
-        display(HBox([reject_button, next_button]))
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
+            return
+        
+        display(HTML(f"😎 We have identified columns should be unique. Please verify:"))
+        display(grid)
+        display(HBox([reject_button, next_button]))
 
 
 class DecideUniqueContinue(DecideUnique):
@@ -17172,9 +17183,9 @@ def plot_distribution_category(con, table_name, column_name):
         bar_plot.patches[other_index].set_facecolor('orange')
     
     for index, value in enumerate(counts):
-        bar_plot.text(value, index, f'{value}', color='black', va='center', fontsize=8)
+        bar_plot.text(value, index, f'{int(value)}', color='black', va='center', fontsize=8)
     
-    plt.xlabel(column_name)
+    plt.xlabel(f"{table_name}[{column_name}]")
     
     plt.tight_layout()
     
@@ -17229,7 +17240,7 @@ def plot_distribution_numerical(con, table_name, column_name):
         plt.text(rect.get_x() + rect.get_width() / 2, height, f'{int(height)}', ha='center', va='bottom', fontsize=8)
 
     plt.ylabel('Frequency')
-    plt.xlabel(column_name)
+    plt.xlabel(f"{table_name}[{column_name}]")
 
     plt.subplots_adjust(top=0.9)
 
@@ -18090,25 +18101,18 @@ class CleanUnusual(Node):
     def extract(self, item):
         clear_output(wait=True)
 
-        print("🧹 Cleaning unusual values ...")
-        create_progress_bar_with_numbers(3, doc_steps)
-
-        self.input_item = item
-
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
-
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
         unusual_reason = self.para["unusual_reason"]
-
+        column_name = self.para["column_name"]
+        
+        display(HTML(f"🧹 Cleaning values for <i>{table_pipeline}[{column_name}]</i>..."))
+        create_progress_bar_with_numbers(1, doc_steps)
         show_progress(max_value=total, value=idx)
 
-        column_name = self.para["column_name"]
-
         sample_size = 100
-    
-
         sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
         total_distinct_count = count_total_distinct(con, table_pipeline, column_name)
 
@@ -18198,8 +18202,7 @@ mapping:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
         
 
-        html_content = f"⚠️ <b>We've found errors in</b>: {column_name} <br><i>{unusual_reason}</i>"
-        display(HTML(html_content))
+        display(HTML(f"⚠️ <b>We've found errors in</b>: {column_name} <br><i>{unusual_reason}</i>"))
         
         table_pipeline = self.para["table_pipeline"]
         column_name = self.para["column_name"]
@@ -18327,6 +18330,7 @@ mapping:
             
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
+            return
 
 
 class CleanUnusualForAll(MultipleNode):
@@ -18434,8 +18438,6 @@ FROM {table_pipeline}{where_sql}"""
 
         table_pipeline.add_step_to_final(step)
 
-
-
         callback(document)
             
 class HandleMissing(Node):
@@ -18444,8 +18446,6 @@ class HandleMissing(Node):
     
     def extract(self, item):
         clear_output(wait=True)
-
-        print("🔍 Handling missing values ...")
         create_progress_bar_with_numbers(2, doc_steps)
 
         document = self.get_sibling_document("Decide Missing Values")
@@ -18463,7 +18463,6 @@ class HandleMissing(Node):
         
         df = pd.read_json(document, orient="split")
         
-        
         df = df[~df["Is NULL Acceptable?"]]
         
         if len(df) == 0:
@@ -18473,9 +18472,7 @@ class HandleMissing(Node):
             return
         
         df = df.drop(columns=["Is NULL Acceptable?"])
-        df = df.drop(columns=["Explanation"])
-        
-        print("🧹 The following columns have abnormal missing values. Please select a strategy to handle them.")
+        df = df.drop(columns=["Explanation"]) 
         
         UNCHANGE = "🔄 Unchanged"
         DROP_COLUMN = "🗑️ Drop Column"
@@ -18492,9 +18489,6 @@ class HandleMissing(Node):
         }
 
         grid = create_dataframe_grid(df, editable_columns, reset, category)
-        display(grid)
-        
-        print("😎 More missing value handling strategies coming soon...")
         
         next_button = widgets.Button(
             description='Accept Handling',
@@ -18548,7 +18542,6 @@ FROM {table_name}"""
             
             return sql_query
         
-        
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
             table_pipeline = self.para["table_pipeline"]
@@ -18567,10 +18560,15 @@ FROM {table_name}"""
         next_button.on_click(on_button_clicked)
         reject_button.on_click(reject_button_click)
         
-        display(HBox([reject_button, next_button]))
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
+            return
+            
+        display(HTML(f"🧹 The following columns have abnormal missing values. Please select a strategy:"))
+        display(grid)
+        display(HTML(f"😎 More missing value handling strategies coming soon..."))
+        display(HBox([reject_button, next_button]))
         
 class DecideDataType(Node):
     default_name = 'Decide Data Type'
@@ -18710,18 +18708,13 @@ class TransformType(Node):
         column_name = self.para["column_name"]
         current_type = self.para["current_type"]
         target_type = self.para["target_type"]
-
-        display(HTML(f"🔍 Transforming data type {table_pipeline}: {column_name}"))
-        create_progress_bar_with_numbers(2, doc_steps)
-
-        self.input_item = item
-
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
 
+        display(HTML(f"🔍 Transforming type for <i>{table_pipeline}[{column_name}]</i>..."))
+        create_progress_bar_with_numbers(1, doc_steps)
         show_progress(max_value=total, value=idx)
 
-        
         database_name = get_database_name(con)
         sample_size = 5
 
@@ -18732,7 +18725,6 @@ class TransformType(Node):
             if target_type in transform_hints[current_type]:
                 if database_name in transform_hints[current_type][target_type]:
                     hint = transform_hints[current_type][target_type][database_name]
-        
         
         return column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint
     
@@ -18846,7 +18838,6 @@ class TransformTypeForAll(MultipleNode):
         
         self.elements = []
         self.nodes = {}
-
         
         for idx, row in df.iterrows():
             column_name = row['Column']
@@ -18868,9 +18859,7 @@ class TransformTypeForAll(MultipleNode):
 
     def display_after_finish_workflow(self, callback, document):
         clear_output(wait=True)
-
-        create_progress_bar_with_numbers(1, doc_steps)
-
+        
         data = {
             'Column Name': [],
             'Clause': [],
@@ -18895,9 +18884,6 @@ class TransformTypeForAll(MultipleNode):
         editable_columns = [False, True, False]
         grid = create_dataframe_grid(df, editable_columns, reset=True, long_text=["Reasoning"])
 
-        print("😎 We have written the clause to cast the columns:")
-        display(grid)
-
         query_widget = self.item["query_widget"]
 
         test_button = widgets.Button(
@@ -18921,9 +18907,7 @@ class TransformTypeForAll(MultipleNode):
             print("😎 Query submitted. Check out the data widget!")
         
         test_button.on_click(on_button_clicked)
-        print("🧪 Please test the cast and ensure the result is as expected.")
-        display(test_button)
-
+        
         next_button = widgets.Button(
             description='Endorse Cast',
             disabled=False,
@@ -18931,7 +18915,6 @@ class TransformTypeForAll(MultipleNode):
             tooltip='Click to submit',
             icon='check'
         )
-
 
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
@@ -18946,8 +18929,6 @@ class TransformTypeForAll(MultipleNode):
             sql_query += indent_paragraph(",\n".join(non_affected_columns + [f"{row['Clause']}" for i, row in new_df.iterrows()])) 
             sql_query += f"\nFROM {self.para['table_pipeline']}"
 
-                
-            
             comment = "-- Column Type Casting: \n"
             
             for idx, row in decided_column_type_df.iterrows():
@@ -18966,11 +18947,17 @@ class TransformTypeForAll(MultipleNode):
             callback(document)
         
         next_button.on_click(on_button_clicked)
-
-        display(next_button)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
+            return
+        
+        create_progress_bar_with_numbers(1, doc_steps)
+        display(HTML(f"😎 We have written the clause to cast the columns:"))
+        display(grid)
+        display(HTML(f"🧪 Please test the cast and ensure the result is as expected."))
+        display(test_button)
+        display(next_button)
         
 def where_clause_for_space(column_name):
     return f"{column_name} <> TRIM({column_name})"
@@ -19171,21 +19158,21 @@ class DecideStringUnusual(Node):
 
     def extract(self, input_item):
         clear_output(wait=True)
-
-        print("🔍 Understanding unusual values ...")
-        create_progress_bar_with_numbers(3, doc_steps)
-
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        
+        display(HTML(f"🔍 Inspecting values for <i>{table_pipeline}[{column_name}]</i>..."))
+        create_progress_bar_with_numbers(1, doc_steps)
         show_progress(max_value=total, value=idx)
-
+        
+        
         self.input_item = input_item
 
         con = self.item["con"]
-        table_pipeline = self.para["table_pipeline"]
-        column_name = self.para["column_name"]
+        
         sample_size = 20
-
         sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
         
         return column_name, sample_values
@@ -19368,7 +19355,6 @@ class WriteStageYMLCode(Node):
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
-        create_progress_bar_with_numbers(1, self.get_sibling_document('Product Steps'))
         border_style = """
 <style>
 .border-class {
@@ -19379,39 +19365,36 @@ class WriteStageYMLCode(Node):
 </style>
 """
 
-        print("🎉 Congratulations! Below is the stage codes.")
-
+        tab_data = []
+        labels = []
+        file_names = []
+        contents = []
         table_pipeline = self.para["table_pipeline"]
         old_table_name = table_pipeline.get_source_step().name
-        new_table_name = "stg_" + old_table_name.replace("src_", "")
+        new_table_name = old_table_name
+        
+        if "yaml_only" not in self.class_para or not self.class_para["yaml_only"]:
+            new_table_name = "stg_" + old_table_name.replace("src_", "")
+            sql_query = f"""SELECT * FROM {table_pipeline}"""
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+            step.run_codes()
+            table_pipeline.add_step_to_final(step)
+            formatter = HtmlFormatter(style='default')
+            css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+            combined_css = css_style + border_style
+            sql_query = table_pipeline.get_codes()
+            highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
+            bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
+            combined_html = combined_css + bordered_content
+            tab_data.append(("sql", combined_html))
+            labels.append("SQL")
+            file_names.append(f"{new_table_name}.sql")
+            contents.append(sql_query)
+        
 
-        sql_query = f"""SELECT * FROM {table_pipeline}"""
-        step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
-        step.run_codes()
-        
-        table_pipeline.add_step_to_final(step)
-
-        tab_data = []
-        
-        formatter = HtmlFormatter(style='default')
-        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
-
-        combined_css = css_style + border_style
-        
-        sql_query = table_pipeline.get_codes()
-        input_table = table_pipeline.get_source_step().name
-        sql_query = process_query_to_dbt(sql_query, [input_table])
-
-        highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
-        bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
-        combined_html = combined_css + bordered_content
-        
-        tab_data.append(("sql", combined_html))
-        
-        table_pipeline = self.para["table_pipeline"]
         table_name = new_table_name
-       
         schema = table_pipeline.get_final_step().get_schema()
+        
         columns = list(schema.keys())
         
         table_object = self.para["table_object"]
@@ -19430,28 +19413,21 @@ class WriteStageYMLCode(Node):
         combined_html = css_style + border_style + bordered_content
 
         tab_data.append(("yml", combined_html))
+        labels.append("YML")
+        file_names.append(f"{table_name}.yml")
+        contents.append(yml_content)
         
         tabs = create_dropdown_with_content(tab_data) 
-        display(tabs)
         
-
-
-        
-        
-        
-        labels = ["SQL", "YAML"]
-        file_names = [f"{new_table_name}.sql", 
-                      f"{new_table_name}.yml",]
-        contents = [
-            sql_query,
-            yml_content,
-        ]
+    
         
         if "dbt_directory" in self.para:
             file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
-            
+       
+        create_progress_bar_with_numbers(4, doc_steps)
+        display(HTML(f"🎉 Congratulations! Below is the stage codes."))
+        display(tabs)
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
-        
         
         def on_button_clicked(b):
             clear_output(wait=True)
@@ -19466,14 +19442,15 @@ class WriteStageYMLCode(Node):
         )
 
         submit_button.on_click(on_button_clicked)
-
-        display(submit_button)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             overwrite_checkbox.value = True
             save_files_click(save_button)  
-            
             on_button_clicked(submit_button)
+            return
+        
+        
+        display(submit_button)
         
 
 def create_stage_workflow(table_name, con, viewer=True):
@@ -19517,15 +19494,14 @@ class CreateShortTableSummary(Node):
     def extract(self, item):
         clear_output(wait=True)
         self.input_item = item
-
-        print("📝 Generating table summary ...")
         
-        create_progress_bar_with_numbers(1, doc_steps)
-
-        self.progress = show_progress(1)
-
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
+        
+        display(HTML(f"📝 Generating table summary for <i>{table_pipeline}</i>..."))
+        create_progress_bar_with_numbers(0, doc_steps)
+        self.progress = show_progress(1)
+        
         sample_size = 5
 
         schema = table_pipeline.get_final_step().get_schema()
@@ -19577,7 +19553,7 @@ Now, your summary in a few sentences and < 500 chars:"""
 
         create_explore_button(query_widget, table_name)
 
-        print(f"📝 Here is the summary for {table_name}, please keep it concise:")
+        display(HTML(f"📝 Here is the summary, please keep it concise:"))
         
         text_area, char_count_label = create_text_area_with_char_count(summary, max_chars=500)
         layout = Layout(display='flex', justify_content='space-between', width='100%')
@@ -19797,12 +19773,11 @@ class SelectTable(Node):
         
         tables = get_table_names(con)
         
-        print(f"🧐 There are {len(tables)} tables in your database.")
-        print(f"🤓 Please select the table:")
+        display(HTML(f"🧐 There are {len(tables)} tables in your database.<br>🤓 Please select the table:"))
         
         dropdown = create_explore_button(query_widget, table_name=tables)
         
-        print(f"🤓 Please select the mode:")
+        
         mode_selector = widgets.RadioButtons(
             options=[
                 ('🧐 Table Provider: We will interatively ask your feedback for each step', 'Table Provider'),        
@@ -19811,7 +19786,7 @@ class SelectTable(Node):
             layout={'width': 'max-content'},
             style={'description_width': 'initial'}
         )
-        display(mode_selector)
+        
         
         next_button = widgets.Button(description="Next", button_style='success')
 
@@ -19828,11 +19803,17 @@ class SelectTable(Node):
             callback({"table_name": table_name})
                 
         next_button.on_click(on_button_click)
-        display(next_button)
+        
         
         if "table_name" in self.para and  self.para["table_name"] is not None:
             dropdown.value = self.para["table_name"]
             on_button_click(next_button)
+            return
+        
+        print(f"🤓 Please select the mode:")
+        display(mode_selector)
+        display(next_button)
+        
          
 
 def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None, para={}):
@@ -19847,6 +19828,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
     workflow_para = {"viewer": viewer, 
                      "table_name": table_name,
                      "table_object": Table()}
+    
     for key, value in para.items():
         workflow_para[key] = value
 
@@ -19877,6 +19859,12 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
 
 
 
+
+
+
+
+    
+
 def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False):
 
     if query_widget is None:
@@ -19890,18 +19878,17 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False):
     main_workflow = Workflow("Data Vault Workflow", 
                             item = item, 
                             description="A workflow to build data vault",
-                            para = {"viewer": viewer, "data_project": DataProject()})
+                            para = {"data_project": DataProject(),
+                                    "dbt_directory": "./"})
 
-    main_workflow.add_to_leaf(SelectTables())
-    main_workflow.add_to_leaf(StageTablesForAll())
-    main_workflow.add_to_leaf(SourceProjectStoryUnderstand())
-    main_workflow.add_to_leaf(DecideHubs())
-    main_workflow.add_to_leaf(DecideReferenceTables())
-    main_workflow.add_to_leaf(DecideTableHubRelationForAll())
-    main_workflow.add_to_leaf(SynthesizeLinks())
-    main_workflow.add_to_leaf(ConstructDataVaultViz())
-    
+    main_workflow.add_to_leaf(SelectTables(viewer=True))
+    main_workflow.add_to_leaf(SourceProjectStoryUnderstanding())
+    main_workflow.add_to_leaf(SourceTableUnderstand())
+    main_workflow.add_to_leaf(StageForAll())
+    main_workflow.add_to_leaf(DecidePKforAll())
+    main_workflow.add_to_leaf(DecideFKForAll())
     return query_widget, main_workflow
+
 
 class DescribeColumnsList(ListNode):
     default_name = 'Describe Columns'
@@ -19910,15 +19897,14 @@ class DescribeColumnsList(ListNode):
     def extract(self, item):
         clear_output(wait=True)
 
-        print("🔍 Checking columns ...")
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        display(HTML(f"🔍 Checking columns for <i>{table_pipeline}</i>..."))
         
-        create_progress_bar_with_numbers(1, doc_steps)
+        create_progress_bar_with_numbers(0, doc_steps)
         self.progress = show_progress(1)
 
         self.input_item = item
-
-        con = self.item["con"]
-        table_pipeline = self.para["table_pipeline"]
 
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
@@ -19995,7 +19981,6 @@ Return in the following format:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
         json_code = run_output
-        
         self.progress.value += 1
 
         table_pipeline = self.para["table_pipeline"]
@@ -20018,8 +20003,6 @@ Return in the following format:
         
         editable_columns = [False, True, True, False]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
-        print("😎 We have described the columns:")
-        display(grid)
 
         next_button = widgets.Button(
             description='Accept Rename',
@@ -20097,11 +20080,14 @@ Return in the following format:
 
         next_button.on_click(on_button_clicked)
         reject_button.on_click(on_button_clicked2)
-
-        display(HBox([reject_button, next_button]))
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
+            return
+        
+        display(HTML(f"😎 We have described the columns:"))
+        display(grid)
+        display(HBox([reject_button, next_button]))
 
             
 class DecideMissingList(ListNode):
@@ -20110,17 +20096,14 @@ class DecideMissingList(ListNode):
 
     def extract(self, item):
         clear_output(wait=True)
-
-        display(HTML("🔍 Checking missing values ..."))
-        create_progress_bar_with_numbers(2, doc_steps)
         
-        self.progress = show_progress(1)
-
-        self.input_item = item
-
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         table_name = table_pipeline.get_final_step().name
+
+        display(HTML(f"🔍 Checking missing values for <i>{table_name}</i>..."))
+        create_progress_bar_with_numbers(2, doc_steps)
+        self.progress = show_progress(1)
 
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
@@ -20253,9 +20236,6 @@ Return in the following format:
         editable_columns = [False, False, True, True]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
         
-        print("😎 We have identified missing values, and potential causes:")
-        display(grid)
-        
         next_button = widgets.Button(
             description='Submit',
             disabled=False,
@@ -20279,12 +20259,14 @@ Return in the following format:
             callback(document)
         
         next_button.on_click(on_button_clicked)
-
-        display(next_button)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
-            
+            return
+ 
+        display(HTML(f"😎 We have identified missing values, and potential causes:"))
+        display(grid)
+        display(next_button)            
             
 class DecideDataTypeList(ListNode):
     default_name = 'Decide Data Type'
@@ -20292,15 +20274,12 @@ class DecideDataTypeList(ListNode):
 
     def extract(self, item):
         clear_output(wait=True)
-
-        print("🔍 Checking data types ...")
-        create_progress_bar_with_numbers(2, doc_steps)
-        self.progress = show_progress(1)
-
-        self.input_item = item
-
+        
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
+        display(HTML(f"🔍 Checking data types for <i>{table_pipeline}</i>..."))
+        create_progress_bar_with_numbers(1, doc_steps)
+        self.progress = show_progress(1)
 
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
@@ -20386,7 +20365,6 @@ Return in the following format:
 
         create_explore_button(query_widget, table_pipeline)
         
-
         rows_list = []
 
         for col in schema:
@@ -20402,8 +20380,6 @@ Return in the following format:
         df = pd.DataFrame(rows_list)
         
         grid = create_data_type_grid(df, all_data_types = all_data_types)
-        print("😎 We have recommended the Data Types for Columns:")
-        display(grid)
 
         next_button = widgets.Button(
             description='Accept Cast',
@@ -20435,12 +20411,14 @@ Return in the following format:
 
         next_button.on_click(on_button_clicked)
         reject_button.on_click(on_button_clicked2)
-
-        display(HBox([reject_button, next_button]))
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
-            
+            return
+        
+        display(HTML(f"😎 We have recommended the Data Types for Columns:"))
+        display(grid)
+        display(HBox([reject_button, next_button]))
 
 def create_cocoon_table_transform_workflow(con, query_widget=None, viewer=True):
     if query_widget is None:
@@ -20530,25 +20508,25 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
-        "🧹 <b>Stage/Clean:</b> Give us a table, we'll understand, clean, and document it. The output is a Data Pipeline in DBT SQL/YAML files.",
-        "🔍 <b>Profile:</b> Give us a table, we'll understand your table and identify anomalies. The output is an HTML report.",
-        "🔗 <b>(Preview) Fuzzy Join/Entity Matching:</b> Give us two tables, we'll fuzzily match them and explain the relation. The output is an HTML report.",
-        "🔧 <b>(Preview) Fuzzy Union/Schema Matching:</b> Give us two tables, we'll fuzzily union them. The output is a Data Pipeline.",
-        "📊 <b>(Preview) Data Modeling (ERD/Data Vault):</b> Give us a set of tables, we'll model them into a data vault. The output is a YAML file.",
-        "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a Data Pipeline (DBT project), we'll interactively interpret each step.",
+        "🧹 <b>Clean Table:</b> Give us a table, we'll understand, clean, and document it.",
+        "📊 <b>Clean Database:</b> Give us a database, we'll clean and identify PK/FK.",
+        "🔍 <b>Profile:</b> Give us a table, we'll understand and identify anomalies.",
+        "🔗 <b>(Preview) Fuzzy Join:</b> Give us two tables, we'll fuzzily join them.",
+        "🔧 <b>(Preview) Fuzzy Union:</b> Give us two tables, we'll fuzzily union them.",
+        "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a Data Pipeline, we'll interpret it.",
         ]
         coming_labels = [
-        "🛠️ <b>(Coming Soon) Pipeline Maintenance:</b> Give us a broken Data Pipeline, we'll run it, debug errors, and recommend repairs.",
-        "🔄 <b>(Coming Soon) Reverse ETL/Common Data Model:</b> Give us a modeled database and a target database, we'll transform your database.",
-        "📈 <b>(Coming Soon) Metrics/Aggregation + Filtering:</b> Give us a modeled database, we'll construct queries for business intelligence.",
+        "🛠️ <b>(Coming Soon) Pipeline Maintenance:</b> Give us a broken Data Pipeline, we'll repair it.",
+        "🔄 <b>(Coming Soon) Table Transform:</b> Give us a target database, we'll transform your database.",
+        "📈 <b>(Coming Soon) Semantic Layer:</b> Give us a database, we'll help build metrics.",
         ]
         
         next_nodes = [
             "Data Stage Workflow",
+             "Data Vault Workflow",
             "Data Profiling Workflow",
             "Fuzzy Join Workflow",
             "Single Table Transformation Workflow",
-            "Data Vault Workflow",
             "DBT Project Explore Workflow",
         ]
 
@@ -21073,6 +21051,7 @@ class BuildFinalLineage(Node):
         pass
     
     
+    
 class SelectSourceTargetTable(Node):
     default_name = 'Select Source and Target Table'
     default_description = 'This step allows you to select the source and target table for the transformation.'
@@ -21096,13 +21075,32 @@ class SelectSourceTargetTable(Node):
         display(HTML(header_html))
 
         html_content = f"""🧐 There are {len(tables)} tables in your database.<br>
-🤓 Please select the <b>Source</b> and <b>Target</b> tables.<br>
-We will transform the Source table to the Target table.<br>
+🤓 Please select the <b>Source</b> and <b>Target</b> tables for transformation.<br>
+We recommend cleaning the source table before transforming it.<br>
 <b>Source Table:</b>"""
         display(HTML(html_content))
         dropdown_source = create_explore_button(query_widget, table_name=tables)
-        display(HTML("<b>Target Table:</b>"))
+
+        clean_checkbox_source = widgets.Checkbox(
+            value=True,
+            description='Clean this table?',
+            disabled=False,
+            indent=False
+        )
+        
+        display(clean_checkbox_source)
+
+        display(HTML(f"<b>Target Table:</b>"))
         dropdown_target = create_explore_button(query_widget, table_name=tables)
+        
+        clean_checkbox_target = widgets.Checkbox(
+            value=False,
+            description='Clean this table?',
+            disabled=False,
+            indent=False
+        )
+        
+        display(clean_checkbox_target)
 
         next_button = widgets.Button(description="Next", button_style='success')
 
@@ -21114,12 +21112,75 @@ We will transform the Source table to the Target table.<br>
                 print("❌ Source and target tables cannot be the same.")
                 return
             
-            selected_tables = {"source_table": source_table, "target_table": target_table}
+            selected_tables = {"source_table": source_table, "target_table": target_table,
+                               "source_clean": clean_checkbox_source.value, 
+                               "target_clean": clean_checkbox_target.value}
             callback(selected_tables)
                 
         next_button.on_click(on_button_click)
         display(next_button)
+
+class StageForSourceTarget(MultipleNode):
+    
+    default_name = 'Stage For All'
+    default_description = 'This stages the source tables'
+
+    def construct_node(self, element_name, all_tables=None, idx=0, total=0, stage_viewer=None, clean=False):
+        if all_tables is None:
+            all_tables = []
+        if self.item is not None:
+            con = self.item.get("con", None)
+            query_widget = self.item.get("query_widget", None)
+        else:
+            con = None
+            query_widget = None
         
+        table_name = element_name
+        
+        para = {"table_name": table_name, 
+                "table_idx": idx, 
+                "all_tables": all_tables,
+                "table_total": total, 
+                "stage_viewer": stage_viewer}
+        
+        for key in self.para:
+            para[key] = self.para[key]
+            
+            
+        if not clean:
+            _, workflow = create_cocoon_profile_yml_workflow(con=con, query_widget=query_widget, 
+                                                       table_name=table_name, para=para)    
+        else:
+            _, workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget, 
+                                                        table_name=table_name, para=para)
+        workflow.add_as_root(StageProgress())
+        
+        return workflow
+
+    def extract(self, item):
+        table_document = self.get_sibling_document('Select Source and Target Table')
+        
+        self.elements = [table_document["source_table"], table_document["target_table"]]
+        
+        stage_viewer = [False]
+        self.nodes = {table_document["source_table"]: self.construct_node(table_document["source_table"], 
+                                          all_tables=self.elements, idx=0, total=2, 
+                                          stage_viewer=stage_viewer, clean=table_document["source_clean"]),
+                      table_document["target_table"]: self.construct_node(table_document["target_table"], 
+                                          all_tables=self.elements, idx=1, total=2, 
+                                          stage_viewer=stage_viewer, clean=table_document["target_clean"])}
+    
+    def display_after_finish_workflow(self, callback, document):
+        data_project = self.para["data_project"]
+        
+        source_table_object = self.nodes[self.elements[0]].para["table_object"]
+        data_project.table_object["source"] = source_table_object
+        target_table_object = self.nodes[self.elements[1]].para["table_object"]
+        data_project.table_object["target"] = target_table_object
+        
+        callback({})
+
+
 class CreateShortSourceTableSummary(CreateShortTableSummary):
     default_name = 'Create Short Source Table Summary'
     default_description = 'Create a short summary of the source table'
@@ -21171,19 +21232,25 @@ class UnderstandSourceToTargetTransform(Node):
     
     def extract(self, item):
         clear_output(wait=True)
-        print("🔍 Verifying the target table...")
+        
+        create_progress_bar_with_numbers(0, transform_steps)
+        print("🔍 Understanding the transform...")
         self.progress = show_progress(1)
         
         self.item = item
         con = self.item["con"]
         
-        source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
-        target_table = self.get_sibling_document('Select Source and Target Table')["target_table"]
+        data_project = self.para["data_project"]
         
-        source_table_summary = self.get_sibling_document('Create Short Source Table Summary')
-        target_table_summary = self.get_sibling_document('Create Short Target Table Summary')
+        source_table_object = data_project.table_object["source"]
+        target_table_object = data_project.table_object["target"]
+        
+        source_table_summary = source_table_object.table_summary
+        target_table_summary = target_table_object.table_summary
         
         sample_size = 5
+        source_table = source_table_object.table_name
+        target_table = target_table_object.table_name
 
         source_sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
         source_table_desc = source_sample_df.to_csv(index=False, quoting=2)
@@ -21191,24 +21258,37 @@ class UnderstandSourceToTargetTransform(Node):
         target_sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
         target_table_desc = target_sample_df.to_csv(index=False, quoting=2)
         
-        return source_table_desc, source_table_summary, target_table_desc, target_table_summary
+        source_column_desc = source_table_object.print_column_desc()
+        target_column_desc = target_table_object.print_column_desc()
+        
+        target_columns = target_table_object.columns
+        
+        return source_table, target_table, source_table_desc, source_table_summary, \
+                target_table_desc, target_table_summary, source_column_desc, target_column_desc, target_columns
     
     def run(self, extract_output, use_cache=True):
-        source_table_sample, source_table_description, target_table_sample, target_table_description = extract_output
+        _, _, source_table_sample, source_table_description, target_table_sample, target_table_description, \
+            source_column_desc, target_column_desc, _ = extract_output
         
-        template = f"""You have a source table: {source_table_description}
+        template = f"""You have a source table:
 {source_table_sample}
+{source_column_desc}
 
-And target table: {target_table_description}
+And target table:
 {target_table_sample}
+{target_column_desc}
 
 Now, verify if any of the target table columns can be derived from source table through SQL. 
-If so, describe the detailed SQL clause.
+If so, describe the detailed instructions for these transformable columns.
 Respond in the following json:
 ```json
 {{  
-    "reasoning": "The transformation is (not) possible through SQL for any column. For X column in the target is semantically the same as column Y in the source. So we can tranformed through a mapping/string manipulation/math calculation...",
+    "reasoning": "The transformation is (not) possible through SQL for any column...",
+    "instruction": {{ # leave empty if no transformation
+        "target_column": "String manipulation/Case when clauses/Direct copy... from source column", # short in 10 words
+    }}, 
     "transformable": true/false,
+    
 }}
 """
 
@@ -21218,27 +21298,48 @@ Respond in the following json:
         messages.append(assistant_message)
         self.messages = messages
         
-        
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
-        summry = json.loads(json_code)
+        summary = json.loads(json_code)
         
-        return summry
+        return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        return {"reasoning": "There is some issue with this transformation", "transformable": False}
+        return {"reasoning": "There is some issue with this transformation. Please specify the steps.", 
+                "instruction": {},
+                "transformable": False}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        source_table, target_table, _, _, _, _, _, _, target_columns = extract_output
+        
         self.progress.value += 1
+        create_explore_button(query_widget, table_name=[source_table, target_table])
         
         summary = run_output
+        
         if summary["transformable"]:
-            print("✔️ The transformation is possible through SQL.")
+            display(HTML(f"✔️ The transformation is possible through SQL: <i>{summary['reasoning']}"))
         else:
-            print("❌ The transformation doesn't seem to be possible through SQL.")
-            print("Please edit below to provide more information.")
+            display(HTML("❌ The transformation doesn't seem to be possible through SQL.<br>Please edit below to provide more information."))
+        
+        data = {
+            'Column': [],
+            'Can Transform?': [],
+            'Clause': [],
+        }
+        
+        for column in target_columns:
+            data['Column'].append(column)
+            data['Can Transform?'].append(True if column in summary['instruction'] else False)
+            data['Clause'].append(summary['instruction'].get(column, ''))
+            
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, True, True]
+            
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
 
-        text_area, char_count_label = create_text_area_with_char_count(summary['reasoning'], max_chars=1000)
-        display(VBox([text_area, char_count_label]))
+        display(grid)
+
         
         next_button = widgets.Button(
             description='Next',
@@ -21249,11 +21350,13 @@ Respond in the following json:
         
         def on_next_button_clicked(b):
             clear_output(wait=True)
-            reason = text_area.value
-            callback(reason)
+            new_df =  grid_to_updated_dataframe(grid)
+            document = new_df.to_json(orient="records")
+            callback(document)
         
         next_button.on_click(on_next_button_clicked)
         display(next_button)
+
         
         
 class WriteCode(Node):
@@ -21261,34 +21364,50 @@ class WriteCode(Node):
     default_description = 'Write code for table transformation'
 
     def extract(self, input_item):
-        
+        create_progress_bar_with_numbers(1, transform_steps)
         print("💻 Writing the codes...")
         self.progress = show_progress(1)
         con = self.item["con"]
         
-        source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
-        target_table = self.get_sibling_document('Select Source and Target Table')["target_table"]
+        data_project = self.para["data_project"]
+        
+        source_table_object = data_project.table_object["source"]
+        target_table_object = data_project.table_object["target"]
+        
+        transform_df = pd.read_json(self.get_sibling_document('Understand Source to Target Transform'))
+        
+        transform_df = transform_df[transform_df['Can Transform?']]
+        target_columns = transform_df['Column'].tolist()
         
         sample_size = 5
+        source_table = source_table_object.table_name
+        target_table = target_table_object.table_name
 
         source_sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
-        source_table_desc = source_sample_df.to_csv(index=False, quoting=2)
+        source_table_sample = source_sample_df.to_csv(index=False, quoting=2)
         
-        target_sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
-        target_table_desc = target_sample_df.to_csv(index=False, quoting=2)
+        target_sample_df = run_sql_return_df(con, f"SELECT {', '.join(target_columns)} FROM {target_table} LIMIT {sample_size}")
+        target_table_sample = target_sample_df.to_csv(index=False, quoting=2)    
         
-        transformation_reasoning = self.get_sibling_document('Understand Source to Target Transform')
+        source_column_desc = source_table_object.print_column_desc()
+        target_column_desc = target_table_object.print_column_desc(target_columns)
         
-        return source_table_desc, target_table_desc, transformation_reasoning
+        transformation_reasoning = ""
+        for column in target_columns:
+            transformation_reasoning += f"{column}: {transform_df.loc[transform_df['Column'] == column, 'Clause'].values[0]}\n"
+        
+        return source_table, source_table_sample, target_table_sample, source_column_desc, target_column_desc, transformation_reasoning
     
     def run(self, extract_output, use_cache=True):
-        source_table_sample, target_table_sample, transformation_reasoning = extract_output
+        source_table, source_table_sample, target_table_sample, source_column_desc, target_column_desc, transformation_reasoning = extract_output
         
         template = f"""You have a source table: 
 {source_table_sample}
-        
+{source_column_desc}
+  
 And target table:
 {target_table_sample}
+{target_column_desc}
 
 {transformation_reasoning}
 
@@ -21314,26 +21433,29 @@ Respond in the following json:
 """
 
         messages = [{"role": "user", "content": template}]
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         
         assistant_message = response['choices'][0]['message']
         messages.append(assistant_message)
         self.messages = messages
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
-        summry = json.loads(json_code)
-
+        summary = json.loads(json_code)
         
-        return summry
+        summary["source_table"] = source_table
+        
+        return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
+        source_table, _, _, _, _, _ = extract_output
         return {"reasoning": "There is some issue with this transformation", 
                 "need_aggregation": False,
                 "need_distinct": False,
                 "selection_clause": "*",
                 "condition_clause": "",
                 "group_by_clause": "",
-                "having_clause": ""
+                "having_clause": "",
+                "source_table": source_table
           }
         
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -21345,28 +21467,27 @@ class DebugCode(Node):
 
     def extract(self, input_item):
         clear_output(wait=True)
-        
-        display("🐞 Debugging the code...")
+        create_progress_bar_with_numbers(1, transform_steps)
+        display(HTML("🐞 Debugging the code..."))
         self.progress = show_progress(1)
         
         con = self.item["con"]
-        source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
         code_clauses = self.get_sibling_document("Write Code")
         
         code_clauses = code_clauses.copy()
         
-        return con, code_clauses, source_table
+        return con, code_clauses
     
     def run(self, extract_output, use_cache=True):
         
-        con, code_clauses, table_pipeline = extract_output
+        con, code_clauses = extract_output
         max_iterations = 10
         self.messages = []
         
         for i in range(max_iterations):
             try:
                 sql = f"""SELECT {code_clauses['selection_clause']}
-FROM {table_pipeline}
+FROM {code_clauses['source_table']}
 {'WHERE ' + code_clauses['condition_clause'] if code_clauses['condition_clause'] else ''}
 {'' if not code_clauses['group_by_clause'] else 'GROUP BY ' + code_clauses['group_by_clause']}
 {'' if not code_clauses['having_clause'] else 'HAVING ' + code_clauses['having_clause']}"""
@@ -21419,8 +21540,6 @@ Please correct the SQL, but don't change the logic. Respond in the following jso
         
         print("🎉 We have finished the coding!")
         
-        _, _, source_table = extract_output
-        
         formatter = HtmlFormatter(style='default')
         css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
         border_style = """
@@ -21438,7 +21557,7 @@ Please correct the SQL, but don't change the logic. Respond in the following jso
         
         sql_query = f"""SELECT 
 {indent_paragraph(selection_clause)}
-FROM {source_table}
+FROM {run_output['source_table']}
 {'WHERE ' + run_output['condition_clause'] if run_output['condition_clause'] else ''}
 {'' if not run_output['group_by_clause'] else 'GROUP BY ' + run_output['group_by_clause']} 
 {'' if not run_output['having_clause'] else 'HAVING ' + run_output['having_clause']}"""
@@ -21467,9 +21586,6 @@ FROM {source_table}
         
         
         
-             
-             
-             
             
 class DecideStringCategoricalForAll(MultipleNode):
     default_name = 'Decide If Categorical For All'
@@ -21503,11 +21619,10 @@ class DecideStringCategoricalForAll(MultipleNode):
     def display_after_finish_workflow(self, callback, document):
         clear_output(wait=True)
 
-        create_progress_bar_with_numbers(2, doc_steps)
-        
         table_pipeline = self.para["table_pipeline"]
         query_widget = self.item["query_widget"]
-
+        
+        create_progress_bar_with_numbers(3, doc_steps)
         create_explore_button(query_widget, table_pipeline)
         
         data = {
@@ -21542,8 +21657,6 @@ class DecideStringCategoricalForAll(MultipleNode):
         long_text = ['Explanation']
         grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists, long_text=long_text)
 
-        print("😎 We have detected categorical columns. Please verify its domain:")
-        display(grid)
 
         next_button = widgets.Button(
             description='Accept',
@@ -21576,17 +21689,21 @@ class DecideStringCategoricalForAll(MultipleNode):
                 column = row['Column']
                 if row['Should Categorical?']:
                     table_object.category[column] = row['Domain (Sep By ,)'].split(',')
-                    
             
             callback(document)
         
         next_button.on_click(on_button_clicked)
         reject_button.on_click(on_reject_button_clicked)
 
-        display(HBox([reject_button, next_button]))
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
+            return
+            
+        
+        display(HTML(f"😎 We have detected categorical columns. Please verify its domain:"))
+        display(grid)
+        display(HBox([reject_button, next_button]))
 
 
 class DecideStringCategoricalForAllContinue(DecideStringCategoricalForAll):
@@ -21700,7 +21817,7 @@ class DecideStringCategorical(Node):
         table_pipeline = self.para["table_pipeline"]
         column_name = self.para["column_name"]
         
-        display(HTML(f"🔍 Detecting categorical attributes {table_pipeline}: {column_name}"))
+        display(HTML(f"🔍 Detecting category for <i>{table_pipeline}[{column_name}]</i>..."))
         create_progress_bar_with_numbers(3, doc_steps)
 
         idx = self.para["column_idx"]
@@ -21708,7 +21825,6 @@ class DecideStringCategorical(Node):
         show_progress(max_value=total, value=idx)
 
         self.input_item = input_item
-
         
         sample_size = 50
 
@@ -21832,6 +21948,9 @@ class SelectTables(Node):
                 
         next_button.on_click(on_button_click)
         display(next_button)
+        
+        if self.viewer:
+            on_button_click(next_button)
         
 
 class StageTablesForAll(MultipleNode):
@@ -21961,7 +22080,7 @@ Return in the following format:
         display_container = create_list_of_strings(summary["story"])
         display(display_container)
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -22074,7 +22193,9 @@ Return in the following format:
         df_widget = create_df_strings(initial_df, can_be_empty=can_be_empty)
         display(df_widget)
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", 
+                                     button_style='success',
+                                     icon='check')
 
         def on_button_click(b):
             df_new = extract_df_from_display(df_widget)
@@ -23006,10 +23127,9 @@ class SourceProjectStoryUnderstanding(Node):
 
     def extract(self, item):
         clear_output(wait=True)
-        self.input_item = item
-        create_progress_bar_with_numbers(0, self.get_sibling_document('Product Steps'))
 
-        display(HTML("🤓 Generating the story of the project ..."))
+        create_progress_bar_with_numbers(0, model_steps)
+        display(HTML(f"🤓 Generating the story of the project ..."))
         self.progress = show_progress(1)
 
         data_project = self.para["data_project"]
@@ -23017,8 +23137,7 @@ class SourceProjectStoryUnderstanding(Node):
         description = data_project.describe_project()
         
         table_summary_document = self.get_sibling_document('Stage Tables For All')
-        
-        
+
         tables = data_project.list_tables()
 
         return description, tables
@@ -23095,9 +23214,9 @@ class SourceTableUnderstand(Node):
     def extract(self, item):
         clear_output(wait=True)
         self.input_item = item
-        create_progress_bar_with_numbers(0, self.get_sibling_document('Product Steps'))
+        create_progress_bar_with_numbers(0, model_steps)
 
-        print("🤓 Understanding the source tables ...")
+        print("🤓 Understanding the database ...")
         self.progress = show_progress(1)
 
         data_project = self.para["data_project"]
@@ -23220,7 +23339,7 @@ Return in the following format:
 
         print("🤓 Please edit above, but keep it short and simple!")
 
-        next_button = widgets.Button(description="Next Step", button_style='success')
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             summary = {}
@@ -23238,10 +23357,10 @@ Return in the following format:
             data_project.set_story(summary["story"])
             
             df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
-            document = df.to_json(orient="records")
+            document = df.to_json(orient="split")
             summary["table_desc"] = document
             
-            callback(document)
+            callback(summary)
 
         next_button.on_click(on_button_click)
 
@@ -23258,13 +23377,37 @@ class Table:
         self.unusualness = unusualness or {}
         self.category = category or {}
         self.uniqueness = uniqueness or {}
-
+    
+    def print_category(self):
+        category_string = ""
+        for column, categories in self.category.items():
+            category_string += f"'{column}': {categories}\n"
+        return category_string.strip()
+    
+    def print_column_desc(self, columns=None):
+        column_desc_string = ""
+        if columns is None:
+            columns = self.columns
+        for column in columns:
+            if column in self.column_desc:
+                desc = self.column_desc.get(column, "")
+                if column in self.category:
+                    categories = self.category[column]
+                    desc += f". Domain: {categories}"
+                column_desc_string += f"'{column}': {desc}\n"
+        return column_desc_string.strip()
+    
     def create_dbt_schema_yml(self):
-        yml_content = f"""version: 2
-models:
-  - name: {self.table_name}
-    description: "{self.table_summary}"
-    columns:"""
+        data = {
+            "version": 2,
+            "models": [
+                {
+                    "name": self.table_name,
+                    "description": self.table_summary,
+                    "columns": []
+                }
+            ]
+        }
 
         for column in self.columns:
             columndesc_key = next((key for key in self.column_desc if key.lower() == column.lower()), None)
@@ -23304,25 +23447,63 @@ models:
                             accepted_values = ast.literal_eval(accepted_values)
                         else:
                             accepted_values = accepted_values.split(",")
-                    tests.append(f"accepted_values:\n{indent_paragraph('values: [' + ', '.join(accepted_values) + ']', spaces=4)}")
+                    tests.append({"accepted_values": {"values": accepted_values}})
 
-            yml_content += f"""
-      - name: {column}
-        description: "{description}\""""
+            column_data = {
+                "name": column,
+                "description": description
+            }
 
             if tests:
-                yml_content += f"""
-        tests:
-{indent_paragraph(chr(10).join(f"- {test}" for test in tests), spaces=10)}"""
+                column_data["tests"] = tests
 
             if cocoon_meta:
-                cocoon_meta_yaml = yaml.dump(cocoon_meta, default_flow_style=False).strip()
-                yml_content += f"""
-        cocoon_meta:
-{indent_paragraph(cocoon_meta_yaml, spaces=10)}"""
+                column_data["cocoon_meta"] = cocoon_meta
 
+            data["models"][0]["columns"].append(column_data)
+
+        yml_content = yaml.safe_dump(data, default_flow_style=False)
         return yml_content
     
+    def read_attributes_from_dbt_schema_yml(self, yml_data):
+        if isinstance(yml_data, str):
+            yml_data = yaml.safe_load(yml_data)
+
+        for model in yml_data.get('models', []):
+            self.table_name = model.get('name', '')
+            self.table_summary = model.get('description', '')
+
+            for column in model.get('columns', []):
+                column_name = column.get('name', '')
+                self.columns.append(column_name)
+                self.column_desc[column_name] = column.get('description', '')
+
+                tests = column.get('tests', [])
+                for test in tests:
+                    if isinstance(test, dict):
+                        test_type = list(test.keys())[0]
+                        test_value = test[test_type]
+                        if test_type == 'not_null':
+                            self.missing_acceptable[column_name] = ''
+                        elif test_type == 'accepted_values':
+                            accepted_values = test_value['values']
+                            self.category[column_name] = accepted_values
+                        elif test_type == 'unique':
+                            self.uniqueness[column_name] = ''
+                    elif test == 'not_null':
+                        self.missing_acceptable[column_name] = ''
+                    elif test == 'unique':
+                        self.uniqueness[column_name] = ''
+
+                cocoon_meta = column.get('cocoon_meta', {})
+                if 'missing_acceptable' in cocoon_meta:
+                    self.missing_acceptable[column_name] = cocoon_meta['missing_acceptable']
+                if 'unusal_values' in cocoon_meta:
+                    self.unusualness[column_name] = cocoon_meta['unusal_values']
+                if 'uniqueness' in cocoon_meta:
+                    self.uniqueness[column_name] = cocoon_meta['uniqueness']
+                    
+                    
     def add_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
         if column_name not in self.columns:
             self.columns.append(column_name)
@@ -23356,7 +23537,83 @@ models:
 
     def __repr__(self):
         return f"Table(table_summary={self.table_summary}, columns={self.columns})"
+
+class DescribeColumnsListAndTableSummaryNoRename(DescribeColumnsList):
+    default_name = 'Describe Columns'
+    default_description = 'This node allows users to describe the columns of a table.'
     
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+        
+        self.progress.value += 1
+
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        schema = table_pipeline.get_final_step().get_schema()
+        
+        table_summary = self.get_sibling_document('Create Short Table Summary')
+        
+        text_area, char_count_label = create_text_area_with_char_count(table_summary, max_chars=500)
+        layout = Layout(display='flex', justify_content='space-between', width='100%')
+
+        rows_list = []
+
+        for col in schema:
+            rows_list.append({
+                "Column": col,
+                "Summary": json_code[col][0]
+            })
+
+        df = pd.DataFrame(rows_list)
+        
+        editable_columns = [False, True]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+        create_progress_bar_with_numbers(0, doc_steps)
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+        
+        
+        def on_button_clicked2(b):
+            new_df =  grid_to_updated_dataframe(grid)
+            new_df["New Column Name"] = new_df["Column"]
+            document = new_df.to_json(orient="split")
+            get_column_desc_from_df(new_df)
+            get_table_summary_from_text()
+            callback(document)
+            
+
+        def get_column_desc_from_df(df):
+            table_object = self.para["table_object"]
+            column_desc = {}
+            for index, row in df.iterrows():
+                table_object.column_desc[row["New Column Name"]] = row["Summary"]
+                
+        def get_table_summary_from_text():
+            table_object = self.para["table_object"]
+            table_object.table_summary = text_area.value
+
+        next_button.on_click(on_button_clicked2)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked2(next_button)
+            return
+        
+        display(HTML(f"📝 Here is the table summary. Please keep it concise:"))
+        display(HBox([text_area, char_count_label], layout=layout))
+        display(HTML(f"📝 Here are the summary for each column."))
+        display(grid)
+        display(next_button)
     
 class DescribeColumnsListAndTableSummary(DescribeColumnsList):
     default_name = 'Describe Columns'
@@ -23378,10 +23635,8 @@ class DescribeColumnsListAndTableSummary(DescribeColumnsList):
         
         table_summary = self.get_sibling_document('Create Short Table Summary')
         
-        print(f"📝 Here is the table summary. Please keep it concise:")
         text_area, char_count_label = create_text_area_with_char_count(table_summary, max_chars=500)
         layout = Layout(display='flex', justify_content='space-between', width='100%')
-        display(HBox([text_area, char_count_label], layout=layout))
 
         rows_list = []
 
@@ -23397,8 +23652,7 @@ class DescribeColumnsListAndTableSummary(DescribeColumnsList):
         
         editable_columns = [False, True, True, False]
         grid = create_dataframe_grid(df, editable_columns, reset=True)
-        print("📝 Here are the summary for each column.")
-        display(grid)
+        create_progress_bar_with_numbers(0, doc_steps)
 
         next_button = widgets.Button(
             description='Accept Rename',
@@ -23482,11 +23736,16 @@ class DescribeColumnsListAndTableSummary(DescribeColumnsList):
         next_button.on_click(on_button_clicked)
         reject_button.on_click(on_button_clicked2)
 
-        display(HBox([reject_button, next_button]))
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
-            
+            return
+        
+        display(HTML(f"📝 Here is the table summary. Please keep it concise:"))
+        display(HBox([text_area, char_count_label], layout=layout))
+        display(HTML(f"📝 Here are the summary for each column."))
+        display(grid)
+        display(HBox([reject_button, next_button]))
         
 class CreateShortTableSummaryContinue(CreateShortTableSummary):
     default_name = 'Create Short Table Summary'
@@ -23504,12 +23763,10 @@ class StageProgress(Node):
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         clear_output(wait=True)
+        create_progress_bar_with_numbers(1, model_steps)
 
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
-
-
-        document = ["Source", "Clean", "Integrate", "Model"]
 
         table_name = self.para['table_name']
         idx = self.para["table_idx"]
@@ -23553,21 +23810,47 @@ class StageProgress(Node):
                                         icon='fast-forward')
         
         
+        def go_to_next_node():
+            callback({})
+            
+        def skip_this_workflow():
+            table_name = self.para["table_name"]
+            new_table_name = "stg_" + table_name.replace("src_", "")
+            
+            file_names = [f"{new_table_name}.sql",  f"{new_table_name}.yml",]
+            
+            if "dbt_directory" in self.para:
+                file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
+            
+            if all([os.path.exists(file_name) for file_name in file_names]):
+                with open(file_names[0], "r") as f:
+                    sql_query = f.read()
+                    con = self.item["con"]
+                    sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                    sql_step.run_codes()
+                    
+                
+                with open(file_names[1], "r") as f:
+                    yml_data = f.read()
+                    table_object = self.para["table_object"]
+                    table_object.read_attributes_from_dbt_schema_yml(yml_data)
+                    
+                callback({"next_node": "COCOON_END_WORKFLOW"})
+                
+            else:
+                callback({})
         
         def on_interactive_next_button_click(b):
-            with self.output_context():
-                callback({})
+            go_to_next_node()
         
         def on_express_next_button_click(b):
-            with self.output_context():
-                self.para["viewer"] = True
-                callback({})
+            self.para["viewer"] = True
+            skip_this_workflow()
                 
         def on_express_all_button_click(b):
-            with self.output_context():
-                self.para["viewer"] = True
-                self.para["stage_viewer"][0] = True
-                callback({})
+            self.para["viewer"] = True
+            self.para["stage_viewer"][0] = True
+            skip_this_workflow()
                 
         interactive_next_button.on_click(on_interactive_next_button_click)
         express_next_button.on_click(on_express_next_button_click)
@@ -23577,5 +23860,450 @@ class StageProgress(Node):
         
         if self.para["stage_viewer"][0]:
             self.para["viewer"] = True
-            callback({})
+            skip_this_workflow()
             return
+        
+        
+class StageForAll(MultipleNode):
+    
+    default_name = 'Stage For All'
+    default_description = 'This stages the source tables'
+
+    def construct_node(self, element_name, all_tables=None, idx=0, total=0, stage_viewer=None):
+        if all_tables is None:
+            all_tables = []
+        if self.item is not None:
+            con = self.item.get("con", None)
+            query_widget = self.item.get("query_widget", None)
+        else:
+            con = None
+            query_widget = None
+        
+        table_name = element_name
+        
+        para = {"table_name": table_name, 
+                "table_idx": idx, 
+                "all_tables": all_tables,
+                "table_total": total, 
+                "stage_viewer": stage_viewer}
+        
+        for key in self.para:
+            para[key] = self.para[key]
+            
+        
+        _, workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget, 
+                                                   table_name=table_name, para=para)
+        workflow.add_as_root(StageProgress())
+        
+        return workflow
+
+    def extract(self, item):
+        data_project = self.para["data_project"]
+        tables = data_project.list_tables()
+        stage_viewer = [False]
+        self.elements = tables
+        self.nodes = {element: self.construct_node(element, self.elements, idx, 
+                                                   len(self.elements), stage_viewer=stage_viewer)
+                      for idx, element in enumerate(self.elements)}
+
+    
+    def display_after_finish_workflow(self, callback, document):
+        create_progress_bar_with_numbers(1, model_steps)
+        df = pd.DataFrame(self.elements, columns=["table"])
+        df["status"] = "✅"
+        display(df)
+        
+        display(HTML("🚀 All tables are staged!<br>🧐 We will integrate the tables ..."))
+
+        submit_button = widgets.Button(description="Next",
+                                       button_style='success',
+                                       icon='check')
+        
+        
+        data_project = self.para["data_project"]
+        data_project.tables = {}
+        tables = []
+        for node in self.nodes.values():
+            table_object = node.para["table_object"]
+            table_name = table_object.table_name
+            data_project.table_object[table_name] = table_object
+            tables.append(table_name)
+            
+        con = self.item["con"]
+        data_project.add_tables_with_con(tables, con)
+        
+        def on_submit_button_click(b):
+            with self.output_context():
+                callback({})
+        
+        submit_button.on_click(on_submit_button_click)
+        display(submit_button)
+
+class DecidePKforAll(Node):
+    default_name = 'Decide PK for All'
+    default_description = 'This decides the PK for all tables'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(2, model_steps)
+        
+        data_project = self.para["data_project"]
+        
+        query_widget = self.item["query_widget"]
+        dropdown = create_explore_button(query_widget, 
+                                         table_name=list(data_project.table_object.keys()))
+        
+        data = {
+            'Table': [],
+            'Primary Key': [],
+        }
+        
+        for table_name, table_object in data_project.table_object.items():
+            data['Table'].append(table_name)
+            columns = [""] + table_object.columns
+            
+            uniqueness = table_object.uniqueness
+            unique_columns = list(uniqueness.keys())
+            
+            if len(unique_columns) > 0:
+                columns.remove(unique_columns[0])
+                columns.insert(0, unique_columns[0])
+            
+            data['Primary Key'].append(columns) 
+            
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, True]
+        reset = True
+        lists = ['Primary Key']
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists)
+        
+        print(f"🧐 We have identified the primary key. Please verify:")
+        display(grid)
+        
+        
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            df = grid_to_updated_dataframe(grid, reset=reset)
+            document = df.to_json(orient="split")
+            callback(document)
+
+        next_button.on_click(on_button_click)
+        
+        print(f"😎 Next, we will identify the foreign keys for each primary key.")
+
+        display(next_button)
+        
+
+
+
+
+
+
+
+def generate_join_graph_yaml(df, cocoon_story, table_descriptions, document):
+    join_graph = {
+        'cocoon_story': cocoon_story,
+        'models': []
+    }
+
+    for table, primary_key in df.values:
+        model = {
+            'name': table,
+            'description': table_descriptions.get(table[4:], ''),
+        }
+
+        if primary_key:
+            model['primary_key'] = {
+                'column': primary_key,
+                'foreign_keys': []
+            }
+
+            if table in document['Decide FK']:
+                for fk_table, fk_info in document['Decide FK'][table].items():
+                    fk = {
+                        'table': fk_table,
+                        'column': fk_info['fk']
+                    }
+                    if fk_info['missing_pk'] > 0:
+                        fk['cocoon_meta'] = {
+                            'orphaned_record': fk_info['missing_pk']
+                        }
+                    model['primary_key']['foreign_keys'].append(fk)
+
+        join_graph['models'].append(model)
+
+    return yaml.dump(join_graph, default_flow_style=False)
+          
+class DecideFKForAll(MultipleNode):
+    default_name = 'Decide FK For All'
+    default_description = 'This decides the FK for all tables'
+
+    def construct_node(self, element_name, all_tables=None, idx=0, total=0, pk=None, fk_viewer=None):
+        if fk_viewer is None:
+            fk_viewer = [False]
+        para = self.para.copy()
+        para["table_name"] = element_name
+        para["table_idx"] = idx
+        para["table_total"] = total
+        para["pk"] = pk
+        para["fk_viewer"] = fk_viewer
+        
+        node = DecideFK(para=para, id_para ="table_name")
+        node.inherit(self)
+        
+        return node
+
+    def extract(self, item):
+        pk_df = pd.read_json(self.get_sibling_document('Decide PK for All'), orient="split")
+        pk_df = pk_df[pk_df['Primary Key']!= ""]
+        table_to_pk = dict(zip(pk_df['Table'], pk_df['Primary Key']))
+        
+        fk_viewer = [False]
+
+        self.elements = list(table_to_pk.keys())
+        self.nodes = {element: self.construct_node(element, self.elements, idx, len(self.elements), table_to_pk[element], fk_viewer=fk_viewer)
+                      for idx, element in enumerate(self.elements)}
+        
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(2, model_steps)
+        def create_graph_data(document):
+            nodes = set()
+            links = []
+
+            def traverse_nodes(node_name):
+                nodes.add(node_name)
+                for child_node, value in document[node_name].items():
+                    nodes.add(child_node)
+                    links.append({"source": node_name, "target": child_node})
+                    links.append({"source": child_node, "target": node_name})
+
+            for node_name in document:
+                traverse_nodes(node_name)
+
+            return {
+                "nodes": [{"id": node} for node in nodes],
+                "links": links
+            }
+
+        graph_data = create_graph_data(document['Decide FK'])
+        graph_data
+        svg_height=400
+        svg_width=600
+
+        html_content = generate_draggable_graph_html_color(graph_data, svg_height=svg_height, svg_width=svg_width)
+        display(HTML(f"🎉 Congratulations! We have documented your database and built the join graph:"))
+        display(HTML(wrap_in_iframe(html_content, width=svg_width+20, height=svg_height+20)))
+        
+        
+        df = pd.read_json(self.get_sibling_document('Decide PK for All'), orient="split")
+        cocoon_story = self.get_sibling_document('Source Project Understand')['story']
+        table_descriptions_df = pd.read_json(self.get_sibling_document('Source Table Understand')['table_desc'], orient="split")
+        table_descriptions = {}
+        for idx, row in table_descriptions_df.iterrows():
+            table_descriptions[row['Table']] = row['Description']
+            
+        yml_content= generate_join_graph_yaml(df, cocoon_story, table_descriptions, document)
+                
+        border_style = """
+<style>
+.border-class {
+    border: 1px solid black;
+    padding: 10px;
+    margin: 10px;
+    font-size: 12px;
+}
+</style>
+"""
+        formatter = HtmlFormatter(style='default')
+        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+
+        highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
+
+        bordered_content = f'<div class="border-class">{highlighted_yml}</div>'
+
+        combined_html = css_style + border_style + bordered_content
+
+        display(HTML(combined_html))
+        
+        labels = ["YAML"]
+        file_names = ["join_graph.yml"]
+        contents = [yml_content]
+        
+        if "dbt_directory" in self.para:
+            file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
+       
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        
+        
+    
+class DecideFK(Node):
+    default_name = 'Decide FK'
+    default_description = 'This decides the FK for the table'
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(2, model_steps)
+        print(f"Identifying the foreign keys ...")
+        self.progress = show_progress(1)
+        self.progress.value += 1
+        
+        data_project = self.para["data_project"]
+        query_widget = self.item["query_widget"]
+        
+        dropdown = create_explore_button(query_widget, table_name=list(data_project.tables.keys()))
+        
+        table_name = self.para["table_name"]
+        pk = self.para["pk"]
+        
+        database_tables = data_project.tables
+        
+        matched_tables = {}
+        unmatched_tables = {}
+        this_html = ""
+        
+        endorse_widgets = {}
+        con = self.item["con"] 
+        database_name = get_database_name(con)
+        
+        only2s = {}
+        
+        for table in database_tables:
+            list_of_attributes = database_tables[table]
+            if isinstance(list_of_attributes, dict):
+                list_of_attributes = list(list_of_attributes.keys())
+                
+            if table.lower() == table_name.lower():
+                this_html = f"<div><b>{table_name}</b>[{pk}]</div>"
+                continue
+            
+            
+            if pk in list_of_attributes:
+                matched_tables[table] = list_of_attributes
+            else:
+                unmatched_tables[table] = list_of_attributes
+
+        if len(matched_tables) == 0:
+            display(HTML(f"😢 We can't find any FK that matches {table_name}[{pk}]."))
+        
+        else:
+            display(HTML(f"🧐 We have found <b>{len(matched_tables)}</b> FK(s) that matches PK: <b>{table_name}</b>[{pk}]."))
+            current_type = data_project.tables[table_name][pk]
+            current_type = get_reverse_type(current_type, database_name)
+            if is_type_numeric(data_type):
+                image_base64 = plot_distribution_numerical(con, table_name, pk)
+            else:
+                image_base64 = plot_distribution_category(con, table_name, pk)
+            plot_html = f'<img src="data:image/png;base64,{image_base64}" width="300">'
+            display(HTML(plot_html))
+                
+            
+
+            
+            children = []
+            titles = []
+
+            for table in matched_tables:
+                
+                
+                plot_html = ""
+                
+                attributes = matched_tables[table]
+                only1, only2, overlap = generate_queries_for_overlap(table_name, [pk], table, [pk], con)
+                only2s[table] = only2
+                if only2 == 0:
+                    plot_html += "✔️ All foreign keys are referenced by primary key.<br>"
+                    titles.append(f"{table}\n[{pk}]")
+                else:
+                    plot_html += f"⚠️ {only2} foreign key(s) are not referenced by primary key!<br>📝 Logged for further review.<br>"
+                    titles.append(f"⚠️ {table}\n[{pk}]")
+                
+
+                current_type = data_project.tables[table][pk]
+                current_type = get_reverse_type(current_type, database_name)
+                if is_type_numeric(data_type):
+                    image_base64 = plot_distribution_numerical(con, table, pk)
+                else:
+                    image_base64 = plot_distribution_category(con, table, pk)
+                plot_html += f'<img src="data:image/png;base64,{image_base64}" width="300">'
+                
+                image_base64 = plot_venn_percentage_by_stats(only1, only2, overlap, f"{table_name}\n[{pk}]", f"{table}\n[{pk}]")
+                plot_html += f'<img src="data:image/png;base64,{image_base64}" width="300">'
+                
+                html_display_widget = widgets.HTML(value=plot_html)
+                
+                checkbox = widgets.Checkbox(
+                    value=True,
+                    description=f'Endorse Foreign Key',
+                    disabled=False,
+                    indent=False
+                )
+                endorse_widgets[table] = checkbox
+                
+                children.append(VBox([html_display_widget, checkbox]))
+                                
+            accordion = widgets.Accordion(children=children, titles=titles)
+            display(accordion)
+        
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            fks = {}
+            for table in endorse_widgets:
+                checkbox = endorse_widgets[table]
+                if checkbox.value:
+                    fks[table] = {"fk": pk, "missing_pk": only2s[table]}
+                
+            callback(fks)
+        
+        express_all_button = widgets.Button(description="Express All",
+                button_style='warning',
+                icon='fast-forward')
+            
+        def on_express_all_button_click(b):
+            self.para["fk_viewer"][0] = True
+            on_button_click(next_button)
+            
+        express_all_button.on_click(on_express_all_button_click)
+        next_button.on_click(on_button_click)
+
+
+        display(HBox([next_button, express_all_button]))
+        
+        if self.para["fk_viewer"][0]:
+            on_button_click(next_button)
+        
+        
+def create_cocoon_profile_yml_workflow(con, query_widget=None, viewer=False, table_name = None, para={}):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+    
+    workflow_para = {"viewer": viewer, 
+                     "table_name": table_name,
+                     "table_object": Table()}
+    for key, value in para.items():
+        workflow_para[key] = value
+
+    main_workflow = Workflow("Data Stage Workflow", 
+                            item = item, 
+                            description="A workflow to stage table",
+                            para = workflow_para)
+    
+    main_workflow.add_to_leaf(SelectTable())
+    main_workflow.add_to_leaf(DecideProjection(viewer=True))
+    main_workflow.add_to_leaf(CreateShortTableSummaryContinue())
+    main_workflow.add_to_leaf(DescribeColumnsListAndTableSummaryNoRename())
+    main_workflow.add_to_leaf(DecideMissingList())
+    main_workflow.add_to_leaf(DecideUnique())
+    main_workflow.add_to_leaf(DecideStringCategoricalForAll())
+    main_workflow.add_to_leaf(WriteStageYMLCode(class_para={"yaml_only": True}))
+    
+    return query_widget, main_workflow
