@@ -12,6 +12,8 @@ Given a **Data Task** from the user, Cocoon connects to your data warehouse, exp
   <img src="./images/arch.png" alt="Cocoon Logo" />
 </div>
 
+👉 Check out the [demo](https://youtu.be/d9BIEGD7xok)
+
 #### Data Tasks currently available:
 - [Profile: Semantically understand your data and detect anomalies](#profile-semantically-understand-your-data-and-detect-anomalies)
 - [Preview: Staging, Data Cleaning, Data Preparation](#preview-staging-data-cleaning-data-preparation)
@@ -71,7 +73,7 @@ Many small decisions require semantic understanding by LLMs. For example, an age
 
 
 - 👉 [**Python Package:** Check out the notebook that cleans tables in Snowflake/DuckDB](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
-- 👉 Check out the [1 min demo](https://youtu.be/D7jw43ccOkg)
+
 
 Screenshot where LLMs interactively suggest data cleaning (cast columns and fix cases). The output is DBT staging sql/yml.
 
