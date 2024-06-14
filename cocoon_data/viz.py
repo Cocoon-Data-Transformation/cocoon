@@ -4,11 +4,14 @@ import numpy as np
 from matplotlib_venn import venn2
 import seaborn as sns
 import base64
-from graphviz import Digraph
+from graphviz import Digraph, Graph
 from matplotlib.ticker import EngFormatter
 import networkx as nx
 from IPython.display import HTML
-
+import io
+from pygments import highlight
+from pygments.lexers import PythonLexer, SqlLexer, YamlLexer
+from pygments.formatters import Terminal256Formatter, HtmlFormatter
 
 
 def wrap_in_iframe(html_code, width=800, height=400):
@@ -21,12 +24,9 @@ def wrap_in_iframe(html_code, width=800, height=400):
 
 
 def plot_venn_percentage_by_stats(only1, only2, overlap, name1, name2):
-    # Set the figure size
     fig, ax = plt.subplots(figsize=(3, 2))
    
-    # Calculate the total elements for percentage calculation
     total_elements = only1 + only2 + overlap
-    # Calculate the percentage for each section of the Venn diagram
     if total_elements == 0:
         overlap = 0
         only_set1 = 0
@@ -37,13 +37,10 @@ def plot_venn_percentage_by_stats(only1, only2, overlap, name1, name2):
         only_set2 = only2 / total_elements * 100
     font_size=8
    
-    # Create a Venn diagram with percentages
     venn_diagram = venn2(subsets=(only_set1, only_set2, overlap), set_labels=(name1, name2), ax=ax)
-    # Adjust transparency
     for patch in venn_diagram.patches:
         if patch:
             patch.set_alpha(0.5)
-    # Customize the labels to show percentages and set font size
     if only_set1 > 0:
         venn_diagram.get_label_by_id('10').set_text(f'{round(only_set1, 1)}%')
         venn_diagram.get_label_by_id('10').set_fontsize(font_size)
@@ -62,17 +59,16 @@ def plot_venn_percentage_by_stats(only1, only2, overlap, name1, name2):
     for label in venn_diagram.set_labels:
         label.set_fontsize(font_size)
        
-    # Save the plot to a BytesIO object
     buffer = io.BytesIO()
     plt.tight_layout()
     plt.savefig(buffer, format='png')
-    plt.close(fig)  # Close the figure to prevent it from being displayed
+    plt.close(fig)
     buffer.seek(0)
    
-    # Encode the image as base64
     image_base64 = base64.b64encode(buffer.getvalue()).decode()
    
     return image_base64
+
 
 def plot_venn_percentage(array1, array2, name1, name2):
 
@@ -672,8 +668,11 @@ def generate_seaborn_palette(n_colors):
     return hex_colors
 
 
-def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, height=400):
-    dot = Digraph(format='png')
+def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=400):
+    if directional:
+        dot = Digraph(format='png')
+    else:
+        dot = Graph(format='png')
 
     highlight_color = '#FFA500'
 
@@ -714,8 +713,9 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
         'penwidth': '2.0'
     }
 
-
     for i, node in enumerate(nodes):
+        if node_shape and i < len(node_shape):
+            node_style['shape'] = node_shape[i]
         if i in highlight_nodes_indices:
             dot.node(node, node, **{**node_style, **highlighted_node_style})
         else:
@@ -724,9 +724,15 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
     for i, (tail, head) in enumerate(edges):
         label = edge_labels[i] if edge_labels and i < len(edge_labels) else ''
         if i in highlight_edges_indices:
-            dot.edge(nodes[tail], nodes[head], label=label, **{**edge_style, **highlighted_edge_style})
+            if directional:
+                dot.edge(nodes[tail], nodes[head], label=label, **{**edge_style, **highlighted_edge_style})
+            else:
+                dot.edge(nodes[tail], nodes[head], label=label, dir='none', **{**edge_style, **highlighted_edge_style})
         else:
-            dot.edge(nodes[tail], nodes[head], label=label, **edge_style)
+            if directional:
+                dot.edge(nodes[tail], nodes[head], label=label, **edge_style)
+            else:
+                dot.edge(nodes[tail], nodes[head], label=label, dir='none', **edge_style)
 
     png_image = dot.pipe()
 
@@ -906,3 +912,39 @@ def create_graph_data(hubs, links, satellites, hub_link_edges, link_satellite_ed
 
 
 
+
+border_style = """
+<style>
+.border-class {
+    border: 1px solid black;
+    padding: 10px;
+    margin: 10px;
+    font-size: 12px;
+}
+</style>
+"""
+
+def highlight_sql(sql_query):
+    formatter = HtmlFormatter(style='default')
+    css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+    combined_css = css_style + border_style
+    highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
+    bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
+    combined_html = combined_css + bordered_content
+    return combined_html
+
+def highlight_yml(yml_content):
+    formatter = HtmlFormatter(style='default')
+    css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+
+    highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
+
+    bordered_content = f'<div class="border-class">{highlighted_yml}</div>'
+
+    combined_html = css_style + border_style + bordered_content
+    return combined_html
+
+def wrap_in_scrollable_div(html_code, width='100%', height='200px'):
+    scrollable_div = f'<div style="width: {width}; overflow: auto; max-height: {height};">{html_code}</div>'
+
+    return scrollable_div

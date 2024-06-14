@@ -64,7 +64,7 @@ icon_import = False
 MAX_TRIALS = 3
 LOG_MESSAGE_HISTORY = False
 DEBUG_MODE = False
-cocoon_comment_start = "-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK IF YOU WANT TO LET COCOON MAINTAIN THE CODES\n"
+cocoon_comment_start = "-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE\n"
 cocoon_comment_end = "-- COCOON BLOCK END\n"
 
 def yml_from_name(table_name):
@@ -94,7 +94,7 @@ class QueryWidget:
             )
             table_dropdown.observe(self.on_table_change, names='value')
             self.dropdown_label = HBox([table_label, table_dropdown])
-            self.sql_input = widgets.Textarea(value=f'SELECT * FROM {self.tables[0]}',
+            self.sql_input = widgets.Textarea(value=f'SELECT * FROM "{self.tables[0]}"',
                                               disabled=False,
                                               layout={'width': '96%', 'height': '100px'})
         else:
@@ -115,7 +115,7 @@ class QueryWidget:
    
     def on_table_change(self, change):
         selected_table = change['new']
-        self.sql_input.value = f'SELECT * FROM {selected_table}'
+        self.sql_input.value = f'SELECT * FROM "{selected_table}"'
         self.run_query_from_button(None)
    
     def run_query(self, sql_query):
@@ -324,6 +324,8 @@ def create_html_content_project(title, descriptions, page_no):
     {generate_workflow_html_multiple(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices)}
     """
     return html_content
+
+
 
 def generate_html_for_sanity_check(document):
     html_output = ""
@@ -861,7 +863,7 @@ def display_index_and_ask_removal(df, missing_column_indices):
 
 doc_steps = ["Table", "Column", "Missing", "Tests"]
 geo_integration_steps = ["Process", "CRS", "Integration"] 
-model_steps = ["Database", "Table", "Integration"]
+model_steps = ["DW conn", "Clean", "Integration", "Model"]
 transform_steps = ["Table Understand", "Table Transform"]
 
 
@@ -1006,10 +1008,6 @@ def get_source_nodes_ids(edges, node):
 
 
 
-def wrap_in_scrollable_div(html_code, width='100%', height='200px'):
-    scrollable_div = f'<div style="width: {width}; overflow: auto; max-height: {height};">{html_code}</div>'
-
-    return scrollable_div
 
 def json_to_html(json_code):
 
@@ -1729,8 +1727,11 @@ def render_json_in_iframe_with_max_height(json_data, max_height=200):
             return int(obj)
         raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
-
-    json_str = json.dumps(json_data, default=default_serializer, indent=2)
+    try:
+        json_str = json.dumps(json_data, default=default_serializer, indent=2)
+    except Exception as e:
+        json_str = f"Error: {str(e)}"
+     
         
     html_template = f"""
     <html>
@@ -1886,7 +1887,7 @@ def describe_df_in_natural_language(df, table_name, num_rows_to_show, num_cols_t
 
         first_rows = first_rows_not_null.iloc[:num_rows_to_show, :num_cols_to_show]
 
-        first_rows_str = first_rows.to_csv(index=False, quoting=2) 
+        first_rows_str = first_rows.to_csv(index=False, quoting=1) 
         description += f"Here are the first {num_rows_to_show} rows:\n{first_rows_str}"
     else:
         description += f"Here are the columns:\n{df.columns.to_list()}"
@@ -2533,7 +2534,7 @@ class DocumentedData:
         print(f"""Congratulation! The document is complete. 🎉
 
 {BOLD}What's next?{END}
-1. Use Cleaner 🧹 to clean the data.
+1. Use Cleaner ✨ to clean the data.
 2. Use Standardizer 📏 to standardize the data.
 3. Use Transformer 🔌 to transform the data.      
 ...
@@ -8356,7 +8357,7 @@ def entity_relation_match_cluster(input_df, I, refernece_df, attributes=None, la
 
 
             entity_desc = json_var["Summary of Relations"]
-            refernece_desc = related_rows[attributes].reset_index(drop=True).to_csv(quoting=2)
+            refernece_desc = related_rows[attributes].reset_index(drop=True).to_csv(quoting=1)
 
             json_var2 = find_relation_satisfy_description(entity_desc=entity_desc, 
                                                         related_rows_desc_str=refernece_desc)
@@ -11609,6 +11610,11 @@ class Node:
             return self.run(extract_output, use_cache=True)
         except Exception as e:
             print(f"Failed to run {self.name}. Retrying...")
+            write_log(f"""
+The node is {self.name}
+The error is: {e}
+The messages are:
+{self.messages}""")
             
             if DEBUG_MODE:
                 raise e
@@ -11624,7 +11630,8 @@ The node is {self.name}
 The error is: {e}
 The messages are:
 {self.messages}""")
-                    
+                
+            
                     
             print(f"😔 Failed to run {self.name}. Please send us the error log (error_log.txt).")
             return self.run_but_fail(extract_output, use_cache=False)
@@ -11665,7 +11672,7 @@ The messages are:
 class ListNode(Node):
     default_name = "List of Nodes"
     default_description = "This node dynamically creates a list of run calls."
-    retry_times = 0
+    retry_times = 3
     
     def run(self, extract_output, use_cache=True):
         return {}
@@ -11938,7 +11945,8 @@ class MultipleNode(Workflow):
     default_name = "Multiple Node"
     default_description = "This node dynamically creates multiple nodes based on the input data."
 
-    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, output=None, id_para="element_name"):
+    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, 
+                 output=None, id_para="element_name", class_para={}):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
         self.nodes = {}
@@ -11958,9 +11966,10 @@ class MultipleNode(Workflow):
         self.init_path()
 
         self.output = output
-
+        self.class_para = class_para
+        
         self.example_node = self.construct_node("example")
-
+        
 
 
     def construct_node(self, element_name, idx=0, total=0):
@@ -12362,7 +12371,7 @@ Now, return in the following format:
 
         assistant_message = response['choices'][0]['message']
         messages.append(assistant_message)
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         summary = json.loads(json_code)
@@ -12455,7 +12464,7 @@ def create_union_table(tables):
 
             response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
             messages.append(response['choices'][0]['message'])
-            self.messages = messages
+            self.messages.append(messages)
             
             python_code = extract_python_code(response['choices'][0]['message']['content'])
             exec(python_code, globals())
@@ -12715,7 +12724,7 @@ FROM {table_name}"
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -12853,7 +12862,7 @@ Respond with the following format:
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -13273,7 +13282,7 @@ Respond in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -13401,7 +13410,7 @@ Respond in the following format:
         messages += [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
 
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -13625,7 +13634,7 @@ Respond with following format:
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -13777,7 +13786,7 @@ Respond with following format:
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
 
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -13895,7 +13904,7 @@ Respond with following format:
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -14168,7 +14177,7 @@ Respond with following format:
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -14253,7 +14262,7 @@ Respond with following format:
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -14328,7 +14337,7 @@ Respond with following format:
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -14419,7 +14428,7 @@ Return the result in yml
 
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.safe_load(yml_code)
@@ -15135,13 +15144,13 @@ class SQLStep(TransformationStep):
             return self.sql_code
         
         if mode == "TABLE":
-            return f"CREATE TABLE OR REPLACE {self.name} AS\n{indent_paragraph(self.sql_code)}"
+            return f"CREATE TABLE OR REPLACE \"{self.name}\" AS\n{indent_paragraph(self.sql_code)}"
 
         if mode == "VIEW":
-            return f"CREATE OR REPLACE VIEW {self.name} AS\n{indent_paragraph(self.sql_code)}"
+            return f"CREATE OR REPLACE VIEW \"{self.name}\" AS\n{indent_paragraph(self.sql_code)}"
         
         if mode == "AS":
-            return f"{self.name} AS (\n{indent_paragraph(self.sql_code)}\n)"
+            return f"\"{self.name}\" AS (\n{indent_paragraph(self.sql_code)}\n)"
 
 class TransformationSQLPipeline(TransformationPipeline):
 
@@ -15176,56 +15185,11 @@ class TransformationSQLPipeline(TransformationPipeline):
                 table_clauses.append(codes)
                 
             return "\n\n".join(table_clauses)
-            
-            
-            
-
-
-            
-
+             
     def __repr__(self):
         final_step = self.get_final_step()
         return final_step.name
 
-
-
-
-def find_duplicate_rows(con, table_name, sample_size=0):
-    sql_query = f"""
-SELECT *, COUNT(*) as cocoon_count
-FROM {table_name}
-GROUP BY ALL
-HAVING COUNT(*) > 1"""
-    duplicate_count_sql = f"SELECT COUNT(*) from ({sql_query});"
-    duplicate_count = run_sql_return_df(con, duplicate_count_sql).iloc[0, 0]
-
-    sample_sql = sql_query
-    if sample_size > 0:
-        sample_sql += f" LIMIT {sample_size}"
-
-    sample_duplicate_rows = run_sql_return_df(con,sample_sql)
-    return duplicate_count, sample_duplicate_rows
-
-def create_sample_distinct_query(table_name, column_name, sample_size=None):
-    query =  f"SELECT {column_name} \nFROM {table_name} \nWHERE {column_name} IS NOT NULL \nGROUP BY {column_name} \nORDER BY COUNT(*) DESC,  {column_name}\n"
-    if sample_size is not None:
-        query += f" LIMIT {sample_size}"
-    return query
-    
-def create_sample_distinct(con, table_name, column_name, sample_size):
-
-    query = create_sample_distinct_query(table_name, column_name, sample_size)
-    sample_values = run_sql_return_df(con,query)
-
-    return sample_values
-
-def count_total_distinct(con, table_name, column_name):
-    total_distinct_count = run_sql_return_df(con,f"SELECT COUNT(DISTINCT {column_name}) FROM {table_name} WHERE {column_name} IS NOT NULL").iloc[0, 0]
-    return total_distinct_count
-
-def indent_paragraph(paragraph, spaces=4):
-    indent = ' ' * spaces
-    return '\n'.join(indent + line for line in paragraph.split('\n'))
 
 
 
@@ -15234,11 +15198,66 @@ def indent_paragraph(paragraph, spaces=4):
 class DataProject:
     def __init__(self):
         self.tables = {}
+        
         self.table_object = {}
 
         self.links = {}
 
         self.story = []
+        
+        self.primary_key = {}
+        
+        self.foreign_key = {}
+        
+        self.fks = {}
+        
+        self.entities = {}
+    
+    def join_graph_yaml(self):
+        models = []
+
+        for table_name in self.tables:
+            if table_name in self.primary_key:
+                table_entry = {
+                    'name': table_name,
+                    'primary_key': {
+                        'column': self.primary_key[table_name]
+                    }
+                }
+
+                if (table_name, self.primary_key[table_name]) in self.foreign_key:
+                    foreign_keys = []
+                    for fk_table_name, fk_column_name in self.foreign_key[(table_name, self.primary_key[table_name])]:
+                        foreign_keys.append({
+                            'table': fk_table_name,
+                            'column': fk_column_name
+                        })
+                    table_entry['primary_key']['foreign_keys'] = foreign_keys
+
+                models.append(table_entry)
+
+        yaml_output = yaml.dump({'models': models}, default_flow_style=False)
+        return yaml_output
+            
+    
+    def add_foreign_key_to_primary_key(self, fk_table_name, fk, pk_table_name, pk):
+        if (pk_table_name, pk) not in self.foreign_key:
+            self.foreign_key[(pk_table_name, pk)] = []
+            
+        self.foreign_key[(pk_table_name, pk)].append((fk_table_name, fk))
+        
+    def add_table_primay_key(self, table_name, primary_key):
+        self.primary_key[table_name] = primary_key
+    
+    
+    
+    def construct_links_from_pk_fk(self):
+        for (pk_table_name, pk), fk_list in self.foreign_key.items():
+            for fk_table_name, fk in fk_list:
+                if pk_table_name not in self.links:
+                    self.links[pk_table_name] = {}
+                
+                self.links[pk_table_name][fk_table_name] = [[pk], [fk]]  
 
     def add_links(self, join_infos):
         for join_info in join_infos:
@@ -15357,9 +15376,10 @@ def display_duplicated_rows_html2(df):
     
     display(HTML(html_output))
 
-def create_explore_button(query_widget, table_name=None, query=""):
+def create_explore_button(query_widget, table_name=None, query="", list_description=""):
     if isinstance(table_name, list):
         dropdown = widgets.Dropdown(
+            description=list_description,
             options=[(name, name) for name in table_name],
             disabled=False,
         )
@@ -15430,9 +15450,9 @@ class DescribeColumns(Node):
         
         table_summary = self.get_sibling_document("Create Short Source Table Summary")
 
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        all_columns = ', '.join(f'"{col}"' for col in columns)
+        sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_pipeline}" LIMIT {sample_size}')
+        table_desc = sample_df.to_csv(index=False, quoting=1)
         
         return table_desc, table_summary, columns
 
@@ -15457,7 +15477,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -15516,6 +15536,7 @@ Return in the following format:
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
+            return
         
         
 class DecideProjection(Node):
@@ -15547,20 +15568,18 @@ class DecideProjection(Node):
         document = {"selected_columns": []}
 
         def callback_next(selected_indices):
-            
 
             if len(selected_indices) == 0:
                 print("🙁 Please keep at least one column.")
                 return
 
-            
             clear_output(wait=True)
-            document["selected_columns"] = [column_names[i] for i in selected_indices]
+            document["selected_columns"] = [f'"{column_names[i]}"' for i in selected_indices]
 
             if len(selected_indices) < num_cols:
                 new_table_name = f"{table_pipeline}_projected"
                 selection_clause = ',\n'.join(document['selected_columns'])
-                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM "{table_pipeline}"'
                 sql_query = f"-- Projection: Selecting {len(document['selected_columns'])} out of {num_cols} columns\n" + sql_query
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 step.run_codes()
@@ -15601,10 +15620,10 @@ class CreateColumnGrouping(Node):
         schema = get_table_schema(con, table_pipeline)
         columns = list(schema.keys())
 
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        all_columns = ', '.join(f'"{col}"' for col in columns)
+        sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_pipeline}" LIMIT {sample_size}')
         self.sample_df = sample_df
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        table_desc = sample_df.to_csv(index=False, quoting=1)
 
         schema = table_pipeline.get_final_step().get_schema()
         column_names = list(schema.keys())
@@ -15653,7 +15672,7 @@ Conclude with the final result as a multi-level JSON.
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         assistant_message = response['choices'][0]['message']
         messages.append(assistant_message)
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(assistant_message['content'])
         json_var = json.loads(json_code)
@@ -15761,7 +15780,7 @@ Conclude with the final result as a multi-level JSON.
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
-        
+            return
     
 class CreateTableSummary(Node):
     default_name = 'Create Table Summary'
@@ -15783,9 +15802,10 @@ class CreateTableSummary(Node):
 
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        all_columns = ', '.join(f'"{col}"' for col in columns)
+        sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_pipeline}" LIMIT {sample_size}')
+        
+        table_desc = sample_df.to_csv(index=False, quoting=1)
 
         self.sample_df = sample_df
 
@@ -15813,7 +15833,7 @@ Now, your summary:
         summary = response['choices'][0]['message']['content']
         assistant_message = response['choices'][0]['message']
         messages.append(assistant_message)
-        self.messages = messages
+        self.messages.append(messages)
 
 
 
@@ -15893,7 +15913,7 @@ Now, your summary:
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
-
+            return
 
 
 class DecideDuplicate(Node):
@@ -15927,7 +15947,7 @@ class DecideDuplicate(Node):
                 if b.description == 'Yes':
                     new_table_name = f"{self.para['table_pipeline']}_dedup"
                     
-                    sql_query = f"""SELECT DISTINCT * FROM {table_pipeline}"""
+                    sql_query = f'SELECT DISTINCT * FROM "{table_pipeline}"'
                     sql_query = f"-- Deduplication: Removed {duplicate_count} duplicated rows\n" + sql_query
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
                     step.run_codes()
@@ -15956,7 +15976,8 @@ class DecideDuplicate(Node):
             display(HBox([no_button, yes_button]))
 
             if self.viewer or ("viewer" in self.para and self.para["viewer"]):
-                on_button_clicked(yes_button)         
+                on_button_clicked(yes_button)  
+                return       
 
         else:
             callback(document)   
@@ -15966,8 +15987,8 @@ class DecideDuplicate(Node):
 
 def get_missing_percentage(con, table_name, column_name):
     query = f"""
-    SELECT COUNT(*) as total_count, COUNT({column_name}) as non_missing_count
-    FROM {table_name}
+    SELECT COUNT(*) as total_count, COUNT("{column_name}") as non_missing_count
+    FROM "{table_name}"
     """
     
     result = run_sql_return_df(con, query)
@@ -15981,70 +16002,133 @@ def get_missing_percentage(con, table_name, column_name):
 class DecideRegex(Node):
     default_name = 'Decide Regex'
     default_description = 'This node allows users to decide the regex pattern for a string column.'
+    max_iterations = 10
+    default_sample_size = 100
 
     def extract(self, item):
         clear_output(wait=True)
-
-        print("🔍 Reading regex pattern ...")
-        create_progress_bar_with_numbers(2, doc_steps)
 
         self.input_item = item
 
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
-
+        
+        
+        table_pipeline = self.para["table_pipeline"]
+        table_name = table_pipeline.get_final_step().name
+        column_name = self.para["column_name"]
+        
+        display(HTML(f"🔍 Reading regex pattern for <i>{table_name}[{column_name}]</i>..."))
+        create_progress_bar_with_numbers(2, doc_steps)
         show_progress(max_value=total, value=idx)
 
-        con = self.item["con"]
-        table_pipeline = self.para["table_pipeline"]
-        column_name = self.para["column_name"]
-        sample_size = 20
-
-        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
-
-        return column_name, sample_values
+        return column_name, table_name
     
     def run(self, extract_output, use_cache=True):
-        column_name, sample_values = extract_output
+        column_name, table_name = extract_output
+        
+        max_iterations = self.class_para.get("max_iterations", self.max_iterations)
 
-        template = f"""{column_name}' has the following distinct values (sep by "):
-{sample_values.to_csv(index=False, header=False, quoting=1)}
+        regex_list = []
+        results = []
+        con = self.item["con"]
+        sample_size = self.class_para.get("sample_size", self.default_sample_size)
+        
+        last_regex_list_size = -1
+        
+        i = 0
+        for i in range(max_iterations):
+            sample_values = create_sample_distinct_query_regex(con, table_name, column_name, 
+                                                sample_size, regex_except_list=regex_list)
+            
+            if len(sample_values) == 0:
+                break
+            
+            if len(regex_list) == last_regex_list_size:
+                use_cache = False
+            else:
+                use_cache = True
+                
+            last_regex_list_size = len(regex_list)
+            
+            value_list = sample_values[column_name].tolist()
+            
+            
+            template = f"""{column_name}' has the following distinct values: {value_list}
 
-Task: Identify the *meaningful* regular expression pattern for the column.
-E.g., Date string "1972/01/01" has regex of ^\d{{4}}\/\d{{2}}\/\d{{2}}$
-Free text doesn't have meaningful regex. Just use .*
-Some columns may have multiple patterns. Please analyze the semantic meaning of these values and provide the categories.
+Are there are common regular expression pattern, or just free texts (.*)
+E.g., Date string "(1'2'1994)" has regex: \(\d{{1,2}}'\d{{1,2}}'\d{{4}}\)
+Note to escape for special characters, e.g., \. for dot, \( for (, etc.
+For unicode characters, include them directly, not as \\u. e.g.: [À-ÖØ-öø-ÿ]+
+Some columns may have multiple patterns. Please provide all the categories, from strict to loose.
 
-Return the result in yml
+Now, return in the following format:
 ```yml
 reasoning: |
-    This column contains X types of values...
-
-patterns: # shall be a short list, mostly jsut one
-    -   name: |
-            semantic meaning of these values (e.g., date, free text)
-        regex: | 
-            .* # don't use quotes
+    This column contains free texts/obvious regex patterns
+patterns: # leave empty if free texts
+    -   summary: |
+            Date values in the format of (1'2'1994)
+        regex: |
+            \(\d{{1,2}}'\d{{1,2}}'\d{{4}}\)
     - ...
 ```"""
-        messages = [{"role": "user", "content": template}]
-        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-        messages.append(response['choices'][0]['message'])
-        self.messages = messages
 
-        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
-        
-        
+            messages = [{"role": "user", "content": template}]
+            response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+            messages.append(response['choices'][0]['message'])
+            self.messages.append(messages)
 
-        return summary
+            yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+            summary = yaml.safe_load(yml_code)
+            
+            if "patterns" not in summary or summary["patterns"] is None or len(summary["patterns"]) == 0:
+                summary["patterns"] = []
+                break
+            
+            def clean_regex(regex):
+                regex = regex.replace("''", "'").replace("'", "''")
+                return regex
+            
+            summary["patterns"] = [{"summary": clean_summary(pattern["summary"]), "regex": clean_regex(pattern["regex"])} for pattern in summary["patterns"]]
+            
+            for pattern in summary.get("patterns", []):
+                if pattern["regex"] == ".*":
+                    continue
+                
+                query = f'SELECT COUNT(*) FROM "{table_name}" WHERE '
+                query +=  create_regex_match_clause(con, column_name, pattern['regex']) + "\n"
+                for regex in regex_list:
+                    regex_match_clause = create_regex_match_clause(con, column_name, regex)
+                    query += f"AND NOT {regex_match_clause} \n"
+                    
+                result_df = run_sql_return_df(con,query)
+                if result_df.iloc[0,0] == 0:
+                    continue
+                
+                regex_list.append(pattern['regex'])
+                results.append(pattern)
+        
+        if i == (max_iterations -1):
+            return self.run_but_fail(extract_output)
+        
+        return results
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return []
+    
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        column_name, table_name = extract_output
+        table_object = self.para["table_object"]
+        table_object.patterns[column_name] = run_output
+        
         callback(run_output)
 
 class DecideRegexForAll(MultipleNode):
     default_name = 'Decide Regex For All'
     default_description = 'This node allows users to decide the regex pattern for all string columns.'
+    default_distinct_threshold = 100
 
     def construct_node(self, element_name, idx=0, total=0):
         para = self.para.copy()
@@ -16062,19 +16146,24 @@ class DecideRegexForAll(MultipleNode):
         self.elements = []
         self.nodes = {}
         table_pipeline = self.para["table_pipeline"]
-        schema = table_pipeline.get_final_step().get_schema()
+        con = self.item["con"]
+        database_name = get_database_name(con)
+        
+        
         distinct_count = table_pipeline.get_final_step().get_distinct_count()
+        distinct_threshold = self.class_para.get("distinct_threshold", self.default_distinct_threshold)
 
         for col in columns:
-            if schema[col] == 'VARCHAR' and distinct_count[col] > 50:
+            if get_reverse_type(schema[col], database_name) == 'VARCHAR' and distinct_count[col] > distinct_threshold:
                 self.elements.append(col)
 
         self.nodes = {col: self.construct_node(col, idx, len(self.elements)) for idx, col in enumerate(self.elements)}
 
     def display_after_finish_workflow(self, callback, document):
         callback(document)
-
-
+        
+        
+        
 class DecideUnusual(Node):
     default_name = 'Decide Unusual'
     default_description = 'This node allows users to decide how to handle unusual values.'
@@ -16082,21 +16171,22 @@ class DecideUnusual(Node):
     def extract(self, input_item):
         clear_output(wait=True)
 
-        print("🔍 Understanding unusual values ...")
-        create_progress_bar_with_numbers(3, doc_steps)
-
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
-        show_progress(max_value=total, value=idx)
-
+        
         self.input_item = input_item
 
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         column_name = self.para["column_name"]
+        
+        display(HTML(f"🔍 Understanding unusual values for <i>{table_pipeline}[{column_name}]</i>"))
+        create_progress_bar_with_numbers(3, doc_steps)
+        show_progress(max_value=total, value=idx)
+        
         sample_size = 20
 
-        sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
+        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
         
         return column_name, sample_values
 
@@ -16104,7 +16194,7 @@ class DecideUnusual(Node):
         column_name, sample_values = extract_output
 
         template = f"""{column_name} has the following distinct values:
-{sample_values.to_csv(index=False, header=False, quoting=2)}
+{sample_values.to_csv(index=False, header=False, quoting=1, quotechar="'")}
 
 Review if there are any unusual values. Look out for:
 1. Values too large/small that are inconsistent with the context.
@@ -16127,7 +16217,7 @@ Now, respond in Json:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -16205,8 +16295,9 @@ class DecideUnusualForAll(MultipleNode):
 
         display(next_button)
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
+            return
         
 class DecideLongitudeLatitude(Node):
     default_name = 'Decide Longitude Latitude'
@@ -16226,9 +16317,9 @@ class DecideLongitudeLatitude(Node):
         
         sample_size = 5
         con = self.item["con"]
-        all_columns = [col for col in schema if schema[col] in data_types['INT'] or schema[col] in data_types['DECIMAL']]
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        all_columns = [f'"{col}"' for col in schema if schema[col] in data_types['INT'] or schema[col] in data_types['DECIMAL']]
+        sample_df = run_sql_return_df(con, f'SELECT {", ".join(all_columns)} FROM "{table_pipeline}" LIMIT {sample_size}')
+        table_desc = sample_df.to_csv(index=False, quoting=1)
         
         return table_desc
     
@@ -16247,7 +16338,7 @@ Respond in JSON format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
@@ -16280,9 +16371,9 @@ class DecideColumnRange(Node):
         
         sample_size = 5
         con = self.item["con"]
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        all_columns = ', '.join(f'"{col}"' for col in columns)
+        sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_pipeline}" LIMIT {sample_size}')
+        table_desc = sample_df.to_csv(index=False, quoting=1)
         database_name = get_database_name(con)
         
         numerical_columns = [col for col in schema if get_reverse_type(schema[col], database_name) in ['INT', 'DECIMAL']]
@@ -16322,7 +16413,7 @@ Now, return in the following format:
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
 
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -16434,9 +16525,9 @@ class DecideMissing(Node):
             if missing_percentage > 0:
                 missing_columns[col] = missing_percentage
 
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_name} LIMIT {sample_size}")
-        sample_df_str = sample_df.to_csv(index=False, quoting=2)    
+        all_columns = ', '.join(f'"{col}"' for col in columns)
+        sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_name}" LIMIT {sample_size}')
+        sample_df_str = sample_df.to_csv(index=False, quoting=1)    
 
         return missing_columns, sample_df_str, table_name
 
@@ -16473,7 +16564,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
@@ -16557,9 +16648,10 @@ Return in the following format:
 
         display(next_button)
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
-            
+            return
+        
 class DecideDMV(Node):
     default_name = 'Decide Disguised Missing Values'
     default_description = 'This node allows users to decide how to handle disguised missing values.'
@@ -16567,21 +16659,22 @@ class DecideDMV(Node):
     def extract(self, input_item):
         clear_output(wait=True)
 
-        print("🔍 Understanding disguised missing values ...")
-        create_progress_bar_with_numbers(3, doc_steps)
-
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
-        show_progress(max_value=total, value=idx)
 
         self.input_item = input_item
 
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         column_name = self.para["column_name"]
+        
+        display(HTML(f"🔍 Understanding disguised missing values <i>{table_pipeline}[{column_name}]</i>"))
+        create_progress_bar_with_numbers(3, doc_steps)
+        show_progress(max_value=total, value=idx)
+        
         sample_size = 20
 
-        sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
+        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
         
         return column_name, sample_values
 
@@ -16610,7 +16703,7 @@ Return in json format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -16722,45 +16815,45 @@ class DecideDMVforAll(MultipleNode):
             
             if has_non_empty_values:
                 table_pipeline = self.para["table_pipeline"]
-                new_table_name = f"{table_pipeline}_null"
-                comment = f"-- NULL Imputation: Impute Null to Disguised Missing Values\n"
-                selection_clauses = []
-                
-                schema = table_pipeline.get_final_step().get_schema()
-                columns = set(schema.keys())
-        
-                for index, row in new_df.iterrows():
-                    if not row["Impute to NULL?"]:
-                        continue
-                    
-                    col = row["Column"]
-                    
-                    columns.remove(col)
-                    
-                    to_remove_values = row["Values to NULL (Sep By ,)"]
-                    
-                    to_remove_values = to_remove_values.split(",")
+            new_table_name = f"{table_pipeline}_null"
+            comment = "-- NULL Imputation: Impute Null to Disguised Missing Values\n"
+            selection_clauses = []
 
-                    selection_str = "CASE\n"
-                    for to_remove_value in to_remove_values:
-                        to_remove_value = to_remove_value.replace("''", "'").replace("'", "''")
-                        selection_str += f"    WHEN {col} = '{to_remove_value}' THEN NULL\n"
-                        
-                    comment += f"-- {col}: {to_remove_values}\n"
-                    selection_str += f"    ELSE {col}\n"
-                    selection_str += "END AS " + col
-                    selection_clauses.append(selection_str)
-                
-                for col in columns:
-                    selection_clauses.append(col)
-                
-                selection_clause = ',\n'.join(selection_clauses)
-                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
-                sql_query = comment + sql_query
-                con = self.item["con"]
-                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
-                step.run_codes()
-                table_pipeline.add_step_to_final(step)
+            schema = table_pipeline.get_final_step().get_schema()
+            columns = set(schema.keys())
+
+            for index, row in new_df.iterrows():
+                if not row["Impute to NULL?"]:
+                    continue
+
+                col = row["Column"]
+
+                columns.remove(col)
+
+                to_remove_values = row["Values to NULL (Sep By ,)"]
+
+                to_remove_values = to_remove_values.split(",")
+
+                selection_str = "CASE\n"
+                for to_remove_value in to_remove_values:
+                    to_remove_value = to_remove_value.replace("''", "'").replace("'", "''")
+                    selection_str += f'    WHEN "{col}" = \'{to_remove_value}\' THEN NULL\n'
+
+                comment += f"-- {col}: {to_remove_values}\n"
+                selection_str += f'    ELSE "{col}"\n'
+                selection_str += f'END AS "{col}"'
+                selection_clauses.append(selection_str)
+
+            for col in columns:
+                selection_clauses.append(f'"{col}"')
+
+            selection_clause = ',\n'.join(selection_clauses)
+            sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM "{table_pipeline}"'
+            sql_query = comment + sql_query
+            con = self.item["con"]
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+            step.run_codes()
+            table_pipeline.add_step_to_final(step)
             
             
             document = new_df.to_json(orient="split")
@@ -16773,27 +16866,13 @@ class DecideDMVforAll(MultipleNode):
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
-            
+            return
+
+
+    
 
 def check_column_uniqueness(con, table_name, column_name, allow_null=False):
-    if not allow_null:
-        query = f"""
-        SELECT COUNT(DISTINCT {column_name}) AS DISTINCT_COUNT,
-               COUNT(*) AS TOTAL_COUNT
-        FROM {table_name}
-        """
-    else:
-        query = f"""
-        SELECT COUNT(DISTINCT {column_name}) AS DISTINCT_COUNT,
-               COUNT({column_name}) AS NON_NULL_COUNT
-        FROM {table_name}
-        """
-
-    result = run_sql_return_df(con, query)
-    distinct_count = result.iloc[0]['DISTINCT_COUNT']
-    
-    total_count = result.iloc[0]['TOTAL_COUNT'] if not allow_null else result.iloc[0]['NON_NULL_COUNT']
-
+    distinct_count, total_count = compute_unique_ratio(con, table_name, column_name, allow_null=allow_null)
     return distinct_count == total_count
 
 
@@ -16818,67 +16897,78 @@ class DecideUnique(Node):
         
         sample_size = 5
 
-        unique_columns = {}
+        unique_columns = []
+        highly_unique_columns = []
 
         for col in columns:
-            unique_columns[col] = check_column_uniqueness(con, table_name, col, allow_null=True)
+            distinct_count, total_count = compute_unique_ratio(con, table_name, col, allow_null=True)
+            if distinct_count/total_count > 0.9:
+                highly_unique_columns.append(col)
+            if distinct_count == total_count:            
+                unique_columns.append(col)
+                
+        all_columns = ', '.join(f'"{col}"' for col in columns)
+        sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_name}" LIMIT {sample_size}')
+        sample_df_str = sample_df.to_csv(index=False, quoting=1)    
 
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_name} LIMIT {sample_size}")
-        sample_df_str = sample_df.to_csv(index=False, quoting=2)    
-
-        return unique_columns, sample_df_str, table_name, columns
+        return unique_columns, sample_df_str, table_name, columns, highly_unique_columns
 
     def run(self, extract_output, use_cache=True):
         
-        unique_columns, sample_df_str, table_name, columns = extract_output
+        unique_columns, sample_df_str, table_name, columns, highly_unique_columns = extract_output
         
-
-        unique_desc = "\n".join([f'{idx+1}. {col}: {unique_columns[col]}' for idx, (col, desc) in enumerate(unique_columns.items())])
+        if len(highly_unique_columns) == 0:
+            return {"reasoning": "No single column that can be candidate key.", "candidate_key": {}}
+        
 
         template = f"""You have the following table:
 {sample_df_str}
 
-Identify the single column can be the candidate key.
-E.g., for a table of customer data, 'Customer ID' can be the candidate key as it uniquely identify rows. But 'First Name' may not.
+The following columns have high uniqueness: {highly_unique_columns}
+For each, reason whether each column is always unique, or just coincidence.
+E.g., for a table of customer names, "customer_id" is always unique. But "first_name" is not always, as there can be multiple customers with the same first name.
 
 Return in the following format:
-```json
-{{
-    "reasoning": "The table is about ... Each row is about ... X column can be candidate key/ There is no single column that can be candidate key.",
-    "candidate_key": {{ # dictionary of columns, each is candidate key. Leave empty if no single column that can be candidate key
-        "column_name": "Short specific reason it uniquely identifies rows, in < 10 words.",
-        ...
-    }}
-}}
-"""
+```yml
+{highly_unique_columns[0]}: 
+    reasoning: this columns means...
+    always_unique: true/false
+...
+```"""
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
-        processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = json.loads(processed_string)
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
         
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
-            (lambda jc: "candidate_key" in jc, "The 'column_type' key is missing in the JSON code."),
-            (lambda jc: all(col_name in columns for col_name in jc["candidate_key"]), "One or more column names specified in 'candidate_key' are not present in the sample DataFrame."),
+            (lambda jc: all(key in highly_unique_columns for key in jc.keys()), f"The dictionary contains keys that are not in the highly_unique_columns list {highly_unique_columns}."),
+            (lambda jc: all(isinstance(value, dict) for value in jc.values()), "Not all values in the dictionary are dictionaries."),
+            (lambda jc: all("reasoning" in value and "always_unique" in value for value in jc.values()), "Not all inner dictionaries contain 'reasoning' and 'always_unique' keys."),
+            (lambda jc: all(isinstance(value["reasoning"], str) for value in jc.values()), "Not all 'reasoning' values are strings."),
+            (lambda jc: all(isinstance(value["always_unique"], bool) for value in jc.values()), "Not all 'always_unique' values are booleans."),
         ]
 
         for check, error_message in checks:
-            if not check(json_code):
+            if not check(summary):
                 raise ValueError(f"Validation failed: {error_message}")
 
-        return json_code
+        return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        return {"candidate_key": {}}
+        unique_columns, sample_df_str, table_name, columns, highly_unique_columns = extract_output
+        return {col: {"reasoning": "Currently unique" if col in unique_columns else "Currently not unique",
+                      "always_unique": True if col in unique_columns else False} for col in highly_unique_columns}
+
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         
         self.progress.value += 1
         json_code = run_output
-        unique_columns, _, _, _ = extract_output
+        unique_columns, sample_df_str, table_name, columns, highly_unique_columns = extract_output
         
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
@@ -16890,18 +16980,20 @@ Return in the following format:
         
         
         rows_list = []
-        for col in unique_columns:
-            is_unique = unique_columns[col]
-            reason = json_code["candidate_key"].get(col, "")
+        for col in highly_unique_columns:
+            is_unique = (col in unique_columns)
+            
+            reason = json_code[col]["reasoning"]
+            should_unique = json_code[col]["always_unique"]
+            
             rows_list.append({
                 "Column": col,
                 "Is Unique?": is_unique,
-                "Should Unique?": True if reason != "" else False,
+                "Should Unique?": should_unique,
                 "Explanation": reason
             })
         
         df = pd.DataFrame(rows_list)
-        df = df[df["Is Unique?"] | df["Should Unique?"]]
         
         if len(df) == 0:
             callback(df.to_json(orient="split"))
@@ -16930,7 +17022,7 @@ Return in the following format:
             clear_output(wait=True)
             new_df =  grid_to_updated_dataframe(grid)
             new_df["Should Unique?"] = False
-            callback(new_df.to_json(orient="records"))
+            callback(new_df.to_json(orient="split"))
         
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
@@ -16953,39 +17045,6 @@ Return in the following format:
         display(HTML(f"😎 We have identified columns should be unique. Please verify:"))
         display(grid)
         display(HBox([reject_button, next_button]))
-
-
-class DecideUniqueContinue(DecideUnique):
-     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        
-        self.progress.value += 1
-        json_code = run_output
-        unique_columns, _, _, _ = extract_output
-        
-        if icon_import:
-            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
-        
-        table_pipeline = self.para["table_pipeline"]
-        query_widget = self.item["query_widget"]
-
-        create_explore_button(query_widget, table_pipeline)
-        
-        
-        rows_list = []
-        for col in unique_columns:
-            is_unique = unique_columns[col]
-            reason = json_code["candidate_key"].get(col, "")
-            rows_list.append({
-                "Column": col,
-                "Is Unique?": is_unique,
-                "Should Unique?": True if reason != "" else False,
-                "Explanation": reason
-            })
-        
-        df = pd.DataFrame(rows_list)
-        df = df[df["Is Unique?"] | df["Should Unique?"]]
-        
-        callback(df.to_json(orient="split"))
         
 
 def create_profile_workflow(table_name, con, viewer=True):
@@ -17289,7 +17348,7 @@ class GenerateReport(Node):
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         schema = table_pipeline.get_final_step().get_schema()
-        df = run_sql_return_df(con, f"SELECT * FROM {table_pipeline} LIMIT  100")
+        df = run_sql_return_df(con, f'SELECT * FROM "{table_pipeline}" LIMIT  100')
         table_name = table_pipeline
 
         def replace_pattern(text):
@@ -18062,12 +18121,17 @@ def ask_save_files(labels, file_names, contents):
                     file.write(content)
                 print(f"🎉 File saved successfully as {file_path}")
 
-    save_button = Button(description="Save Files")
+    save_button = Button(
+        description="Save Files",
+        button_style='primary',
+        icon='save'
+    )
     save_button.on_click(save_files_click)
-
-    display(VBox(file_path_inputs+[overwrite_checkbox]), save_button)
+    
+    display(VBox(file_path_inputs+[overwrite_checkbox,save_button]))
     
     return overwrite_checkbox, save_button, save_files_click
+
     
 
     
@@ -18095,115 +18159,231 @@ def ask_save_file(file_name, content):
     display(HBox([file_name_input, overwrite_checkbox]), save_button)
     
 
-class CleanUnusual(Node):
-    default_name = 'Clean Unusual'
-    default_description = 'This node allows users to clean the unusual values.'
+
+class DecideTableHubRelationForAll(MultipleNode):
+    default_name = 'Decide Table Hub Relation For All'
+    default_description = 'This node allows users to decide the relation between tables and hubs.'
+
+    def construct_node(self, element_name, idx=0, total=0, hubs=None):
+        if hubs is None:
+            hubs = []
+            
+        para = self.para.copy()
+        para["table_name"] = element_name
+        para["table_idx"] = idx
+        para["total_tables"] = total
+        para["hubs"] = hubs
+        node = DecideTableHubRelation(para=para, id_para ="table_name")
+        node.inherit(self)
+        return node
 
     def extract(self, item):
         clear_output(wait=True)
 
+        print("🔍 Deciding the relation between tables and hubs...")
+
+        self.input_item = item
+
+        data_project = self.para["data_project"]
+        tables = data_project.list_tables()
+        
+        reference_tables_document = self.get_sibling_document('Decide Reference Tables')
+        reference_tables_df = pd.read_json(reference_tables_document, orient="split")
+        reference_tables = reference_tables_df[reference_tables_df["Is Reference Table?"] == True]["Table"].tolist()
+        
+        tables = [table for table in tables if table not in reference_tables]
+        
+        hubs = self.get_sibling_document('Decide Hubs')
+        self.elements = []
+        self.nodes = {}
+
+        idx = 0
+        for table in tables:
+            self.elements.append(table)
+            self.nodes[table] = self.construct_node(table, idx, len(tables), hubs)
+            idx += 1
+            
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        
+        tables = self.para["data_project"].list_tables()
+        query_widget = self.item["query_widget"]
+        
+        dropdown =  create_explore_button(query_widget, table_name=tables)
+        
+        hub_document = document.get('Decide Table Hub Relation', {})
+        
+        data = {
+            'Table': [],
+            'Related Hubs': [],
+            'Explanation': [],
+        }
+
+        for table_name, details in hub_document.items():
+            data['Table'].append(table_name)
+            data['Related Hubs'].append(list(details["contain_hubs"].keys()))
+            data['Explanation'].append(details["description"])
+            
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        hub_document = self.get_sibling_document('Decide Hubs')
+        hub_df = pd.read_json(hub_document, orient="split")
+        hubs = hub_df["Hub"].tolist()
+        
+        editable_columns = [False, True, True, True]
+        reset = True
+        long_text = []
+        
+        editable_list = {
+            'Related Hubs': {
+                'allowed_tags': hubs,
+                'allow_duplicates': False
+            }
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, long_text=long_text, editable_list=editable_list)
+        
+        
+        hub_desc = ", ".join(hubs)
+        print(f"🤓 The hubs are: {hub_desc}")
+        
+        print("😎 We have decided the relation between tables and hubs. Please verify:")
+        display(grid)
+        
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            try:
+                new_df =  grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            except Exception as e:
+                print(f"{str(e)}")
+                return
+            
+            document = new_df.to_json(orient="split")
+            callback(document)
+            
+        next_button.on_click(on_button_clicked)
+        display(next_button)
+        
+
+class CleanUnusual(ListNode):
+    default_name = 'Clean Unusual'
+    default_description = 'This node allows users to clean the unusual values.'
+    default_sample_size = 300
+    batch_size = 50
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        self.input_item = item
+
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
+
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
         unusual_reason = self.para["unusual_reason"]
+
         column_name = self.para["column_name"]
         
-        display(HTML(f"🧹 Cleaning values for <i>{table_pipeline}[{column_name}]</i>..."))
-        create_progress_bar_with_numbers(1, doc_steps)
+        display(HTML(f"🧹 Cleaning unusual values for <i>{table_pipeline}[{column_name}]</i>..."))
+        create_progress_bar_with_numbers(3, doc_steps)
         show_progress(max_value=total, value=idx)
+        
+        sample_size = self.class_para.get("sample_size", self.default_sample_size)
 
-        sample_size = 100
         sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
         total_distinct_count = count_total_distinct(con, table_pipeline, column_name)
 
-        return column_name, sample_values, unusual_reason, sample_size, total_distinct_count
+        outputs = []
+        
+        if total_distinct_count > sample_size:
+            return [(column_name, None, unusual_reason, sample_size, total_distinct_count)]
+        
+        for i in range(0, len(sample_values), self.batch_size):
+            sample_values_batch = sample_values[i:i+self.batch_size]
+            outputs.append((column_name, sample_values_batch, unusual_reason, sample_size, total_distinct_count))
+        
+        return outputs
 
     def run(self, extract_output, use_cache=True):
         column_name, sample_values, unusual_reason, sample_size, total_distinct_count = extract_output
 
-        if sample_size < total_distinct_count:
+        if total_distinct_count > sample_size:
+            return {"explanation": unusual_reason, "could_clean": False, "mapping": {}, "projection": False}
+        
+        value_list = sample_values[column_name].tolist()
+        
+        template = f"""{column_name}  column is unusual: {unusual_reason}
+It has the following values, ordered by frequency: {value_list}
 
-            template = f"""{column_name} has the following distinct values:
-{sample_values.to_csv(index=False, header=False, quoting=2)}
-
-This column is unusual: {unusual_reason}
-
-Task: Reason if it is possible to use a simple projection to the clean values.
-The clause will be filled in the following format: SELECT (Clause?) AS {column_name} ...
-If so, provide the projection clause.
-
-Return in the following format:
-```yml
-explanation: |
-    The error is caused by ...
-could_clean: |
-    true/false
-projection_clause: |
-    {column_name}...
-```
-"""
-
-            messages = [{"role": "user", "content": template}]
-            response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-            messages.append(response['choices'][0]['message'])
-            self.messages = messages
-            
-            yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-            summary = yaml.safe_load(yml_code)
-            
-            summary["could_clean"] = False
-            summary["projection"] = True
-            
-
-        else:
-
-            template = f"""{column_name}  column is unusual: {unusual_reason}
-It has the following values, ordered by frequency:
-{sample_values.to_csv(index=False, header=False, quoting=2)}
-
-Task: First, understand what are the unusual values and why.
-Then, reason if the corrected value is obvious.
-If so, maps those unusual old values to the correct ones to fix the problems.
+Task: First, understand which values are unusual and why.
+Then, maps those unusual values to the correct ones to fix the problems.
 E.g., if the old values have inconsistent patters/typos, map to the most frequent case.
-If a few old values are meaningless, map to empty string.
-If almost all old values are meaningless, could_clean is false (and skip mapping)
+If old values are meaningless, map to empty string.
 
 Return in the following format:
 ```yml
 explanation: |
     The problem is ... The correct values are ...
-could_clean: true/false
-mapping: 
-    '{sample_values.iloc[0, 0]}': '{sample_values.iloc[0, 0]}' # unusual_old_value : correct_value
+mapping: # just the values need to be changed; remember to escape quote in yml (' to '')
+    '{sample_values.iloc[0, 0].replace("'", "''")}': |'{sample_values.iloc[0, 0].replace("'", "''")}' 
     ...
-```
-"""
+```"""
 
-            messages = [{"role": "user", "content": template}]
-            response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-            messages.append(response['choices'][0]['message'])
-            self.messages = messages
-            
-            yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-            summary = yaml.safe_load(yml_code)
-            summary["projection"] = False 
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        summary["projection"] = False 
+        summary["could_clean"] = True
 
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        return {"explanation": "Fail to run", "could_clean": False}
+        return {"explanation": "Fail to run", "could_clean": False, "mapping": {}, "projection": False}
+    
+    def merge_run_output(self, run_outputs):
+        
+        explanation = run_outputs[0]["explanation"]
+       
+        merged_mapping = {}
+
+        for run_output in run_outputs:
+            mapping = run_output["mapping"]
+            for key, value in mapping.items():
+                if key not in merged_mapping:
+                    merged_mapping[key] = value
+
+        return {"explanation": explanation, 
+                "mapping": merged_mapping, 
+                "could_clean": True if len(merged_mapping) > 0 else False,
+                "projection": False}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         
         json_code = run_output
-        column_name, sample_values, unusual_reason, _, _ = extract_output
+        column_name, _, unusual_reason, _, _ = extract_output[0]
         
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
         
 
-        display(HTML(f"⚠️ <b>We've found errors in</b>: {column_name} <br><i>{unusual_reason}</i>"))
+        html_content = f"⚠️ <b>We've found errors in</b>: {column_name} <br><i>{unusual_reason}</i>"
+        display(HTML(html_content))
         
         table_pipeline = self.para["table_pipeline"]
         column_name = self.para["column_name"]
@@ -18217,9 +18397,6 @@ mapping:
         if not json_code["could_clean"]:
             print("☹️ Cocoon can't clean this for you, as it's too complex...")
             print("😎 We'll log this for future cleanings and analyses")
-            
-            table_object = self.para["table_object"]
-            table_object.unusualness[column_name] = json_code["unusual_reason"]
             
             submit_button = widgets.Button(
                 description='Next',
@@ -18276,7 +18453,8 @@ mapping:
             def on_button_clicked(b):
                 clear_output(wait=True)
                 json_code["could_clean"] = True
-                json_code["projection_clause"] = text_area.value                    
+                json_code["projection_clause"] = text_area.value    
+                display(HTML(""))              
                 callback(json_code)
             
             submit_button.on_click(on_button_clicked)
@@ -18307,7 +18485,7 @@ mapping:
                 old_values_to_remove, non_removed_values = process_grid_changes_remove(grid)
                 json_code["mapping"] = non_removed_values
                 json_code["old_values_to_remove"] = old_values_to_remove
-            
+                display(HTML(""))
                 callback(json_code)
 
             submit_button.on_click(on_button_clicked)
@@ -18331,12 +18509,12 @@ mapping:
             
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
-            return
 
 
 class CleanUnusualForAll(MultipleNode):
     default_name = 'Clean Unusual For All'
     default_description = 'This node allows users to clean the unusual values for all columns.'
+    default_sample_size = 100
 
     def construct_node(self, element_name, idx=0, total=0, unusual_reason=""):
         para = self.para.copy()
@@ -18344,7 +18522,9 @@ class CleanUnusualForAll(MultipleNode):
         para["column_idx"] = idx
         para["total_columns"] = total
         para["unusual_reason"] = unusual_reason
-        node = CleanUnusual(para=para, id_para ="column_name")
+        node = CleanUnusual(para=para, 
+                            id_para ="column_name",
+                            class_para={"sample_size": self.class_para.get("sample_size", self.default_sample_size)})
         node.inherit(self)
         return node
 
@@ -18391,9 +18571,8 @@ class CleanUnusualForAll(MultipleNode):
         comment = "-- Clean unusual string values: \n"
         
         for col in columns:
-            
             if col not in clean_unusual:
-                selections.append(col)
+                selections.append(f'"{col}"')
                 continue
                 
             clean_unusual_col = clean_unusual[col]
@@ -18402,36 +18581,36 @@ class CleanUnusualForAll(MultipleNode):
             comment += f"-- {col}: {explanation_value}\n"
 
             if not clean_unusual_col["could_clean"]:
-                selections.append(col)
+                selections.append(f'"{col}"')
             else:
                 if clean_unusual_col["projection"]:
-                    selections.append(clean_unusual_col["projection_clause"] + " AS " + col)
+                    selections.append(clean_unusual_col["projection_clause"] + f' AS "{col}"')
                         
                 else:
                     mapping = clean_unusual_col["mapping"]
                     old_values_to_remove = clean_unusual_col.get("old_values_to_remove", [])
                     remove_list_str = "(" + ", ".join([f"'{val}'" for val in old_values_to_remove]) + ")"
                     if old_values_to_remove:
-                        filters.append(f"{col} NOT IN {remove_list_str}")
+                        filters.append(f'"{col}" NOT IN {remove_list_str}')
 
                     selection_str = "CASE\n"
                     for old_value, new_value in mapping.items():
                         old_value = old_value.replace("''", "'").replace("'", "''")
                         new_value = new_value.replace("''", "'").replace("'", "''")
-                        selection_str += f"    WHEN {col} = '{old_value}' THEN '{new_value}'\n"
-                    selection_str += f"    ELSE {col}\n"
-                    selection_str += "END AS " + col
+                        selection_str += f'    WHEN "{col}" = \'{old_value}\' THEN \'{new_value}\'\n'
+                    selection_str += f'    ELSE "{col}"\n'
+                    selection_str += f'END AS "{col}"'
                     selections.append(selection_str)
 
         selection_sql = indent_paragraph(",\n".join(selections))
         where_sql = ""
-        
+
         if len(filters) > 0:
             where_sql = "\nWHERE\n" + indent_paragraph(" AND\n".join(filters) if filters else "")
 
         sql_query = f"""SELECT
 {selection_sql}
-FROM {table_pipeline}{where_sql}"""     
+FROM "{table_pipeline}"{where_sql}"""  
         
         sql_query = comment + sql_query
         step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
@@ -18516,31 +18695,31 @@ class HandleMissing(Node):
         def create_missing_handling_sql(df, schema, table_name):
             drop_columns = df[df["Strategy"] == DROP_COLUMN]["Column"].tolist()
             remove_rows = df[df["Strategy"] == REMOVE_ROWS]["Column"].tolist()
-            
+
             if len(drop_columns) == len(schema):
                 raise ValueError("All columns are dropped. Please keep at least one column.")
-            
+
             if len(remove_rows) == 0 and len(drop_columns) == 0:
                 return ""
-                        
-            select_columns = [col for col in schema if col not in drop_columns]
+
+            select_columns = [f'"{col}"' for col in schema if col not in drop_columns]
             selection_sql = indent_paragraph(',\n'.join(select_columns))
             sql_query = f"""SELECT
 {selection_sql}
-FROM {table_name}"""
-            
-            where_clause = " AND\n".join([f"{col} IS NOT NULL" for col in remove_rows])
-            
+FROM "{table_name}\""""
+
+            where_clause = " AND\n".join([f'"{col}" IS NOT NULL' for col in remove_rows])
+
             if where_clause:
                 sql_query += f"\nWHERE \n{indent_paragraph(where_clause)}"
-            
+
             handling_comments = f"-- Handling missing values: There are {len(df)} columns with unacceptable missing values\n"
-            
+
             for index, row in df.iterrows():
                 handling_comments += f"-- {row['Column']} has {row['NULL (%)']} percent missing. Strategy: {row['Strategy']}\n"
-            
+
             sql_query = handling_comments + sql_query
-            
+
             return sql_query
         
         def on_button_clicked(b):
@@ -18594,8 +18773,8 @@ class DecideDataType(Node):
         database_name = get_database_name(con)
         all_data_types = list(data_types_database[database_name].keys())
 
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
+        all_columns = ', '.join(f'"{col}"' for col in columns)
+        sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_pipeline}" LIMIT {sample_size}')
         schema = table_pipeline.get_final_step().get_schema()
 
         return sample_df, all_data_types, database_name, schema
@@ -18604,7 +18783,7 @@ class DecideDataType(Node):
         sample_df, all_data_types, database_name, schema = extract_output
 
         template = f"""You have the following table:
-{sample_df.to_csv(index=False, quoting=2)}
+{sample_df.to_csv(index=False, quoting=1)}
 
 For each column, classify what the column type should be.
 The column type should be one of the following:
@@ -18623,7 +18802,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
 
@@ -18693,11 +18872,12 @@ Return in the following format:
 
         display(next_button)
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
-            
+            return
 
-class TransformType(Node):
+
+class TransformType(ListNode):
     default_name = 'Transform Type'
     default_description = 'This node allows users to transform the data type for a column.'
 
@@ -18717,27 +18897,45 @@ class TransformType(Node):
         show_progress(max_value=total, value=idx)
 
         database_name = get_database_name(con)
-        sample_size = 5
-
-        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
         
         hint = ""
         if current_type in transform_hints:
             if target_type in transform_hints[current_type]:
                 if database_name in transform_hints[current_type][target_type]:
                     hint = transform_hints[current_type][target_type][database_name]
+                    
+        sample_size = 5
+        outputs = []
         
-        return column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint
-    
+        table_object = self.para["table_object"]
+        patterns = table_object.patterns.get(column_name, [])
+        
+        if len(patterns) == 0:
+            sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
+            return [(column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint, None, [])]
+        
+        else:
+            for i in range(len(patterns)):
+                pattern = patterns[i]
+                regex = pattern["regex"]
+                previous_patterns = [p["regex"] for p in patterns[:i]]
+                sample_values = create_sample_distinct_query_regex(con, table_pipeline, column_name, sample_size, 
+                                                                   regex_except_list=previous_patterns, regex_list=[regex])
+                outputs.append((column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint, regex, previous_patterns))
+            return outputs
+        
     def run(self, extract_output, use_cache=True):
-        column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint= extract_output
+        column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint, regex, except_regex= extract_output
         max_iterations = 10
-        self.messages = []
+        
+        value_list = sample_values[column_name].tolist()
+        
+        column_intro = f"'{column_name}' has the following distinct values: {value_list}"
+        if regex:
+            column_intro = f"'{column_name}' has the regex pattern '{regex}', and the following distinct values: {value_list}"
 
-        template = f"""'{column_name}' has the following distinct values:
-{sample_values.to_csv(index=False, header=False, quoting=1)}
-
-Task: Transform the data type of the column from '{current_type}' to '{target_type}', in a simple SELECT clause.
+        template = f"""{column_intro}
+Task: Transform the data type of the column from '{current_type}' to '{target_type}', in a simple cast clause.
 Note that we use {database_name} syntax. {hint}
 
 Return the result in yml
@@ -18746,7 +18944,7 @@ reasoning: |
     To transform, we need to ...
 
 cast_clause: |
-    CAST({column_name} AS {target_type}) AS {column_name}
+    CAST({column_name} AS {target_type})
 ```"""
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
@@ -18762,24 +18960,36 @@ cast_clause: |
             if clause.lower().startswith("select"):
                 clause = clause[6:].strip()
 
-            clause = clause.replace("\n", " ")
+            
+            if database_name == "DuckDB" and current_type == "VARCHAR":
+                clause = unescape_regex(clause)
+            
+            if clause.lower().endswith(f"as {column_name}"):
+                clause = clause[:-(len(column_name) + 3)].strip()
+                
+            clause = clause.replace(f'"{column_name}"', column_name).replace(column_name, f'"{column_name}"')
+                
             return  clause
 
         summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
         
-        if database_name == "DuckDB" and current_type == "VARCHAR":
-            summary["cast_clause"] = unescape_regex(summary["cast_clause"])
-        
         for i in range(max_iterations):
             try:
-                sql = f"""SELECT {summary['cast_clause']}
-FROM {table_pipeline}"""
+                sql = f'SELECT {summary["cast_clause"]} AS "{column_name}"'
+                sql += f'\nFROM "{table_pipeline}"'
+                if regex:
+                    sql += f'\nWHERE {create_regex_match_clause(con, column_name, regex)}'
+                for each_except_regex in except_regex:
+                    sql += f'\nAND NOT {create_regex_match_clause(con, column_name, each_except_regex)}'
+
                 df = run_sql_return_df(con, sql)
                 break
             except Exception: 
                 detailed_error_info = get_detailed_error_info()
-                template = f"""You have the following CAST clause:
+                template = f"""{column_intro}
+You have the following CAST clause:
 {summary['cast_clause']}
+For query: SELECT [cast_clause] AS {column_name} FROM table
 It has an error: {detailed_error_info}
 
 Please correct the CAST clause, but don't change the logic.
@@ -18790,7 +19000,7 @@ reasoning: |
     The error is caused by ...
 
 cast_clause: |
-    CAST({column_name} AS {target_type}) AS {column_name}
+    CAST({column_name} AS {target_type})
 ```
 """
 
@@ -18807,13 +19017,37 @@ cast_clause: |
             return self.run_but_fail(extract_output, use_cache)
         
         summary["reasoning"] = reasoning
+        summary["regex"] = regex if regex else ".*"
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        column_name, _, _, _, _, _, _, _ = extract_output
-        return {"reasoning": "Fail to cast", "cast_clause": f"{column_name} AS {column_name}"}
+        column_name = self.para["column_name"]
+        return {"reasoning": "Fail to cast", "cast_clause": f"{column_name} "}
+    
+    def merge_run_output(self, run_outputs):
+        if len(run_outputs) == 1:
+            return run_outputs[0]
+        
+        for run_output in run_outputs:
+            if run_output["reasoning"] == "Fail to cast":
+                return run_output
+        
+        merged_explanation = ""
+        merged_clause = "CASE\n"
+        con = self.item["con"]
+        column_name = self.para["column_name"]
+        
+        for run_output in run_outputs:
+            merged_explanation += run_output["reasoning"] + "\n"
+            pattern_match_clause = create_regex_match_clause(con, column_name, run_output['regex'])
+            merged_clause += f"    WHEN {pattern_match_clause} THEN {run_output['cast_clause']}\n"
+        
+        merged_clause += f"    ELSE \"{column_name}\"\nEND"
+        return {"reasoning": merged_explanation, "cast_clause": merged_clause}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if run_output["reasoning"] != "Fail to cast":
+            self.para["table_object"].patterns[self.para["column_name"]] = []
         return callback(run_output)
     
 
@@ -18897,13 +19131,13 @@ class TransformTypeForAll(MultipleNode):
         
         def on_button_clicked(b):
             new_df =  grid_to_updated_dataframe(grid)
-            query = f"SELECT\n"
+            query = "SELECT\n"
             for i, row in new_df.iterrows():
                 column_name = row["Column Name"]
-                clause = row["Clause"]
-                query += f"    {column_name} AS {column_name},\n"
-                query += f"    {clause},\n"
-            query = query[:-2] + f"\nFROM {self.para['table_pipeline']}"
+                clause = row["Clause"] + f' AS "{column_name}",'
+                query += f'    "{column_name}" AS "{column_name}",\n'
+                query += indent_paragraph(clause) + "\n"
+            query = query[:-2] + f'\nFROM "{self.para["table_pipeline"]}"'
             query_widget.run_query(query)
             print("😎 Query submitted. Check out the data widget!")
         
@@ -18918,27 +19152,27 @@ class TransformTypeForAll(MultipleNode):
         )
 
         def on_button_clicked(b):
-            new_df =  grid_to_updated_dataframe(grid)
+            new_df = grid_to_updated_dataframe(grid)
             affected_columns = new_df["Column Name"].tolist()
-            document["Transform Type"] = new_df.to_json(orient="records")
+            document["Transform Type"] = new_df.to_json(orient="split")
             new_table_name = f"{self.para['table_pipeline']}_casted"
             schema = self.para["table_pipeline"].get_final_step().get_schema()
             columns = list(schema.keys())
-            non_affected_columns = [col for col in columns if col not in affected_columns]
+            non_affected_columns = [f'"{col}"' for col in columns if col not in affected_columns]
 
-            sql_query = f"SELECT\n"
-            sql_query += indent_paragraph(",\n".join(non_affected_columns + [f"{row['Clause']}" for i, row in new_df.iterrows()])) 
-            sql_query += f"\nFROM {self.para['table_pipeline']}"
+            sql_query = "SELECT\n"
+            sql_query += indent_paragraph(",\n".join(non_affected_columns + [f"{row['Clause']} AS \"{row['Column Name']}\"" for i, row in new_df.iterrows()]))
+            sql_query += f'\nFROM "{self.para["table_pipeline"]}"'
 
             comment = "-- Column Type Casting: \n"
-            
+
             for idx, row in decided_column_type_df.iterrows():
                 column_name = row['Column']
                 current_type = row['Current Type']
                 target_type = row['Target Type']
                 if current_type != target_type:
                     comment += f"-- {column_name}: from {current_type} to {target_type}\n"
-                    
+
             sql_query = comment + sql_query
 
             step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
@@ -18960,8 +19194,7 @@ class TransformTypeForAll(MultipleNode):
         display(test_button)
         display(next_button)
         
-def where_clause_for_space(column_name):
-    return f"{column_name} <> TRIM({column_name})"
+
 
 class DecideTrim(Node):
     default_name = 'Decide Trim'
@@ -18984,16 +19217,16 @@ class DecideTrim(Node):
             current_type = get_reverse_type(schema[column], database_name)
             if current_type == "VARCHAR":
                 where_clause = where_clause_for_space(column)
-                count = run_sql_return_df(con, f"SELECT COUNT(*) FROM {table_pipeline} WHERE {where_clause}").iloc[0, 0]
+                count = run_sql_return_df(con, f'SELECT COUNT(*) FROM "{table_pipeline}" WHERE {where_clause}').iloc[0, 0]
                 if count > 0:
                     columns.append(column)
 
         sample_size = 2
         sample_df = None
         if len(columns) > 0:
-            all_columns = ", ".join(columns)
-            sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
-
+            all_columns = ', '.join(f'"{col}"' for col in columns)
+            sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_pipeline}" LIMIT {sample_size}')
+        
         return columns, sample_df
     
     def run(self, extract_output, use_cache=True):
@@ -19003,7 +19236,7 @@ class DecideTrim(Node):
             return {}, columns
 
         template = f"""You have a table, and the following columns have leading or trailing spaces:
-{sample_df.to_csv(index=False, quoting=2)}
+{sample_df.to_csv(index=False, quoting=1)}
 
 Task: Decide whether to keep the leading and trailing spaces.
 Most of the time, they are not meaningful.
@@ -19019,7 +19252,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
 
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
@@ -19102,12 +19335,12 @@ Return in the following format:
             clear_output(wait=True)
             new_df =  grid_to_updated_dataframe(grid)
             new_df["Trim?"] = False
-            callback(new_df.to_json(orient="records"))
+            callback(new_df.to_json(orient="split"))
             
 
         def on_button_clicked(b):
             clear_output(wait=True)
-            new_df =  grid_to_updated_dataframe(grid)
+            new_df = grid_to_updated_dataframe(grid)
             
             if new_df["Trim?"].any():
                 sql_pipeline = self.para["table_pipeline"]
@@ -19116,8 +19349,8 @@ Return in the following format:
 
                 schema = self.para["table_pipeline"].get_final_step().get_schema()
                 all_columns = list(schema.keys())
-                non_affected_columns = [col for col in all_columns if col not in new_df["Column Name"].tolist()]
-                sql_query = f"SELECT\n"
+                non_affected_columns = [f'"{col}"' for col in all_columns if col not in new_df["Column Name"].tolist()]
+                sql_query = "SELECT\n"
 
                 columns_to_trim = []
                 columns_not_to_trim = []
@@ -19126,23 +19359,23 @@ Return in the following format:
                     column_name = row["Column Name"]
                     trim = row["Trim?"]
                     if trim:
-                        columns_to_trim.append(column_name)
+                        columns_to_trim.append(f'"{column_name}"')
                     else:
-                        columns_not_to_trim.append(column_name)
+                        columns_not_to_trim.append(f'"{column_name}"')
 
                 sql_query += indent_paragraph(",\n".join(non_affected_columns + \
                                                         columns_not_to_trim +\
-                                                        [f"TRIM({col}) AS {col}" for col in columns_to_trim]))
+                                                        [f'TRIM({col}) AS {col}' for col in columns_to_trim]))
 
-                sql_query += f"\nFROM {sql_pipeline}"
+                sql_query += f'\nFROM "{sql_pipeline}"'
                 
-                sql_query = f"-- Trim Leading and Trailing Spaces\n" + sql_query
+                sql_query = "-- Trim Leading and Trailing Spaces\n" + sql_query
 
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
                 step.run_codes()
                 sql_pipeline.add_step_to_final(step)
 
-            callback(new_df.to_json(orient="records"))
+            callback(new_df.to_json(orient="split"))
 
         next_button.on_click(on_button_clicked)
         reject_button.on_click(on_button_clicked2)
@@ -19156,25 +19389,27 @@ Return in the following format:
 class DecideStringUnusual(Node):
     default_name = 'Decide String Unusual'
     default_description = 'This node allows users to decide how to handle unusual values.'
+    default_sample_size = 20
 
     def extract(self, input_item):
         clear_output(wait=True)
+        
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
-        table_pipeline = self.para["table_pipeline"]
-        column_name = self.para["column_name"]
-        
-        display(HTML(f"🔍 Inspecting values for <i>{table_pipeline}[{column_name}]</i>..."))
-        create_progress_bar_with_numbers(1, doc_steps)
-        show_progress(max_value=total, value=idx)
-        
-        
+
         self.input_item = input_item
 
         con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
         
-        sample_size = 20
-        sample_values = run_sql_return_df(con, f"SELECT {column_name} FROM {table_pipeline} WHERE {column_name} IS NOT NULL GROUP BY {column_name} ORDER BY COUNT(*) DESC,  {column_name} LIMIT {sample_size}")
+        display(HTML(f"🔍 Understanding unusual values for <i>{table_pipeline}[{column_name}]</i>"))
+        create_progress_bar_with_numbers(3, doc_steps)
+        show_progress(max_value=total, value=idx)
+        
+        sample_size = self.class_para.get("sample_size", self.default_sample_size)
+
+        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
         
         return column_name, sample_values
 
@@ -19185,10 +19420,10 @@ class DecideStringUnusual(Node):
             return {"Reasoning": "Column is fully missing", "Unusualness": False}
 
         template = f"""{column_name} has the following distinct values:
-{sample_values.to_csv(index=False, header=False, quoting=2)}
+{sample_values.to_csv(index=False, header=False, quoting=1, quotechar="'")}
 
 Review if there are
-1. Any weird characters/typo (e.g., "cofffee")
+1. Any weird characters/typo (e.g., "cofffee") Note that escape characters are expected.
 2. Redundant/Inconsistent representations of the same coencept (e.g., "New York" and "NY")
 If so, report them as unusual values.
 
@@ -19204,7 +19439,7 @@ Now, respond in Json:
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
         
@@ -19228,17 +19463,21 @@ Now, respond in Json:
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
-
+        
+        
 class DecideStringUnusualForAll(MultipleNode):
     default_name = 'Decide Unusual String For All'
     default_description = 'This node allows users to decide how to handle unusual values for all columns.'
-
+    default_sample_size = 20
+    
     def construct_node(self, element_name, idx=0, total=0):
         para = self.para.copy()
         para["column_name"] = element_name
         para["column_idx"] = idx
         para["total_columns"] = total
-        node = DecideStringUnusual(para=para, id_para ="column_name")
+        node = DecideStringUnusual(para=para, 
+                                   id_para ="column_name",
+                                   class_para={"sample_size": self.class_para.get("sample_size", self.default_sample_size)})
         node.inherit(self)
         return node
 
@@ -19257,7 +19496,7 @@ class DecideStringUnusualForAll(MultipleNode):
             self.elements.append(col)
             self.nodes[col] = self.construct_node(col, idx, len(columns))
             idx += 1
-            
+        
 
 
 
@@ -19376,7 +19615,7 @@ class WriteStageYMLCode(Node):
         
         if "yaml_only" not in self.class_para or not self.class_para["yaml_only"]:
             new_table_name = "stg_" + old_table_name.replace("src_", "")
-            sql_query = f"""SELECT * FROM {table_pipeline}"""
+            sql_query = f'SELECT * FROM "{table_pipeline}"'
             step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
             step.run_codes()
             table_pipeline.add_step_to_final(step)
@@ -19507,9 +19746,9 @@ class CreateShortTableSummary(Node):
 
         schema = table_pipeline.get_final_step().get_schema()
         columns = list(schema.keys())
-        all_columns = ", ".join(columns)
-        sample_df = run_sql_return_df(con, f"SELECT {all_columns} FROM {table_pipeline} LIMIT {sample_size}")
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        all_columns = ', '.join(f'"{col}"' for col in columns)
+        sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_pipeline}" LIMIT {sample_size}')
+        table_desc = sample_df.to_csv(index=False, quoting=1)
 
         self.sample_df = sample_df
 
@@ -19520,14 +19759,17 @@ class CreateShortTableSummary(Node):
 
         template = f"""You have the table '{table_name}' with samples:
 {table_desc}
-        
-- Task: Summarize the table.
--  Structure: Start with the big picture. Then explain what are the details mentioned, with related columns in ().
--  Style: Use a few short sentences with very simple words.
+
+Summarize the table. Start with the big picture. Then explain what are the details mentioned.
 
 Example: 
-The table is about ... It discusses customers (customer_id, customer_name) and their orders (order_id, order_date).
-Now, your summary in a few sentences and < 500 chars:"""
+The table is about ... It discusses customers and their orders.
+Now, your summary in short simple SVO sentences and < 500 chars
+Return in the following format:
+```yml
+table_summary: "The table is about ... It discusses customers and their orders."
+```
+"""
 
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
@@ -19535,9 +19777,11 @@ Now, your summary in a few sentences and < 500 chars:"""
         summary = response['choices'][0]['message']['content']
         assistant_message = response['choices'][0]['message']
         messages.append(assistant_message)
-        self.messages = messages
-
-        return summary
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        return summary["table_summary"]
     
     def run_but_fail(self, extract_output, use_cache=True):
         return "Please summarize the table"
@@ -19581,7 +19825,7 @@ Now, your summary in a few sentences and < 500 chars:"""
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
-            
+            return
             
 class SelectMainVocabularyTable(Node):
     default_name = 'Select Main and Vocabulary Table'
@@ -19781,8 +20025,8 @@ class SelectTable(Node):
         
         mode_selector = widgets.RadioButtons(
             options=[
-                ('🧐 Table Provider: We will interatively ask your feedback for each step', 'Table Provider'),        
-                ('👀 Table Viewer: Sit back and grab a coffee. We will provide our best guess.', 'Table Viewer'),
+                ('💬 Interactive: Interactively provide your feedback for each step', 'Table Provider'),        
+                ('⚡ Express: Sit back, relax, and let us provide our best guess', 'Table Viewer'),
             ],
             layout={'width': 'max-content'},
             style={'description_width': 'initial'}
@@ -19844,19 +20088,21 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
     main_workflow.add_to_leaf(CreateShortTableSummaryContinue())
     main_workflow.add_to_leaf(DescribeColumnsListAndTableSummary())
     main_workflow.add_to_leaf(DecideDuplicate())
-    main_workflow.add_to_leaf(DecideDataTypeList())
-    main_workflow.add_to_leaf(TransformTypeForAll())
     main_workflow.add_to_leaf(DecideTrim())
     main_workflow.add_to_leaf(DecideStringUnusualForAll())
     main_workflow.add_to_leaf(CleanUnusualForAll())
     main_workflow.add_to_leaf(DecideDMVforAll())
+    main_workflow.add_to_leaf(DecideDataTypeList())
+    
+    main_workflow.add_to_leaf(DecideRegexForAll())
+    main_workflow.add_to_leaf(TransformTypeForAll())
     main_workflow.add_to_leaf(DecideMissingList())
     main_workflow.add_to_leaf(HandleMissing())
     main_workflow.add_to_leaf(DecideUnique())
     main_workflow.add_to_leaf(DecideStringCategoricalForAll())
     main_workflow.add_to_leaf(WriteStageYMLCode())
-    
     return query_widget, main_workflow
+
 
 
 
@@ -19919,8 +20165,9 @@ class DescribeColumnsList(ListNode):
         
         for i in range(0, len(columns), 30):
             chunk_columns = columns[i:i + 30]
-            sample_df = run_sql_return_df(con, f"SELECT {', '.join(chunk_columns)} FROM {table_pipeline} LIMIT {sample_size}")
-            table_desc = sample_df.to_csv(index=False, quoting=2)
+            selection_clause = ", ".join(f'"{col}"' for col in chunk_columns)
+            sample_df = run_sql_return_df(con, f'SELECT {selection_clause} FROM "{table_pipeline}" LIMIT {sample_size}')
+            table_desc = sample_df.to_csv(index=False, quoting=1)
             outputs.append((table_desc, table_summary, chunk_columns))
         
         return outputs
@@ -20122,9 +20369,9 @@ class DecideMissingList(ListNode):
                 missing_percentage = get_missing_percentage(con, table_name, col)
                 if missing_percentage > 0:
                     missing_columns[col] = missing_percentage
-            
-            sample_df = run_sql_return_df(con, f"SELECT {', '.join(chunk_columns)} FROM {table_name} LIMIT {sample_size}")
-            sample_df_str = sample_df.to_csv(index=False, quoting=2)
+            selection_clause = ", ".join(f'"{col}"' for col in chunk_columns)
+            sample_df = run_sql_return_df(con, f'SELECT {selection_clause} FROM "{table_name}" LIMIT {sample_size}')
+            sample_df_str = sample_df.to_csv(index=False, quoting=1)
             
             outputs.append((missing_columns, sample_df_str))
 
@@ -20294,8 +20541,9 @@ class DecideDataTypeList(ListNode):
                 
         for i in range(0, len(columns), 30):
             chunk_columns = columns[i:i + 30]
-            sample_df = run_sql_return_df(con, f"SELECT {', '.join(chunk_columns)} FROM {table_pipeline} LIMIT {sample_size}")
-            table_desc = sample_df.to_csv(index=False, quoting=2)
+            selection_clause = ", ".join(f'"{col}"' for col in chunk_columns)
+            sample_df = run_sql_return_df(con, f'SELECT {selection_clause} FROM "{table_pipeline}" LIMIT {sample_size}')
+            table_desc = sample_df.to_csv(index=False, quoting=1)
             chunk_schema = {col: schema[col] for col in chunk_columns}
             outputs.append((table_desc, all_data_types, database_name, chunk_schema))
 
@@ -20511,7 +20759,7 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
-        "🧹 <b>Clean Table:</b> Give us a table, we'll understand, clean, and document it.",
+        "✨ <b>Clean Table:</b> Give us a table, we'll understand, clean, and document it.",
         "📊 <b>Clean Database:</b> Give us a database, we'll clean and identify PK/FK.",
         "🔍 <b>Profile:</b> Give us a table, we'll understand and identify anomalies.",
         "🔗 <b>(Preview) Fuzzy Join:</b> Give us two tables, we'll fuzzily join them.",
@@ -20691,22 +20939,22 @@ class DecideColumnsPattern(Node):
         display(grid)
         
         def on_button_clicked(b):
-            new_df =  grid_to_updated_dataframe(grid, lists=["Columns"])
+            new_df = grid_to_updated_dataframe(grid, lists=["Columns"])
             table_pipeline = self.para["table_pipeline"]
             con = self.item["con"]
-            
+
             columns_to_remove = []
             for index, row in new_df.iterrows():
                 if row["Remove?"]:
                     columns_to_remove.extend(row["Columns"])
-            
+
             if len(columns_to_remove) > 0:
                 new_table_name = f"{table_pipeline}_removeWideColumns"
-                selected_columns = [col for col in columns if col not in columns_to_remove] 
-            
+                selected_columns = [f'"{col}"' for col in columns if col not in columns_to_remove]
+
                 selection_clause = ',\n'.join(selected_columns)
-                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
-                
+                sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM "{table_pipeline}"'
+
                 comment = "-- Remove wide columns with pattern. The regex and columns are:\n"
                 for index, row in new_df.iterrows():
                     if row["Remove?"]:
@@ -20714,9 +20962,9 @@ class DecideColumnsPattern(Node):
                             comment += f"-- {row['Pattern']}: {', '.join(row['Columns'][0:10])} ...\n"
                         else:
                             comment += f"-- {row['Pattern']}: {', '.join(row['Columns'])}\n"
-                
+
                 sql_query = f"{comment}{sql_query}"
-                
+
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 step.run_codes()
                 table_pipeline.add_step_to_final(step)
@@ -20890,7 +21138,7 @@ class TagTable(Node):
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
         
@@ -21009,7 +21257,7 @@ E.g., table A is the main table, table B is to enrich table A, table C is to fil
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
         
@@ -21077,16 +21325,17 @@ class SelectSourceTargetTable(Node):
 
         display(HTML(header_html))
 
-        html_content = f"""🧐 There are {len(tables)} tables in your database.<br>
-🤓 Please select the <b>Source</b> and <b>Target</b> tables for transformation.<br>
-We recommend cleaning the source table before transforming it.<br>
-<b>Source Table:</b>"""
+        html_content = f"""🤓 Please select the <b>Source</b> and (example of) <b>Target</b> tables for transformation.<br>
+✨ We recommend cleaning the source table before transforming it.<br>"""
         display(HTML(html_content))
+        
+        display(HTML(f"<b>Source Table:</b>"))
+        
         dropdown_source = create_explore_button(query_widget, table_name=tables)
 
         clean_checkbox_source = widgets.Checkbox(
             value=True,
-            description='Clean this table?',
+            description='✨ Clean this?',
             disabled=False,
             indent=False
         )
@@ -21098,7 +21347,7 @@ We recommend cleaning the source table before transforming it.<br>
         
         clean_checkbox_target = widgets.Checkbox(
             value=False,
-            description='Clean this table?',
+            description='✨ Clean this?',
             disabled=False,
             indent=False
         )
@@ -21128,7 +21377,7 @@ class StageForSourceTarget(MultipleNode):
     default_name = 'Stage For All'
     default_description = 'This stages the source tables'
 
-    def construct_node(self, element_name, all_tables=None, idx=0, total=0, stage_viewer=None, clean=False):
+    def construct_node(self, element_name, all_tables=None, idx=0, total=1, stage_viewer=None, clean=None):
         if all_tables is None:
             all_tables = []
         if self.item is not None:
@@ -21137,6 +21386,10 @@ class StageForSourceTarget(MultipleNode):
         else:
             con = None
             query_widget = None
+            
+        if clean is None:
+            clean = [True] * total
+        
         
         table_name = element_name
         
@@ -21144,19 +21397,21 @@ class StageForSourceTarget(MultipleNode):
                 "table_idx": idx, 
                 "all_tables": all_tables,
                 "table_total": total, 
-                "stage_viewer": stage_viewer}
+                "stage_viewer": stage_viewer,
+                "clean": clean}
         
         for key in self.para:
             para[key] = self.para[key]
             
             
-        if not clean:
-            _, workflow = create_cocoon_profile_yml_workflow(con=con, query_widget=query_widget, 
-                                                       table_name=table_name, para=para)    
-        else:
+        if clean[idx]:
             _, workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget, 
                                                         table_name=table_name, para=para)
-        workflow.add_as_root(StageProgress())
+        else:
+            _, workflow = create_cocoon_profile_yml_workflow(con=con, query_widget=query_widget, 
+                                                       table_name=table_name, para=para)    
+            
+        workflow.add_as_root(StageSourceTargetProgress())
         
         return workflow
 
@@ -21165,13 +21420,14 @@ class StageForSourceTarget(MultipleNode):
         
         self.elements = [table_document["source_table"], table_document["target_table"]]
         
+        clean = [table_document["source_clean"], table_document["target_clean"]]
         stage_viewer = [False]
         self.nodes = {table_document["source_table"]: self.construct_node(table_document["source_table"], 
                                           all_tables=self.elements, idx=0, total=2, 
-                                          stage_viewer=stage_viewer, clean=table_document["source_clean"]),
+                                          stage_viewer=stage_viewer, clean=clean),
                       table_document["target_table"]: self.construct_node(table_document["target_table"], 
                                           all_tables=self.elements, idx=1, total=2, 
-                                          stage_viewer=stage_viewer, clean=table_document["target_clean"])}
+                                          stage_viewer=stage_viewer, clean=clean)}
     
     def display_after_finish_workflow(self, callback, document):
         data_project = self.para["data_project"]
@@ -21200,7 +21456,7 @@ class CreateShortSourceTableSummary(CreateShortTableSummary):
         sample_size = 5
 
         sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        table_desc = sample_df.to_csv(index=False, quoting=1)
         
         self.sample_df = sample_df
 
@@ -21222,7 +21478,7 @@ class CreateShortTargetTableSummary(CreateShortTableSummary):
         sample_size = 5
 
         sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        table_desc = sample_df.to_csv(index=False, quoting=1)
 
         self.sample_df = sample_df
 
@@ -21256,10 +21512,10 @@ class UnderstandSourceToTargetTransform(Node):
         target_table = target_table_object.table_name
 
         source_sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
-        source_table_desc = source_sample_df.to_csv(index=False, quoting=2)
+        source_table_desc = source_sample_df.to_csv(index=False, quoting=1)
         
         target_sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
-        target_table_desc = target_sample_df.to_csv(index=False, quoting=2)
+        target_table_desc = target_sample_df.to_csv(index=False, quoting=1)
         
         source_column_desc = source_table_object.print_column_desc()
         target_column_desc = target_table_object.print_column_desc()
@@ -21287,9 +21543,12 @@ Respond in the following json:
 ```json
 {{  
     "reasoning": "The transformation is (not) possible through SQL for any column...",
-    "instruction": {{ # leave empty if no transformation
-        "target_column": "String manipulation/Case when clauses/Direct copy... from source column", # short in 10 words
+    "selection_instruction": {{ # leave empty if no transformation
+        "target_column": "String manipulation/Case When clauses/Direct copy... from X column", # short in 10 words
     }}, 
+    "where_instruction": "Select ..." # Empty if no where
+    "group_by_instruction": "Group by ..." # Empty if no group by
+    "having_instruction": "Having ..." # Empty if no having
     "transformable": true/false,
     
 }}
@@ -21299,7 +21558,7 @@ Respond in the following json:
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1)
         assistant_message = response['choices'][0]['message']
         messages.append(assistant_message)
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         summary = json.loads(json_code)
@@ -21308,13 +21567,17 @@ Respond in the following json:
     
     def run_but_fail(self, extract_output, use_cache=True):
         return {"reasoning": "There is some issue with this transformation. Please specify the steps.", 
-                "instruction": {},
+                "selection_instruction": {},
+                "where_instruction": "",
+                "group_by_instruction": "",
+                "having_instruction": "",
                 "transformable": False}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         source_table, target_table, _, _, _, _, _, _, target_columns = extract_output
         
         self.progress.value += 1
+        query_widget =  self.item["query_widget"]
         create_explore_button(query_widget, table_name=[source_table, target_table])
         
         summary = run_output
@@ -21327,21 +21590,31 @@ Respond in the following json:
         data = {
             'Column': [],
             'Can Transform?': [],
-            'Clause': [],
+            'Instruction': [],
         }
         
         for column in target_columns:
             data['Column'].append(column)
-            data['Can Transform?'].append(True if column in summary['instruction'] else False)
-            data['Clause'].append(summary['instruction'].get(column, ''))
+            data['Can Transform?'].append(True if column in summary['selection_instruction'] else False)
+            data['Instruction'].append(summary['selection_instruction'].get(column, ''))
             
         df = pd.DataFrame(data)
-        
         editable_columns = [False, True, True]
-            
         grid = create_dataframe_grid(df, editable_columns, reset=True)
-
         display(grid)
+        
+        data = {
+            'Clause': ["WHERE", "GROUP BY", "HAVING"],
+            'Instruction': [summary.get("where_instruction", ""), 
+                            summary.get("group_by_instruction", ""), 
+                            summary.get("having_instruction", "")]
+        }
+        
+        df = pd.DataFrame(data)
+        editable_columns = [False, True]
+        grid_clause = create_dataframe_grid(df, editable_columns, reset=True)
+        display(grid_clause)
+        
 
         
         next_button = widgets.Button(
@@ -21354,14 +21627,20 @@ Respond in the following json:
         def on_next_button_clicked(b):
             clear_output(wait=True)
             new_df =  grid_to_updated_dataframe(grid)
-            document = new_df.to_json(orient="records")
+            document = {}
+            document["selection"] = new_df.to_json(orient="split")
+            
+            clause_df = grid_to_updated_dataframe(grid_clause)
+            document["clause"] = clause_df.to_json(orient="split")
+            
             callback(document)
         
         next_button.on_click(on_next_button_clicked)
         display(next_button)
+      
+        
 
-        
-        
+
 class WriteCode(Node):
     default_name = 'Write Code'
     default_description = 'Write code for table transformation'
@@ -21377,7 +21656,8 @@ class WriteCode(Node):
         source_table_object = data_project.table_object["source"]
         target_table_object = data_project.table_object["target"]
         
-        transform_df = pd.read_json(self.get_sibling_document('Understand Source to Target Transform'))
+        transform_df = pd.read_json(self.get_sibling_document('Understand Source to Target Transform')["selection"], orient="split")
+        clause_df = pd.read_json(self.get_sibling_document('Understand Source to Target Transform')["clause"], orient="split")
         
         transform_df = transform_df[transform_df['Can Transform?']]
         target_columns = transform_df['Column'].tolist()
@@ -21387,17 +21667,21 @@ class WriteCode(Node):
         target_table = target_table_object.table_name
 
         source_sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
-        source_table_sample = source_sample_df.to_csv(index=False, quoting=2)
+        source_table_sample = source_sample_df.to_csv(index=False, quoting=1)
         
         target_sample_df = run_sql_return_df(con, f"SELECT {', '.join(target_columns)} FROM {target_table} LIMIT {sample_size}")
-        target_table_sample = target_sample_df.to_csv(index=False, quoting=2)    
+        target_table_sample = target_sample_df.to_csv(index=False, quoting=1)    
         
         source_column_desc = source_table_object.print_column_desc()
         target_column_desc = target_table_object.print_column_desc(target_columns)
         
         transformation_reasoning = ""
         for column in target_columns:
-            transformation_reasoning += f"{column}: {transform_df.loc[transform_df['Column'] == column, 'Clause'].values[0]}\n"
+            transformation_reasoning += f"{column}: {transform_df.loc[transform_df['Column'] == column, 'Instruction'].values[0]}\n"
+        
+        for index, row in clause_df.iterrows():
+            if row["Instruction"]:
+                transformation_reasoning += f"{row['Clause']}: {row['Instruction']}\n"
         
         return source_table, source_table_sample, target_table_sample, source_column_desc, target_column_desc, transformation_reasoning
     
@@ -21440,7 +21724,7 @@ Respond in the following json:
         
         assistant_message = response['choices'][0]['message']
         messages.append(assistant_message)
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         summary = json.loads(json_code)
@@ -21463,7 +21747,7 @@ Respond in the following json:
         
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
-
+        
 class DebugCode(Node):
     default_name = 'Debug Code'
     default_description = 'Debug the code'
@@ -21631,7 +21915,7 @@ class DecideStringCategoricalForAll(MultipleNode):
         data = {
             'Column': [],
             'Should Categorical?': [],
-            'Domain (Sep By ,)': [],
+            'Acceptable Values': [],
             'Explanation': []
         }
 
@@ -21642,10 +21926,10 @@ class DecideStringCategoricalForAll(MultipleNode):
                     data['Should Categorical?'].append(True)
                     if details['current_full']:
                         domain_list = [str(item) for item in details['domain']]
-                        data['Domain (Sep By ,)'].append(",".join(domain_list))
+                        data['Acceptable Values'].append(domain_list)
                     else:
                         domain_list = [str(item) for item in details['full_domain']]
-                        data['Domain (Sep By ,)'].append(",".join(domain_list))
+                        data['Acceptable Values'].append(domain_list)
                     data['Explanation'].append(details['explanation'])
 
         df = pd.DataFrame(data)
@@ -21658,7 +21942,12 @@ class DecideStringCategoricalForAll(MultipleNode):
         reset = True
         lists = ['Current Domain']
         long_text = ['Explanation']
-        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists, long_text=long_text)
+        editable_list = {
+            'Related Hubs': {}
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists, 
+                                     long_text=long_text, editable_list=editable_list)
 
 
         next_button = widgets.Button(
@@ -21678,20 +21967,20 @@ class DecideStringCategoricalForAll(MultipleNode):
         )
         
         def on_reject_button_clicked(b):
-            new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
+            new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists, editable_list=editable_list)
             new_df['Should Categorical?'] = False
             document = new_df.to_json(orient="split")
             callback(document)
         
         def on_button_clicked(b):
-            new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists)
+            new_df =  grid_to_updated_dataframe(grid, reset=reset, lists=lists, editable_list=editable_list)
             document = new_df.to_json(orient="split")
 
             table_object = self.para["table_object"]
             for idx, row in new_df.iterrows():
                 column = row['Column']
                 if row['Should Categorical?']:
-                    table_object.category[column] = row['Domain (Sep By ,)'].split(',')
+                    table_object.category[column] = row['Acceptable Values']
             
             callback(document)
         
@@ -21723,7 +22012,7 @@ class DecideStringCategoricalForAllContinue(DecideStringCategoricalForAll):
         data = {
             'Column': [],
             'Is Categorical?': [],
-            'Domain (Sep By ,)': [],
+            'Acceptable Values': [],
             'Explanation': []
         }
 
@@ -21734,10 +22023,10 @@ class DecideStringCategoricalForAllContinue(DecideStringCategoricalForAll):
                     data['Is Categorical?'].append(True)
                     if details['current_full']:
                         domain_list = [str(item) for item in details['domain']]
-                        data['Domain (Sep By ,)'].append(",".join(domain_list))
+                        data['Acceptable Values'].append(domain_list)
                     else:
                         domain_list = [str(item) for item in details['full_domain']]
-                        data['Domain (Sep By ,)'].append(",".join(domain_list))
+                        data['Acceptable Values'].append(domain_list)
                     data['Explanation'].append(details['explanation'])
 
         df = pd.DataFrame(data)
@@ -21798,7 +22087,7 @@ class VerifyTests(Node):
             
             for idx, row in category_df.iterrows():
                 column = row['Column']
-                table_object.category[column] = row['Domain (Sep By ,)'].split(',')
+                table_object.category[column] = row['Acceptable Values']
             callback(summary)
         
         next_button.on_click(on_button_clicked)
@@ -21807,12 +22096,13 @@ class VerifyTests(Node):
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
-        
+            return
         
     
 class DecideStringCategorical(Node):
     default_name = 'Decide If Categorical'
     default_description = 'This node allows users to decide if a string column should be free text or categorical.'
+    default_sample_size = 50
 
     def extract(self, input_item):
         clear_output(wait=True)
@@ -21829,7 +22119,7 @@ class DecideStringCategorical(Node):
 
         self.input_item = input_item
         
-        sample_size = 50
+        sample_size = self.class_para.get("sample_size", self.default_sample_size)
 
         sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
         total_distinct_count = count_total_distinct(con, table_pipeline, column_name)
@@ -21847,7 +22137,7 @@ class DecideStringCategorical(Node):
             return {"explanation": "The column has too many distinct values.", "can_enumerate": False}
 
         template = f"""{column_name} has the following distinct values:
-{sample_values.to_csv(index=False, header=False, quoting=2)}
+{sample_values.to_csv(index=False, header=False, quoting=1, quotechar="'")}
 
 Review if the column is categorical with a limited domain of acceptable values that you CAN enumerate.
 If so, enumerate the FULL domain with Jinja template. E.g.,
@@ -21861,14 +22151,15 @@ explanation: |
     The full domain follows ... pattern. It cannot/can be fully enumerated by Jinja that ...
 can_enumerate: true/false
 current_full: true/false # if categorical is true, are the current distinct values already the full domain? 
-full_domain: | # Jinja template that creates a list, to the best of you knowledge, WITHOUT referencing any var
-    [{{% for i in range(1, 10) %}}'x_{{{{ i }}}}'{{% if not loop.last %}},{{% endif %}}{{% endfor %}}]
+# Jinja template that creates a list, to the best of you knowledge, WITHOUT referencing any var
+full_domain: |
+    [{{% for i in range(1, 10) %}}'x_{{{{ i }}}}'{{% if not loop.last %}},{{% endif %}}{{% endfor %}}] 
 ```"""
 
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.safe_load(yml_code)
@@ -21881,7 +22172,6 @@ full_domain: | # Jinja template that creates a list, to the best of you knowledg
             (lambda jc: "current_full" in jc if jc["can_enumerate"] else True, "The 'current_full' key is missing when 'can_enumerate' is True."),
             (lambda jc: isinstance(jc["current_full"], bool) if "current_full" in jc else True, "The value of 'current_full' must be a boolean."),
             (lambda jc: "full_domain" in jc if jc.get("current_full") is False and jc["can_enumerate"] else True, "The 'full_domain' key is missing when 'current_full' is False and 'can_enumerate' is True."),
-            (lambda jc: isinstance(jc["full_domain"], str) if "full_domain" in jc else True, "The value of 'full_domain' must be a string."),
         ]
 
         for check, error_message in checks:
@@ -21892,7 +22182,10 @@ full_domain: | # Jinja template that creates a list, to the best of you knowledg
         
         if "full_domain" in summary:
             full_domain = summary["full_domain"]
-            if full_domain.strip() == "":
+            
+            if isinstance(full_domain, list):
+                pass
+            elif full_domain.strip() == "":
                 full_domain = []
             elif full_domain.strip().startswith("#"):
                 full_domain = []
@@ -21910,6 +22203,11 @@ full_domain: | # Jinja template that creates a list, to the best of you knowledg
             summary["explanation"] += "The domain is too large to enumerate."
             del summary["full_domain"]
             del summary["current_full"]
+            
+        if "full_domain" in summary and summary["can_enumerate"]:
+            missing_values = set(summary["domain"]) - set(summary["full_domain"])
+            if missing_values:
+                summary["full_domain"].extend(list(missing_values))
             
         return summary
     
@@ -21952,9 +22250,9 @@ class SelectTables(Node):
         next_button.on_click(on_button_click)
         display(next_button)
         
-        if self.viewer:
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_click(next_button)
-        
+            return
 
 class StageTablesForAll(MultipleNode):
     default_name = 'Stage Tables For All'
@@ -22054,7 +22352,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -22147,7 +22445,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -22260,7 +22558,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -22473,7 +22771,7 @@ class DecideTableHubRelation(Node):
         
         sample_size = 5
         sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
-        table_desc = sample_df.to_csv(index=False, quoting=2)
+        table_desc = sample_df.to_csv(index=False, quoting=1)
 
         return table_name, table_desc, hub_desc, hubs
 
@@ -22502,7 +22800,7 @@ description: A do B, C do D... # leave empty if contain_hubs < 2
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.safe_load(yml_code)
@@ -22579,7 +22877,7 @@ reference_tables:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.safe_load(yml_code)
@@ -22710,7 +23008,7 @@ similar_links:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.safe_load(yml_code)
@@ -22976,14 +23274,12 @@ class DecideFunctionalDependencyForAll(MultipleNode):
         data = {
             'Column Name': [],
             'Decide Columns': [],
-            'Explanation': []
         }
         
         if "Decide If Functional Dependency" in document:
             for column_name, details in document["Decide If Functional Dependency"].items():
                 data['Column Name'].append(column_name)
-                data['Decide Columns'].append(details['decide_columns'])
-                data['Explanation'].append(details['explanation'])
+                data['Decide Columns'].append(details['one_one_columns'])
                 
         df = pd.DataFrame(data)
         
@@ -22991,14 +23287,16 @@ class DecideFunctionalDependencyForAll(MultipleNode):
             callback(df.to_json(orient="split"))
             return
         
-        editable_columns = [False, True, False]
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, table_pipeline)
+        
+        editable_columns = [False, False]
         reset = True
-        long_text = ['Explanation']
+        long_text = []
         editable_list = {
-            'Related Hubs': {
-                'allowed_tags': [],
-                'allow_duplicates': False
-            }
         }
         
         grid = create_dataframe_grid(df, editable_columns, reset=reset, long_text=long_text, editable_list=editable_list)
@@ -23056,18 +23354,12 @@ class DecideFunctionalDependency(Node):
             sql_query = generate_group_ratio_query(table_name, column_name, decide_columns)
             ratio_df = run_sql_return_df(con, sql_query)
             
-            ratio_df = ratio_df.loc[:, ratio_df.iloc[0] <= 0.2]
+            ratio_df = ratio_df.loc[:, ratio_df.iloc[0] < 0.9]
             decide_column_candidates = list(ratio_df.columns)
             
             
         table_desc = ""
         
-        if len(decide_column_candidates) > 0:
-            sample_size = 5
-            all_columns_str = ", ".join(all_columns)
-            sample_df = run_sql_return_df(con, f"SELECT {all_columns_str} FROM {table_name} ORDER BY {column_name} LIMIT {sample_size} ")
-            table_desc = sample_df.to_csv(index=False, quoting=2)
-
         
         return column_name, decide_column_candidates, table_summary, table_desc
 
@@ -23076,28 +23368,25 @@ class DecideFunctionalDependency(Node):
         column_name, decide_column_candidates, table_summary, table_desc = extract_output
         
         if len(decide_column_candidates) == 0:
-            return {"explanation": "No candidates", "decide_columns": []}
+            return {"explanation": "No candidates", "one_one_columns": []}
 
-        template = f"""You have a table, with a sample:
-{table_desc}
+        template = f"""You have a table: {table_summary}
 
-{table_summary}
-
-For column '{column_name}', here is a list of columns that could have functional dependency: '{column_name}' -> {decide_column_candidates}
-Reason about what each column means and whether the FD is semantically sensible for each column.
-E.g., 'city' -> 'country', but not 'country'-> 'city'.
+Reason about whether, for each '{column_name}', there is a unique value for: '{decide_column_candidates}'.
+E.g., 'country' -> 'city' is not one_one, because one country can have multiple cities.
+'order_id' -> 'order_date' is one_one, because one order_id has one order_date.
 
 Respond in yml:
 ```yml
-explanation: |
-    '{column_name}' means ... When we know '{column_name}', we know ...
-decide_columns: [column1, column2, ...]
+explanation: |  
+    For each value in '{column_name}', there possibly is a unique value in ...
+one_one_columns: [column1, column2, ...] 
 ```"""
 
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.safe_load(yml_code)
@@ -23105,25 +23394,116 @@ decide_columns: [column1, column2, ...]
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
             (lambda jc: "explanation" in jc, "The 'explanation' key is missing in the JSON code."),
+            (lambda jc: "one_one_columns" in jc, "The 'one_one_columns' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["one_one_columns"], list), "The value of 'one_one_columns' must be a list."),
         ]
 
         for check, error_message in checks:
             if not check(summary):
                 raise ValueError(f"Validation failed: {error_message}")
         
-        if "decide_columns" not in summary:
-            summary["decide_columns"] = []
-        
+        summary["one_one_columns"] = [col for col in summary["one_one_columns"] if col != column_name]
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        return {"explanation": "Fail to run", "decide_columns": []}
+        return {"explanation": "Fail to run", "one_one_columns": []}
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        callback(run_output)
+        summary = run_output
+        column_name, _, _, _ = extract_output
         
+        clear_output(wait=True)
+        print("Explanation", summary["explanation"])
+        print("FD Columns", summary["one_one_columns"])
+        groupby = column_name
+        table_pipeline = self.para["table_pipeline"]
+        table_name = table_pipeline.get_final_step().name
+        all_columns = list(table_pipeline.get_final_step().get_schema().keys())
         
+        repair_selection_clauses = {}
+        
+        for decide_column in summary["one_one_columns"]:
+            if decide_column not in all_columns:
+                continue
+            
+            def create_repair_pair_sql(table_name, groupby, decide_col):
+                sql = f"""SELECT {groupby}, mode({decide_col}) AS {decide_col}
+            FROM {table_name}
+            WHERE {groupby} IS NOT NULL
+            GROUP BY {groupby}
+            HAVING count(distinct(coalesce({decide_col}, 'NULL'))) > 1"""
 
+                return sql
+
+            repair_pair_sql = create_repair_pair_sql(table_name, groupby, decide_column)
+            repair_df = run_sql_return_df(con, repair_pair_sql)
+            
+            if len(repair_df) == 0:
+                continue
+
+            def create_repair_selection_str(df, groupby, decide_col):
+                selection_str = "CASE\n"
+                for i, row in df.iterrows():
+                    old_value = row[groupby].replace("''", "'").replace("'", "''")
+                    new_value = row[decide_col].replace("''", "'").replace("'", "''")
+                    selection_str += f"    WHEN {groupby} = '{old_value}' THEN '{new_value}'\n"
+
+                selection_str += f"    ELSE {decide_col}\n"
+                selection_str += "END AS " + decide_col
+
+                return selection_str
+
+            repair_selection_clause = create_repair_selection_str(repair_df, groupby, decide_column)
+            repair_selection_clauses[decide_column] = repair_selection_clause
+            
+        if len(repair_selection_clauses) == 0:
+            callback(summary)
+            return
+        
+        selections = []
+        
+        new_table_name = f"{table_pipeline}_fd"
+        
+        for col in all_columns:
+            if col in repair_selection_clauses:
+                selections.append(repair_selection_clauses[col])
+            else:
+                selections.append(col)
+        selection_sql = indent_paragraph(",\n".join(selections))
+        
+        sql_query = f"""SELECT
+{selection_sql}
+FROM {table_pipeline}"""    
+
+        comment = f"-- FD: functional dependency\n"
+        comment += f"-- {groupby} -> {', '.join(summary['one_one_columns'])}\n"
+        
+        step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+        step.run_codes()
+
+        table_pipeline.add_step_to_final(step)
+        
+        submit_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            callback(summary)
+            
+        submit_button.on_click(on_button_clicked)
+        
+        display(submit_button)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(submit_button) 
+        
+        
+        
 class SourceProjectStoryUnderstanding(Node):
     default_name = 'Source Project Understand'
     default_description = 'This understands the source tables and dbt project'
@@ -23176,7 +23556,7 @@ Return in the following format:
         messages = [{"role": "user", "content": template}]
         response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
         
         json_code = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = replace_newline(json_code)
@@ -23208,7 +23588,6 @@ Return in the following format:
 
         on_button_click(None) 
         
-
 
 class SourceTableUnderstand(Node):
     default_name = 'Source Table Understand'
@@ -23262,7 +23641,7 @@ Return in the following format:
         summary = json.loads(json_code)
 
         messages.append(response['choices'][0]['message'])
-        self.messages = messages
+        self.messages.append(messages)
 
         return summary, tables, story_description
     
@@ -23371,7 +23750,7 @@ Return in the following format:
         
 
 class Table:
-    def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_acceptable=None, unusualness=None, category=None, uniqueness=None):
+    def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_acceptable=None, unusualness=None, category=None, uniqueness=None, patterns=None):
         self.table_name = table_name
         self.table_summary = table_summary
         self.columns = columns or []
@@ -23380,6 +23759,7 @@ class Table:
         self.unusualness = unusualness or {}
         self.category = category or {}
         self.uniqueness = uniqueness or {}
+        self.patterns = patterns or {}
     
     def print_category(self):
         category_string = ""
@@ -23440,6 +23820,7 @@ class Table:
                 if unique_reason:
                     tests.append("unique")
                     cocoon_meta["uniqueness"] = unique_reason
+                    
 
             category_key = next((key for key in self.category if key.lower() == column.lower()), None)
             if category_key:
@@ -23451,7 +23832,13 @@ class Table:
                         else:
                             accepted_values = accepted_values.split(",")
                     tests.append({"accepted_values": {"values": accepted_values}})
-
+            
+            patterns_key = next((key for key in self.patterns if key.lower() == column.lower()), None)
+            if patterns_key:
+                patterns = self.patterns[patterns_key]
+                if patterns:
+                    cocoon_meta["patterns"] = patterns
+                    
             column_data = {
                 "name": column,
                 "description": description
@@ -23505,6 +23892,8 @@ class Table:
                     self.unusualness[column_name] = cocoon_meta['unusal_values']
                 if 'uniqueness' in cocoon_meta:
                     self.uniqueness[column_name] = cocoon_meta['uniqueness']
+                if 'patterns' in cocoon_meta:
+                    self.patterns[column_name] = cocoon_meta['patterns']
                     
                     
     def add_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
@@ -23721,12 +24110,12 @@ class DescribeColumnsListAndTableSummary(DescribeColumnsList):
                     
                     if old_name != new_name:
                         comment += f"-- {old_name} -> {new_name}\n"
-                        selection_clauses.append(f"{old_name} AS {new_name}")
+                        selection_clauses.append(f"\"{old_name}\" AS \"{new_name}\"")
                     else:
-                        selection_clauses.append(f"{old_name}")
+                        selection_clauses.append(f"\"{old_name}\"")
                 
                 selection_clause = ',\n'.join(selection_clauses)
-                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM "{table_pipeline}"'
                 sql_query = comment + sql_query
                 con = self.item["con"]
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
@@ -23759,6 +24148,7 @@ class CreateShortTableSummaryContinue(CreateShortTableSummary):
         self.progress.value += 1
         
         callback(summary)
+        
 
 class StageProgress(Node):
     default_name = 'Stage Progress'
@@ -23775,7 +24165,6 @@ class StageProgress(Node):
         idx = self.para["table_idx"]
         all_tables = self.para["all_tables"]
 
-        print(f"🧐 We will clean the tables ... Next table is {BOLD}{table_name}{END} ...")
 
         df = pd.DataFrame(all_tables, columns=["table"])
 
@@ -23783,21 +24172,17 @@ class StageProgress(Node):
         df.loc[:idx, "status"] = "✅"
         df.loc[idx, "status"] = "🚀"
 
-        display(df)
-
 
         next_button = widgets.Button(description="Next",
                                     button_style='success')
         
-        
-        html_mode_content = """<h3>To proceed, there are two modes </h3>
+        html_mode_content = """<h3>Two modes to proceed: </h3>
 <ul>
-<li><b>💬 Interactive Mode</b>: We will interatively ask your feedback for each step</li>
-<li><b>⚡ Express Mode</b>: Sit back and grab a coffee. We will provide our best guess.</li>
+<li><b>💬 Interactive</b>: Interactively provide your feedback for each step.</li>
+<li><b>⚡ Express</b>: Sit back, relax, and let us provide our best guess.</li>
 </ul>
 """
 
-        display(HTML(html_mode_content))
 
         
         interactive_next_button = widgets.Button(description="Interactive Next", 
@@ -23858,14 +24243,129 @@ class StageProgress(Node):
         interactive_next_button.on_click(on_interactive_next_button_click)
         express_next_button.on_click(on_express_next_button_click)
         express_all_button.on_click(on_express_all_button_click)
-          
-        display(HBox([interactive_next_button, express_next_button, express_all_button]))
         
         if self.para["stage_viewer"][0]:
             self.para["viewer"] = True
             skip_this_workflow()
             return
         
+        display(HTML(f"🧐 We will clean all the tables ... The next table is <b>{table_name}</b> ..."))
+        display(df)
+        display(HTML(html_mode_content))
+        display(HBox([interactive_next_button, express_next_button, express_all_button]))
+
+
+class StageSourceTargetProgress(Node):
+    default_name = 'Stage Progress'
+    default_description = 'This shows the progress of staging'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(1, model_steps)
+
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        table_name = self.para['table_name']
+        idx = self.para["table_idx"]
+        all_tables = self.para["all_tables"]
+        clean = self.para["clean"]
+        
+
+        df = pd.DataFrame()
+        
+        df["type"] = ["Source", "Target"]
+        df["table"] = all_tables
+        
+        df["status"] = "🕒"
+        df.loc[:idx, "status"] = "✅"
+        df.loc[idx, "status"] = "🚀"
+        
+        
+        df["step"] = ["✨Clean" if clean[i] else "🔍Profile" for i in range(len(all_tables))]
+        
+
+        next_button = widgets.Button(description="Next",
+                                    button_style='success')
+        
+        
+        html_mode_content = """<h3>Two modes to proceed: </h3>
+<ul>
+<li><b>💬 Interactive</b>: Interatively provide your feedback for each step.</li>
+<li><b>⚡ Express</b>: Sit back, relax, and let us provide our best guess.</li>
+</ul>
+"""
+
+        
+        interactive_next_button = widgets.Button(description="Interactive Next", 
+                                     button_style='success',
+                                     icon='check')
+
+        express_next_button = widgets.Button(description="Express Next",
+                                        button_style='info',
+                                        icon='bolt')
+        
+        express_all_button = widgets.Button(description="Express All",
+                                        button_style='warning',
+                                        icon='fast-forward')
+        
+        def go_to_next_node():
+            callback({})
+            
+        def skip_this_workflow():
+            table_name = self.para["table_name"]
+            new_table_name = "stg_" + table_name.replace("src_", "")
+            
+            file_names = [f"{new_table_name}.sql",  f"{new_table_name}.yml",]
+            
+            if "dbt_directory" in self.para:
+                file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
+            
+            if all([os.path.exists(file_name) for file_name in file_names]):
+                with open(file_names[0], "r") as f:
+                    sql_query = f.read()
+                    con = self.item["con"]
+                    sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                    sql_step.run_codes()
+                    
+                
+                with open(file_names[1], "r") as f:
+                    yml_data = f.read()
+                    table_object = self.para["table_object"]
+                    table_object.read_attributes_from_dbt_schema_yml(yml_data)
+                    
+                callback({"next_node": "COCOON_END_WORKFLOW"})
+                
+            else:
+                callback({})
+        
+        def on_interactive_next_button_click(b):
+            go_to_next_node()
+        
+        def on_express_next_button_click(b):
+            self.para["viewer"] = True
+            skip_this_workflow()
+                
+        def on_express_all_button_click(b):
+            self.para["viewer"] = True
+            self.para["stage_viewer"][0] = True
+            skip_this_workflow()
+                
+        interactive_next_button.on_click(on_interactive_next_button_click)
+        express_next_button.on_click(on_express_next_button_click)
+        express_all_button.on_click(on_express_all_button_click)
+        
+        
+        if self.para["stage_viewer"][0]:
+            self.para["viewer"] = True
+            skip_this_workflow()
+            return
+        
+        display(HTML(f"🧐 We will clean all the tables ... The next table is <b>{table_name}</b> ..."))
+        display(HTML(df.to_html(index=False)))
+        display(HTML(html_mode_content))
+        display(HBox([interactive_next_button, express_next_button, express_all_button]))
+
         
 class StageForAll(MultipleNode):
     
@@ -23911,12 +24411,13 @@ class StageForAll(MultipleNode):
 
     
     def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
         create_progress_bar_with_numbers(1, model_steps)
         df = pd.DataFrame(self.elements, columns=["table"])
         df["status"] = "✅"
         display(df)
         
-        display(HTML("🚀 All tables are staged!<br>🧐 We will integrate the tables ..."))
+        display(HTML("💯 All the tables are clean! Next, we will integrate the tables ..."))
 
         submit_button = widgets.Button(description="Next",
                                        button_style='success',
@@ -23942,63 +24443,7 @@ class StageForAll(MultipleNode):
         submit_button.on_click(on_submit_button_click)
         display(submit_button)
 
-class DecidePKforAll(Node):
-    default_name = 'Decide PK for All'
-    default_description = 'This decides the PK for all tables'
 
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        clear_output(wait=True)
-        create_progress_bar_with_numbers(2, model_steps)
-        
-        data_project = self.para["data_project"]
-        
-        query_widget = self.item["query_widget"]
-        dropdown = create_explore_button(query_widget, 
-                                         table_name=list(data_project.table_object.keys()))
-        
-        data = {
-            'Table': [],
-            'Primary Key': [],
-        }
-        
-        for table_name, table_object in data_project.table_object.items():
-            data['Table'].append(table_name)
-            columns = [""] + table_object.columns
-            
-            uniqueness = table_object.uniqueness
-            unique_columns = list(uniqueness.keys())
-            
-            if len(unique_columns) > 0:
-                columns.remove(unique_columns[0])
-                columns.insert(0, unique_columns[0])
-            
-            data['Primary Key'].append(columns) 
-            
-        df = pd.DataFrame(data)
-        
-        editable_columns = [False, True]
-        reset = True
-        lists = ['Primary Key']
-        
-        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists)
-        
-        print(f"🧐 We have identified the primary key. Please verify:")
-        display(grid)
-        
-        
-        next_button = widgets.Button(description="Next", button_style='success', icon='check')
-        
-        def on_button_click(b):
-            df = grid_to_updated_dataframe(grid, reset=reset)
-            document = df.to_json(orient="split")
-            callback(document)
-
-        next_button.on_click(on_button_click)
-        
-        print(f"😎 Next, we will identify the foreign keys for each primary key.")
-
-        display(next_button)
-        
 
 
 
@@ -24039,20 +24484,20 @@ def generate_join_graph_yaml(df, cocoon_story, table_descriptions, document):
         join_graph['models'].append(model)
 
     return yaml.dump(join_graph, default_flow_style=False)
-          
+       
+                  
 class DecideFKForAll(MultipleNode):
     default_name = 'Decide FK For All'
     default_description = 'This decides the FK for all tables'
 
-    def construct_node(self, element_name, all_tables=None, idx=0, total=0, pk=None, fk_viewer=None):
-        if fk_viewer is None:
-            fk_viewer = [False]
+    def construct_node(self, element_name, idx=0, total=0, fks=None):
+        if fks is None:
+            fks = []
         para = self.para.copy()
         para["table_name"] = element_name
         para["table_idx"] = idx
         para["table_total"] = total
-        para["pk"] = pk
-        para["fk_viewer"] = fk_viewer
+        para["fks"] = fks
         
         node = DecideFK(para=para, id_para ="table_name")
         node.inherit(self)
@@ -24061,88 +24506,94 @@ class DecideFKForAll(MultipleNode):
 
     def extract(self, item):
         pk_df = pd.read_json(self.get_sibling_document('Decide PK for All'), orient="split")
-        pk_df = pk_df[pk_df['Primary Key']!= ""]
-        table_to_pk = dict(zip(pk_df['Table'], pk_df['Primary Key']))
+        pk_df = pk_df[pk_df['Foreign Keys'].apply(lambda x: len(x) > 0)]
         
-        fk_viewer = [False]
-
-        self.elements = list(table_to_pk.keys())
-        self.nodes = {element: self.construct_node(element, self.elements, idx, len(self.elements), table_to_pk[element], fk_viewer=fk_viewer)
+        table_to_fks = {}
+        for idx, row in pk_df.iterrows():
+            table_to_fks[row['Table']] = row['Foreign Keys']
+        
+        self.elements = list(pk_df['Table'])
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements), table_to_fks[element])
                       for idx, element in enumerate(self.elements)}
-        
+    
     def display_after_finish_workflow(self, callback, document):
         clear_output(wait=True)
         create_progress_bar_with_numbers(2, model_steps)
-        def create_graph_data(document):
-            nodes = set()
-            links = []
-
-            def traverse_nodes(node_name):
-                nodes.add(node_name)
-                for child_node, value in document[node_name].items():
-                    nodes.add(child_node)
-                    links.append({"source": node_name, "target": child_node})
-                    links.append({"source": child_node, "target": node_name})
-
-            for node_name in document:
-                traverse_nodes(node_name)
-
-            return {
-                "nodes": [{"id": node} for node in nodes],
-                "links": links
-            }
-
-        graph_data = create_graph_data(document['Decide FK'])
-        graph_data
-        svg_height=400
-        svg_width=600
-
-        html_content = generate_draggable_graph_html_color(graph_data, svg_height=svg_height, svg_width=svg_width)
-        display(HTML(f"🎉 Congratulations! We have documented your database and built the join graph:"))
-        display(HTML(wrap_in_iframe(html_content, width=svg_width+20, height=svg_height+20)))
         
-        
+        display(HTML(f"🧐 For each table, we have identified the PK/FK:"))
         df = pd.read_json(self.get_sibling_document('Decide PK for All'), orient="split")
-        cocoon_story = self.get_sibling_document('Source Project Understand')['story']
-        table_descriptions_df = pd.read_json(self.get_sibling_document('Source Table Understand')['table_desc'], orient="split")
-        table_descriptions = {}
-        for idx, row in table_descriptions_df.iterrows():
-            table_descriptions[row['Table']] = row['Description']
+        editable_columns = [False, True, True]
+        reset = True
+        editable_list = {
+            'Foreign Keys': {}
+        }
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, editable_list=editable_list)
+        display(grid)
+        
+        display(HTML(f"🧐 For each FK, we have identified the matched PK:"))
+        
+        data_project = self.para["data_project"]
+        
+        all_pks = [""]
+        table_to_pk = data_project.primary_key
+        for table in table_to_pk:
+            pk = table_to_pk[table]
+            all_pks.append(f"{table}[{pk}]")
+        
+        data = {
+            'Table[FK]': [],
+            'Table[PK]': [],
+            'Referential Integrity': [],
+        }
+        
+        if 'Decide FK' in document:
+            for fk_table in document['Decide FK']:
+                for fk in document['Decide FK'][fk_table]:
+                    fk_info = document['Decide FK'][fk_table][fk]
+
+                    if fk_info is None:
+                        data['Table[FK]'].append(f"{fk_table}[{fk}]")
+                        data['Table[PK]'].append(all_pks)
+                        data['Referential Integrity'].append("")
+                    else:
+                        pk_table, pk, only, total = fk_info
+                        data['Table[FK]'].append(f"{fk_table}[{fk}]")
+                        new_list = [f"{pk_table}[{pk}]"] + [item for item in all_pks if item != f"{pk_table}[{pk}]"]
+                        data['Table[PK]'].append(new_list)
+                        data['Referential Integrity'].append(f"{'✅' if only == 0 else f'⚠️ {only} out of {total} are orphaned'}")
+        
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, True, False]
+        reset = True
+        lists = ['Table[PK]']
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists)
+        
+        display(grid)
+        
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            df = grid_to_updated_dataframe(grid, reset=reset)
             
-        yml_content= generate_join_graph_yaml(df, cocoon_story, table_descriptions, document)
-                
-        border_style = """
-<style>
-.border-class {
-    border: 1px solid black;
-    padding: 10px;
-    margin: 10px;
-    font-size: 12px;
-}
-</style>
-"""
-        formatter = HtmlFormatter(style='default')
-        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
-
-        highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
-
-        bordered_content = f'<div class="border-class">{highlighted_yml}</div>'
-
-        combined_html = css_style + border_style + bordered_content
-
-        display(HTML(combined_html))
+            for idx, row in df.iterrows():
+                if row['Table[PK]'] == "":
+                    continue
+                print(row['Table[PK]'])
+                fk_table, fk = row['Table[FK]'].split("[")
+                fk = fk[:-1]
+                pk_table, pk = row['Table[PK]'].split("[")
+                pk = pk[:-1]
+                if pk:
+                    data_project.add_foreign_key_to_primary_key(fk_table, fk, pk_table, pk)
+            
+            callback(df.to_json(orient="split"))
         
-        labels = ["YAML"]
-        file_names = ["join_graph.yml"]
-        contents = [yml_content]
-        
-        if "dbt_directory" in self.para:
-            file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
-       
-        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        next_button.on_click(on_button_click)
+        display(next_button)
         
         
-    
+        
 class DecideFK(Node):
     default_name = 'Decide FK'
     default_description = 'This decides the FK for the table'
@@ -24150,134 +24601,68 @@ class DecideFK(Node):
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         clear_output(wait=True)
         create_progress_bar_with_numbers(2, model_steps)
-        print(f"Identifying the foreign keys ...")
-        self.progress = show_progress(1)
-        self.progress.value += 1
         
         data_project = self.para["data_project"]
-        query_widget = self.item["query_widget"]
-        
-        dropdown = create_explore_button(query_widget, table_name=list(data_project.tables.keys()))
+        con = self.item["con"]
+        database_name = get_database_name(con) 
         
         table_name = self.para["table_name"]
-        pk = self.para["pk"]
+        table_idx = self.para["table_idx"]
+        table_total = self.para["table_total"]
         
-        database_tables = data_project.tables
+        fks = self.para["fks"]
+        table_to_pk = data_project.primary_key
         
-        matched_tables = {}
-        unmatched_tables = {}
-        this_html = ""
+        display(HTML(f"🧐 Identifying FK matching for table: {table_name}..."))
+        show_progress(max_value=table_total, value=table_idx)
         
-        endorse_widgets = {}
-        con = self.item["con"] 
-        database_name = get_database_name(con)
+        matched_fks = {}
         
-        only2s = {}
-        
-        for table in database_tables:
-            list_of_attributes = database_tables[table]
-            if isinstance(list_of_attributes, dict):
-                list_of_attributes = list(list_of_attributes.keys())
+        for fk in fks:
+            fk_type = data_project.tables[table_name][fk]
+            fk_type = get_reverse_type(fk_type, database_name)
+            
+            for pk_table in table_to_pk:
+                pk = table_to_pk[pk_table]
+                pk_type = data_project.tables[pk_table][pk]
+                pk_type = get_reverse_type(pk_type, database_name)
                 
-            if table.lower() == table_name.lower():
-                this_html = f"<div><b>{table_name}</b>[{pk}]</div>"
+                if fk.lower() == pk.lower() and ((is_type_numeric(fk_type) and is_type_numeric(pk_type)) or (fk_type=="VARCHAR" and pk_type=="VARCHAR")):
+                    only1, only2, overlap = generate_queries_for_overlap(pk_table, [fk], table_name, [fk], con)
+                    if only2 + overlap == 0:
+                        continue
+                    ratio = only2 / (only2 + overlap)
+                    matched_fks[fk] = (pk_table, table_to_pk[pk_table], only2, only2 + overlap)
+                    break
+                
+            if fk in matched_fks:
                 continue
+                
+            overlap_ratio = []
             
-            
-            if pk in list_of_attributes:
-                matched_tables[table] = list_of_attributes
+            for pk_table in table_to_pk:
+                pk = table_to_pk[pk_table]
+                
+                pk_type = data_project.tables[pk_table][pk]
+                pk_type = get_reverse_type(pk_type, database_name)
+                
+                if fk_type != pk_type:
+                    continue
+                
+                only1, only2, overlap = generate_queries_for_overlap(pk_table, [pk], table_name, [fk], con)
+                if only2 + overlap == 0:
+                    continue
+                ratio = only2 / (only2 + overlap)
+                if ratio > 0.2:
+                    continue
+                overlap_ratio.append((pk_table, pk, only2, only2 + overlap))
+                
+            if len(overlap_ratio) > 0:
+                matched_fks[fk] = min(overlap_ratio, key=lambda x: x[2] / x[3])
             else:
-                unmatched_tables[table] = list_of_attributes
-
-        if len(matched_tables) == 0:
-            display(HTML(f"😢 We can't find any FK that matches {table_name}[{pk}]."))
-        
-        else:
-            display(HTML(f"🧐 We have found <b>{len(matched_tables)}</b> FK(s) that matches PK: <b>{table_name}</b>[{pk}]."))
-            current_type = data_project.tables[table_name][pk]
-            current_type = get_reverse_type(current_type, database_name)
-            if is_type_numeric(data_type):
-                image_base64 = plot_distribution_numerical(con, table_name, pk)
-            else:
-                image_base64 = plot_distribution_category(con, table_name, pk)
-            plot_html = f'<img src="data:image/png;base64,{image_base64}" width="300">'
-            display(HTML(plot_html))
-                
+                matched_fks[fk] = None
             
-
-            
-            children = []
-            titles = []
-
-            for table in matched_tables:
-                
-                
-                plot_html = ""
-                
-                attributes = matched_tables[table]
-                only1, only2, overlap = generate_queries_for_overlap(table_name, [pk], table, [pk], con)
-                only2s[table] = only2
-                if only2 == 0:
-                    plot_html += "✔️ All foreign keys are referenced by primary key.<br>"
-                    titles.append(f"{table}\n[{pk}]")
-                else:
-                    plot_html += f"⚠️ {only2} foreign key(s) are not referenced by primary key!<br>📝 Logged for further review.<br>"
-                    titles.append(f"⚠️ {table}\n[{pk}]")
-                
-
-                current_type = data_project.tables[table][pk]
-                current_type = get_reverse_type(current_type, database_name)
-                if is_type_numeric(data_type):
-                    image_base64 = plot_distribution_numerical(con, table, pk)
-                else:
-                    image_base64 = plot_distribution_category(con, table, pk)
-                plot_html += f'<img src="data:image/png;base64,{image_base64}" width="300">'
-                
-                image_base64 = plot_venn_percentage_by_stats(only1, only2, overlap, f"{table_name}\n[{pk}]", f"{table}\n[{pk}]")
-                plot_html += f'<img src="data:image/png;base64,{image_base64}" width="300">'
-                
-                html_display_widget = widgets.HTML(value=plot_html)
-                
-                checkbox = widgets.Checkbox(
-                    value=True,
-                    description=f'Endorse Foreign Key',
-                    disabled=False,
-                    indent=False
-                )
-                endorse_widgets[table] = checkbox
-                
-                children.append(VBox([html_display_widget, checkbox]))
-                                
-            accordion = widgets.Accordion(children=children, titles=titles)
-            display(accordion)
-        
-        next_button = widgets.Button(description="Next", button_style='success', icon='check')
-        
-        def on_button_click(b):
-            fks = {}
-            for table in endorse_widgets:
-                checkbox = endorse_widgets[table]
-                if checkbox.value:
-                    fks[table] = {"fk": pk, "missing_pk": only2s[table]}
-                
-            callback(fks)
-        
-        express_all_button = widgets.Button(description="Express All",
-                button_style='warning',
-                icon='fast-forward')
-            
-        def on_express_all_button_click(b):
-            self.para["fk_viewer"][0] = True
-            on_button_click(next_button)
-            
-        express_all_button.on_click(on_express_all_button_click)
-        next_button.on_click(on_button_click)
-
-
-        display(HBox([next_button, express_all_button]))
-        
-        if self.para["fk_viewer"][0]:
-            on_button_click(next_button)
+        callback(matched_fks)
         
         
 def create_cocoon_profile_yml_workflow(con, query_widget=None, viewer=False, table_name = None, para={}):
@@ -24310,3 +24695,971 @@ def create_cocoon_profile_yml_workflow(con, query_widget=None, viewer=False, tab
     main_workflow.add_to_leaf(WriteStageYMLCode(class_para={"yaml_only": True}))
     
     return query_widget, main_workflow
+
+
+
+class DisplayJoinGraph(Node):
+    default_name = 'Display Join Graph'
+    default_description = 'This displays the join graph'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(2, model_steps)
+        
+        display(HTML(f"🎉 Congratulations! We have integrate your data warehouses:"))
+        
+        data_project = self.para["data_project"]
+        
+        data_project.construct_links_from_pk_fk()
+        data_project.display_graph()
+        yml_content = data_project.join_graph_yaml()
+        
+        border_style = """
+<style>
+.border-class {
+    border: 1px solid black;
+    padding: 10px;
+    margin: 10px;
+    font-size: 12px;
+}
+</style>
+"""
+        formatter = HtmlFormatter(style='default')
+        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+
+        highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
+
+        bordered_content = f'<div class="border-class">{highlighted_yml}</div>'
+
+        combined_html = css_style + border_style + bordered_content
+
+        display(HTML(combined_html))
+        
+        labels = ["YAML"]
+        file_names = ["cocoon_join_graph.yml"]
+        contents = [yml_content]
+        
+        if "dbt_directory" in self.para:
+            file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
+       
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            callback({})
+        
+        next_button.on_click(on_button_click)
+        
+        display(HTML("🎉 Next, we will model your data warehouses!"))
+        display(next_button)
+        
+
+class StartDisplaySteps(Node):
+    default_name = 'Product Steps'
+    default_description = 'This is the start of the product steps'
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        clear_output(wait=True)
+
+        header_html = f'<div style="display: flex; align-items: center;">' \
+            f'<img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">' \
+            f'<div style="margin: 0; padding: 0;">' \
+            f'<h1 style="margin: 0; padding: 0;">Cocoon</h1>' \
+            f'<p style="margin: 0; padding: 0;">Organize Data Warehouses with LLM agents</p>' \
+            f'</div>' \
+            f'</div><hr>'
+
+        description_html = f"""
+        <p>Welcome to Cocoon! There are 3 main steps:</p>
+        <img src="data:image/png;base64,{cocoon_steps}" style="width:350px">
+        """
+
+        display(HTML(header_html + description_html))
+
+
+
+        next_button = widgets.Button(description="Start", 
+                                     button_style='success',
+                                    icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                callback({})
+
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+        
+
+        
+class DecidePKforAll(Node):
+    default_name = 'Decide PK for All'
+    default_description = 'This decides the PK for all tables'
+    
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        create_progress_bar_with_numbers(2, model_steps)
+        display(HTML(f"🤓 Identifying the primary key..."))
+        self.progress = show_progress(1)
+        
+        data_project = self.para["data_project"]
+        
+        table_unique_columns = {}
+        table_summarys = {}
+        for table_name, table_object in data_project.table_object.items():
+            table_unique_columns[table_name] = list(table_object.uniqueness.keys())
+            table_summarys[table_name] = table_object.table_summary
+            
+        return table_unique_columns, table_summarys
+    
+    def run(self, extract_output, use_cache=True):
+        table_unique_columns, table_summarys = extract_output
+        
+        all_table_desc = ""
+        for table_name in table_unique_columns:
+
+            unique_columns = table_unique_columns[table_name]
+            if len(unique_columns) > 0:
+                all_table_desc += f"'{table_name}': {table_summarys[table_name]}\n"
+                all_table_desc += f"Unique Columns: {unique_columns}\n\n"
+                
+        template = f"""You have the following tables and candidate keys
+{all_table_desc}
+Now, for each table, choose the primary key from the candidate keys, based on the semantical meaning.
+Return in the following format:
+```yml
+# This table is about ... The candidate keys are ... x column is the primary key
+{next(iter(table_unique_columns))}: {next(iter(table_unique_columns[next(iter(table_unique_columns))]))}                
+```"""
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        return summary        
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+
+        table_to_pk_mapping = run_output
+        
+        self.progress.value += 1
+        
+        data_project = self.para["data_project"]
+        
+        query_widget = self.item["query_widget"]
+        dropdown = create_explore_button(query_widget, 
+                                         table_name=list(data_project.table_object.keys()))
+        
+        data = {
+            'Table': [],
+            'Primary Key': [],
+            'Foreign Keys': [],
+        }
+        
+        for table_name, table_object in data_project.table_object.items():
+            data['Table'].append(table_name)
+            columns = [""] + table_object.columns
+
+            primary_key = table_to_pk_mapping[table_name]
+            
+            foreign_keys = [col for col in columns if col.lower().endswith("_id")]
+
+            columns.remove(primary_key)
+            columns.insert(0, primary_key)
+            
+            if primary_key in foreign_keys:
+                foreign_keys.remove(primary_key)
+            
+            data['Primary Key'].append(columns) 
+            data['Foreign Keys'].append(foreign_keys)
+            
+            
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, True, True]
+        reset = True
+        lists = ['Primary Key']
+        editable_list = {
+            'Foreign Keys': {}
+        }
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists, editable_list=editable_list)
+        
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            
+            data_project = self.para["data_project"]
+            
+            for idx, row in df.iterrows():
+                table_name = row['Table']
+                primary_key = row['Primary Key']
+                foreign_keys = row['Foreign Keys']
+                if primary_key:
+                    data_project.add_table_primay_key(table_name, primary_key)
+                if foreign_keys:
+                    data_project.fks[table_name] = foreign_keys
+            
+            document = df.to_json(orient="split")
+            callback(document)
+
+        next_button.on_click(on_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+        display(grid)
+        
+        display(HTML(f"😎 Next, we construct the join graph."))
+        display(next_button)
+        
+        
+class EntityUnderstanding(Node):
+    default_name = 'Entity  Understand'
+    default_description = 'This understands the entity of the tables'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        create_progress_bar_with_numbers(3, model_steps)
+        display(HTML(f"🤓 Identifying the entities..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+
+        return data_project.primary_key
+
+    def run(self, extract_output, use_cache=True):
+        primary_key = extract_output
+        table_pk_desc = "\n".join([f"{table}: {pk}" for table, pk in primary_key.items()])
+        
+        template = f"""You have the following table: primary_key
+{table_pk_desc}
+
+Now, for each table with the primary key, choose the name of the entity (e.g., Customers, Orders, Products) that it represents.
+Return in the following format:
+```yml
+{next(iter(primary_key))}: Customers
+...
+```"""
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+
+        return summary
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        data_project = self.para["data_project"]
+        data_project.entities = run_output
+        callback(run_output)
+
+class RelationUnderstandingForAll(MultipleNode):
+    default_name = 'Relation Understand For All'
+    default_description = 'This understands the relation of the tables'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["table_name"] = element_name
+        para["table_idx"] = idx
+        para["table_total"] = total
+        
+        node = RelationUnderstanding(para=para, id_para ="table_name")
+        node.inherit(self)
+        
+        return node
+
+    def extract(self, item):
+        pk_df = pd.read_json(self.get_sibling_document('Decide PK for All'), orient="split")
+        pk_df = pk_df[pk_df['Foreign Keys'].apply(lambda x: len(x) > 0)]
+        
+        self.elements = list(pk_df['Table'])
+        
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+                      for idx, element in enumerate(self.elements)}
+    
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(3, model_steps)
+        
+        data_project = self.para["data_project"]
+        table_to_entity = data_project.entities
+        
+        display(HTML(f"🧐 We have identified <b>entities</b>:"))
+        
+        data = {
+            'Table[PK]': [],
+            'Entity Name': [],
+        }
+        
+        for table in table_to_entity:
+            data['Table[PK]'].append(f"{table}[{data_project.primary_key[table]}]")
+            data['Entity Name'].append(table_to_entity[table])
+            
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, True]
+        reset = True
+        entity_grid = create_dataframe_grid(df, editable_columns, reset=reset)
+        
+        display(entity_grid)
+        
+        display(HTML(f"🧐 Based on the entities, we have identified <b>relations</b>:"))
+        
+        data = {
+            'Table[PK, FK]': [],
+            'Entities': [],
+            'Relation Name': [],
+            'Relation Description': [],
+        }
+        
+        pk_df = pd.read_json(self.get_sibling_document('Decide PK for All'), orient="split")
+        pk_df = pk_df[pk_df['Foreign Keys'].apply(lambda x: len(x) > 0)]
+        
+        multiplicity = {}
+        participation = {}
+        
+        if 'Relation Understand' in document:
+            for table in document['Relation Understand']:
+                relation = document['Relation Understand'][table]
+                pk = data_project.primary_key[table]
+                fks = pk_df[pk_df['Table'] == table]['Foreign Keys'].values[0]
+                pk_fks = [pk] + fks
+                data['Table[PK, FK]'].append(f"{table}[{', '.join(pk_fks)}]")
+                data['Entities'].append(relation['entities'])
+                data['Relation Name'].append(relation['relation_name'])
+                data['Relation Description'].append(relation['relation_desc'])
+                
+                multiplicity[relation['relation_name']] = relation['multiplicity']
+                participation[relation['relation_name']] = relation['participation']
+        
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, True, True, True]
+        lists = ['Entities']
+        reset = True
+        relation_grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists)
+        
+        display(relation_grid)
+        
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            summary = {}
+            
+            entity_df = grid_to_updated_dataframe(entity_grid, reset=reset)
+            relation_df = grid_to_updated_dataframe(relation_grid, reset=reset, lists=lists)
+            
+            for idx, row in entity_df.iterrows():
+                table = row['Table[PK]'].split("[")[0]
+                entity = row['Entity Name']
+                data_project.entities[table] = entity
+            
+            summary['entities'] = entity_df.to_json(orient="split")
+            summary['relations'] = relation_df.to_json(orient="split")
+            summary['multiplicity'] = multiplicity
+            summary['participation'] = participation
+            
+            callback(summary)
+            
+        next_button.on_click(on_button_click)
+        display(HTML("🎉 Next, we will build the ER diagram!"))
+        display(next_button)
+        
+
+class RelationUnderstanding(Node):
+    default_name = 'Relation Understand'
+    default_description = 'This understands the relation of the table'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        idx = self.para["table_idx"]
+        total = self.para["table_total"]
+        table_name = self.para["table_name"]
+        con = self.item["con"]
+
+        display(HTML(f"🔍 Reading relation in {table_name} ..."))
+        create_progress_bar_with_numbers(3, doc_steps)
+
+        self.input_item = item
+
+        show_progress(max_value=total, value=idx)
+
+        data_project = self.para["data_project"]
+        main_entity = data_project.entities[table_name]
+        
+        fk_unique = {}
+        total_participation = {}
+        
+        pk = data_project.primary_key[table_name]
+        fk_unique[main_entity] = check_column_uniqueness(con, table_name, pk, allow_null=True)
+        total_participation[main_entity] = True
+        
+        
+        related_entity = set()
+        for pk_table_name, pk in data_project.foreign_key:
+            for fk_table_name, fk in data_project.foreign_key[(pk_table_name, pk)]:
+                if fk_table_name == table_name:
+                    entity = data_project.entities[pk_table_name]
+                    related_entity.add(entity)
+                    
+                    fk_unique[entity] = check_column_uniqueness(con, fk_table_name, fk, allow_null=True)
+                    only1, only2, overlap = generate_queries_for_overlap(pk_table_name, [pk], table_name, [fk], con)
+                    total_participation[entity] = (only1 == 0)
+                    
+        table_object = data_project.table_object[table_name]
+        table_summary = table_object.table_summary        
+        return main_entity, related_entity, table_summary, fk_unique, total_participation
+    
+    def run(self, extract_output, use_cache=True):
+        main_entity, related_entity, table_summary, fk_unique, total_participation = extract_output
+        
+        multiplicity_desc = []
+        for entity in fk_unique:
+            if fk_unique[entity]:
+                multiplicity_desc += f"1-1 to {entity}"
+            else:
+                multiplicity_desc += f"1-M to {entity}"
+        
+        participation_desc = []
+        for entity in total_participation:
+            if total_participation[entity]:
+                participation_desc += f"{entity} is total"
+            else:
+                participation_desc += f"{entity} is partial"
+                
+
+        template = f"""You have a relation: {table_summary}
+        
+It is about {len(related_entity) + 1} entities: '{[main_entity] + list(related_entity)}'
+For multiplicity, the relation is {", ".join(multiplicity_desc)}
+For participation, {", ".join(participation_desc)}
+
+First, describe the relation between the entities:
+(1). Include all entities
+(2). Simple SVO sentence (<10 words)
+(3). Use descriptive words (not just 'relates', 'has', ...)
+Then, pick a name for the relation.
+Next, explain multiplicity and participation.
+
+Return in the following format:
+```yml
+relation_desc: Customer make Order to buy Item
+relation_name: CustomerOrderItem
+multiplicity: 
+    Order: Each Order is uniquely identified by this relation # Relation is 1-1 to Order
+    Customer: Customers can make multiple Orders # Relation is 1-M to Customer
+    Item: Items can be purchased by multiple Orders # Relation is 1-M to Item
+participation:
+    Order: Order is created from this relation # Relation is total to Order
+    Customer: Not every customer makes any Order # Relation is partial to Customer
+    Item: Not every Item is purchased by any Order # Relation is partial to Item
+```"""
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        summary['entities'] = [main_entity] + list(related_entity)
+        summary['multiplicity']['cocoon_meta'] = fk_unique
+        summary['participation']['cocoon_meta'] = total_participation
+        return summary
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+   
+        
+class ReorderRelationToStory(Node):
+    default_name = 'Reorder Relation To Story'
+    default_description = 'This reorders the relation to story'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML("📖 Telling the story..."))
+        create_progress_bar_with_numbers(3, model_steps)
+
+        self.input_item = item
+        
+        relation_df = pd.read_json(self.get_sibling_document('Relation Understand For All')['relations'], orient="split")
+        relation_desc = ""
+        for idx, row in relation_df.iterrows():
+            relation_desc += f"'{row['Relation Name']}': {row['Relation Description']}\n"
+        
+        return relation_desc
+    
+    def run(self, extract_output, use_cache=True):
+        relation_desc = extract_output
+
+        template = f"""For a database, you have the following 'Relation Name': 'Relation Description'
+{relation_desc}
+Now, tell a story using the relations. 
+First, reorder the relations based on the sequence of events. E.g., "Customer opens account" should come before "Customer deposits money".
+Then, modifidy the description to make the story coherent.
+
+Return in the following format:
+```yml
+reasoning: The tables are ... The sequence should be ...
+story: # Reorder the relations
+    -   relation_name: Relation Name
+        relation_desc: short and simple SVO in < 10 words
+    -   ...
+```"""
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+
+        return summary
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output["story"])
+
+
+
+
+
+
+
+
+
+def generate_workflow_graph(relation_map, relation_details):
+    nodes = []
+    edges = []
+    node_shapes = []
+
+    for relation, entities in relation_map.items():
+        nodes.append(relation)
+        node_shapes.append("box")
+        for entity in entities:
+            if entity not in nodes:
+                nodes.append(entity)
+                node_shapes.append("oval")
+
+    for relation, entities in relation_map.items():
+        relation_index = nodes.index(relation)
+        for entity in entities:
+            entity_index = nodes.index(entity)
+            edges.append((relation_index, entity_index))
+
+    last_relation = list(relation_map.keys())[-1]
+    last_relation_desc = next(detail['relation_desc'] for detail in relation_details if detail['relation_name'] == last_relation)
+
+    last_relation_index = nodes.index(last_relation)
+    highlight_nodes_indices = [nodes.index(entity) for entity in relation_map[last_relation]]
+    highlight_nodes_indices.append(last_relation_index)
+    highlight_edges_indices = [edges.index((last_relation_index, nodes.index(entity))) for entity in relation_map[last_relation]]
+
+    html_output = generate_workflow_html_multiple(nodes, edges, node_shape=node_shapes, directional=False,
+                                                  highlight_nodes_indices=highlight_nodes_indices,
+                                                  highlight_edges_indices=highlight_edges_indices)
+
+    return html_output
+    
+
+
+
+def create_html_content_er_story(relation_map, relation_details, df_display=None, page_no=0):
+
+    list_of_descriptions = "<ol>"
+
+    for i in range(page_no):
+        entry = relation_details[i]
+        relation_name, relation_desc = entry['relation_name'], entry['relation_desc']
+        list_of_descriptions += f"<li><u>{relation_name}</u>: {relation_desc}</li>"
+    
+    entry = relation_details[page_no]
+    relation_name, relation_desc = entry['relation_name'], entry['relation_desc']
+    list_of_descriptions += f"<li><b><u>{relation_name}</u>: {relation_desc}</b></li>"
+    list_of_descriptions += "</ol>"
+
+    relation_details = relation_details[:page_no+1]
+
+    included_relations = [detail['relation_name'] for detail in relation_details]
+    relation_map = {key: relation_map[key] for key in included_relations}
+
+    graph_html = generate_workflow_graph(relation_map, relation_details)
+    
+    if df_display is not None:
+        df_html = df_display[page_no]
+    else:
+        df_html = ""
+        
+    html_content = f"""
+    {list_of_descriptions}
+    {graph_html}
+    <br>
+    {df_html}
+    """
+    return html_content
+
+
+
+class BuildERStory(Node):
+    default_name = 'Build ER Story'
+    default_description = 'This builds the ER story'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(3, model_steps)
+        
+        data_project = self.para["data_project"]
+        con = self.item["con"]
+        relation_df = pd.read_json(self.get_sibling_document('Relation Understand For All')['relations'], orient="split")
+        entity_df = pd.read_json(self.get_sibling_document('Relation Understand For All')['entities'], orient="split")
+        multiplicity = self.get_sibling_document('Relation Understand For All')['multiplicity']
+        participation = self.get_sibling_document('Relation Understand For All')['participation']
+        
+        
+        labels = []
+        file_names = []
+        contents = []
+        tab_data = []
+        
+        yml_dict = {}
+        yml_dict['entities'] = []
+        yml_dict['relations'] = []
+        
+        for idx, row in entity_df.iterrows():
+            table = row['Table[PK]'].split("[")[0]
+            entity = row['Entity Name']
+            new_table_name = f"entity_{entity}"
+            
+            labels.append(new_table_name)
+            file_names.append(f"entity_{entity}.sql")
+            
+            pk = data_project.primary_key[table]
+            fks = data_project.foreign_key.get((table, pk), [])
+            
+            columns = data_project.table_object[table].columns
+            columns = [col for col in columns if col != pk and col not in fks]
+            columns += [f"{pk} AS {entity}_id"]
+            
+            selection_clause = ',\n'.join(columns)
+            sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table}"
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+            step.run_codes()
+            contents.append(sql_query)
+            tab_data.append((f"entity_{entity}.sql", highlight_sql(sql_query)))
+            
+            yml_dict['entities'].append({'name': new_table_name, 'key': f"{entity}_id"})
+        
+        df_displays = {}
+        relation_to_entities = {}
+        for idx, row in relation_df.iterrows():
+            table_name = row['Table[PK, FK]'].split("[")[0]
+            relation_name = row['Relation Name']
+            table_entity = data_project.entities[table_name]
+            relation_desc = row['Relation Description']
+            new_table_name = f"relation_{relation_name}"
+            
+            labels.append(new_table_name)
+            file_names.append(f"relation_{relation_name}.sql")
+            
+            table_pk = data_project.primary_key[table_name]
+            fks = data_project.foreign_key.get((table, table_pk), [])
+            
+            fk_to_entity = {}
+            for pk_table_name, pk in data_project.foreign_key:
+                for fk_table_name, fk in data_project.foreign_key[(pk_table_name, pk)]:
+                    if fk_table_name == table_name:
+                        fk_to_entity[fk] = data_project.entities[pk_table_name]
+                        
+            columns = [f"{table_pk} AS {table_entity}_id"]
+            for fk, entity in fk_to_entity.items():
+                columns.append(f"{fk} AS {entity}_id")
+                
+            selection_clause = ',\n'.join(columns)
+            sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_name}"
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+            step.run_codes()
+            contents.append(sql_query)
+            tab_data.append((f"relation_{relation_name}.sql", highlight_sql(sql_query)))
+            relation_to_entities[relation_name] = [table_entity] + list(fk_to_entity.values())
+            
+            data = {
+                'Entity': [],
+                'Multiplicity': [],
+                'Participation': [],
+            }
+            
+            relation_multiplicity = multiplicity[relation_name]
+            multiplicity_cocoon_meta = relation_multiplicity['cocoon_meta']
+            relation_participation = participation[relation_name]
+            participation_cocoon_meta = relation_participation['cocoon_meta']
+            
+            relation_entry = {'name': new_table_name, 
+                              'description': relation_desc,
+                              'entities': []
+                              }
+            
+            for entity in [table_entity] + list(fk_to_entity.values()):
+                entity_entry = {'name': entity}
+                
+                data['Entity'].append(entity)
+                
+                multiplicity_desc = ""
+                if multiplicity_cocoon_meta[entity]:
+                    multiplicity_desc += f"👤 1-1: "
+                    entity_entry['multiple'] = False
+                else:
+                    multiplicity_desc += f"👥 1-M: "
+                    entity_entry['multiple'] = True
+                multiplicity_desc += relation_multiplicity[entity]
+                entity_entry['multiplicity_description'] = relation_multiplicity[entity]
+                data['Multiplicity'].append(multiplicity_desc)
+                
+                participation_desc = ""
+                if participation_cocoon_meta[entity]:
+                    participation_desc += f"🌕 Total: "
+                    entity_entry['total_participation'] = True
+                else:
+                    participation_desc += f"🌗 Partial: "
+                    entity_entry['total_participation'] = False
+                    
+                participation_desc += relation_participation[entity]
+                entity_entry['participation_description'] = relation_participation[entity]
+                data['Participation'].append(participation_desc)
+                
+                relation_entry['entities'].append(entity_entry)
+                
+            yml_dict['relations'].append(relation_entry)
+                
+            df = pd.DataFrame(data)
+            df_displays[relation_name] = df.to_html(index=False)
+        
+        new_tables = labels.copy()
+        query_widget = self.item["query_widget"]
+        dropdown =  create_explore_button(query_widget, table_name=new_tables)
+        
+        display(HTML(f"🥳 We have modeled your data warehouse (oval for entity, box for relation):"))
+        
+        relation_story = self.get_sibling_document('Reorder Relation To Story')
+
+        df_displays_ordered = [df_displays[entry['relation_name']] for entry in relation_story]
+        display_pages(total_page=len(relation_story), 
+                      create_html_content=partial(create_html_content_er_story, relation_to_entities, relation_story, df_displays_ordered))
+        
+        display(HTML("<hr> 💾 Please save the SQL and YML files:"))
+        
+        tab_data.append(("YAML", highlight_yml(yaml.dump(yml_dict, default_flow_style=False))))
+        tabs = create_dropdown_with_content(tab_data)
+        display(tabs)
+        
+        labels += ['YAML']
+        file_names += ["cocoon_er_diagram.yml"]
+        contents += [yaml.dump(yml_dict, default_flow_style=False)]
+        
+        if "dbt_directory" in self.para:
+            file_names = [os.path.join(self.para["dbt_directory"], "model", file_name) for file_name in file_names]
+       
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        
+        
+
+
+class DecideDataTypeForAll(MultipleNode):
+    default_name = 'Decide Data Type'
+    default_description = 'This node allows users to decide the data type for all columns.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["column_name"] = element_name
+        para["column_idx"] = idx
+        para["total_columns"] = total
+        node = DecideDataTypeSingle(para=para, id_para ="column_name")
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        
+        self.elements = columns
+        self.nodes = {col: self.construct_node(col, idx, len(columns)) for idx, col in enumerate(columns)}
+
+
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        
+        con = self.item["con"]
+        database_name = get_database_name(con)
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+        
+        
+        data = {
+            'Column': [],
+            'Current Type': [],
+            'Target Type': [],
+            'Matched?':[]
+        }
+        
+        alert = 0
+        
+        if "Decide Data Type" in document:
+            for column_name, details in document["Decide Data Type"].items():
+                data['Column'].append(column_name)
+                data['Current Type'].append(details['current_type'])
+                data['Target Type'].append(details['target_type'])
+                data['Matched?'].append("✔️ Yes"  if details['current_type'] == details['target_type'] else "❌ No")
+                if details['current_type'] != details['target_type']:
+                    alert += 1
+                
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        all_data_types = list(data_types_database[database_name].keys())
+        editable_columns = [False, False, True, False]
+        lists = {'Target Type': all_data_types}
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists)
+        
+        next_button = widgets.Button(
+            description='Accept Cast',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+        
+        reject_button = widgets.Button(
+            description='Reject Cast',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='close'
+        )
+        
+        def on_button_clicked2(b):
+            clear_output(wait=True)
+            df = grid_to_updated_dataframe(grid, reset=reset)
+            df['Target Type'] = df['Current Type']
+            callback(df.to_json(orient="split"))
+
+        def on_button_clicked(b):
+            clear_output(wait=True)
+            df = grid_to_updated_dataframe(grid, reset=reset)
+            callback(df.to_json(orient="split"))
+            
+        next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(next_button)
+            return
+        
+        create_progress_bar_with_numbers(1, doc_steps)
+        create_explore_button(query_widget, table_pipeline)
+        display(HTML(f"😎 We have analyzed Data Types:"))
+        if alert > 0:
+            display(HTML(f"⚠️ There are {alert} columns with mismatched data types."))
+        else:
+            display(HTML(f"✅ All columns have the correct data types."))
+        display(grid)
+        display(HBox([reject_button, next_button]))
+
+class DecideDataTypeSingle(Node):
+    default_name = 'Decide Data Type'
+    default_description = 'This node allows users to decide the data type for a single column.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        column_name = self.para["column_name"]
+        idx = self.para["column_idx"]
+        total = self.para["total_columns"]
+        
+        table_object = self.para["table_object"]
+        column_desc = table_object.column_desc.get(column_name, "")
+        
+        display(HTML(f"🔍 Checking data types for <i>{table_pipeline}[{column_name}]</i>..."))
+        create_progress_bar_with_numbers(1, doc_steps)
+        show_progress(max_value=total, value=idx)
+        
+        sample_size = 50
+        
+        database_name = get_database_name(con)
+        all_data_types = list(data_types_database[database_name].keys())
+        
+        schema = table_pipeline.get_final_step().get_schema()
+        column_type = get_reverse_type(schema[column_name], database_name)
+        
+        sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
+        
+        return column_name, column_type, all_data_types, sample_values, column_desc
+
+    def run(self, extract_output, use_cache=True):
+        column_name, column_type, all_data_types, sample_values, column_desc = extract_output
+        self.messages = []
+
+        sample_values_list = sample_values[column_name].values.tolist()
+        
+        template = f"""'{column_name}' is for: {column_desc}
+It has the following distinct values:  {sample_values_list}
+
+Task: Decide what is the most suitable column type (potentially after some extraction).
+The column type should be one of the following: {all_data_types}
+Choose BOOLEAN only if values mean true/false (So, e.g., Male/Female shall not be BOOLEAN)
+
+Return in the following format:
+```json
+{{
+    "reasoning": "The column means... It is most suitable to be...",
+    "target_type": "INT"
+}}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        json_code = extract_json_code(response['choices'][0]['message']["content"])
+        summary = json.loads(json_code)
+        
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: all(key in jc for key in ["reasoning", "target_type"]), "The JSON code does not contain the correct keys."),
+            (lambda jc: jc["target_type"] in all_data_types, "The target type is not a valid data type."),
+        ]
+
+        for check, error_message in checks:
+            if not check(summary):
+                raise ValueError(f"Validation failed: {error_message}")
+            
+        summary["current_type"] = column_type
+        
+        return summary
+        
+    def run_but_fail(self, extract_output, use_cache=True):
+        column_name, column_type, _, _, database_name, _, _ = extract_output
+        return {"reasoning": "Fail to decide", 
+                "target_type": column_type,
+                "current_type": column_type}
+        
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)

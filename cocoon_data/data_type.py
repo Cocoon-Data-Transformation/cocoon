@@ -46,10 +46,6 @@ data_types_database = {
         "ARRAY": ["ARRAY"],
         "INTERVAL": ["INTERVAL"],
         "UUID": ["UUID"],
-        "LIST": ["LIST"],
-        "MAP": ["MAP"],
-        "STRUCT": ["STRUCT"],
-        "UNION": ["UNION"]
     }
 }
 
@@ -103,6 +99,18 @@ SPLIT('127.0.0.1', '.')""",
 PARSE_JSON('["Apple", "Pear","Chicken"]')
 SPLIT('127.0.0.1', '.')""",
         },
+        "INT": {
+            "DuckDB": """Example Clause:
+CAST(REGEXP_EXTRACT('35 KG', '(\d+(\.\d+)?)') AS INT)""",
+            "Snowflake": """Example Clause:
+CAST(REGEXP_SUBSTR('35 KG', '\\\\d+(\\\\.\\\\d+)?') AS INT)""",
+        },
+        "DECIMAL": {
+            "DuckDB": """Example Clause:
+CAST(REGEXP_EXTRACT('35.2 KG', '(\d+(\.\d+)?)') AS DECIMAL)""",
+            "Snowflake": """Example Clause:
+CAST(REGEXP_SUBSTR('35.2 KG', '\\\\d+(\\\\.\\\\d+)?') AS FLOAT)""",
+        },
     },
     
     'INT':{
@@ -147,6 +155,11 @@ TO_TIMESTAMP(TO_CHAR(19920302083200), 'YYYYMMDDHH24MISS')""",
     },
 }
 
+
+def is_type_numeric(data_type):
+    return data_type in ["INT", "DECIMAL"]
+    
+    
 def get_reverse_type(data_type, database):
     if database == "Snowflake":
         if data_type.upper().startswith("NUMBER"):
@@ -154,6 +167,10 @@ def get_reverse_type(data_type, database):
                 return "INT"
             else:
                 return "DECIMAL"
+            
+    if database == "DuckDB":
+        if data_type.endswith("[]"):
+            return "ARRAY"
     
     data_type = data_type.split('(')[0].upper().strip()
     

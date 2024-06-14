@@ -210,7 +210,10 @@ def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists=
             if col_name in category:
                 widget = widgets.Dropdown(options=category[col_name], value=value)
             elif col_name in lists:
-                widget = widgets.Dropdown(options=value)
+                if isinstance(lists, dict):
+                    widget = widgets.Dropdown(options=lists[col_name], value=value)
+                else:
+                    widget = widgets.Dropdown(options=value)
             elif col_name in editable_list:
                 widget = widgets.Text(value=str(value))   
             elif col_name in long_text:
@@ -252,6 +255,8 @@ def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists=
                         elif isinstance(widget, widgets.Dropdown):
                             if value  in widget.options:
                                 widget.value = value
+                        elif isinstance(widget, widgets.Dropdown):
+                            widget.value = widget.options[0]
                         elif isinstance(widget, widgets.Text):
                             widget.value = str(value)
 
@@ -383,23 +388,29 @@ def collect_updated_dict_from_grid(grid):
 
 
 def create_text_area_with_char_count(initial_value, max_chars=300):
-
     text_area = Textarea(layout=Layout(height='100px', width='80%'),
-                            value=initial_value)
-
+                         value=initial_value)
+    
     char_count_label = ipywidgets.HTML()
-
+    
     def update_char_count(change):
         if len(text_area.value) <= max_chars:
             char_count_label.value = f"Characters entered: {len(text_area.value)}"
         else:
             char_count_label.value = f"Characters entered: {len(text_area.value)}<br> <div style='color: red;'>⚠️ Too long!</div>"
-
+    
     text_area.observe(update_char_count, names='value')
-
+    
+    reset_button = ipywidgets.Button(icon="fast-backward", description='Reset', button_style='warning')
+    
+    def on_reset_click(b):
+        text_area.value = initial_value
+    
+    reset_button.on_click(on_reset_click)
+    
     update_char_count(None)
-
-    return text_area, char_count_label
+    
+    return text_area, VBox([reset_button, char_count_label])
 
 
 

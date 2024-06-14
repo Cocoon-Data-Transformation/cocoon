@@ -20,6 +20,9 @@ def get_detailed_error_info():
         if "con.execute(" in line:
             tb_list = tb_list[i+1:]
             break
+        if "pandas.io.sql.DatabaseError:" in line:
+            tb_list = tb_list[i+1:]
+            break
 
     detailed_error_info = ''.join(tb_list)
 
@@ -129,9 +132,7 @@ def evaluate_jinja(template_string):
     template = Template(template_string)
 
     rendered_template = template.render()
-    print(rendered_template)
     rendered_template = escape_single_quotes(rendered_template)
-    print(rendered_template)
     result = ast.literal_eval(rendered_template)
 
     return result
@@ -157,3 +158,12 @@ def escape_single_quotes(input_string):
 
 
 
+
+def clean_summary(summary):
+    summary = summary.strip()
+    summary = summary.strip("'")
+    return summary
+
+def indent_paragraph(paragraph, spaces=4):
+    indent = ' ' * spaces
+    return '\n'.join(indent + line for line in paragraph.split('\n'))
