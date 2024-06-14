@@ -16054,6 +16054,7 @@ class DecideRegex(Node):
             value_list = sample_values[column_name].tolist()
             
             
+            
             template = f"""{column_name}' has the following distinct values: {value_list}
 
 Are there are common regular expression pattern, or just free texts (.*)
@@ -16064,12 +16065,12 @@ Some columns may have multiple patterns. Please provide all the categories, from
 
 Now, return in the following format:
 ```yml
-reasoning: |
+reasoning: >
     This column contains free texts/obvious regex patterns
 patterns: # leave empty if free texts
-    -   summary: |
+    -   summary: >
             Date values in the format of (1'2'1994)
-        regex: |
+        regex: >-
             \(\d{{1,2}}'\d{{1,2}}'\d{{4}}\)
     - ...
 ```"""
@@ -16090,10 +16091,21 @@ patterns: # leave empty if free texts
                 regex = regex.replace("''", "'").replace("'", "''")
                 return regex
             
-            summary["patterns"] = [{"summary": clean_summary(pattern["summary"]), "regex": clean_regex(pattern["regex"])} for pattern in summary["patterns"]]
             
+            def has_non_capturing_groups(regex):
+                pattern = r'\(\?:'
+                return bool(re.search(pattern, regex))
+
+
+
+
+            summary["patterns"] = [{"summary": clean_summary(pattern["summary"]), "regex": clean_regex(pattern["regex"])} for pattern in summary["patterns"]]
+            database_name = get_database_name(con)
             for pattern in summary.get("patterns", []):
                 if pattern["regex"] == ".*":
+                    continue
+                
+                if database_name == "Snowflake" and has_non_capturing_groups(pattern["regex"]):
                     continue
                 
                 query = f'SELECT COUNT(*) FROM "{table_name}" WHERE '
@@ -16921,18 +16933,26 @@ class DecideUnique(Node):
             return {"reasoning": "No single column that can be candidate key.", "candidate_key": {}}
         
 
+
         template = f"""You have the following table:
 {sample_df_str}
 
 The following columns have high uniqueness: {highly_unique_columns}
-For each, reason whether each column is always unique, or just coincidence.
-E.g., for a table of customer names, "customer_id" is always unique. But "first_name" is not always, as there can be multiple customers with the same first name.
+Identify the column that can be candidate key.
+First, identify continuous columns can't be candidate key (e.g., temperature)
+Then, walk through each remain key.
+E.g., for a table of customer, "customer_id" is can be candidate key.
+But "first_name" is not always, as there can be multiple customers with the same first name.
+"region_id" is not the candidate key for customer table, because multiple customers can be in the same region.
+But "region_id" could be the candidate key for region table.
 
 Return in the following format:
 ```yml
-{highly_unique_columns[0]}: 
-    reasoning: this columns means...
-    always_unique: true/false
+continuous_columns: ['col1', ...]
+non_continuous_columns: 
+    {highly_unique_columns[0]}: 
+        reasoning: this columns means... For this table, each row is for ... {highly_unique_columns[0]} is (not) unique across rows.
+        candidate_key: true/false
 ...
 ```"""
         messages = [{"role": "user", "content": template}]
@@ -16945,11 +16965,10 @@ Return in the following format:
         
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
-            (lambda jc: all(key in highly_unique_columns for key in jc.keys()), f"The dictionary contains keys that are not in the highly_unique_columns list {highly_unique_columns}."),
-            (lambda jc: all(isinstance(value, dict) for value in jc.values()), "Not all values in the dictionary are dictionaries."),
-            (lambda jc: all("reasoning" in value and "always_unique" in value for value in jc.values()), "Not all inner dictionaries contain 'reasoning' and 'always_unique' keys."),
-            (lambda jc: all(isinstance(value["reasoning"], str) for value in jc.values()), "Not all 'reasoning' values are strings."),
-            (lambda jc: all(isinstance(value["always_unique"], bool) for value in jc.values()), "Not all 'always_unique' values are booleans."),
+            (lambda jc: "continuous_columns" in jc, "The 'continuous_columns' key is missing."),
+            (lambda jc: "non_continuous_columns" in jc, "The 'non_continuous_columns' key is missing."),
+            (lambda jc: isinstance(jc["continuous_columns"], list), "The value of 'continuous_columns' is not a list."),
+            (lambda jc: isinstance(jc["non_continuous_columns"], dict), "The value of 'non_continuous_columns' is not a dictionary."),
         ]
 
         for check, error_message in checks:
@@ -16960,8 +16979,10 @@ Return in the following format:
     
     def run_but_fail(self, extract_output, use_cache=True):
         unique_columns, sample_df_str, table_name, columns, highly_unique_columns = extract_output
-        return {col: {"reasoning": "Currently unique" if col in unique_columns else "Currently not unique",
-                      "always_unique": True if col in unique_columns else False} for col in highly_unique_columns}
+        return {"continuous_columns": [],
+                "non_continuous_columns": {col: 
+                    {"reasoning": "Fail to run",
+                      "candidate_key": False} for col in highly_unique_columns}}
 
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -16983,8 +17004,12 @@ Return in the following format:
         for col in highly_unique_columns:
             is_unique = (col in unique_columns)
             
-            reason = json_code[col]["reasoning"]
-            should_unique = json_code[col]["always_unique"]
+            if col not in json_code["non_continuous_columns"]:
+                reason = "This column contains continuous values"
+                should_unique = False
+            else:       
+                reason = json_code["non_continuous_columns"][col].get("reasoning", "")
+                should_unique = json_code["non_continuous_columns"][col].get("candidate_key", False)
             
             rows_list.append({
                 "Column": col,
@@ -18334,10 +18359,10 @@ If old values are meaningless, map to empty string.
 
 Return in the following format:
 ```yml
-explanation: |
+explanation: >
     The problem is ... The correct values are ...
 mapping: # just the values need to be changed; remember to escape quote in yml (' to '')
-    '{sample_values.iloc[0, 0].replace("'", "''")}': |'{sample_values.iloc[0, 0].replace("'", "''")}' 
+    '{sample_values.iloc[0, 0].replace("'", "''")}': '{sample_values.iloc[0, 0].replace("'", "''")}' 
     ...
 ```"""
 
@@ -18350,6 +18375,11 @@ mapping: # just the values need to be changed; remember to escape quote in yml (
         summary = yaml.safe_load(yml_code)
         summary["projection"] = False 
         summary["could_clean"] = True
+        
+        def clean_mapping(mapping):
+            return {k: v for k, v in mapping.items() if k != v}
+
+        summary["mapping"] = clean_mapping(summary["mapping"])
 
         return summary
     
@@ -18940,7 +18970,7 @@ Note that we use {database_name} syntax. {hint}
 
 Return the result in yml
 ```yml
-reasoning: |
+reasoning: >
     To transform, we need to ...
 
 cast_clause: |
@@ -18996,7 +19026,7 @@ Please correct the CAST clause, but don't change the logic.
 Note that we use {database_name} syntax. {hint}
 Return the result in yml
 ```yml
-reasoning: |
+reasoning: >
     The error is caused by ...
 
 cast_clause: |
@@ -19022,7 +19052,7 @@ cast_clause: |
     
     def run_but_fail(self, extract_output, use_cache=True):
         column_name = self.para["column_name"]
-        return {"reasoning": "Fail to cast", "cast_clause": f"{column_name} "}
+        return {"reasoning": "Fail to cast", "cast_clause": f'"{column_name}"'}
     
     def merge_run_output(self, run_outputs):
         if len(run_outputs) == 1:
@@ -20841,7 +20871,7 @@ E.g., columns "year_1", "year_2", ... follow the pattern: ^year_\d+$
 
 Return the result in yml
 ```yml
-reasoning: |
+reasoning: >
     The columns follow ... They have varying numbers...
 
 patterns:
@@ -22146,13 +22176,13 @@ If so, enumerate the FULL domain with Jinja template. E.g.,
 
 Now, respond in yml:
 ```yml
-explanation: |
+explanation: >
     The column means ... The domain contains... 
     The full domain follows ... pattern. It cannot/can be fully enumerated by Jinja that ...
 can_enumerate: true/false
 current_full: true/false # if categorical is true, are the current distinct values already the full domain? 
 # Jinja template that creates a list, to the best of you knowledge, WITHOUT referencing any var
-full_domain: |
+full_domain: >
     [{{% for i in range(1, 10) %}}'x_{{{{ i }}}}'{{% if not loop.last %}},{{% endif %}}{{% endfor %}}] 
 ```"""
 
@@ -22789,7 +22819,7 @@ If it contains multiple hubs, describe how the hubs are related, in simple SVO s
 
 Now, respond in yml:
 ```yml
-explanation: |
+explanation: >
     Among the {len(hubs)} hubs given, the table directly contains ...
 contain_hubs: 
     hub_name: [list of attributes directly related to the hub]
@@ -22868,7 +22898,7 @@ E.g., Locations, Codes (e.g. Airport Short Codes), Categories (e.g., Item catego
 Finad all the reference tables. Respond in yml:
 
 ```yml
-explanation: |
+explanation: >
     The tables are ... They are reference tables because ...
 reference_tables: 
     table_name1: explanation in < 5 words
@@ -22997,7 +23027,7 @@ Identify if there are multiple redundant tables (links) for the similar purpose 
 
 Return in yml:
 ```yml
-explanation: |
+explanation: >
     The links are ... They serve the similar purpose because they both record ...
 similar_links:
     Customer buys Product: # simple SVO that mentioedn related all hubs
@@ -23378,7 +23408,7 @@ E.g., 'country' -> 'city' is not one_one, because one country can have multiple 
 
 Respond in yml:
 ```yml
-explanation: |  
+explanation: >
     For each value in '{column_name}', there possibly is a unique value in ...
 one_one_columns: [column1, column2, ...] 
 ```"""

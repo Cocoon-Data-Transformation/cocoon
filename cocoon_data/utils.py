@@ -21,7 +21,7 @@ def get_detailed_error_info():
             tb_list = tb_list[i+1:]
             break
         if "pandas.io.sql.DatabaseError:" in line:
-            tb_list = tb_list[i+1:]
+            tb_list = tb_list[i:]
             break
 
     detailed_error_info = ''.join(tb_list)
