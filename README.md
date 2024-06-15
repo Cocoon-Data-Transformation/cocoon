@@ -12,7 +12,9 @@ Given a **Data Task** from the user, Cocoon connects to your data warehouse, exp
   <img src="./images/arch.png" alt="Cocoon Logo" />
 </div>
 
-👉 Check out the [demo](https://youtu.be/d9BIEGD7xok)
+- 👉 Check out the [demo](https://youtu.be/d9BIEGD7xok)
+
+- 👐 Need support? Email: zh2408@columbia.edu
 
 #### Data Tasks currently available:
 - [Profile: Semantically understand your data and detect anomalies](#profile-semantically-understand-your-data-and-detect-anomalies)
@@ -121,11 +123,3 @@ Give us a database, we design the data model/data vault
 
 
 <kbd>![](./images/model.gif)</kbd>
-
-## Future
-
-We are working on tools to help understand data, break silos and maintain pipelines for the data warehouse. 
-
-These will make discovering tables, generating reports, and making predictions incredibly simple.
-
-Email zh2408@columbia.edu to learn more...
