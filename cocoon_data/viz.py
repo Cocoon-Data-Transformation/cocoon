@@ -482,29 +482,20 @@ def generate_draggable_graph_html(data, svg_height=300, svg_width=1000):
     graph_html = f"""<!DOCTYPE html>
 <meta charset="utf-8">
 <style>
-  .nodes rect {{
-    stroke: #aaa;
-    fill: #fff;
-  }}
-
   .links line {{
-    stroke: #aaa;
     stroke-width: 2px;
   }}
-
-  .nodetext {{
+.nodetext {{
     text-anchor: middle;
     alignment-baseline: middle;
-  }}
-
-  html {{
-      font-family: sans-serif;
-      font-size: 12px;
-  }}
+    }}
+html {{
+    font-family: sans-serif;
+    font-size: 12px;
+}}
 </style>
 <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
 <svg id="session1" width="{svg_width}" height="{svg_height}"></svg>
-
 <script>
   var svg = d3.select("#session1"),
       width = +svg.attr("width"),
@@ -524,7 +515,8 @@ def generate_draggable_graph_html(data, svg_height=300, svg_width=1000):
       .attr("class", "links")
       .selectAll("line")
       .data(graph.links)
-      .enter().append("line");
+      .enter().append("line")
+      .style("stroke", function(d) {{ return d.color || "#aaa"; }});
 
 var node = svg.append("g")
     .attr("class", "nodes")
@@ -536,33 +528,52 @@ var node = svg.append("g")
         .on("drag", dragged)
         .on("end", dragended));
 
-// Append the rectangles first
-node.append("rect")
-    .attr("width", 60) // Temporary default width
-    .attr("height", nodeHeight);
+// Append the shapes based on node shape
+node.each(function(d) {{
+    if (d.shape === "ellipse") {{
+        d3.select(this).append("ellipse")
+            .attr("cx", nodeWidth/2)
+            .attr("cy", nodeHeight/2)
+            .attr("rx", nodeWidth / 2)
+            .attr("ry", nodeHeight / 2)
+            .style("stroke", d.borderColor || "#aaa")
+            .style("fill", d.fillColor || "#fff");
+    }} else {{
+        d3.select(this).append("rect")
+            .attr("width", nodeWidth)
+            .attr("height", nodeHeight)
+            .style("stroke", d.borderColor || "#aaa")
+            .style("fill", d.fillColor || "#fff");
+    }}
+}});
 
 // Then append the text
 var texts = node.append("text")
     .attr("class", "nodetext")
-    .attr("x", 30) // Temporary x position, half of the default width
+    .attr("x", nodeWidth / 2)
     .attr("y", nodeHeight / 2)
     .text(function(d) {{ return d.id; }});
 
-// Update the width of the rectangles and reposition the text
+// Update the width of the shapes and reposition the text
 node.each(function(d, i) {{
-    var rect = d3.select(this).select("rect");
+    var shape = d3.select(this).select(d.shape);
     var text = d3.select(this).select("text");
 
     var textLength = text.node().getComputedTextLength();
-    var newWidth = textLength + 20; // Adjust padding as needed
+    var newWidth = textLength + 40;
 
-    // Update rect width
-    rect.attr("width", newWidth);
+    // Update shape width
+    if (d.shape === "ellipse") {{
+        let newWidthEllipse = newWidth;
+        shape.attr("rx", newWidthEllipse / 2);
+        shape.attr("cx", newWidthEllipse / 2);
+    }} else {{
+        shape.attr("width", newWidth);
+    }}
 
     // Update text position
     text.attr("x", newWidth / 2);
 }});
-
 
 
   simulation
@@ -606,7 +617,6 @@ node.each(function(d, i) {{
 </script>
 """
     return graph_html
-
 
 
 def generate_dialogue_html(dialogue):

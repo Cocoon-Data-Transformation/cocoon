@@ -15935,7 +15935,7 @@ class DecideDuplicate(Node):
 
         duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, table_pipeline)
 
-        document = {"duplicate_count": duplicate_count}
+        document = {"duplicate_count": duplicate_count, "duplicate_removed": False}
         
         self.progress.value += 1
 
@@ -15952,6 +15952,7 @@ class DecideDuplicate(Node):
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
                     step.run_codes()
                     self.para["table_pipeline"].add_step_to_final(step)
+                    document["duplicate_removed"] = True
                 callback(document)
 
             yes_button = widgets.Button(
@@ -17105,7 +17106,7 @@ def create_profile_workflow(table_name, con, viewer=True):
     main_workflow.add_to_leaf(DecideUnusualForAll(viewer=True))
     main_workflow.add_to_leaf(DecideColumnRange(viewer=True))
     main_workflow.add_to_leaf(DecideLongitudeLatitude(viewer=True))
-    main_workflow.add_to_leaf(GenerateReport(viewer=True))
+    main_workflow.add_to_leaf(GenerateProfileReport(viewer=True))
     
     return query_widget, main_workflow
 
@@ -17156,11 +17157,11 @@ def replace_df_html_col_with_dropdown(df, df_html, col_name):
 
 def build_histogram_inputs(con, column, tablename):
     num_bins = 20
-    query_min_max = f'SELECT MIN({column}) AS min_val, MAX({column}) AS max_val FROM {tablename};'
+    query_min_max = f'SELECT MIN("{column}") AS min_val, MAX("{column}") AS max_val FROM "{tablename}";'
     min_val, max_val = run_sql_return_df(con, query_min_max).iloc[0]
 
     if min_val == max_val:
-        total_count_query = f'SELECT COUNT(*) FROM {tablename};'
+        total_count_query = f'SELECT COUNT(*) FROM "{tablename}";'
         total_count = run_sql_return_df(con, total_count_query).iloc[0][0]
         return [total_count], min_val, [min_val]
 
@@ -17172,9 +17173,9 @@ def build_histogram_inputs(con, column, tablename):
         bin_start = bin_edges[i]
         bin_end = bin_edges[i + 1]
         if i == num_bins - 1:
-            case_statement = f'WHEN {column} >= {bin_start} AND {column} <= {bin_end} THEN {i+1}'
+            case_statement = f'WHEN "{column}" >= {bin_start} AND "{column}" <= {bin_end} THEN {i+1}'
         else:
-            case_statement = f'WHEN {column} >= {bin_start} AND {column} < {bin_end} THEN {i+1}'
+            case_statement = f'WHEN "{column}" >= {bin_start} AND "{column}" < {bin_end} THEN {i+1}'
         case_statements.append(case_statement)
 
     case_statement = ' '.join(case_statements)
@@ -17182,7 +17183,7 @@ def build_histogram_inputs(con, column, tablename):
     query = f'''
     WITH BINS AS (
         SELECT CAST(ROW_NUMBER() OVER (ORDER BY NULL) AS INTEGER) AS BIN
-        FROM {tablename}
+        FROM "{tablename}"
         LIMIT {num_bins}
     )
     SELECT
@@ -17193,7 +17194,7 @@ def build_histogram_inputs(con, column, tablename):
         SELECT
             CASE {case_statement} ELSE NULL END AS BIN,
             COUNT(*) AS COUNT
-        FROM {tablename}
+        FROM "{tablename}"
         GROUP BY BIN
     ) COUNTS ON BINS.BIN = COUNTS.BIN
     ORDER BY BINS.BIN;
@@ -17211,38 +17212,38 @@ def df_to_list(df):
 
 
 def build_barchat_input(con, column, tablename, limit=6):
-    count_query = f'SELECT COUNT(DISTINCT {column}) AS distinct_count FROM {tablename} WHERE {column} IS NOT NULL'
+    count_query = f'SELECT COUNT(DISTINCT "{column}") AS distinct_count FROM "{tablename}" WHERE "{column}" IS NOT NULL'
     distinct_count_result = run_sql_return_df(con, count_query).iloc[0][0]
 
     if distinct_count_result > limit:
         fetch_query = f'''
         WITH CityCounts AS (
-            SELECT CAST({column} AS VARCHAR) AS {column}, COUNT(*) AS count
-            FROM {tablename}
-            WHERE {column} IS NOT NULL
-            GROUP BY {column}
+            SELECT CAST("{column}" AS VARCHAR) AS "{column}", COUNT(*) AS count
+            FROM "{tablename}"
+            WHERE "{column}" IS NOT NULL
+            GROUP BY "{column}"
             ORDER BY count DESC
         ),
         TopCities AS (
-            SELECT {column}, count
+            SELECT "{column}", count
             FROM CityCounts
             LIMIT {limit-1}
         ),
         OtherGroup AS (
-            SELECT 'Other values' AS {column}, SUM(count) AS count
+            SELECT 'Other values' AS "{column}", SUM(count) AS count
             FROM CityCounts
-            WHERE {column} NOT IN (SELECT {column} FROM TopCities) AND {column} IS NOT NULL
+            WHERE "{column}" NOT IN (SELECT "{column}" FROM TopCities) AND "{column}" IS NOT NULL
         )
-        SELECT {column}, count FROM TopCities
+        SELECT "{column}", count FROM TopCities
         UNION ALL
         SELECT * FROM OtherGroup
         '''
     else:
         fetch_query = f'''
-        SELECT {column}, COUNT(*) AS count
-        FROM {tablename}
-        WHERE {column} IS NOT NULL
-        GROUP BY {column}
+        SELECT "{column}", COUNT(*) AS count
+        FROM "{tablename}"
+        WHERE "{column}" IS NOT NULL
+        GROUP BY "{column}"
         ORDER BY count DESC
         '''
 
@@ -17365,7 +17366,7 @@ def build_map_inputs(con, column, column2, tablename):
 
             
             
-class GenerateReport(Node):
+class GenerateProfileReport(Node):
     default_name = 'Generate Report'
     default_description = 'This node generates a report based on the profiling results.'
 
@@ -19147,7 +19148,8 @@ class TransformTypeForAll(MultipleNode):
             return
 
         editable_columns = [False, True, False]
-        grid = create_dataframe_grid(df, editable_columns, reset=True, long_text=["Reasoning"])
+        long_text = ["Reasoning"]
+        grid = create_dataframe_grid(df, editable_columns, reset=True, long_text=long_text)
 
         query_widget = self.item["query_widget"]
 
@@ -19160,7 +19162,7 @@ class TransformTypeForAll(MultipleNode):
         )
         
         def on_button_clicked(b):
-            new_df =  grid_to_updated_dataframe(grid)
+            new_df =  grid_to_updated_dataframe(grid, long_text=long_text)
             query = "SELECT\n"
             for i, row in new_df.iterrows():
                 column_name = row["Column Name"]
@@ -19182,9 +19184,9 @@ class TransformTypeForAll(MultipleNode):
         )
 
         def on_button_clicked(b):
-            new_df = grid_to_updated_dataframe(grid)
+            new_df = grid_to_updated_dataframe(grid, long_text=long_text)
             affected_columns = new_df["Column Name"].tolist()
-            document["Transform Type"] = new_df.to_json(orient="split")
+            document = new_df.to_json(orient="split")
             new_table_name = f"{self.para['table_pipeline']}_casted"
             schema = self.para["table_pipeline"].get_final_step().get_schema()
             columns = list(schema.keys())
@@ -19310,10 +19312,6 @@ Return in the following format:
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
-        if len(columns) == 0:
-            callback({})
-            return
-
         df = pd.DataFrame(columns=["Column Name", "Trim?"])
 
         df["Column Name"] = columns
@@ -19321,8 +19319,10 @@ Return in the following format:
         df["Trim?"] = [not (col in json_code["columns_to_keep_spaces"]) for col in columns]
 
         grid = create_dataframe_grid(df, [False, True], reset=True)
-        print(f"😎 We have found the following columns with leading or trailing spaces, and recommend to {BOLD}trim{END} them:")
-        display(grid)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
 
         query_widget = self.item["query_widget"]
         table_pipeline = self.para["table_pipeline"]
@@ -19343,6 +19343,10 @@ Return in the following format:
 
         explore_button.on_click(on_button_clicked)
 
+
+        display(explore_button)
+
+        
         display(explore_button)
 
         next_button = widgets.Button(
@@ -19409,12 +19413,15 @@ Return in the following format:
 
         next_button.on_click(on_button_clicked)
         reject_button.on_click(on_button_clicked2)
-
-        display(HBox([reject_button, next_button]))
-        
         
         if "viewer" in self.para and self.para["viewer"]:
             on_button_clicked(next_button)
+            return
+        
+        display(HTML(f"😎 We have found the following columns with leading or trailing spaces, and recommend to <b>trim</b> them:"))
+        display(grid)
+        display(explore_button)
+        display(HBox([reject_button, next_button]))
         
 class DecideStringUnusual(Node):
     default_name = 'Decide String Unusual'
@@ -19641,27 +19648,8 @@ class WriteStageYMLCode(Node):
         contents = []
         table_pipeline = self.para["table_pipeline"]
         old_table_name = table_pipeline.get_source_step().name
-        new_table_name = old_table_name
+        new_table_name = "stg_" + old_table_name.replace("src_", "")
         
-        if "yaml_only" not in self.class_para or not self.class_para["yaml_only"]:
-            new_table_name = "stg_" + old_table_name.replace("src_", "")
-            sql_query = f'SELECT * FROM "{table_pipeline}"'
-            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
-            step.run_codes()
-            table_pipeline.add_step_to_final(step)
-            formatter = HtmlFormatter(style='default')
-            css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
-            combined_css = css_style + border_style
-            sql_query = table_pipeline.get_codes()
-            highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
-            bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
-            combined_html = combined_css + bordered_content
-            tab_data.append(("sql", combined_html))
-            labels.append("SQL")
-            file_names.append(f"{new_table_name}.sql")
-            contents.append(sql_query)
-        
-
         table_name = new_table_name
         schema = table_pipeline.get_final_step().get_schema()
         
@@ -19671,7 +19659,8 @@ class WriteStageYMLCode(Node):
         table_object.columns = columns
         table_object.table_name = table_name
         
-        yml_content = table_object.create_dbt_schema_yml()
+        yml_dict = table_object.create_dbt_schema_dict()
+        yml_content = yaml.safe_dump(yml_dict, default_flow_style=False)
         
         formatter = HtmlFormatter(style='default')
         css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
@@ -19687,6 +19676,255 @@ class WriteStageYMLCode(Node):
         file_names.append(f"{table_name}.yml")
         contents.append(yml_content)
         
+        if "yaml_only" not in self.class_para or not self.class_para["yaml_only"]:
+            
+            sql_query = f'SELECT * FROM "{table_pipeline}"'
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+            step.run_codes()
+            table_pipeline.add_step_to_final(step)
+            formatter = HtmlFormatter(style='default')
+            css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+            combined_css = css_style + border_style
+            sql_query = table_pipeline.get_codes()
+            highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
+            bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
+            combined_html = combined_css + bordered_content
+            tab_data.append(("sql", combined_html))
+            labels.append("SQL")
+            file_names.append(f"{new_table_name}.sql")
+            contents.append(sql_query)
+            
+            
+            con = self.item["con"]
+            database_name = get_database_name(con)
+
+            table_pipeline = self.para["table_pipeline"]
+            table_object = self.para["table_object"]
+            before_table_name = table_pipeline.get_source_step().name
+            after_table_name = table_pipeline.get_final_step().name
+
+
+            bottom_html = "<h1>Cocoon Cleaning Summary 🤗</h1><hr><br>"
+            bottom_idx = 1
+
+            table_summary = table_object.table_summary
+            if table_summary != "":
+                bottom_html += f"""<h2>📃 {bottom_idx}. Table Summary</h2><br>{table_summary}<br><br><br>"""
+                bottom_idx += 1
+
+            column_document = self.get_sibling_document('Describe Columns')
+            column_df = pd.read_json(column_document, orient="split")
+            if len(column_df) > 0:
+                renamed_columns = column_df[column_df['Column'] != column_df['New Column Name']]
+                bottom_html += f"""<h2>📊 {bottom_idx}. Column Rename</h2><br>
+                {"😎 <b>" + str(len(renamed_columns)) + "</b> columns have been renamed" if len(renamed_columns) > 0 else "🤓 No column is renamed"}<br>
+                {column_df.to_html()}<br><br><br>"""
+                bottom_idx += 1
+                
+                column_mapping = dict(zip(column_df['New Column Name'], column_df['Column']))
+                final_columns = table_object.columns
+                after_selection = ", ".join([f'"{col}"' for col in final_columns])
+                after_df = run_sql_return_df(con, f'SELECT {after_selection} FROM "{after_table_name}" LIMIT  100')
+                before_selection = ", ".join([f'"{column_mapping[col]}"' for col in final_columns])
+                before_df = run_sql_return_df(con, f'SELECT {before_selection} FROM "{before_table_name}" LIMIT  100')
+            else:
+                before_df = run_sql_return_df(con, f'SELECT * FROM "{before_table_name}" LIMIT  100')
+                after_df = run_sql_return_df(con, f'SELECT * FROM "{after_table_name}" LIMIT  100')
+                            
+            duplication_document = self.get_sibling_document('Decide Duplicate')
+            duplication_count = duplication_document['duplicate_count']
+            if duplication_count > 0:
+                duplication_removed = duplication_document['duplicate_removed']
+                bottom_html += f"""<h2>👯‍♀️ {bottom_idx}. Duplicate</h2><br>
+                {"🔍 <b>" + str(duplication_count) + "</b> duplicates have been detected" }<br>
+                {"✔️ Duplicates have been removed" if duplication_removed else "❌ Duplicates have <b>not</b> been removed"}<br><br><br>"""
+                bottom_idx += 1 
+
+            trim_document = self.get_sibling_document('Decide Trim')
+            trim_df = pd.read_json(trim_document, orient="split")
+            if len(trim_df) > 0:
+                trimed_column_count = len(trim_df[trim_df['Trim?']])
+                bottom_html += f"""<h2>✂️ {bottom_idx}. Leading and Trailing Whitespace</h2><br>
+                {"🔍 <b>" + str(len(trim_df)) + "</b> columns have leading and trailing whitespace"}<br>
+                {"✔️ <b>" + str(trimed_column_count) + "</b> columns have been trimmed" if trimed_column_count > 0 else "❌ No column is trimmed"}<br><br><br>"""
+                bottom_idx += 1
+
+            clean_unusual_document = self.get_sibling_document('Clean Unusual For All')
+            if clean_unusual_document:
+                clean_unusual_document = clean_unusual_document['Clean Unusual']
+                bottom_html += f"""<h2>🚧 {bottom_idx}. Erroneous Values</h2><br>
+            {"🔍 <b>" + str(len(clean_unusual_document)) + "</b> columns have erroneous values"}<br>"""
+                bottom_idx += 1
+                bottom_html += "<ol>"
+                for column in clean_unusual_document:
+                    value = clean_unusual_document[column]
+                    unusual_reason = value['unusual_reason']
+                    bottom_html += f"<li><b>{column}</b>: {unusual_reason}<br>"
+                    could_clean = value['could_clean']
+                    bottom_html += f"{'✔️ The column has been cleaned:' if could_clean else '❌ The column has not been cleaned'}<br>"
+                    if could_clean:
+                        mapping = value['mapping']
+                        mapping_df = pd.DataFrame(list(mapping.items()), columns=["Original Value", "Cleaned Value"])
+                        bottom_html += mapping_df.to_html()
+                    bottom_html += "<br></li>"
+                bottom_html += "</ol><br>"
+
+            dmv_document = self.get_sibling_document('Decide Disguised Missing Values For All')
+            dmv_df = pd.read_json(dmv_document, orient="split")
+            if len(dmv_df) > 0:
+                dmv_column_count = len(dmv_df[dmv_df["Impute to NULL?"]])
+                bottom_html += f"""<h2>🕵️‍♂️ {bottom_idx}. Disguised Missing Values</h2><br>
+                {"🔍 <b>" + str(len(dmv_df)) + "</b> columns have disguised missing values"}<br>
+                {"✔️ <b>" + str(dmv_column_count) + "</b> columns have been cleaned" if dmv_column_count > 0 else "❌ No column is cleaned"}<br>
+                {dmv_df.to_html()}<br><br><br>"""
+                bottom_idx += 1
+
+            transform_document = self.get_sibling_document('Transform Type For All')
+            transform_df = pd.read_json(transform_document, orient="split")
+            if len(transform_df) > 0:
+                bottom_html += f"""<h2>🔧 {bottom_idx}. Data Type</h2><br>
+                {"✔️ <b>" + str(len(transform_df)) + "</b> columns have been casted"}<br>
+                {transform_df.to_html()}<br><br><br>"""
+                bottom_idx += 1
+                    
+            missing_document = self.get_sibling_document('Decide Missing Values')
+            missing_df = pd.read_json(missing_document, orient="split")
+            if len(missing_df) > 0:
+                acceptable_missing_count = len(missing_df[missing_df["Is NULL Acceptable?"]])
+                bottom_html += f"""<h2>❓ {bottom_idx}. Missing Values</h2><br>
+                {"🔍 <b>" + str(len(missing_df)) + "</b> columns have missing values"}<br>
+                {"✔️ <b>" + str(acceptable_missing_count) + "</b> of them are acceptable" if acceptable_missing_count > 0 else "❌ No missing value is acceptable"}<br>
+                {missing_df.to_html()}<br>"""
+                
+                handle_missing_document = self.get_sibling_document('Handle Missing Values')
+                handle_missing_df = pd.read_json(handle_missing_document, orient="split")
+                
+                if len(handle_missing_df) > 0:
+                    bottom_html += f"""🧩 These missing values are handled as follows:<br>
+                    {handle_missing_df.to_html()}<br>"""
+                bottom_html += "<br><br>"
+                bottom_idx += 1
+                
+            column_html = ""        
+            column_javascript = ""
+            schema = table_pipeline.get_final_step().get_schema()
+            
+
+            for column in yml_dict["models"][0]["columns"]:
+                column_name = column["name"]
+                data_type = schema[column_name]
+                data_type = get_reverse_type(data_type, database_name)
+                
+                single_column_html = ""
+                
+                tests = column.get('tests', [])
+                for test in tests:
+                    if isinstance(test, dict):
+                        test_type = list(test.keys())[0]
+                        test_value = test[test_type]
+                        option_html = "<select>"
+                        for value in test_value["values"]:
+                            option_html += f"<option value='{value}'>{value}</option>"
+                        option_html += "</select>"
+                        single_column_html += f'''<span class="tag tag-purple">{test_type}{option_html}</span>'''
+                    elif test == 'not_null':
+                        single_column_html += f'''<span class="tag tag-red">{test}</span>'''
+                    elif test == 'unique':
+                        single_column_html += f'''<span class="tag tag-blue">{test}</span>'''
+                
+                if len(tests) > 0:
+                    single_column_html += "<br><br>"
+                        
+                html_output, javascript_output = build_column_viz(column_name, is_numeric=is_type_numeric(data_type), con=con, table_name=after_table_name)
+                single_column_html += html_output
+                single_column_html += "<b>📃 Summary:</b> " + column["description"] + "<br>"
+                            
+                cocoon_meta = column.get('cocoon_meta', {})
+                if 'missing_acceptable' in cocoon_meta:
+                    single_column_html += "<b>❓ Missing:</b> " + str(cocoon_meta['missing_acceptable']) + "<br>"
+                if 'unusal_values' in cocoon_meta:
+                    single_column_html += "<b>🚧 Erroneous:</b> " + str(cocoon_meta['unusal_values']) + "<br>"
+                if 'uniqueness' in cocoon_meta:
+                    single_column_html += "<b>🦄 Unique:</b> " + str(cocoon_meta['uniqueness']) + "<br>"
+                if 'patterns' in cocoon_meta:
+                    single_column_html += "<b>🎨 Patterns:</b><br>"
+                    single_column_html += "<ul>"
+                    for pattern in cocoon_meta['patterns']:
+                        summary = pattern['summary']
+                        regex = pattern['regex']
+                        single_column_html += f"<li><code>{regex}</code><br><i>{summary}</i></li>"
+                    single_column_html += "</ul>"
+                    
+                column_html += f"""
+<div class="card-item card-item-collapsed">
+    <span class="field-name">{column_name}</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;">{single_column_html}<br></div>
+"""
+                
+                column_javascript += javascript_output
+                
+            html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+{cocoon_html_style_block}
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            {create_cocoon_logo(header="Data Cleaning", footer="Powered by Cocoon")}
+            <div><h1>{before_table_name}</h1>(First 100 rows)</div>
+            <div>
+                {cocoon_html_toggle_block}
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            {before_df.to_html()}
+        </div>
+        <div class="table-container after">
+            {after_df.to_html()}
+        </div>
+    </div>
+    <div class="right-panel">
+{column_html}
+    </div>
+
+    <div class="bottom-panel">
+        {bottom_html}
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+{cocoon_js_expand_block}
+{cocoon_js_toggle_block}
+</script>
+<script>
+{cocoon_js_viz_block}
+{column_javascript}
+
+</script>
+</body>
+</html>"""
+            html_tab = wrap_in_iframe(html_content, width="1000px")
+            tab_data.append(("html", html_tab))
+            
+            labels.append("HTML")
+            file_names.append(f"{new_table_name}.html")
+            contents.append(html_content)
+        
         tabs = create_dropdown_with_content(tab_data) 
         
     
@@ -19701,7 +19939,14 @@ class WriteStageYMLCode(Node):
         
         def on_button_clicked(b):
             clear_output(wait=True)
-            callback({})
+            document = {}
+            
+            for i in range(len(labels)):
+                label = labels[i]
+                content = contents[i]
+                document[label] = content
+
+            callback(document)
 
         submit_button = widgets.Button(
             description='Next',
@@ -20698,6 +20943,7 @@ Return in the following format:
         display(HTML(f"😎 We have recommended the Data Types for Columns:"))
         display(grid)
         display(HBox([reject_button, next_button]))
+        
 
 def create_cocoon_table_transform_workflow(con, query_widget=None, viewer=True):
     if query_widget is None:
@@ -20750,7 +20996,7 @@ def create_cocoon_profile_workflow(con, query_widget=None, viewer=False):
     main_workflow.add_to_leaf(DecideUnusualForAll())
     main_workflow.add_to_leaf(DecideColumnRange())
     main_workflow.add_to_leaf(DecideLongitudeLatitude())
-    main_workflow.add_to_leaf(GenerateReport())
+    main_workflow.add_to_leaf(GenerateProfileReport())
     
     return query_widget, main_workflow
 
@@ -20780,7 +21026,7 @@ class CocoonBranchStep(Node):
 <img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">
 <div style="margin: 0; padding: 0;">
 <h1 style="margin: 0; padding: 0;">Cocoon</h1>
-<p style="margin: 0; padding: 0;">Use LLMs to augment data tasks.</p>
+<p style="margin: 0; padding: 0;">Organize Data Warehouses with LLMs</p>
 </div>
 </div><hr>
 🤓 Please select the data task:
@@ -20789,22 +21035,21 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
-        "✨ <b>Clean Table:</b> Give us a table, we'll understand, clean, and document it.",
-        "📊 <b>Clean Database:</b> Give us a database, we'll clean and identify PK/FK.",
-        "🔍 <b>Profile:</b> Give us a table, we'll understand and identify anomalies.",
-        "🔗 <b>(Preview) Fuzzy Join:</b> Give us two tables, we'll fuzzily join them.",
-        "🔧 <b>(Preview) Fuzzy Union:</b> Give us two tables, we'll fuzzily union them.",
-        "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a Data Pipeline, we'll interpret it.",
+        "✨ <b>Clean:</b> Give us a table, we'll clean and document it.",
+        "🔍 <b>Profile:</b> Give us a table, we'll identify anomalies.",
+        "🔗 <b>Standardization:</b> Give us a vocabulary, we will standardize tables.",
+        "🔧 <b>(Preview) Transform:</b> Give us source/target tables, we will transform.",
+        "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a  Pipeline, we'll interpret it.",
         ]
         coming_labels = [
-        "🛠️ <b>(Coming Soon) Pipeline Maintenance:</b> Give us a broken Data Pipeline, we'll repair it.",
-        "🔄 <b>(Coming Soon) Table Transform:</b> Give us a target database, we'll transform your database.",
-        "📈 <b>(Coming Soon) Semantic Layer:</b> Give us a database, we'll help build metrics.",
+        "🔄 <b>(Coming Soon) Integrate:</b> Give us tables, we'll integrate them.",
+        "🧩 <b>(Coming Soon) Model:</b> Give us a database, we'll model it.",
+        "🛠️ <b>(Coming Soon) Pipeline Maintenance:</b> Give us a broken Pipeline, we'll repair it.",
+        "📈 <b>(Coming Soon) Semantic:</b> Give us a database, we'll build metrics.",
         ]
         
         next_nodes = [
             "Data Stage Workflow",
-             "Data Vault Workflow",
             "Data Profiling Workflow",
             "Fuzzy Join Workflow",
             "Single Table Transformation Workflow",
@@ -23810,7 +24055,7 @@ class Table:
                 column_desc_string += f"'{column}': {desc}\n"
         return column_desc_string.strip()
     
-    def create_dbt_schema_yml(self):
+    def create_dbt_schema_dict(self):
         data = {
             "version": 2,
             "models": [
@@ -23882,6 +24127,10 @@ class Table:
 
             data["models"][0]["columns"].append(column_data)
 
+        return data
+    
+    def create_dbt_schema_yml(self):
+        data = self.create_dbt_schema_dict()
         yml_content = yaml.safe_dump(data, default_flow_style=False)
         return yml_content
     
@@ -25693,3 +25942,27 @@ Return in the following format:
         
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
+        
+def build_column_viz(column_name, is_numeric=True, con=None, table_name=None):
+    html_output = ""
+    javascript_output = ""
+    if is_numeric:
+        html_output += f"<div id=\"hist_viz_{column_name}\"></div>"
+        counts, bin_width, bin_centers = build_histogram_inputs(con, column_name, table_name)
+        javascript_output += f"""data = {[
+        {"x": center, "y": count} for center, count in zip(bin_centers, counts)
+    ]};
+    binWidth = {bin_width};
+    drawHistogram("hist_viz_{column_name}", data, binWidth);
+"""
+    
+    else:
+        html_output += f"<div id=\"bar_viz_{column_name}\"></div>"
+        data_dict = build_barchat_input(con, column_name, table_name)
+        total_value = sum(data_dict.values())
+        data = [{"label": (str(label)[:15] + "...") if len(str(label)) > 15 else str(label), "value": (value / total_value) * 100} for label, value in data_dict.items()]
+        javascript_output += f"""data = {data};
+    drawBarChart("bar_viz_{column_name}", data);
+"""  
+    
+    return html_output, javascript_output

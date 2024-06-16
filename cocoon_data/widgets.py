@@ -133,8 +133,15 @@ def extract_text_from_html(html_str):
     parser.feed(html_str)
     return ''.join(parser.data)
 
-def grid_to_updated_dataframe(grid, reset=True, lists=[], editable_list={}):
+def grid_to_updated_dataframe(grid, reset=True, lists=None, editable_list=None, long_text=None):
     updated_data = []
+    
+    if lists is None:
+        lists = []
+    if editable_list is None:
+        editable_list = {}
+    if long_text is None:
+        long_text = []
 
     if reset:
         j_max = grid.n_columns - 1
@@ -153,6 +160,8 @@ def grid_to_updated_dataframe(grid, reset=True, lists=[], editable_list={}):
 
             if column_name in lists:
                 value = list(widget.options)
+            elif column_name in long_text:
+                value = widget.tooltip
             elif column_name in editable_list:
                 value = widget.value
                 value = ast.literal_eval(value)
@@ -184,7 +193,17 @@ def grid_to_updated_dataframe(grid, reset=True, lists=[], editable_list={}):
     
     return updated_df
 
-def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists= [], editable_list={}, long_text = []):
+def create_dataframe_grid(df, editable_columns, reset=False, category=None, lists=None, editable_list=None, long_text=None):
+    
+    if category is None:
+        category = {}
+    if lists is None:
+        lists = []
+    if editable_list is None:
+        editable_list = {}
+    if long_text is None:
+        long_text = []
+    
     rows = len(df) + 1
     columns = len(df.columns) + (1 if reset else 0)
 
@@ -219,7 +238,7 @@ def create_dataframe_grid(df, editable_columns, reset=False, category={}, lists=
             elif col_name in long_text:
                 widget = widgets.Button(description='Hover over me',
                       button_style='',
-                      tooltip=value,
+                      tooltip=str(value),
                       icon='fa-commenting-o')
             elif pd.api.types.is_bool_dtype(df[col_name]):
                 widget = widgets.Checkbox(value=bool(value))

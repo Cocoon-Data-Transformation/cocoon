@@ -178,7 +178,7 @@ def generate_queries_for_overlap(table1, attributes1, table2, attributes2, con):
             LEFT JOIN (
                 SELECT DISTINCT {select_clause2}
                 FROM "{table2}"
-                WHERE {' OR '.join(f'"{table2}."{attr2}" IS NOT NULL' for attr2 in attributes2)}
+                WHERE {' OR '.join(f'"{table2}"."{attr2}" IS NOT NULL' for attr2 in attributes2)}
             ) T2 ON {' AND '.join(f'"{table1}"."{attr1}" = T2."{attr2}"' for attr1, attr2 in zip(attributes1, attributes2))}
             WHERE {' AND '.join(f'T2."{attr2}" IS NULL' for attr2 in attributes2)}
                 AND {' OR '.join(f'"{table1}"."{attr1}" IS NOT NULL' for attr1 in attributes1)}
