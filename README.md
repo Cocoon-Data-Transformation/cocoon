@@ -22,7 +22,7 @@ Cocoon is available on PyPI:
 pip install cocoon_data
 ```
 
-To get started, import Cocoon in a Notebook. You need to connect to
+To get started, you need to connect to
 - LLMs (e.g., GPT-4, Claude-3, Gemini-Ultra...) 
 - Data Warehouses (e.g., Snowflake, Duckdb...)
 
@@ -44,4 +44,6 @@ query_widget.display()
 cocoon_workflow.start_workflow()
 ```
 
+🎉 You shall see the following on a notebook:
 
+<kbd><img src="./images/notebook.png" alt="" width="500"></kbd>
