@@ -1,0 +1,3247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9em;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  th, td {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid #dddddd;
+    border-right: 1px solid #dddddd;
+  }
+
+  th:last-child, td:last-child {
+    border-right: none; /* Removes the border from the last cell of each row */
+  }
+
+  thead tr {
+    background-color: #009879; /* Changed color for header */
+    color: #ffffff; /* Changed text color for better contrast */
+    text-align: left;
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background-color: #bebebe; /* Ensure the sticky header has the same background color */
+  }
+
+  tbody tr {
+    background-color: #f9f9f9; /* Lighter color for content rows */
+    font-size: 14px
+  }
+
+  tbody tr:last-of-type {
+    border-bottom: 2px solid #009879;
+  }
+
+  tbody tr.active-row {
+    font-weight: bold;
+    color: #009879;
+  }
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>orders</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Customer_Status</th>
+      <th>Quantity_Ordered</th>
+      <th>Total_Retail_Price_for_This_Order</th>
+      <th>Cost_Price_Per_Unit</th>
+      <th>Customer_ID</th>
+      <th>Order_ID</th>
+      <th>Product_ID</th>
+      <th>Delivery_Date</th>
+      <th>Date_Order_was_placed</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>92.6</td>
+      <td>20.70</td>
+      <td>579</td>
+      <td>123002578</td>
+      <td>220101400106</td>
+      <td>07-Jan-17</td>
+      <td>01-Jan-17</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>92.6</td>
+      <td>20.70</td>
+      <td>579</td>
+      <td>123002578</td>
+      <td>220101400106</td>
+      <td>07-Jan-17</td>
+      <td>01-Jan-17</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>SILVER</td>
+      <td>1</td>
+      <td>21.7</td>
+      <td>9.95</td>
+      <td>7574</td>
+      <td>123004074</td>
+      <td>210201000009</td>
+      <td>05-Jan-17</td>
+      <td>01-Jan-17</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>1.7</td>
+      <td>0.80</td>
+      <td>28861</td>
+      <td>123000871</td>
+      <td>230100500068</td>
+      <td>04-Jan-17</td>
+      <td>01-Jan-17</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>47.9</td>
+      <td>24.05</td>
+      <td>43796</td>
+      <td>123002851</td>
+      <td>220100100633</td>
+      <td>06-Jan-17</td>
+      <td>01-Jan-17</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>36.9</td>
+      <td>18.30</td>
+      <td>54673</td>
+      <td>123003607</td>
+      <td>220200200043</td>
+      <td>04-Jan-17</td>
+      <td>01-Jan-17</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>24.7</td>
+      <td>11.80</td>
+      <td>74503</td>
+      <td>123000487</td>
+      <td>240200100007</td>
+      <td>04-Jan-17</td>
+      <td>01-Jan-17</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>65.5</td>
+      <td>25.60</td>
+      <td>1870</td>
+      <td>123006324</td>
+      <td>240100400009</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>44.0</td>
+      <td>9.10</td>
+      <td>2351</td>
+      <td>123005769</td>
+      <td>240600100089</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>108.7</td>
+      <td>56.30</td>
+      <td>3073</td>
+      <td>123008467</td>
+      <td>240200100215</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>53.0</td>
+      <td>26.60</td>
+      <td>5907</td>
+      <td>123008924</td>
+      <td>220200300083</td>
+      <td>06-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>SILVER</td>
+      <td>1</td>
+      <td>64.0</td>
+      <td>37.85</td>
+      <td>7309</td>
+      <td>123006398</td>
+      <td>220200200021</td>
+      <td>07-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>114.2</td>
+      <td>57.20</td>
+      <td>9216</td>
+      <td>123009762</td>
+      <td>220100100108</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>266.4</td>
+      <td>66.70</td>
+      <td>9542</td>
+      <td>123009779</td>
+      <td>220200100226</td>
+      <td>06-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>29.6</td>
+      <td>7.50</td>
+      <td>12409</td>
+      <td>123005849</td>
+      <td>240200100047</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>647.2</td>
+      <td>133.55</td>
+      <td>12601</td>
+      <td>123009881</td>
+      <td>240800100075</td>
+      <td>07-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>69.8</td>
+      <td>22.40</td>
+      <td>14679</td>
+      <td>123009905</td>
+      <td>240500100046</td>
+      <td>07-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>GOLD</td>
+      <td>3</td>
+      <td>339.0</td>
+      <td>51.45</td>
+      <td>16958</td>
+      <td>123009956</td>
+      <td>220200200045</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>12.7</td>
+      <td>5.75</td>
+      <td>17705</td>
+      <td>123008541</td>
+      <td>230100300001</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>423.2</td>
+      <td>94.25</td>
+      <td>18363</td>
+      <td>123009987</td>
+      <td>240800100080</td>
+      <td>03-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>22.8</td>
+      <td>9.75</td>
+      <td>18432</td>
+      <td>123009996</td>
+      <td>240600100165</td>
+      <td>04-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>39.2</td>
+      <td>17.85</td>
+      <td>18802</td>
+      <td>123006561</td>
+      <td>240500100011</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>95.8</td>
+      <td>20.90</td>
+      <td>19121</td>
+      <td>123006600</td>
+      <td>240800200042</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>GOLD</td>
+      <td>1</td>
+      <td>96.9</td>
+      <td>40.00</td>
+      <td>19669</td>
+      <td>123008945</td>
+      <td>230100500095</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>169.8</td>
+      <td>38.70</td>
+      <td>20504</td>
+      <td>123010084</td>
+      <td>220200300121</td>
+      <td>04-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>94.6</td>
+      <td>20.20</td>
+      <td>21446</td>
+      <td>123008948</td>
+      <td>240300300032</td>
+      <td>06-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>36.6</td>
+      <td>16.55</td>
+      <td>23400</td>
+      <td>123008591</td>
+      <td>210200600085</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>10.2</td>
+      <td>4.85</td>
+      <td>25625</td>
+      <td>123006672</td>
+      <td>240500200069</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>103.0</td>
+      <td>23.75</td>
+      <td>27779</td>
+      <td>123010227</td>
+      <td>230100100033</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>256.0</td>
+      <td>55.80</td>
+      <td>28821</td>
+      <td>123006707</td>
+      <td>240300300005</td>
+      <td>07-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Silver</td>
+      <td>8</td>
+      <td>1202.0</td>
+      <td>60.10</td>
+      <td>29095</td>
+      <td>123010254</td>
+      <td>240800200008</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>93.2</td>
+      <td>37.30</td>
+      <td>29494</td>
+      <td>123009270</td>
+      <td>240500100055</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>SILVER</td>
+      <td>1</td>
+      <td>57.9</td>
+      <td>29.05</td>
+      <td>30556</td>
+      <td>123010296</td>
+      <td>220100700027</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>GOLD</td>
+      <td>1</td>
+      <td>45.0</td>
+      <td>19.20</td>
+      <td>30802</td>
+      <td>123008037</td>
+      <td>240100300005</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>30.6</td>
+      <td>15.40</td>
+      <td>31447</td>
+      <td>123008053</td>
+      <td>210200400047</td>
+      <td>06-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>41.4</td>
+      <td>18.00</td>
+      <td>33957</td>
+      <td>123008997</td>
+      <td>220200200085</td>
+      <td>06-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>91.0</td>
+      <td>20.80</td>
+      <td>35331</td>
+      <td>123009271</td>
+      <td>230100100024</td>
+      <td>06-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>51.4</td>
+      <td>10.40</td>
+      <td>35484</td>
+      <td>123010388</td>
+      <td>240800100099</td>
+      <td>04-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>24.3</td>
+      <td>10.90</td>
+      <td>35675</td>
+      <td>123008662</td>
+      <td>220101300016</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>40.5</td>
+      <td>20.35</td>
+      <td>35983</td>
+      <td>123010401</td>
+      <td>220100100232</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>88.2</td>
+      <td>38.40</td>
+      <td>38619</td>
+      <td>123008100</td>
+      <td>220200200066</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>78.8</td>
+      <td>16.35</td>
+      <td>39859</td>
+      <td>123010492</td>
+      <td>240800200018</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>99.6</td>
+      <td>45.35</td>
+      <td>40639</td>
+      <td>123006897</td>
+      <td>220200300117</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>35.5</td>
+      <td>17.90</td>
+      <td>40959</td>
+      <td>123009289</td>
+      <td>240100300001</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>213.8</td>
+      <td>45.50</td>
+      <td>43110</td>
+      <td>123007162</td>
+      <td>230100100015</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>SILVER</td>
+      <td>2</td>
+      <td>73.4</td>
+      <td>18.45</td>
+      <td>43450</td>
+      <td>123005983</td>
+      <td>220100100218</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>196.0</td>
+      <td>86.45</td>
+      <td>43894</td>
+      <td>123010577</td>
+      <td>220100500016</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>18.4</td>
+      <td>8.30</td>
+      <td>43941</td>
+      <td>123010597</td>
+      <td>220101300012</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>47.4</td>
+      <td>20.55</td>
+      <td>45734</td>
+      <td>123009293</td>
+      <td>220101200019</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>3.0</td>
+      <td>0.70</td>
+      <td>49196</td>
+      <td>123006025</td>
+      <td>240100100379</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>91.1</td>
+      <td>37.95</td>
+      <td>50740</td>
+      <td>123010721</td>
+      <td>230100500087</td>
+      <td>12-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>37.3</td>
+      <td>18.75</td>
+      <td>51269</td>
+      <td>123008749</td>
+      <td>220100100617</td>
+      <td>07-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>100.9</td>
+      <td>50.55</td>
+      <td>52897</td>
+      <td>123010782</td>
+      <td>220100400004</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>24.8</td>
+      <td>12.35</td>
+      <td>55397</td>
+      <td>123010869</td>
+      <td>220101400385</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>33.4</td>
+      <td>16.80</td>
+      <td>57190</td>
+      <td>123006992</td>
+      <td>220200100126</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>55.6</td>
+      <td>23.70</td>
+      <td>58517</td>
+      <td>123010943</td>
+      <td>220100100638</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>217.5</td>
+      <td>161.20</td>
+      <td>58709</td>
+      <td>123010973</td>
+      <td>240100400057</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>PLATINUM</td>
+      <td>2</td>
+      <td>413.8</td>
+      <td>82.80</td>
+      <td>59593</td>
+      <td>123010979</td>
+      <td>240800100090</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>SILVER</td>
+      <td>1</td>
+      <td>101.1</td>
+      <td>48.10</td>
+      <td>62216</td>
+      <td>123007573</td>
+      <td>240500200141</td>
+      <td>04-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>24.3</td>
+      <td>13.00</td>
+      <td>62236</td>
+      <td>123007583</td>
+      <td>240200200070</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>16.9</td>
+      <td>8.60</td>
+      <td>63455</td>
+      <td>123011082</td>
+      <td>240700200019</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>28.0</td>
+      <td>13.40</td>
+      <td>65598</td>
+      <td>123011212</td>
+      <td>240500200140</td>
+      <td>03-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>268.8</td>
+      <td>57.05</td>
+      <td>70285</td>
+      <td>123007173</td>
+      <td>230100100059</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>24.0</td>
+      <td>3.80</td>
+      <td>71485</td>
+      <td>123006109</td>
+      <td>210201000133</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>99.3</td>
+      <td>45.20</td>
+      <td>71955</td>
+      <td>123008192</td>
+      <td>240100100591</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>179.0</td>
+      <td>89.60</td>
+      <td>72062</td>
+      <td>123009072</td>
+      <td>220200100107</td>
+      <td>03-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>42.4</td>
+      <td>21.30</td>
+      <td>72333</td>
+      <td>123007641</td>
+      <td>210200300053</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Silver</td>
+      <td>4</td>
+      <td>98.4</td>
+      <td>11.80</td>
+      <td>72617</td>
+      <td>123008196</td>
+      <td>240800200053</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>GOLD</td>
+      <td>1</td>
+      <td>38.8</td>
+      <td>18.05</td>
+      <td>73736</td>
+      <td>123008210</td>
+      <td>210200600018</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>GOLD</td>
+      <td>1</td>
+      <td>15.3</td>
+      <td>6.05</td>
+      <td>74605</td>
+      <td>123008222</td>
+      <td>240100200002</td>
+      <td>07-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>382.0</td>
+      <td>80.45</td>
+      <td>74813</td>
+      <td>123006126</td>
+      <td>230100500091</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>11.4</td>
+      <td>5.15</td>
+      <td>75510</td>
+      <td>123008247</td>
+      <td>210200900022</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>GOLD</td>
+      <td>1</td>
+      <td>55.1</td>
+      <td>27.65</td>
+      <td>75673</td>
+      <td>123007660</td>
+      <td>220100700039</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>70.0</td>
+      <td>30.45</td>
+      <td>76263</td>
+      <td>123009087</td>
+      <td>210200600122</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>40.0</td>
+      <td>9.25</td>
+      <td>76405</td>
+      <td>123009094</td>
+      <td>240800200049</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>177.2</td>
+      <td>44.40</td>
+      <td>78982</td>
+      <td>123007759</td>
+      <td>220200100090</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>66.6</td>
+      <td>14.85</td>
+      <td>83947</td>
+      <td>123006193</td>
+      <td>240100100155</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>117.2</td>
+      <td>58.55</td>
+      <td>84704</td>
+      <td>123008341</td>
+      <td>240100400087</td>
+      <td>03-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>494.4</td>
+      <td>241.00</td>
+      <td>85502</td>
+      <td>123007231</td>
+      <td>230100700008</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>SILVER</td>
+      <td>1</td>
+      <td>93.8</td>
+      <td>41.75</td>
+      <td>85636</td>
+      <td>123007867</td>
+      <td>220200300036</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>149.6</td>
+      <td>36.85</td>
+      <td>87274</td>
+      <td>123009180</td>
+      <td>220200100047</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>GOLD</td>
+      <td>2</td>
+      <td>89.4</td>
+      <td>22.45</td>
+      <td>87322</td>
+      <td>123006229</td>
+      <td>220100100265</td>
+      <td>03-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Gold</td>
+      <td>3</td>
+      <td>35.7</td>
+      <td>5.40</td>
+      <td>88346</td>
+      <td>123006250</td>
+      <td>220101400067</td>
+      <td>04-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>SILVER</td>
+      <td>2</td>
+      <td>715.2</td>
+      <td>149.05</td>
+      <td>89765</td>
+      <td>123008368</td>
+      <td>240300300057</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>226.2</td>
+      <td>58.90</td>
+      <td>92956</td>
+      <td>123009195</td>
+      <td>230100100013</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>25.8</td>
+      <td>11.05</td>
+      <td>93084</td>
+      <td>123007948</td>
+      <td>240100100572</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>122.4</td>
+      <td>61.15</td>
+      <td>94196</td>
+      <td>123009206</td>
+      <td>220100100458</td>
+      <td>02-Jan-17</td>
+      <td>02-Jan-17</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>315.6</td>
+      <td>79.00</td>
+      <td>1155</td>
+      <td>123012964</td>
+      <td>220200100099</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>326.8</td>
+      <td>74.30</td>
+      <td>1419</td>
+      <td>123015824</td>
+      <td>240800200020</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>52.2</td>
+      <td>26.20</td>
+      <td>1562</td>
+      <td>123015830</td>
+      <td>220100100530</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Gold</td>
+      <td>3</td>
+      <td>323.1</td>
+      <td>46.80</td>
+      <td>2501</td>
+      <td>123011798</td>
+      <td>220200200078</td>
+      <td>04-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Silver</td>
+      <td>6</td>
+      <td>156.6</td>
+      <td>12.45</td>
+      <td>2910</td>
+      <td>123011816</td>
+      <td>240800200051</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>100.2</td>
+      <td>45.60</td>
+      <td>5017</td>
+      <td>123015934</td>
+      <td>220200300070</td>
+      <td>05-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>268.8</td>
+      <td>57.05</td>
+      <td>5167</td>
+      <td>123015943</td>
+      <td>230100100059</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>GOLD</td>
+      <td>1</td>
+      <td>46.8</td>
+      <td>22.05</td>
+      <td>5806</td>
+      <td>123015958</td>
+      <td>240100100256</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>99.9</td>
+      <td>50.05</td>
+      <td>8028</td>
+      <td>123016014</td>
+      <td>230100200004</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>49.5</td>
+      <td>22.10</td>
+      <td>8978</td>
+      <td>123011962</td>
+      <td>220101400181</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>22.9</td>
+      <td>9.10</td>
+      <td>9305</td>
+      <td>123013798</td>
+      <td>240100300004</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>220.0</td>
+      <td>135.00</td>
+      <td>9785</td>
+      <td>123011967</td>
+      <td>230100700002</td>
+      <td>03-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Silver</td>
+      <td>3</td>
+      <td>146.1</td>
+      <td>22.10</td>
+      <td>9867</td>
+      <td>123011989</td>
+      <td>240300200034</td>
+      <td>05-Jan-17</td>
+      <td>03-Jan-17</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Customer_Status</th>
+      <th>order_quantity</th>
+      <th>total_order_price</th>
+      <th>unit_cost_price</th>
+      <th>Customer_ID</th>
+      <th>Order_ID</th>
+      <th>Product_ID</th>
+      <th>delivery_date</th>
+      <th>order_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>92.6</td>
+      <td>20.70</td>
+      <td>579</td>
+      <td>123002578</td>
+      <td>220101400106</td>
+      <td>0017-01-07</td>
+      <td>0017-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>21.7</td>
+      <td>9.95</td>
+      <td>7574</td>
+      <td>123004074</td>
+      <td>210201000009</td>
+      <td>0017-01-05</td>
+      <td>0017-01-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>1.7</td>
+      <td>0.80</td>
+      <td>28861</td>
+      <td>123000871</td>
+      <td>230100500068</td>
+      <td>0017-01-04</td>
+      <td>0017-01-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>47.9</td>
+      <td>24.05</td>
+      <td>43796</td>
+      <td>123002851</td>
+      <td>220100100633</td>
+      <td>0017-01-06</td>
+      <td>0017-01-01</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>36.9</td>
+      <td>18.30</td>
+      <td>54673</td>
+      <td>123003607</td>
+      <td>220200200043</td>
+      <td>0017-01-04</td>
+      <td>0017-01-01</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>65.5</td>
+      <td>25.60</td>
+      <td>1870</td>
+      <td>123006324</td>
+      <td>240100400009</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>44.0</td>
+      <td>9.10</td>
+      <td>2351</td>
+      <td>123005769</td>
+      <td>240600100089</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>108.7</td>
+      <td>56.30</td>
+      <td>3073</td>
+      <td>123008467</td>
+      <td>240200100215</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>53.0</td>
+      <td>26.60</td>
+      <td>5907</td>
+      <td>123008924</td>
+      <td>220200300083</td>
+      <td>0017-01-06</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>64.0</td>
+      <td>37.85</td>
+      <td>7309</td>
+      <td>123006398</td>
+      <td>220200200021</td>
+      <td>0017-01-07</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>114.2</td>
+      <td>57.20</td>
+      <td>9216</td>
+      <td>123009762</td>
+      <td>220100100108</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>266.4</td>
+      <td>66.70</td>
+      <td>9542</td>
+      <td>123009779</td>
+      <td>220200100226</td>
+      <td>0017-01-06</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>29.6</td>
+      <td>7.50</td>
+      <td>12409</td>
+      <td>123005849</td>
+      <td>240200100047</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>69.8</td>
+      <td>22.40</td>
+      <td>14679</td>
+      <td>123009905</td>
+      <td>240500100046</td>
+      <td>0017-01-07</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>22.8</td>
+      <td>9.75</td>
+      <td>18432</td>
+      <td>123009996</td>
+      <td>240600100165</td>
+      <td>0017-01-04</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>95.8</td>
+      <td>20.90</td>
+      <td>19121</td>
+      <td>123006600</td>
+      <td>240800200042</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>96.9</td>
+      <td>40.00</td>
+      <td>19669</td>
+      <td>123008945</td>
+      <td>230100500095</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>169.8</td>
+      <td>38.70</td>
+      <td>20504</td>
+      <td>123010084</td>
+      <td>220200300121</td>
+      <td>0017-01-04</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>57.9</td>
+      <td>29.05</td>
+      <td>30556</td>
+      <td>123010296</td>
+      <td>220100700027</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>30.6</td>
+      <td>15.40</td>
+      <td>31447</td>
+      <td>123008053</td>
+      <td>210200400047</td>
+      <td>0017-01-06</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>51.4</td>
+      <td>10.40</td>
+      <td>35484</td>
+      <td>123010388</td>
+      <td>240800100099</td>
+      <td>0017-01-04</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>99.6</td>
+      <td>45.35</td>
+      <td>40639</td>
+      <td>123006897</td>
+      <td>220200300117</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>196.0</td>
+      <td>86.45</td>
+      <td>43894</td>
+      <td>123010577</td>
+      <td>220100500016</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>217.5</td>
+      <td>161.20</td>
+      <td>58709</td>
+      <td>123010973</td>
+      <td>240100400057</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>101.1</td>
+      <td>48.10</td>
+      <td>62216</td>
+      <td>123007573</td>
+      <td>240500200141</td>
+      <td>0017-01-04</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>38.8</td>
+      <td>18.05</td>
+      <td>73736</td>
+      <td>123008210</td>
+      <td>210200600018</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>226.2</td>
+      <td>58.90</td>
+      <td>92956</td>
+      <td>123009195</td>
+      <td>230100100013</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>315.6</td>
+      <td>79.00</td>
+      <td>1155</td>
+      <td>123012964</td>
+      <td>220200100099</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>57.3</td>
+      <td>28.75</td>
+      <td>23706</td>
+      <td>123014578</td>
+      <td>220200100139</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>71.0</td>
+      <td>17.25</td>
+      <td>37670</td>
+      <td>123011389</td>
+      <td>230100500096</td>
+      <td>0017-01-05</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>94.3</td>
+      <td>47.25</td>
+      <td>43532</td>
+      <td>123013203</td>
+      <td>220200100104</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Platinum</td>
+      <td>1</td>
+      <td>13.2</td>
+      <td>5.45</td>
+      <td>50115</td>
+      <td>123014004</td>
+      <td>240100100191</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>77.1</td>
+      <td>32.85</td>
+      <td>50121</td>
+      <td>123014008</td>
+      <td>240100100649</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>85.4</td>
+      <td>40.70</td>
+      <td>59179</td>
+      <td>123012715</td>
+      <td>220100800052</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>19.7</td>
+      <td>9.95</td>
+      <td>15509</td>
+      <td>123023851</td>
+      <td>210200300103</td>
+      <td>0017-01-05</td>
+      <td>0017-01-05</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>12.7</td>
+      <td>5.75</td>
+      <td>17705</td>
+      <td>123008541</td>
+      <td>230100300001</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>423.2</td>
+      <td>94.25</td>
+      <td>18363</td>
+      <td>123009987</td>
+      <td>240800100080</td>
+      <td>0017-01-03</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>24.3</td>
+      <td>10.90</td>
+      <td>35675</td>
+      <td>123008662</td>
+      <td>220101300016</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>88.2</td>
+      <td>38.40</td>
+      <td>38619</td>
+      <td>123008100</td>
+      <td>220200200066</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>18.4</td>
+      <td>8.30</td>
+      <td>43941</td>
+      <td>123010597</td>
+      <td>220101300012</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>47.4</td>
+      <td>20.55</td>
+      <td>45734</td>
+      <td>123009293</td>
+      <td>220101200019</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>37.3</td>
+      <td>18.75</td>
+      <td>51269</td>
+      <td>123008749</td>
+      <td>220100100617</td>
+      <td>0017-01-07</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>24.3</td>
+      <td>13.00</td>
+      <td>62236</td>
+      <td>123007583</td>
+      <td>240200200070</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>179.0</td>
+      <td>89.60</td>
+      <td>72062</td>
+      <td>123009072</td>
+      <td>220200100107</td>
+      <td>0017-01-03</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>42.4</td>
+      <td>21.30</td>
+      <td>72333</td>
+      <td>123007641</td>
+      <td>210200300053</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>15.3</td>
+      <td>6.05</td>
+      <td>74605</td>
+      <td>123008222</td>
+      <td>240100200002</td>
+      <td>0017-01-07</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>382.0</td>
+      <td>80.45</td>
+      <td>74813</td>
+      <td>123006126</td>
+      <td>230100500091</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>494.4</td>
+      <td>241.00</td>
+      <td>85502</td>
+      <td>123007231</td>
+      <td>230100700008</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>93.8</td>
+      <td>41.75</td>
+      <td>85636</td>
+      <td>123007867</td>
+      <td>220200300036</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>25.8</td>
+      <td>11.05</td>
+      <td>93084</td>
+      <td>123007948</td>
+      <td>240100100572</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>122.4</td>
+      <td>61.15</td>
+      <td>94196</td>
+      <td>123009206</td>
+      <td>220100100458</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Gold</td>
+      <td>3</td>
+      <td>323.1</td>
+      <td>46.80</td>
+      <td>2501</td>
+      <td>123011798</td>
+      <td>220200200078</td>
+      <td>0017-01-04</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>46.8</td>
+      <td>22.05</td>
+      <td>5806</td>
+      <td>123015958</td>
+      <td>240100100256</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>28.2</td>
+      <td>12.60</td>
+      <td>10705</td>
+      <td>123016083</td>
+      <td>210201000031</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>22.6</td>
+      <td>4.55</td>
+      <td>30160</td>
+      <td>123016715</td>
+      <td>220100300020</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>17.8</td>
+      <td>4.15</td>
+      <td>34354</td>
+      <td>123013117</td>
+      <td>240100100382</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>16.0</td>
+      <td>8.10</td>
+      <td>37453</td>
+      <td>123016897</td>
+      <td>220101400304</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>56.4</td>
+      <td>25.00</td>
+      <td>57585</td>
+      <td>123014818</td>
+      <td>210200100008</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>101.3</td>
+      <td>50.75</td>
+      <td>60839</td>
+      <td>123017575</td>
+      <td>220100100197</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>160.7</td>
+      <td>80.45</td>
+      <td>60047</td>
+      <td>123020962</td>
+      <td>220200100082</td>
+      <td>0017-01-04</td>
+      <td>0017-01-04</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>69.5</td>
+      <td>34.70</td>
+      <td>20641</td>
+      <td>123014556</td>
+      <td>220101400422</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>115.6</td>
+      <td>29.00</td>
+      <td>92990</td>
+      <td>123011724</td>
+      <td>220100100216</td>
+      <td>0017-01-07</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>44.0</td>
+      <td>19.15</td>
+      <td>93318</td>
+      <td>123013747</td>
+      <td>240600100109</td>
+      <td>0017-01-06</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>24.7</td>
+      <td>11.80</td>
+      <td>74503</td>
+      <td>123000487</td>
+      <td>240200100007</td>
+      <td>0017-01-04</td>
+      <td>0017-01-01</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>647.2</td>
+      <td>133.55</td>
+      <td>12601</td>
+      <td>123009881</td>
+      <td>240800100075</td>
+      <td>0017-01-07</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Gold</td>
+      <td>3</td>
+      <td>339.0</td>
+      <td>51.45</td>
+      <td>16958</td>
+      <td>123009956</td>
+      <td>220200200045</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>39.2</td>
+      <td>17.85</td>
+      <td>18802</td>
+      <td>123006561</td>
+      <td>240500100011</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>36.6</td>
+      <td>16.55</td>
+      <td>23400</td>
+      <td>123008591</td>
+      <td>210200600085</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>10.2</td>
+      <td>4.85</td>
+      <td>25625</td>
+      <td>123006672</td>
+      <td>240500200069</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>103.0</td>
+      <td>23.75</td>
+      <td>27779</td>
+      <td>123010227</td>
+      <td>230100100033</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>41.4</td>
+      <td>18.00</td>
+      <td>33957</td>
+      <td>123008997</td>
+      <td>220200200085</td>
+      <td>0017-01-06</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>91.0</td>
+      <td>20.80</td>
+      <td>35331</td>
+      <td>123009271</td>
+      <td>230100100024</td>
+      <td>0017-01-06</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>35.5</td>
+      <td>17.90</td>
+      <td>40959</td>
+      <td>123009289</td>
+      <td>240100300001</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Silver</td>
+      <td>2</td>
+      <td>73.4</td>
+      <td>18.45</td>
+      <td>43450</td>
+      <td>123005983</td>
+      <td>220100100218</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>91.1</td>
+      <td>37.95</td>
+      <td>50740</td>
+      <td>123010721</td>
+      <td>230100500087</td>
+      <td>0017-01-12</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>33.4</td>
+      <td>16.80</td>
+      <td>57190</td>
+      <td>123006992</td>
+      <td>220200100126</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>28.0</td>
+      <td>13.40</td>
+      <td>65598</td>
+      <td>123011212</td>
+      <td>240500200140</td>
+      <td>0017-01-03</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>24.0</td>
+      <td>3.80</td>
+      <td>71485</td>
+      <td>123006109</td>
+      <td>210201000133</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>149.6</td>
+      <td>36.85</td>
+      <td>87274</td>
+      <td>123009180</td>
+      <td>220200100047</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>34.9</td>
+      <td>17.55</td>
+      <td>41857</td>
+      <td>123014690</td>
+      <td>220200100160</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>18.6</td>
+      <td>7.50</td>
+      <td>1642</td>
+      <td>123018141</td>
+      <td>240600100028</td>
+      <td>0017-01-04</td>
+      <td>0017-01-04</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Gold</td>
+      <td>4</td>
+      <td>474.4</td>
+      <td>59.40</td>
+      <td>26213</td>
+      <td>123017796</td>
+      <td>230100600026</td>
+      <td>0017-01-04</td>
+      <td>0017-01-04</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>38.6</td>
+      <td>19.40</td>
+      <td>40813</td>
+      <td>123022013</td>
+      <td>220100100563</td>
+      <td>0017-01-05</td>
+      <td>0017-01-05</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Silver</td>
+      <td>8</td>
+      <td>1202.0</td>
+      <td>60.10</td>
+      <td>29095</td>
+      <td>123010254</td>
+      <td>240800200008</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>40.5</td>
+      <td>20.35</td>
+      <td>35983</td>
+      <td>123010401</td>
+      <td>220100100232</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>78.8</td>
+      <td>16.35</td>
+      <td>39859</td>
+      <td>123010492</td>
+      <td>240800200018</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>3.0</td>
+      <td>0.70</td>
+      <td>49196</td>
+      <td>123006025</td>
+      <td>240100100379</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Silver</td>
+      <td>4</td>
+      <td>98.4</td>
+      <td>11.80</td>
+      <td>72617</td>
+      <td>123008196</td>
+      <td>240800200053</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>11.4</td>
+      <td>5.15</td>
+      <td>75510</td>
+      <td>123008247</td>
+      <td>210200900022</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>55.1</td>
+      <td>27.65</td>
+      <td>75673</td>
+      <td>123007660</td>
+      <td>220100700039</td>
+      <td>0017-01-02</td>
+      <td>0017-01-02</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Silver</td>
+      <td>1</td>
+      <td>100.2</td>
+      <td>45.60</td>
+      <td>5017</td>
+      <td>123015934</td>
+      <td>220200300070</td>
+      <td>0017-01-05</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>268.8</td>
+      <td>57.05</td>
+      <td>5167</td>
+      <td>123015943</td>
+      <td>230100100059</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>99.9</td>
+      <td>50.05</td>
+      <td>8028</td>
+      <td>123016014</td>
+      <td>230100200004</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>49.5</td>
+      <td>22.10</td>
+      <td>8978</td>
+      <td>123011962</td>
+      <td>220101400181</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>220.0</td>
+      <td>135.00</td>
+      <td>9785</td>
+      <td>123011967</td>
+      <td>230100700002</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Silver</td>
+      <td>3</td>
+      <td>146.1</td>
+      <td>22.10</td>
+      <td>9867</td>
+      <td>123011989</td>
+      <td>240300200034</td>
+      <td>0017-01-05</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>34.8</td>
+      <td>14.55</td>
+      <td>13162</td>
+      <td>123015460</td>
+      <td>230100300023</td>
+      <td>0017-01-05</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Gold</td>
+      <td>1</td>
+      <td>35.2</td>
+      <td>17.70</td>
+      <td>21537</td>
+      <td>123012105</td>
+      <td>220100100356</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Silver</td>
+      <td>4</td>
+      <td>97.2</td>
+      <td>11.65</td>
+      <td>26667</td>
+      <td>123012193</td>
+      <td>240800200052</td>
+      <td>0017-01-04</td>
+      <td>0017-01-03</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Gold</td>
+      <td>2</td>
+      <td>89.8</td>
+      <td>22.55</td>
+      <td>27982</td>
+      <td>123016657</td>
+      <td>220200100150</td>
+      <td>0017-01-03</td>
+      <td>0017-01-03</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">Customer_Status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Silver'>Silver</option><option value='Gold'>Gold</option><option value='Platinum'>Platinum</option></select></span><br><br><div id="bar_viz_Customer_Status"></div><b>📃 Summary:</b> Status level of the customer (e.g. Silver, Gold)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_quantity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_order_quantity"></div><b>📃 Summary:</b> Number of units ordered for the product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_order_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_total_order_price"></div><b>📃 Summary:</b> Total retail price for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unit_cost_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_unit_cost_price"></div><b>📃 Summary:</b> Cost price per unit of the product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">Customer_ID</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_Customer_ID"></div><b>📃 Summary:</b> Unique identifier for the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">Order_ID</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_Order_ID"></div><b>📃 Summary:</b> Unique identifier for the order<br><b>🦄 Unique:</b> This column represents a unique identifier for each order. For this table, each row corresponds to a specific order. Order_ID is unique across all rows as each order has its own distinct identifier.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">Product_ID</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_Product_ID"></div><b>📃 Summary:</b> Unique identifier for the product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">delivery_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_delivery_date"></div><b>📃 Summary:</b> Date when the order was delivered<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_order_date"></div><b>📃 Summary:</b> Date when the order was placed<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table contains order information for customers. It includes customer ID, status, order and delivery dates, order ID, product ID, quantity, total retail price, and unit cost price.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>5</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Customer_ID</td>
+      <td>Unique identifier for the customer</td>
+      <td>Customer_ID</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Customer_Status</td>
+      <td>Status level of the customer (e.g. Silver, Gold)</td>
+      <td>Customer_Status</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Date_Order_was_placed</td>
+      <td>Date when the order was placed</td>
+      <td>order_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Delivery_Date</td>
+      <td>Date when the order was delivered</td>
+      <td>delivery_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Order_ID</td>
+      <td>Unique identifier for the order</td>
+      <td>Order_ID</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Product_ID</td>
+      <td>Unique identifier for the product</td>
+      <td>Product_ID</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Quantity_Ordered</td>
+      <td>Number of units ordered for the product</td>
+      <td>order_quantity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Total_Retail_Price_for_This_Order</td>
+      <td>Total retail price for the order</td>
+      <td>total_order_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Cost_Price_Per_Unit</td>
+      <td>Cost price per unit of the product</td>
+      <td>unit_cost_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>👯‍♀️ 3. Duplicate</h2><br>
+                🔍 <b>1</b> duplicates have been detected<br>
+                ✔️ Duplicates have been removed<br><br><br><h2>🚧 4. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>Customer_Status</b>: 'Gold' and 'GOLD', 'Silver' and 'SILVER' are unusual because of inconsistent capitalization.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>GOLD</td>
+      <td>Gold</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>SILVER</td>
+      <td>Silver</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>PLATINUM</td>
+      <td>Platinum</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>5</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Customer_ID</td>
+      <td>CAST("Customer_ID" AS VARCHAR)</td>
+      <td>To transform the data type of the 'Customer_ID' column from 'INT' to 'VARCHAR' in Snowflake, we need to use the CAST function. The CAST function allows us to explicitly convert a value from one data type to another. In this case, we will cast the 'Customer_ID' column to the 'VARCHAR' data type.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Order_ID</td>
+      <td>CAST("Order_ID" AS VARCHAR)</td>
+      <td>To transform the data type of the 'Order_ID' column from 'INT' to 'VARCHAR' in Snowflake, we need to use the CAST function. The CAST function allows us to convert a value from one data type to another compatible data type. In this case, we will cast the 'Order_ID' column to the 'VARCHAR' data type.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Product_ID</td>
+      <td>CAST("Product_ID" AS VARCHAR)</td>
+      <td>To transform the data type of the 'Product_ID' column from 'INT' to 'VARCHAR' in Snowflake, we can use the CAST function.  The CAST function allows us to convert a value from one data type to another.  In this case, we will cast the 'Product_ID' column to the 'VARCHAR' data type.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>delivery_date</td>
+      <td>CAST("delivery_date" AS DATE)</td>
+      <td>To transform the 'delivery_date' column from VARCHAR to DATE, we can simply use the CAST function in Snowflake. The existing format of the dates is already in a standard format recognized by Snowflake ('DD-Mon-YY'), so no additional formatting is needed. By casting the column as DATE, Snowflake will automatically parse the string values into proper date values.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>order_date</td>
+      <td>CAST("order_date" AS DATE)</td>
+      <td>To transform the 'order_date' column from VARCHAR to DATE data type in Snowflake, we can use a simple CAST function. The 'order_date' values are already in a format that Snowflake recognizes as a valid date format ('DD-Mon-YY'), so we don't need to use the TO_DATE function with a specific format string. By directly casting the 'order_date' column to the DATE data type, Snowflake will automatically parse the string values and convert them to proper DATE values.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Silver', 'value': 50.79125847776941}, {'label': 'Gold', 'value': 47.07987942727958}, {'label': 'Platinum', 'value': 2.1288620949510175}];
+    drawBarChart("bar_viz_Customer_Status", data);
+data = [{'x': 1.175, 'y': 4051}, {'x': 1.525, 'y': 0}, {'x': 1.875, 'y': 995}, {'x': 2.2249999999999996, 'y': 0}, {'x': 2.575, 'y': 0}, {'x': 2.925, 'y': 129}, {'x': 3.2749999999999995, 'y': 0}, {'x': 3.625, 'y': 0}, {'x': 3.975, 'y': 81}, {'x': 4.325, 'y': 0}, {'x': 4.675, 'y': 0}, {'x': 5.0249999999999995, 'y': 35}, {'x': 5.375, 'y': 0}, {'x': 5.725, 'y': 0}, {'x': 6.074999999999999, 'y': 11}, {'x': 6.425, 'y': 0}, {'x': 6.7749999999999995, 'y': 0}, {'x': 7.125, 'y': 5}, {'x': 7.475, 'y': 0}, {'x': 7.824999999999999, 'y': 1}];
+    binWidth = 0.35;
+    drawHistogram("hist_viz_order_quantity", data, binWidth);
+data = [{'label': '32.2', 'value': 0.5086661642803316}, {'label': '22.6', 'value': 0.45214770158251694}, {'label': '157.8', 'value': 0.4333082140165787}, {'label': '35.5', 'value': 0.4333082140165787}, {'label': '15.9', 'value': 0.37678975131876413}, {'label': 'Other values', 'value': 97.79577995478523}];
+    drawBarChart("bar_viz_total_order_price", data);
+data = [{'label': '22.8', 'value': 0.5651846269781462}, {'label': '13.35', 'value': 0.5275056518462697}, {'label': '9.95', 'value': 0.5086661642803316}, {'label': '79', 'value': 0.5086661642803316}, {'label': '12.2', 'value': 0.4709871891484552}, {'label': 'Other values', 'value': 97.41899020346648}];
+    drawBarChart("bar_viz_unit_cost_price", data);
+data = [{'label': '56361', 'value': 0.07535795026375283}, {'label': '83212', 'value': 0.07535795026375283}, {'label': '36387', 'value': 0.07535795026375283}, {'label': '79454', 'value': 0.05651846269781462}, {'label': '65728', 'value': 0.05651846269781462}, {'label': 'Other values', 'value': 99.66088922381311}];
+    drawBarChart("bar_viz_Customer_ID", data);
+data = [{'label': '123034132', 'value': 0.018839487565938208}, {'label': '123036859', 'value': 0.018839487565938208}, {'label': '123038360', 'value': 0.018839487565938208}, {'label': '123039775', 'value': 0.018839487565938208}, {'label': '123031532', 'value': 0.018839487565938208}, {'label': 'Other values', 'value': 99.90580256217031}];
+    drawBarChart("bar_viz_Order_ID", data);
+data = [{'label': '220200100099', 'value': 0.5086661642803316}, {'label': '240100200012', 'value': 0.48982667671439334}, {'label': '240100200001', 'value': 0.4333082140165787}, {'label': '230100700002', 'value': 0.37678975131876413}, {'label': '230100700011', 'value': 0.37678975131876413}, {'label': 'Other values', 'value': 97.81461944235117}];
+    drawBarChart("bar_viz_Product_ID", data);
+data = [{'label': '0017-02-02', 'value': 1.8462697814619442}, {'label': '0017-01-27', 'value': 1.8085908063300677}, {'label': '0017-01-10', 'value': 1.8085908063300677}, {'label': '0017-01-16', 'value': 1.7332328560663148}, {'label': '0017-02-21', 'value': 1.6767143933685003}, {'label': 'Other values', 'value': 91.1266013564431}];
+    drawBarChart("bar_viz_delivery_date", data);
+data = [{'label': '0017-01-10', 'value': 2.2042200452147704}, {'label': '0017-02-21', 'value': 1.9216277317256971}, {'label': '0017-02-02', 'value': 1.8085908063300677}, {'label': '0017-01-03', 'value': 1.7897513187641296}, {'label': '0017-01-15', 'value': 1.7897513187641296}, {'label': 'Other values', 'value': 90.4860587792012}];
+    drawBarChart("bar_viz_order_date", data);
+
+
+</script>
+</body>
+</html>

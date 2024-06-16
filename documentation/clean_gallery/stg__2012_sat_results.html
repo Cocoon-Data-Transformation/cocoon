@@ -1,0 +1,2676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9em;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  th, td {
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid #dddddd;
+    border-right: 1px solid #dddddd;
+  }
+
+  th:last-child, td:last-child {
+    border-right: none; /* Removes the border from the last cell of each row */
+  }
+
+  thead tr {
+    background-color: #009879; /* Changed color for header */
+    color: #ffffff; /* Changed text color for better contrast */
+    text-align: left;
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background-color: #bebebe; /* Ensure the sticky header has the same background color */
+  }
+
+  tbody tr {
+    background-color: #f9f9f9; /* Lighter color for content rows */
+    font-size: 14px
+  }
+
+  tbody tr:last-of-type {
+    border-bottom: 2px solid #009879;
+  }
+
+  tbody tr.active-row {
+    font-weight: bold;
+    color: #009879;
+  }
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>_2012_sat_results</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>DBN</th>
+      <th>SCHOOL_NAME</th>
+      <th>Num_of_SAT_Test_Takers</th>
+      <th>SAT_Critical_Reading_Avg__Score</th>
+      <th>SAT_Math_Avg__Score</th>
+      <th>SAT_Writing_Avg__Score</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>01M292</td>
+      <td>HENRY STREET SCHOOL FOR INTERNATIONAL STUDIES</td>
+      <td>29</td>
+      <td>355</td>
+      <td>404</td>
+      <td>363</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>01M448</td>
+      <td>UNIVERSITY NEIGHBORHOOD HIGH SCHOOL</td>
+      <td>91</td>
+      <td>383</td>
+      <td>423</td>
+      <td>366</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>01M450</td>
+      <td>EAST SIDE COMMUNITY SCHOOL</td>
+      <td>70</td>
+      <td>377</td>
+      <td>402</td>
+      <td>370</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>01M458</td>
+      <td>FORSYTH SATELLITE ACADEMY</td>
+      <td>7</td>
+      <td>414</td>
+      <td>401</td>
+      <td>359</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>01M509</td>
+      <td>MARTA VALLE HIGH SCHOOL</td>
+      <td>44</td>
+      <td>390</td>
+      <td>433</td>
+      <td>384</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>01M515</td>
+      <td>LOWER EAST SIDE PREPARATORY HIGH SCHOOL</td>
+      <td>112</td>
+      <td>332</td>
+      <td>557</td>
+      <td>316</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>01M539</td>
+      <td>NEW EXPLORATIONS INTO SCIENCE, TECHNOLOGY AND MATH HIGH SCHOOL</td>
+      <td>159</td>
+      <td>522</td>
+      <td>574</td>
+      <td>525</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>01M650</td>
+      <td>CASCADES HIGH SCHOOL</td>
+      <td>18</td>
+      <td>417</td>
+      <td>418</td>
+      <td>411</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>01M696</td>
+      <td>BARD HIGH SCHOOL EARLY COLLEGE</td>
+      <td>130</td>
+      <td>624</td>
+      <td>604</td>
+      <td>628</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>02M047</td>
+      <td>47 THE AMERICAN SIGN LANGUAGE AND ENGLISH SECONDARY SCHOOL</td>
+      <td>16</td>
+      <td>395</td>
+      <td>400</td>
+      <td>387</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>02M288</td>
+      <td>FOOD AND FINANCE HIGH SCHOOL</td>
+      <td>62</td>
+      <td>409</td>
+      <td>393</td>
+      <td>392</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>02M294</td>
+      <td>ESSEX STREET ACADEMY</td>
+      <td>53</td>
+      <td>394</td>
+      <td>384</td>
+      <td>378</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>02M296</td>
+      <td>HIGH SCHOOL OF HOSPITALITY MANAGEMENT</td>
+      <td>58</td>
+      <td>374</td>
+      <td>375</td>
+      <td>362</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>02M298</td>
+      <td>PACE HIGH SCHOOL</td>
+      <td>85</td>
+      <td>423</td>
+      <td>438</td>
+      <td>432</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>02M300</td>
+      <td>URBAN ASSEMBLY SCHOOL OF DESIGN AND CONSTRUCTION, THE</td>
+      <td>48</td>
+      <td>404</td>
+      <td>449</td>
+      <td>416</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>02M303</td>
+      <td>FACING HISTORY SCHOOL, THE</td>
+      <td>76</td>
+      <td>353</td>
+      <td>358</td>
+      <td>340</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>02M305</td>
+      <td>URBAN ASSEMBLY ACADEMY OF GOVERNMENT AND LAW, THE</td>
+      <td>50</td>
+      <td>375</td>
+      <td>388</td>
+      <td>385</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>02M308</td>
+      <td>LOWER MANHATTAN ARTS ACADEMY</td>
+      <td>40</td>
+      <td>403</td>
+      <td>392</td>
+      <td>405</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>02M313</td>
+      <td>JAMES BALDWIN SCHOOL, THE: A SCHOOL FOR EXPEDITIONARY LEARNING</td>
+      <td>69</td>
+      <td>408</td>
+      <td>390</td>
+      <td>390</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>02M316</td>
+      <td>URBAN ASSEMBLY SCHOOL OF BUSINESS FOR YOUNG WOMEN, THE</td>
+      <td>42</td>
+      <td>373</td>
+      <td>370</td>
+      <td>384</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>02M374</td>
+      <td>GRAMERCY ARTS HIGH SCHOOL</td>
+      <td>60</td>
+      <td>391</td>
+      <td>391</td>
+      <td>394</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>02M376</td>
+      <td>NYC ISCHOOL</td>
+      <td>92</td>
+      <td>473</td>
+      <td>483</td>
+      <td>479</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>02M392</td>
+      <td>MANHATTAN BUSINESS ACADEMY</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>02M393</td>
+      <td>BUSINESS OF SPORTS SCHOOL</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>02M394</td>
+      <td>EMMA LAZARUS HIGH SCHOOL</td>
+      <td>79</td>
+      <td>319</td>
+      <td>512</td>
+      <td>357</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>02M399</td>
+      <td>THE HIGH SCHOOL FOR LANGUAGE AND DIPLOMACY</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>02M400</td>
+      <td>HIGH SCHOOL FOR ENVIRONMENTAL STUDIES</td>
+      <td>263</td>
+      <td>465</td>
+      <td>493</td>
+      <td>461</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>02M407</td>
+      <td>INSTITUTE FOR COLLABORATIVE EDUCATION</td>
+      <td>54</td>
+      <td>492</td>
+      <td>465</td>
+      <td>467</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>02M408</td>
+      <td>PROFESSIONAL PERFORMING ARTS HIGH SCHOOL</td>
+      <td>94</td>
+      <td>509</td>
+      <td>490</td>
+      <td>523</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>02M411</td>
+      <td>BARUCH COLLEGE CAMPUS HIGH SCHOOL</td>
+      <td>104</td>
+      <td>496</td>
+      <td>563</td>
+      <td>518</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>02M412</td>
+      <td>N.Y.C. LAB SCHOOL FOR COLLABORATIVE STUDIES</td>
+      <td>114</td>
+      <td>537</td>
+      <td>590</td>
+      <td>550</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>02M413</td>
+      <td>SCHOOL OF THE FUTURE HIGH SCHOOL</td>
+      <td>66</td>
+      <td>517</td>
+      <td>533</td>
+      <td>515</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>02M414</td>
+      <td>N.Y.C. MUSEUM SCHOOL</td>
+      <td>103</td>
+      <td>468</td>
+      <td>492</td>
+      <td>459</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>02M416</td>
+      <td>ELEANOR ROOSEVELT HIGH SCHOOL</td>
+      <td>127</td>
+      <td>572</td>
+      <td>594</td>
+      <td>592</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>02M418</td>
+      <td>MILLENNIUM HIGH SCHOOL</td>
+      <td>144</td>
+      <td>528</td>
+      <td>553</td>
+      <td>533</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>02M419</td>
+      <td>LANDMARK HIGH SCHOOL</td>
+      <td>62</td>
+      <td>390</td>
+      <td>399</td>
+      <td>381</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>02M420</td>
+      <td>HIGH SCHOOL FOR HEALTH PROFESSIONS AND HUMAN SERVICES</td>
+      <td>336</td>
+      <td>429</td>
+      <td>449</td>
+      <td>428</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>02M425</td>
+      <td>LEADERSHIP AND PUBLIC SERVICE HIGH SCHOOL</td>
+      <td>84</td>
+      <td>416</td>
+      <td>426</td>
+      <td>391</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>02M427</td>
+      <td>MANHATTAN ACADEMY FOR ARTS &amp; LANGUAGE</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>02M429</td>
+      <td>LEGACY SCHOOL FOR INTEGRATED STUDIES</td>
+      <td>29</td>
+      <td>356</td>
+      <td>357</td>
+      <td>349</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>02M437</td>
+      <td>HUDSON HIGH SCHOOL OF LEARNING TECHNOLOGIES</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>02M438</td>
+      <td>INTERNATIONAL HIGH SCHOOL AT UNION SQUARE</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>02M439</td>
+      <td>MANHATTAN VILLAGE ACADEMY</td>
+      <td>95</td>
+      <td>441</td>
+      <td>473</td>
+      <td>458</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>02M440</td>
+      <td>BAYARD RUSTIN EDUCATIONAL COMPLEX</td>
+      <td>59</td>
+      <td>378</td>
+      <td>365</td>
+      <td>368</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>02M449</td>
+      <td>VANGUARD HIGH SCHOOL</td>
+      <td>72</td>
+      <td>395</td>
+      <td>416</td>
+      <td>388</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>02M459</td>
+      <td>MANHATTAN INTERNATIONAL HIGH SCHOOL</td>
+      <td>49</td>
+      <td>376</td>
+      <td>460</td>
+      <td>391</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>02M460</td>
+      <td>WASHINGTON IRVING HIGH SCHOOL</td>
+      <td>151</td>
+      <td>373</td>
+      <td>387</td>
+      <td>360</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>02M473</td>
+      <td>WASHINGTON IRVING YABC</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>02M475</td>
+      <td>STUYVESANT HIGH SCHOOL</td>
+      <td>832</td>
+      <td>679</td>
+      <td>735</td>
+      <td>682</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>02M489</td>
+      <td>HIGH SCHOOL OF ECONOMICS AND FINANCE</td>
+      <td>167</td>
+      <td>443</td>
+      <td>489</td>
+      <td>442</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>02M500</td>
+      <td>UNITY CENTER FOR URBAN TECHNOLOGIES</td>
+      <td>25</td>
+      <td>370</td>
+      <td>349</td>
+      <td>351</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>02M519</td>
+      <td>TALENT UNLIMITED HIGH SCHOOL</td>
+      <td>81</td>
+      <td>469</td>
+      <td>472</td>
+      <td>475</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>02M520</td>
+      <td>MURRY BERGTRAUM HIGH SCHOOL FOR BUSINESS CAREERS</td>
+      <td>264</td>
+      <td>407</td>
+      <td>440</td>
+      <td>393</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>02M529</td>
+      <td>JACQUELINE KENNEDY ONASSIS HIGH SCHOOL</td>
+      <td>131</td>
+      <td>414</td>
+      <td>425</td>
+      <td>400</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>02M531</td>
+      <td>REPERTORY COMPANY HIGH SCHOOL FOR THEATRE ARTS</td>
+      <td>42</td>
+      <td>429</td>
+      <td>404</td>
+      <td>420</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>02M542</td>
+      <td>MANHATTAN BRIDGES HIGH SCHOOL</td>
+      <td>66</td>
+      <td>336</td>
+      <td>378</td>
+      <td>344</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>02M543</td>
+      <td>NEW DESIGN HIGH SCHOOL</td>
+      <td>73</td>
+      <td>391</td>
+      <td>395</td>
+      <td>382</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>02M544</td>
+      <td>INDEPENDENCE HIGH SCHOOL</td>
+      <td>14</td>
+      <td>389</td>
+      <td>371</td>
+      <td>335</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>02M545</td>
+      <td>HIGH SCHOOL FOR DUAL LANGUAGE AND ASIAN STUDIES</td>
+      <td>78</td>
+      <td>412</td>
+      <td>581</td>
+      <td>431</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>02M550</td>
+      <td>LIBERTY HIGH SCHOOL ACADEMY FOR NEWCOMERS</td>
+      <td>26</td>
+      <td>368</td>
+      <td>436</td>
+      <td>352</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>02M551</td>
+      <td>THE URBAN ASSEMBLY NEW YORK HARBOR SCHOOL</td>
+      <td>77</td>
+      <td>405</td>
+      <td>423</td>
+      <td>384</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>02M560</td>
+      <td>HIGH SCHOOL M560 s CITY AS SCHOOL</td>
+      <td>56</td>
+      <td>498</td>
+      <td>440</td>
+      <td>477</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>02M565</td>
+      <td>URBAN ACADEMY LABORATORY HIGH SCHOOL</td>
+      <td>30</td>
+      <td>527</td>
+      <td>508</td>
+      <td>512</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>02M570</td>
+      <td>SATELLITE ACADEMY HIGH SCHOOL</td>
+      <td>33</td>
+      <td>350</td>
+      <td>337</td>
+      <td>345</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>02M575</td>
+      <td>MANHATTAN COMPREHENSIVE NIGHT AND DAY HIGH SCHOOL</td>
+      <td>121</td>
+      <td>345</td>
+      <td>517</td>
+      <td>343</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>02M580</td>
+      <td>RICHARD R. GREEN HIGH SCHOOL OF TEACHING</td>
+      <td>84</td>
+      <td>408</td>
+      <td>384</td>
+      <td>403</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>02M586</td>
+      <td>HARVEY MILK HIGH SCHOOL</td>
+      <td>9</td>
+      <td>458</td>
+      <td>416</td>
+      <td>429</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>02M600</td>
+      <td>THE HIGH SCHOOL OF FASHION INDUSTRIES</td>
+      <td>335</td>
+      <td>423</td>
+      <td>423</td>
+      <td>411</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>02M605</td>
+      <td>HUMANITIES PREPARATORY ACADEMY</td>
+      <td>36</td>
+      <td>426</td>
+      <td>403</td>
+      <td>426</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>02M615</td>
+      <td>CHELSEA CAREER AND TECHNICAL EDUCATION HIGH SCHOOL</td>
+      <td>83</td>
+      <td>399</td>
+      <td>418</td>
+      <td>390</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>02M620</td>
+      <td>NORMAN THOMAS HIGH SCHOOL</td>
+      <td>154</td>
+      <td>370</td>
+      <td>379</td>
+      <td>359</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>02M625</td>
+      <td>HIGH SCHOOL OF GRAPHIC COMMUNICATION ARTS</td>
+      <td>191</td>
+      <td>395</td>
+      <td>382</td>
+      <td>376</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>02M630</td>
+      <td>ART AND DESIGN HIGH SCHOOL</td>
+      <td>270</td>
+      <td>444</td>
+      <td>441</td>
+      <td>430</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>02M655</td>
+      <td>LIFE SCIENCES SECONDARY SCHOOL</td>
+      <td>61</td>
+      <td>409</td>
+      <td>424</td>
+      <td>403</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>03M283</td>
+      <td>MANHATTAN THEATRE LAB HIGH SCHOOL</td>
+      <td>27</td>
+      <td>406</td>
+      <td>379</td>
+      <td>408</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>03M299</td>
+      <td>HIGH SCHOOL FOR ARTS, IMAGINATION AND INQUIRY</td>
+      <td>49</td>
+      <td>374</td>
+      <td>384</td>
+      <td>374</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>03M307</td>
+      <td>URBAN ASSEMBLY SCHOOL FOR MEDIA STUDIES, THE</td>
+      <td>41</td>
+      <td>384</td>
+      <td>390</td>
+      <td>370</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>03M402</td>
+      <td>THE URBAN ASSEMBLY SCHOOL FOR GREEN CAREERS</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>03M403</td>
+      <td>THE GLOBAL LEARNING COLLABORATIVE</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>03M404</td>
+      <td>INNOVATION DIPLOMA PLUS</td>
+      <td>12</td>
+      <td>416</td>
+      <td>403</td>
+      <td>381</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>03M415</td>
+      <td>WADLEIGH SECONDARY SCHOOL FOR THE PERFORMING &amp; VISUAL ARTS</td>
+      <td>32</td>
+      <td>371</td>
+      <td>368</td>
+      <td>370</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>03M417</td>
+      <td>FRANK MCCOURT HIGH SCHOOL</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>03M470</td>
+      <td>LOUIS D. BRANDEIS HIGH SCHOOL</td>
+      <td>131</td>
+      <td>370</td>
+      <td>390</td>
+      <td>358</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>03M479</td>
+      <td>BEACON HIGH SCHOOL</td>
+      <td>261</td>
+      <td>577</td>
+      <td>575</td>
+      <td>592</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>03M485</td>
+      <td>FIORELLO H. LAGUARDIA HIGH SCHOOL OF MUSIC &amp; ART AND PERFORMING ARTS</td>
+      <td>531</td>
+      <td>566</td>
+      <td>564</td>
+      <td>577</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>03M492</td>
+      <td>HIGH SCHOOL FOR LAW, ADVOCACY AND COMMUNITY JUSTICE</td>
+      <td>66</td>
+      <td>396</td>
+      <td>398</td>
+      <td>402</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>03M494</td>
+      <td>HIGH SCHOOL OF ARTS AND TECHNOLOGY</td>
+      <td>75</td>
+      <td>433</td>
+      <td>433</td>
+      <td>411</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>03M505</td>
+      <td>EDWARD A. REYNOLDS WEST SIDE HIGH SCHOOL</td>
+      <td>35</td>
+      <td>401</td>
+      <td>369</td>
+      <td>351</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>03M541</td>
+      <td>MANHATTAN / HUNTER SCIENCE HIGH SCHOOL</td>
+      <td>111</td>
+      <td>473</td>
+      <td>506</td>
+      <td>467</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>03M577</td>
+      <td>YOUNG ADULT BOROUGH CENTER AT LOUIS D. BRANDEIS HS</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>03M860</td>
+      <td>FREDERICK DOUGLASS ACADEMY II SECONDARY SCHOOL</td>
+      <td>43</td>
+      <td>356</td>
+      <td>379</td>
+      <td>361</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>04M409</td>
+      <td>COALITION SCHOOL FOR SOCIAL CHANGE</td>
+      <td>48</td>
+      <td>354</td>
+      <td>357</td>
+      <td>373</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>04M435</td>
+      <td>MANHATTAN CENTER FOR SCIENCE AND MATHEMATICS</td>
+      <td>375</td>
+      <td>461</td>
+      <td>514</td>
+      <td>455</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>04M495</td>
+      <td>PARK EAST HIGH SCHOOL</td>
+      <td>51</td>
+      <td>373</td>
+      <td>379</td>
+      <td>376</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>04M555</td>
+      <td>CENTRAL PARK EAST HIGH SCHOOL</td>
+      <td>73</td>
+      <td>405</td>
+      <td>421</td>
+      <td>395</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>04M610</td>
+      <td>YOUNG WOMEN'S LEADERSHIP SCHOOL</td>
+      <td>70</td>
+      <td>432</td>
+      <td>446</td>
+      <td>448</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>04M635</td>
+      <td>ACADEMY OF ENVIRONMENTAL SCIENCE SECONDARY HIGH SCHOOL</td>
+      <td>48</td>
+      <td>369</td>
+      <td>369</td>
+      <td>357</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>04M680</td>
+      <td>HERITAGE SCHOOL, THE</td>
+      <td>31</td>
+      <td>358</td>
+      <td>351</td>
+      <td>345</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>05M285</td>
+      <td>HARLEM RENAISSANCE HIGH SCHOOL</td>
+      <td>29</td>
+      <td>357</td>
+      <td>318</td>
+      <td>333</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>05M304</td>
+      <td>MOTT HALL HIGH SCHOOL</td>
+      <td>54</td>
+      <td>413</td>
+      <td>399</td>
+      <td>398</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>school_id</th>
+      <th>SCHOOL_NAME</th>
+      <th>num_sat_takers</th>
+      <th>sat_critical_reading_avg</th>
+      <th>sat_math_avg</th>
+      <th>sat_writing_avg</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>01M292</td>
+      <td>HENRY STREET SCHOOL FOR INTERNATIONAL STUDIES</td>
+      <td>29.0</td>
+      <td>355.0</td>
+      <td>404.0</td>
+      <td>363.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>01M448</td>
+      <td>UNIVERSITY NEIGHBORHOOD HIGH SCHOOL</td>
+      <td>91.0</td>
+      <td>383.0</td>
+      <td>423.0</td>
+      <td>366.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>01M450</td>
+      <td>EAST SIDE COMMUNITY SCHOOL</td>
+      <td>70.0</td>
+      <td>377.0</td>
+      <td>402.0</td>
+      <td>370.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>01M458</td>
+      <td>FORSYTH SATELLITE ACADEMY</td>
+      <td>7.0</td>
+      <td>414.0</td>
+      <td>401.0</td>
+      <td>359.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>01M509</td>
+      <td>MARTA VALLE HIGH SCHOOL</td>
+      <td>44.0</td>
+      <td>390.0</td>
+      <td>433.0</td>
+      <td>384.0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>01M515</td>
+      <td>LOWER EAST SIDE PREPARATORY HIGH SCHOOL</td>
+      <td>112.0</td>
+      <td>332.0</td>
+      <td>557.0</td>
+      <td>316.0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>01M539</td>
+      <td>NEW EXPLORATIONS INTO SCIENCE, TECHNOLOGY AND MATH HIGH SCHOOL</td>
+      <td>159.0</td>
+      <td>522.0</td>
+      <td>574.0</td>
+      <td>525.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>01M650</td>
+      <td>CASCADES HIGH SCHOOL</td>
+      <td>18.0</td>
+      <td>417.0</td>
+      <td>418.0</td>
+      <td>411.0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>01M696</td>
+      <td>BARD HIGH SCHOOL EARLY COLLEGE</td>
+      <td>130.0</td>
+      <td>624.0</td>
+      <td>604.0</td>
+      <td>628.0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>02M047</td>
+      <td>47 THE AMERICAN SIGN LANGUAGE AND ENGLISH SECONDARY SCHOOL</td>
+      <td>16.0</td>
+      <td>395.0</td>
+      <td>400.0</td>
+      <td>387.0</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>02M288</td>
+      <td>FOOD AND FINANCE HIGH SCHOOL</td>
+      <td>62.0</td>
+      <td>409.0</td>
+      <td>393.0</td>
+      <td>392.0</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>02M294</td>
+      <td>ESSEX STREET ACADEMY</td>
+      <td>53.0</td>
+      <td>394.0</td>
+      <td>384.0</td>
+      <td>378.0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>02M296</td>
+      <td>HIGH SCHOOL OF HOSPITALITY MANAGEMENT</td>
+      <td>58.0</td>
+      <td>374.0</td>
+      <td>375.0</td>
+      <td>362.0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>02M298</td>
+      <td>PACE HIGH SCHOOL</td>
+      <td>85.0</td>
+      <td>423.0</td>
+      <td>438.0</td>
+      <td>432.0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>02M300</td>
+      <td>URBAN ASSEMBLY SCHOOL OF DESIGN AND CONSTRUCTION, THE</td>
+      <td>48.0</td>
+      <td>404.0</td>
+      <td>449.0</td>
+      <td>416.0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>02M303</td>
+      <td>FACING HISTORY SCHOOL, THE</td>
+      <td>76.0</td>
+      <td>353.0</td>
+      <td>358.0</td>
+      <td>340.0</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>02M305</td>
+      <td>URBAN ASSEMBLY ACADEMY OF GOVERNMENT AND LAW, THE</td>
+      <td>50.0</td>
+      <td>375.0</td>
+      <td>388.0</td>
+      <td>385.0</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>02M308</td>
+      <td>LOWER MANHATTAN ARTS ACADEMY</td>
+      <td>40.0</td>
+      <td>403.0</td>
+      <td>392.0</td>
+      <td>405.0</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>02M313</td>
+      <td>JAMES BALDWIN SCHOOL, THE: A SCHOOL FOR EXPEDITIONARY LEARNING</td>
+      <td>69.0</td>
+      <td>408.0</td>
+      <td>390.0</td>
+      <td>390.0</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>02M316</td>
+      <td>URBAN ASSEMBLY SCHOOL OF BUSINESS FOR YOUNG WOMEN, THE</td>
+      <td>42.0</td>
+      <td>373.0</td>
+      <td>370.0</td>
+      <td>384.0</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>02M374</td>
+      <td>GRAMERCY ARTS HIGH SCHOOL</td>
+      <td>60.0</td>
+      <td>391.0</td>
+      <td>391.0</td>
+      <td>394.0</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>02M376</td>
+      <td>NYC ISCHOOL</td>
+      <td>92.0</td>
+      <td>473.0</td>
+      <td>483.0</td>
+      <td>479.0</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>02M392</td>
+      <td>MANHATTAN BUSINESS ACADEMY</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>02M393</td>
+      <td>BUSINESS OF SPORTS SCHOOL</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>02M394</td>
+      <td>EMMA LAZARUS HIGH SCHOOL</td>
+      <td>79.0</td>
+      <td>319.0</td>
+      <td>512.0</td>
+      <td>357.0</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>02M399</td>
+      <td>THE HIGH SCHOOL FOR LANGUAGE AND DIPLOMACY</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>02M400</td>
+      <td>HIGH SCHOOL FOR ENVIRONMENTAL STUDIES</td>
+      <td>263.0</td>
+      <td>465.0</td>
+      <td>493.0</td>
+      <td>461.0</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>02M407</td>
+      <td>INSTITUTE FOR COLLABORATIVE EDUCATION</td>
+      <td>54.0</td>
+      <td>492.0</td>
+      <td>465.0</td>
+      <td>467.0</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>02M408</td>
+      <td>PROFESSIONAL PERFORMING ARTS HIGH SCHOOL</td>
+      <td>94.0</td>
+      <td>509.0</td>
+      <td>490.0</td>
+      <td>523.0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>02M411</td>
+      <td>BARUCH COLLEGE CAMPUS HIGH SCHOOL</td>
+      <td>104.0</td>
+      <td>496.0</td>
+      <td>563.0</td>
+      <td>518.0</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>02M412</td>
+      <td>N.Y.C. LAB SCHOOL FOR COLLABORATIVE STUDIES</td>
+      <td>114.0</td>
+      <td>537.0</td>
+      <td>590.0</td>
+      <td>550.0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>02M413</td>
+      <td>SCHOOL OF THE FUTURE HIGH SCHOOL</td>
+      <td>66.0</td>
+      <td>517.0</td>
+      <td>533.0</td>
+      <td>515.0</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>02M414</td>
+      <td>N.Y.C. MUSEUM SCHOOL</td>
+      <td>103.0</td>
+      <td>468.0</td>
+      <td>492.0</td>
+      <td>459.0</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>02M416</td>
+      <td>ELEANOR ROOSEVELT HIGH SCHOOL</td>
+      <td>127.0</td>
+      <td>572.0</td>
+      <td>594.0</td>
+      <td>592.0</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>02M418</td>
+      <td>MILLENNIUM HIGH SCHOOL</td>
+      <td>144.0</td>
+      <td>528.0</td>
+      <td>553.0</td>
+      <td>533.0</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>02M419</td>
+      <td>LANDMARK HIGH SCHOOL</td>
+      <td>62.0</td>
+      <td>390.0</td>
+      <td>399.0</td>
+      <td>381.0</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>02M420</td>
+      <td>HIGH SCHOOL FOR HEALTH PROFESSIONS AND HUMAN SERVICES</td>
+      <td>336.0</td>
+      <td>429.0</td>
+      <td>449.0</td>
+      <td>428.0</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>02M425</td>
+      <td>LEADERSHIP AND PUBLIC SERVICE HIGH SCHOOL</td>
+      <td>84.0</td>
+      <td>416.0</td>
+      <td>426.0</td>
+      <td>391.0</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>02M427</td>
+      <td>MANHATTAN ACADEMY FOR ARTS &amp; LANGUAGE</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>02M429</td>
+      <td>LEGACY SCHOOL FOR INTEGRATED STUDIES</td>
+      <td>29.0</td>
+      <td>356.0</td>
+      <td>357.0</td>
+      <td>349.0</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>02M437</td>
+      <td>HUDSON HIGH SCHOOL OF LEARNING TECHNOLOGIES</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>02M438</td>
+      <td>INTERNATIONAL HIGH SCHOOL AT UNION SQUARE</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>02M439</td>
+      <td>MANHATTAN VILLAGE ACADEMY</td>
+      <td>95.0</td>
+      <td>441.0</td>
+      <td>473.0</td>
+      <td>458.0</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>02M440</td>
+      <td>BAYARD RUSTIN EDUCATIONAL COMPLEX</td>
+      <td>59.0</td>
+      <td>378.0</td>
+      <td>365.0</td>
+      <td>368.0</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>02M449</td>
+      <td>VANGUARD HIGH SCHOOL</td>
+      <td>72.0</td>
+      <td>395.0</td>
+      <td>416.0</td>
+      <td>388.0</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>02M459</td>
+      <td>MANHATTAN INTERNATIONAL HIGH SCHOOL</td>
+      <td>49.0</td>
+      <td>376.0</td>
+      <td>460.0</td>
+      <td>391.0</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>02M460</td>
+      <td>WASHINGTON IRVING HIGH SCHOOL</td>
+      <td>151.0</td>
+      <td>373.0</td>
+      <td>387.0</td>
+      <td>360.0</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>02M473</td>
+      <td>WASHINGTON IRVING YABC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>02M475</td>
+      <td>STUYVESANT HIGH SCHOOL</td>
+      <td>832.0</td>
+      <td>679.0</td>
+      <td>735.0</td>
+      <td>682.0</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>02M489</td>
+      <td>HIGH SCHOOL OF ECONOMICS AND FINANCE</td>
+      <td>167.0</td>
+      <td>443.0</td>
+      <td>489.0</td>
+      <td>442.0</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>02M500</td>
+      <td>UNITY CENTER FOR URBAN TECHNOLOGIES</td>
+      <td>25.0</td>
+      <td>370.0</td>
+      <td>349.0</td>
+      <td>351.0</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>02M519</td>
+      <td>TALENT UNLIMITED HIGH SCHOOL</td>
+      <td>81.0</td>
+      <td>469.0</td>
+      <td>472.0</td>
+      <td>475.0</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>02M520</td>
+      <td>MURRY BERGTRAUM HIGH SCHOOL FOR BUSINESS CAREERS</td>
+      <td>264.0</td>
+      <td>407.0</td>
+      <td>440.0</td>
+      <td>393.0</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>02M529</td>
+      <td>JACQUELINE KENNEDY ONASSIS HIGH SCHOOL</td>
+      <td>131.0</td>
+      <td>414.0</td>
+      <td>425.0</td>
+      <td>400.0</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>02M531</td>
+      <td>REPERTORY COMPANY HIGH SCHOOL FOR THEATRE ARTS</td>
+      <td>42.0</td>
+      <td>429.0</td>
+      <td>404.0</td>
+      <td>420.0</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>02M542</td>
+      <td>MANHATTAN BRIDGES HIGH SCHOOL</td>
+      <td>66.0</td>
+      <td>336.0</td>
+      <td>378.0</td>
+      <td>344.0</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>02M543</td>
+      <td>NEW DESIGN HIGH SCHOOL</td>
+      <td>73.0</td>
+      <td>391.0</td>
+      <td>395.0</td>
+      <td>382.0</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>02M544</td>
+      <td>INDEPENDENCE HIGH SCHOOL</td>
+      <td>14.0</td>
+      <td>389.0</td>
+      <td>371.0</td>
+      <td>335.0</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>02M545</td>
+      <td>HIGH SCHOOL FOR DUAL LANGUAGE AND ASIAN STUDIES</td>
+      <td>78.0</td>
+      <td>412.0</td>
+      <td>581.0</td>
+      <td>431.0</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>02M550</td>
+      <td>LIBERTY HIGH SCHOOL ACADEMY FOR NEWCOMERS</td>
+      <td>26.0</td>
+      <td>368.0</td>
+      <td>436.0</td>
+      <td>352.0</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>02M551</td>
+      <td>THE URBAN ASSEMBLY NEW YORK HARBOR SCHOOL</td>
+      <td>77.0</td>
+      <td>405.0</td>
+      <td>423.0</td>
+      <td>384.0</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>02M560</td>
+      <td>HIGH SCHOOL M560 s CITY AS SCHOOL</td>
+      <td>56.0</td>
+      <td>498.0</td>
+      <td>440.0</td>
+      <td>477.0</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>02M565</td>
+      <td>URBAN ACADEMY LABORATORY HIGH SCHOOL</td>
+      <td>30.0</td>
+      <td>527.0</td>
+      <td>508.0</td>
+      <td>512.0</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>02M570</td>
+      <td>SATELLITE ACADEMY HIGH SCHOOL</td>
+      <td>33.0</td>
+      <td>350.0</td>
+      <td>337.0</td>
+      <td>345.0</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>02M575</td>
+      <td>MANHATTAN COMPREHENSIVE NIGHT AND DAY HIGH SCHOOL</td>
+      <td>121.0</td>
+      <td>345.0</td>
+      <td>517.0</td>
+      <td>343.0</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>02M580</td>
+      <td>RICHARD R. GREEN HIGH SCHOOL OF TEACHING</td>
+      <td>84.0</td>
+      <td>408.0</td>
+      <td>384.0</td>
+      <td>403.0</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>02M586</td>
+      <td>HARVEY MILK HIGH SCHOOL</td>
+      <td>9.0</td>
+      <td>458.0</td>
+      <td>416.0</td>
+      <td>429.0</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>02M600</td>
+      <td>THE HIGH SCHOOL OF FASHION INDUSTRIES</td>
+      <td>335.0</td>
+      <td>423.0</td>
+      <td>423.0</td>
+      <td>411.0</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>02M605</td>
+      <td>HUMANITIES PREPARATORY ACADEMY</td>
+      <td>36.0</td>
+      <td>426.0</td>
+      <td>403.0</td>
+      <td>426.0</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>02M615</td>
+      <td>CHELSEA CAREER AND TECHNICAL EDUCATION HIGH SCHOOL</td>
+      <td>83.0</td>
+      <td>399.0</td>
+      <td>418.0</td>
+      <td>390.0</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>02M620</td>
+      <td>NORMAN THOMAS HIGH SCHOOL</td>
+      <td>154.0</td>
+      <td>370.0</td>
+      <td>379.0</td>
+      <td>359.0</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>02M625</td>
+      <td>HIGH SCHOOL OF GRAPHIC COMMUNICATION ARTS</td>
+      <td>191.0</td>
+      <td>395.0</td>
+      <td>382.0</td>
+      <td>376.0</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>02M630</td>
+      <td>ART AND DESIGN HIGH SCHOOL</td>
+      <td>270.0</td>
+      <td>444.0</td>
+      <td>441.0</td>
+      <td>430.0</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>02M655</td>
+      <td>LIFE SCIENCES SECONDARY SCHOOL</td>
+      <td>61.0</td>
+      <td>409.0</td>
+      <td>424.0</td>
+      <td>403.0</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>03M283</td>
+      <td>MANHATTAN THEATRE LAB HIGH SCHOOL</td>
+      <td>27.0</td>
+      <td>406.0</td>
+      <td>379.0</td>
+      <td>408.0</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>03M299</td>
+      <td>HIGH SCHOOL FOR ARTS, IMAGINATION AND INQUIRY</td>
+      <td>49.0</td>
+      <td>374.0</td>
+      <td>384.0</td>
+      <td>374.0</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>03M307</td>
+      <td>URBAN ASSEMBLY SCHOOL FOR MEDIA STUDIES, THE</td>
+      <td>41.0</td>
+      <td>384.0</td>
+      <td>390.0</td>
+      <td>370.0</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>03M402</td>
+      <td>THE URBAN ASSEMBLY SCHOOL FOR GREEN CAREERS</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>03M403</td>
+      <td>THE GLOBAL LEARNING COLLABORATIVE</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>03M404</td>
+      <td>INNOVATION DIPLOMA PLUS</td>
+      <td>12.0</td>
+      <td>416.0</td>
+      <td>403.0</td>
+      <td>381.0</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>03M415</td>
+      <td>WADLEIGH SECONDARY SCHOOL FOR THE PERFORMING &amp; VISUAL ARTS</td>
+      <td>32.0</td>
+      <td>371.0</td>
+      <td>368.0</td>
+      <td>370.0</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>03M417</td>
+      <td>FRANK MCCOURT HIGH SCHOOL</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>03M470</td>
+      <td>LOUIS D. BRANDEIS HIGH SCHOOL</td>
+      <td>131.0</td>
+      <td>370.0</td>
+      <td>390.0</td>
+      <td>358.0</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>03M479</td>
+      <td>BEACON HIGH SCHOOL</td>
+      <td>261.0</td>
+      <td>577.0</td>
+      <td>575.0</td>
+      <td>592.0</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>03M485</td>
+      <td>FIORELLO H. LAGUARDIA HIGH SCHOOL OF MUSIC &amp; ART AND PERFORMING ARTS</td>
+      <td>531.0</td>
+      <td>566.0</td>
+      <td>564.0</td>
+      <td>577.0</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>03M492</td>
+      <td>HIGH SCHOOL FOR LAW, ADVOCACY AND COMMUNITY JUSTICE</td>
+      <td>66.0</td>
+      <td>396.0</td>
+      <td>398.0</td>
+      <td>402.0</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>03M494</td>
+      <td>HIGH SCHOOL OF ARTS AND TECHNOLOGY</td>
+      <td>75.0</td>
+      <td>433.0</td>
+      <td>433.0</td>
+      <td>411.0</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>03M505</td>
+      <td>EDWARD A. REYNOLDS WEST SIDE HIGH SCHOOL</td>
+      <td>35.0</td>
+      <td>401.0</td>
+      <td>369.0</td>
+      <td>351.0</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>03M541</td>
+      <td>MANHATTAN / HUNTER SCIENCE HIGH SCHOOL</td>
+      <td>111.0</td>
+      <td>473.0</td>
+      <td>506.0</td>
+      <td>467.0</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>03M577</td>
+      <td>YOUNG ADULT BOROUGH CENTER AT LOUIS D. BRANDEIS HS</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>03M860</td>
+      <td>FREDERICK DOUGLASS ACADEMY II SECONDARY SCHOOL</td>
+      <td>43.0</td>
+      <td>356.0</td>
+      <td>379.0</td>
+      <td>361.0</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>04M409</td>
+      <td>COALITION SCHOOL FOR SOCIAL CHANGE</td>
+      <td>48.0</td>
+      <td>354.0</td>
+      <td>357.0</td>
+      <td>373.0</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>04M435</td>
+      <td>MANHATTAN CENTER FOR SCIENCE AND MATHEMATICS</td>
+      <td>375.0</td>
+      <td>461.0</td>
+      <td>514.0</td>
+      <td>455.0</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>04M495</td>
+      <td>PARK EAST HIGH SCHOOL</td>
+      <td>51.0</td>
+      <td>373.0</td>
+      <td>379.0</td>
+      <td>376.0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>04M555</td>
+      <td>CENTRAL PARK EAST HIGH SCHOOL</td>
+      <td>73.0</td>
+      <td>405.0</td>
+      <td>421.0</td>
+      <td>395.0</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>04M610</td>
+      <td>YOUNG WOMEN'S LEADERSHIP SCHOOL</td>
+      <td>70.0</td>
+      <td>432.0</td>
+      <td>446.0</td>
+      <td>448.0</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>04M635</td>
+      <td>ACADEMY OF ENVIRONMENTAL SCIENCE SECONDARY HIGH SCHOOL</td>
+      <td>48.0</td>
+      <td>369.0</td>
+      <td>369.0</td>
+      <td>357.0</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>04M680</td>
+      <td>HERITAGE SCHOOL, THE</td>
+      <td>31.0</td>
+      <td>358.0</td>
+      <td>351.0</td>
+      <td>345.0</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>05M285</td>
+      <td>HARLEM RENAISSANCE HIGH SCHOOL</td>
+      <td>29.0</td>
+      <td>357.0</td>
+      <td>318.0</td>
+      <td>333.0</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>05M304</td>
+      <td>MOTT HALL HIGH SCHOOL</td>
+      <td>54.0</td>
+      <td>413.0</td>
+      <td>399.0</td>
+      <td>398.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">school_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_school_id"></div><b>📃 Summary:</b> School identifier code<br><b>🦄 Unique:</b> This column contains a unique identifier for each school. For this table, each row represents data for a specific school. The school_id is unique across all rows, making it a suitable candidate key.<br><b>🎨 Patterns:</b><br><ul><li><code>\d{2}[A-Z]\d{3}</code><br><i>School ID in the format of two digits, an uppercase letter, and three digits</i></li><li><code>\d+[A-Z]\d+/\d+[A-Z]\d+</code><br><i>Alphanumeric values separated by a slash, with each part starting with digits followed by an uppercase letter and more digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">SCHOOL_NAME</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_SCHOOL_NAME"></div><b>📃 Summary:</b> Full name of the school<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">num_sat_takers</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_num_sat_takers"></div><b>📃 Summary:</b> Number of students who took the SAT<br><b>❓ Missing:</b> No students took SAT at that school.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sat_critical_reading_avg</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sat_critical_reading_avg"></div><b>📃 Summary:</b> Average SAT score in critical reading section<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sat_math_avg</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sat_math_avg"></div><b>📃 Summary:</b> Average SAT score in math section<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sat_writing_avg</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sat_writing_avg"></div><b>📃 Summary:</b> Average SAT score in writing section<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about SAT exam results from schools in 2012. It lists the school DBN, name, number of test takers, and average scores in critical reading, math, and writing.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>5</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>DBN</td>
+      <td>School identifier code</td>
+      <td>school_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>SCHOOL_NAME</td>
+      <td>Full name of the school</td>
+      <td>SCHOOL_NAME</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Num_of_SAT_Test_Takers</td>
+      <td>Number of students who took the SAT</td>
+      <td>num_sat_takers</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>SAT_Critical_Reading_Avg__Score</td>
+      <td>Average SAT score in critical reading section</td>
+      <td>sat_critical_reading_avg</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>SAT_Math_Avg__Score</td>
+      <td>Average SAT score in math section</td>
+      <td>sat_math_avg</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>SAT_Writing_Avg__Score</td>
+      <td>Average SAT score in writing section</td>
+      <td>sat_writing_avg</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>4</b> columns have erroneous values<br><ol><li><b>num_sat_takers</b>: 's' value is unusual because it is not a number like the other values.<br>❌ The column has not been cleaned<br><br></li><li><b>sat_critical_reading_avg</b>: 's' is unusual because it is not a valid numeric SAT score.<br>❌ The column has not been cleaned<br><br></li><li><b>sat_math_avg</b>: 's' value is unusual because it is not a valid numeric SAT score.<br>❌ The column has not been cleaned<br><br></li><li><b>sat_writing_avg</b>: 's' is unusual because it is not a valid numeric SAT score.<br>❌ The column has not been cleaned<br><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>4</b> columns have disguised missing values<br>
+                ✔️ <b>4</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>num_sat_takers</td>
+      <td>[s]</td>
+      <td>True</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>sat_critical_reading_avg</td>
+      <td>[s]</td>
+      <td>True</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>sat_math_avg</td>
+      <td>[s]</td>
+      <td>True</td>
+      <td>s</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>sat_writing_avg</td>
+      <td>[s]</td>
+      <td>True</td>
+      <td>s</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>4</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>num_sat_takers</td>
+      <td>CAST("num_sat_takers" AS INT)</td>
+      <td>To transform the data type of the 'num_sat_takers' column from 'VARCHAR' to 'INT', we simply need to use the CAST function in Snowflake. Since the distinct values in the column are already in a valid integer format, we don't need any additional string manipulation or regular expressions to extract the numeric part. We can directly cast the column to the 'INT' data type.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>sat_critical_reading_avg</td>
+      <td>CAST("sat_critical_reading_avg" AS INT)</td>
+      <td>To transform the data type of the 'sat_critical_reading_avg' column from VARCHAR to INT, we can use a simple CAST clause in Snowflake. Since the distinct values in the column are all valid integers ('367', '370', '384', '398', '363'), we don't need any additional transformations or regex parsing. We can directly cast the column to the INT data type.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>sat_math_avg</td>
+      <td>CAST("sat_math_avg" AS INT)</td>
+      <td>To transform the data type of the 'sat_math_avg' column from 'VARCHAR' to 'INT', we can use a simple CAST clause in Snowflake. Since the distinct values in the column are all valid integers ('385', '364', '371', '381', '391'), we don't need any additional parsing or extraction. We can directly cast the column to the 'INT' data type.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>sat_writing_avg</td>
+      <td>CAST("sat_writing_avg" AS INT)</td>
+      <td>To transform the 'sat_writing_avg' column from VARCHAR to INT, we can simply use the CAST function in Snowflake. The existing regex pattern '\b([2-5]\d{2}|6[0-3]\d)\b' ensures that the values are  valid integers between 200 and 639, so no additional regex extraction is needed. We can directly cast the column to INT.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>4</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>num_sat_takers</td>
+      <td>11.92</td>
+      <td>True</td>
+      <td>No students took SAT at that school.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>sat_critical_reading_avg</td>
+      <td>11.92</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>sat_math_avg</td>
+      <td>11.92</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>sat_writing_avg</td>
+      <td>11.92</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>sat_critical_reading_avg</td>
+      <td>11.92</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>sat_math_avg</td>
+      <td>11.92</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>sat_writing_avg</td>
+      <td>11.92</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': '20K490', 'value': 0.20920502092050208}, {'label': '24Q267', 'value': 0.20920502092050208}, {'label': '23K697', 'value': 0.20920502092050208}, {'label': '22K535', 'value': 0.20920502092050208}, {'label': '22K495', 'value': 0.20920502092050208}, {'label': 'Other values', 'value': 98.9539748953975}];
+    drawBarChart("bar_viz_school_id", data);
+data = [{'label': 'METROPOLITAN HI...', 'value': 0.20920502092050208}, {'label': 'FRANKLIN K. LAN...', 'value': 0.20920502092050208}, {'label': 'EAST NEW YORK F...', 'value': 0.20920502092050208}, {'label': 'EAST BROOKLYN C...', 'value': 0.20920502092050208}, {'label': 'IT TAKES A VILL...', 'value': 0.20920502092050208}, {'label': 'Other values', 'value': 98.9539748953975}];
+    drawBarChart("bar_viz_SCHOOL_NAME", data);
+data = [{'x': 37.775, 'y': 246}, {'x': 101.32499999999999, 'y': 101}, {'x': 164.875, 'y': 24}, {'x': 228.42499999999998, 'y': 8}, {'x': 291.975, 'y': 7}, {'x': 355.525, 'y': 7}, {'x': 419.07499999999993, 'y': 10}, {'x': 482.625, 'y': 3}, {'x': 546.175, 'y': 4}, {'x': 609.7249999999999, 'y': 0}, {'x': 673.275, 'y': 1}, {'x': 736.8249999999999, 'y': 4}, {'x': 800.375, 'y': 3}, {'x': 863.925, 'y': 1}, {'x': 927.4749999999999, 'y': 1}, {'x': 991.025, 'y': 0}, {'x': 1054.5749999999998, 'y': 0}, {'x': 1118.125, 'y': 0}, {'x': 1181.675, 'y': 0}, {'x': 1245.225, 'y': 1}];
+    binWidth = 63.55;
+    drawHistogram("hist_viz_num_sat_takers", data, binWidth);
+data = [{'x': 289.0, 'y': 2}, {'x': 309.0, 'y': 11}, {'x': 329.0, 'y': 13}, {'x': 349.0, 'y': 37}, {'x': 369.0, 'y': 91}, {'x': 389.0, 'y': 93}, {'x': 409.0, 'y': 73}, {'x': 429.0, 'y': 35}, {'x': 449.0, 'y': 18}, {'x': 469.0, 'y': 17}, {'x': 489.0, 'y': 6}, {'x': 509.0, 'y': 5}, {'x': 529.0, 'y': 6}, {'x': 549.0, 'y': 1}, {'x': 569.0, 'y': 3}, {'x': 589.0, 'y': 2}, {'x': 609.0, 'y': 2}, {'x': 629.0, 'y': 5}, {'x': 649.0, 'y': 0}, {'x': 669.0, 'y': 1}];
+    binWidth = 20.0;
+    drawHistogram("hist_viz_sat_critical_reading_avg", data, binWidth);
+data = [{'x': 322.575, 'y': 10}, {'x': 343.725, 'y': 23}, {'x': 364.875, 'y': 89}, {'x': 386.025, 'y': 95}, {'x': 407.175, 'y': 58}, {'x': 428.325, 'y': 45}, {'x': 449.47499999999997, 'y': 29}, {'x': 470.625, 'y': 21}, {'x': 491.775, 'y': 17}, {'x': 512.925, 'y': 8}, {'x': 534.075, 'y': 3}, {'x': 555.2249999999999, 'y': 6}, {'x': 576.375, 'y': 6}, {'x': 597.525, 'y': 3}, {'x': 618.675, 'y': 0}, {'x': 639.825, 'y': 1}, {'x': 660.9749999999999, 'y': 4}, {'x': 682.125, 'y': 2}, {'x': 703.275, 'y': 0}, {'x': 724.425, 'y': 1}];
+    binWidth = 21.15;
+    drawHistogram("hist_viz_sat_math_avg", data, binWidth);
+data = [{'x': 295.9, 'y': 7}, {'x': 315.70000000000005, 'y': 10}, {'x': 335.5, 'y': 29}, {'x': 355.29999999999995, 'y': 88}, {'x': 375.1, 'y': 95}, {'x': 394.9, 'y': 75}, {'x': 414.70000000000005, 'y': 39}, {'x': 434.5, 'y': 27}, {'x': 454.3, 'y': 11}, {'x': 474.1, 'y': 12}, {'x': 493.9, 'y': 5}, {'x': 513.7, 'y': 4}, {'x': 533.5, 'y': 3}, {'x': 553.3000000000001, 'y': 3}, {'x': 573.1, 'y': 2}, {'x': 592.9, 'y': 5}, {'x': 612.7, 'y': 0}, {'x': 632.5, 'y': 4}, {'x': 652.3000000000001, 'y': 1}, {'x': 672.1, 'y': 1}];
+    binWidth = 19.8;
+    drawHistogram("hist_viz_sat_writing_avg", data, binWidth);
+
+
+</script>
+</body>
+</html>
