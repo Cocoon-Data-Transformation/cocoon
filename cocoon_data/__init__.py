@@ -32,6 +32,8 @@ import rasterio
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 from datasketch import MinHash, MinHashLSH
 from bs4 import BeautifulSoup
+import time
+from collections import OrderedDict
 
 from .database import *
 from .llm import *
@@ -7862,14 +7864,25 @@ def replace_nan(df):
     return df
 
 def embed_string(string, engine=None):
+    max_retries = 3
+    retry_count = 0
+    last_exception = None
 
-    try:
-        response = call_embed(string)
-        embeddings = response['data'][0]['embedding']
-        return embeddings
-    except Exception as e:
-        print(f"An error occurred while embedding: {e}")
-        return None
+    while retry_count < max_retries:
+        try:
+            response = call_embed(string)
+            embeddings = response['data'][0]['embedding']
+            return embeddings
+        except Exception as e:
+            retry_count += 1
+            print(f"Retry {retry_count}: An error occurred while embedding: {e}")
+            last_exception = e
+            
+            if retry_count < max_retries:
+                print(f"Waiting for 3 seconds before retrying...")
+                time.sleep(3)
+
+    raise last_exception
 
 def initialize_output_csv(df, output_csv_address, label='label'):
     try:
@@ -7893,10 +7906,12 @@ def find_first_nan_index(df, column_name):
     else:
         return None
 
-def embed_labels(df, output_csv_address, chunk_size=1000, label='label'):
+def embed_labels(df, output_csv_address, chunk_size=1000, 
+                 label='label', embedding_col='embedding'):
     df_output = initialize_output_csv(df, output_csv_address, label='label')
-
-    start_index = find_first_nan_index(df_output, 'embedding')
+    df[embedding_col] = df[embedding_col].astype('object')
+    
+    start_index = find_first_nan_index(df_output, embedding_col)
 
     if start_index is None:
         print("All labels already embedded.")
@@ -7911,16 +7926,15 @@ def embed_labels(df, output_csv_address, chunk_size=1000, label='label'):
         labels_chunk = df_output[label][chunk_start:chunk_end]
 
         for i, label_value in enumerate(labels_chunk):
-            if pd.isna(df_output.at[chunk_start + i, 'embedding']):
+            if pd.isna(df_output.at[chunk_start + i, embedding_col]):
                 embeddings = embed_string(label_value)
                 if embeddings is not None:
-                    df_output.at[chunk_start + i, 'embedding'] = embeddings
+                    df_output.at[chunk_start + i, embedding_col] = embeddings
             pbar.update(1)
 
         df_output.to_csv(output_csv_address, index=False)
 
     pbar.close()
-    
     print("All labels embedded and CSV updated.")
 
     return df_output
@@ -19660,7 +19674,7 @@ class WriteStageYMLCode(Node):
         table_object.table_name = table_name
         
         yml_dict = table_object.create_dbt_schema_dict()
-        yml_content = yaml.safe_dump(yml_dict, default_flow_style=False)
+        yml_content = yaml.dump(yml_dict, default_flow_style=False)
         
         formatter = HtmlFormatter(style='default')
         css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
@@ -20114,15 +20128,16 @@ class SelectMainVocabularyTable(Node):
         
         tables = get_table_names(con)
         
-        print(f"🧐 There are {len(tables)} tables in your database.")
-        print(f"🤓 Please select the {BOLD}main table{END} and {BOLD}vocabulary table{END}.")
-        print(f"Each row in the {BOLD}main table{END} will be mapped to vocabulary.")
-        print(f"If unsure, choose the smaller table as the {BOLD}main table{END}.")
+        display(HTML(f"""🧐 There are {len(tables)} tables in your database.<br>
+🤓 Please select the <b>main table</b> and <b>vocabulary table</b>.<br>
+Each row in the <b>main table</b> will be mapped to vocabulary.<br>
+If unsure, choose the smaller table as the <b>main table</b>.<br><br>
+<b>Main Table:</b>"""))
         
-        print(f"{BOLD}Main Table:{END}", flush=True)
+
         dropdown =  create_explore_button(query_widget, table_name=tables)
         
-        print(f"{BOLD}Vocabulary Table:{END}")
+        display(HTML("<b>Vocabulary Table:</b>"))
         dropdown_vocabulary = create_explore_button(query_widget, table_name=tables)
 
         next_button = widgets.Button(description="Next", button_style='success')
@@ -24056,22 +24071,22 @@ class Table:
         return column_desc_string.strip()
     
     def create_dbt_schema_dict(self):
-        data = {
-            "version": 2,
-            "models": [
-                {
-                    "name": self.table_name,
-                    "description": self.table_summary,
-                    "columns": []
-                }
-            ]
-        }
+        data = OrderedDict([
+            ("version", 2),
+            ("models", [
+                OrderedDict([
+                    ("name", self.table_name),
+                    ("description", self.table_summary),
+                    ("columns", [])
+                ])
+            ])
+        ])
 
         for column in self.columns:
             columndesc_key = next((key for key in self.column_desc if key.lower() == column.lower()), None)
             description = self.column_desc[columndesc_key] if columndesc_key else ""
             tests = []
-            cocoon_meta = {}
+            cocoon_meta = OrderedDict()
 
             missing_acceptable_key = next((key for key in self.missing_acceptable if key.lower() == column.lower()), None)
             if missing_acceptable_key:
@@ -24095,7 +24110,6 @@ class Table:
                 if unique_reason:
                     tests.append("unique")
                     cocoon_meta["uniqueness"] = unique_reason
-                    
 
             category_key = next((key for key in self.category if key.lower() == column.lower()), None)
             if category_key:
@@ -24106,18 +24120,18 @@ class Table:
                             accepted_values = ast.literal_eval(accepted_values)
                         else:
                             accepted_values = accepted_values.split(",")
-                    tests.append({"accepted_values": {"values": accepted_values}})
-            
+                    tests.append(OrderedDict([("accepted_values", OrderedDict([("values", accepted_values)]))]))
+
             patterns_key = next((key for key in self.patterns if key.lower() == column.lower()), None)
             if patterns_key:
                 patterns = self.patterns[patterns_key]
                 if patterns:
                     cocoon_meta["patterns"] = patterns
-                    
-            column_data = {
-                "name": column,
-                "description": description
-            }
+
+            column_data = OrderedDict([
+                ("name", column),
+                ("description", description)
+            ])
 
             if tests:
                 column_data["tests"] = tests
@@ -24131,7 +24145,8 @@ class Table:
     
     def create_dbt_schema_yml(self):
         data = self.create_dbt_schema_dict()
-        yml_content = yaml.safe_dump(data, default_flow_style=False)
+        yaml.add_representer(OrderedDict, represent_ordereddict)
+        yml_content = yaml.dump(data, default_flow_style=False)
         return yml_content
     
     def read_attributes_from_dbt_schema_yml(self, yml_data):

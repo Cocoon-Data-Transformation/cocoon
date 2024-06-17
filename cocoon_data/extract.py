@@ -1,6 +1,6 @@
 import re
-
-
+import yaml
+from collections import OrderedDict
 
 def extract_json_code_safe(s):
     s_stripped = s.strip()
@@ -48,3 +48,18 @@ def extract_yml_code(s):
     pattern = r"```yml(.*?)```"
     match = re.search(pattern, s, re.DOTALL)
     return match.group(1).strip() if match else None
+
+
+def represent_ordereddict(dumper, data):
+    value = []
+    for item_key, item_value in data.items():
+        node_key = dumper.represent_data(item_key)
+        node_value = dumper.represent_data(item_value)
+        value.append((node_key, node_value))
+    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+
+yaml.add_representer(OrderedDict, represent_ordereddict)
+
+
+
