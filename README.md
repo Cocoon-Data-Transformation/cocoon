@@ -4,9 +4,12 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-😎 Cocoon organizes your data warehouse using LLM agents, preparing it for analysis. It connects to your data warehouses to explore and understand your data. It helps you interactively build, test, and maintain pipelines.
-<kbd>![](./images/clean_html.gif)</kbd>
+😎 Cocoon organizes your data warehouse using LLM agents, preparing it for analysis. Specifically, Cocoon helps you with data cleaning, data integration, and data modeling.
 
+<div align="center">
+<kbd><img src="https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/steps.png?raw=true" alt="" width="500"></kbd>
+  </div>
+  
 - 📚 We currently help you profile, clean and standardize your tables. [Learn more about current features](https://cocoon-data-transformation.github.io/page/)
 
 - 👉 Check out the [Youtube demo](https://youtu.be/d9BIEGD7xok). Need support? Email: zh2408@columbia.edu
@@ -45,5 +48,6 @@ cocoon_workflow.start_workflow()
 ```
 
 🎉 You shall see the following on a notebook:
-
+<div align="center">
 <kbd><img src="./images/notebook.png" alt="" width="500"></kbd>
+</div>
