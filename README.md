@@ -10,7 +10,7 @@
 <kbd><img src="https://github.com/Cocoon-Data-Transformation/cocoon/blob/main/images/steps.png?raw=true" alt="" width="400"></kbd>
   </div>
   
-- 📚 We currently help you profile, clean and standardize your tables. [Learn more about current features](https://cocoon-data-transformation.github.io/page/)
+- 📚 [Learn more about current features](https://cocoon-data-transformation.github.io/page/)
 
 - 👉 Check out the [Youtube demo](https://youtu.be/d9BIEGD7xok). Need support? Email: zh2408@columbia.edu
 
