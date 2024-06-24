@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sales_subscription_events</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cancellation_reason</th>
+      <th>promotional_offer_name</th>
+      <th>state</th>
+      <th>previous_subscription_apple_id</th>
+      <th>promotional_offer_id</th>
+      <th>subscription_name</th>
+      <th>_index</th>
+      <th>_filename</th>
+      <th>consecutive_paid_periods</th>
+      <th>event</th>
+      <th>device</th>
+      <th>standard_subscription_duration</th>
+      <th>proceeds_reason</th>
+      <th>country</th>
+      <th>quantity</th>
+      <th>app_name</th>
+      <th>account_number</th>
+      <th>app_apple_id</th>
+      <th>days_before_canceling</th>
+      <th>days_canceled</th>
+      <th>event_date</th>
+      <th>original_start_date</th>
+      <th>previous_subscription_name</th>
+      <th>subscription_apple_id</th>
+      <th>subscription_group_id</th>
+      <th>subscription_offer_duration</th>
+      <th>subscription_offer_type</th>
+      <th>vendor_number</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td></td>
+      <td></td>
+      <td>NJ</td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>9</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>3</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td></td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2021-02-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td></td>
+      <td></td>
+      <td>FL</td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>25</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>14</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>Rate After One Year</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td></td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2020-03-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Canceled</td>
+      <td></td>
+      <td>CA</td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>41</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>1</td>
+      <td>Cancel</td>
+      <td>iPhone</td>
+      <td>1 Year</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>176</td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2020-04-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td></td>
+      <td></td>
+      <td>CA</td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>57</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>2</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td></td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2021-03-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>73</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>3</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Year</td>
+      <td>Rate After One Year</td>
+      <td>GB</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td></td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2019-04-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td></td>
+      <td></td>
+      <td>ON</td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>89</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>13</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>Rate After One Year</td>
+      <td>CA</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td></td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2020-04-24</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Canceled</td>
+      <td></td>
+      <td>CA</td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>105</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>1</td>
+      <td>Cancel</td>
+      <td>iPad</td>
+      <td>1 Year</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>70</td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2020-04-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>121</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>13</td>
+      <td>Renew</td>
+      <td>iPad</td>
+      <td>1 Month</td>
+      <td>Rate After One Year</td>
+      <td>AT</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td></td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2020-04-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td></td>
+      <td>MO</td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>137</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>1</td>
+      <td>Subscribe</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td></td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2021-04-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td></td>
+      <td></td>
+      <td>KA</td>
+      <td></td>
+      <td></td>
+      <td>Super Cool Name</td>
+      <td>153</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>3</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>None</td>
+      <td>IN</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td></td>
+      <td></td>
+      <td>2021-04-25</td>
+      <td>2021-02-25</td>
+      <td>NaN</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12345</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cancellation_reason</th>
+      <th>promotional_offer_name</th>
+      <th>user_state</th>
+      <th>previous_subscription_apple_id</th>
+      <th>promotional_offer_id</th>
+      <th>subscription_name</th>
+      <th>row_index</th>
+      <th>source_file</th>
+      <th>consecutive_paid_periods</th>
+      <th>event_type</th>
+      <th>device_type</th>
+      <th>standard_subscription_duration</th>
+      <th>proceeds_reason</th>
+      <th>country_code</th>
+      <th>subscription_quantity</th>
+      <th>app_name</th>
+      <th>account_number</th>
+      <th>app_apple_id</th>
+      <th>days_before_canceling</th>
+      <th>days_canceled</th>
+      <th>event_date</th>
+      <th>original_start_date</th>
+      <th>previous_subscription_name</th>
+      <th>subscription_apple_id</th>
+      <th>subscription_group_id</th>
+      <th>subscription_offer_duration</th>
+      <th>subscription_offer_type</th>
+      <th>vendor_number</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>None</td>
+      <td>NJ</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>9</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>3</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2021-02-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>None</td>
+      <td>FL</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>25</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>14</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>Rate After One Year</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2020-03-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Canceled</td>
+      <td>None</td>
+      <td>CA</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>41</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>1</td>
+      <td>Cancel</td>
+      <td>iPhone</td>
+      <td>1 Year</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>176.0</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2020-04-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>None</td>
+      <td>None</td>
+      <td>CA</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>57</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>2</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2021-03-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>73</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>3</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Year</td>
+      <td>Rate After One Year</td>
+      <td>GB</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2019-04-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>89</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>13</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>Rate After One Year</td>
+      <td>CA</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2020-04-24</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Canceled</td>
+      <td>None</td>
+      <td>CA</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>105</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>1</td>
+      <td>Cancel</td>
+      <td>iPad</td>
+      <td>1 Year</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>70.0</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2020-04-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>121</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>13</td>
+      <td>Renew</td>
+      <td>iPad</td>
+      <td>1 Month</td>
+      <td>Rate After One Year</td>
+      <td>AT</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2020-04-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>None</td>
+      <td>None</td>
+      <td>MO</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>137</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>1</td>
+      <td>Subscribe</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>None</td>
+      <td>US</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2021-04-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>None</td>
+      <td>None</td>
+      <td>KS</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Super Cool Name</td>
+      <td>153</td>
+      <td>Subscription_Event_12345678_20220102_V1_2.txt.gz</td>
+      <td>3</td>
+      <td>Renew</td>
+      <td>iPhone</td>
+      <td>1 Month</td>
+      <td>None</td>
+      <td>IN</td>
+      <td>1</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-04-25</td>
+      <td>2021-02-25</td>
+      <td>None</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12345</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cancellation_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Too expensive'>Too expensive</option><option value='No longer needed'>No longer needed</option><option value='Switched to competitor'>Switched to competitor</option><option value='Poor service quality'>Poor service quality</option><option value='Technical issues'>Technical issues</option><option value='Changed circumstances'>Changed circumstances</option><option value='Found better alternative'>Found better alternative</option><option value='Billing problems'>Billing problems</option><option value='Lack of features'>Lack of features</option><option value='Unused subscription'>Unused subscription</option><option value='Dissatisfied with product'>Dissatisfied with product</option><option value='Company policy change'>Company policy change</option><option value='Budget cuts'>Budget cuts</option><option value='Temporary pause'>Temporary pause</option><option value='Moving/Relocating'>Moving/Relocating</option><option value='Other'>Other</option><option value='Canceled'>Canceled</option></select></span><br><br><div id="bar_viz_cancellation_reason"></div><b>📃 Summary:</b> Reason for subscription cancellation<br><b>❓ Missing:</b> Not applicable for renewals or non-canceled subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">promotional_offer_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_promotional_offer_name"></div><b>📃 Summary:</b> Name of promotional offer<br><b>❓ Missing:</b> Not applicable if no promotional offer was used<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='AL'>AL</option><option value='AK'>AK</option><option value='AZ'>AZ</option><option value='AR'>AR</option><option value='CA'>CA</option><option value='CO'>CO</option><option value='CT'>CT</option><option value='DE'>DE</option><option value='FL'>FL</option><option value='GA'>GA</option><option value='HI'>HI</option><option value='ID'>ID</option><option value='IL'>IL</option><option value='IN'>IN</option><option value='IA'>IA</option><option value='KS'>KS</option><option value='KY'>KY</option><option value='LA'>LA</option><option value='ME'>ME</option><option value='MD'>MD</option><option value='MA'>MA</option><option value='MI'>MI</option><option value='MN'>MN</option><option value='MS'>MS</option><option value='MO'>MO</option><option value='MT'>MT</option><option value='NE'>NE</option><option value='NV'>NV</option><option value='NH'>NH</option><option value='NJ'>NJ</option><option value='NM'>NM</option><option value='NY'>NY</option><option value='NC'>NC</option><option value='ND'>ND</option><option value='OH'>OH</option><option value='OK'>OK</option><option value='OR'>OR</option><option value='PA'>PA</option><option value='RI'>RI</option><option value='SC'>SC</option><option value='SD'>SD</option><option value='TN'>TN</option><option value='TX'>TX</option><option value='UT'>UT</option><option value='VT'>VT</option><option value='VA'>VA</option><option value='WA'>WA</option><option value='WV'>WV</option><option value='WI'>WI</option><option value='WY'>WY</option></select></span><br><br><div id="bar_viz_user_state"></div><b>📃 Summary:</b> State or region of the user<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">previous_subscription_apple_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_previous_subscription_apple_id"></div><b>📃 Summary:</b> Apple ID of previous subscription<br><b>❓ Missing:</b> Not applicable for first-time subscribers<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">promotional_offer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_promotional_offer_id"></div><b>📃 Summary:</b> Identifier for promotional offer<br><b>❓ Missing:</b> Not applicable if no promotional offer was used<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_subscription_name"></div><b>📃 Summary:</b> Name of the subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_index"></div><b>📃 Summary:</b> Row index in the source file<br><b>🦄 Unique:</b> This column represents the row index in the source file. For this table, each row is a specific subscription event. The row_index appears to be unique across rows in the given sample, and it's likely to be unique across the entire dataset if it represents the actual row number in the source file.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">source_file</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_source_file"></div><b>📃 Summary:</b> Name of the source file<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">consecutive_paid_periods</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_consecutive_paid_periods"></div><b>📃 Summary:</b> Number of consecutive paid subscription periods<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Renew'>Renew</option><option value='Cancel'>Cancel</option><option value='Subscribe'>Subscribe</option><option value='Upgrade'>Upgrade</option><option value='Downgrade'>Downgrade</option><option value='Pause'>Pause</option><option value='Resume'>Resume</option><option value='Trial'>Trial</option><option value='Expire'>Expire</option><option value='Refund'>Refund</option></select></span><br><br><div id="bar_viz_event_type"></div><b>📃 Summary:</b> Type of subscription event (e.g., Renew, Cancel)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">device_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='iPhone'>iPhone</option><option value='iPad'>iPad</option><option value='Android phone'>Android phone</option><option value='Android tablet'>Android tablet</option><option value='Windows phone'>Windows phone</option><option value='MacBook'>MacBook</option><option value='Windows laptop'>Windows laptop</option><option value='Desktop computer'>Desktop computer</option><option value='Smart TV'>Smart TV</option><option value='Gaming console'>Gaming console</option><option value='Smartwatch'>Smartwatch</option><option value='E-reader'>E-reader</option></select></span><br><br><div id="bar_viz_device_type"></div><b>📃 Summary:</b> Device used for the subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">standard_subscription_duration</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='1 Day'>1 Day</option><option value='1 Week'>1 Week</option><option value='2 Weeks'>2 Weeks</option><option value='1 Month'>1 Month</option><option value='3 Months'>3 Months</option><option value='6 Months'>6 Months</option><option value='1 Year'>1 Year</option><option value='2 Years'>2 Years</option><option value='3 Years'>3 Years</option><option value='5 Years'>5 Years</option></select></span><br><br><div id="bar_viz_standard_subscription_duration"></div><b>📃 Summary:</b> Duration of standard subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">proceeds_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_proceeds_reason"></div><b>📃 Summary:</b> Reason for proceeds change<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">country_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_country_code"></div><b>📃 Summary:</b> Country code of the user<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_quantity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_subscription_quantity"></div><b>📃 Summary:</b> Quantity of subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">app_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_app_name"></div><b>📃 Summary:</b> Name of the application<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_number"></div><b>📃 Summary:</b> Unique identifier for the user account<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">app_apple_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_app_apple_id"></div><b>📃 Summary:</b> Apple ID of the application<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">days_before_canceling</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_days_before_canceling"></div><b>📃 Summary:</b> Days between subscription start and cancellation<br><b>❓ Missing:</b> Not applicable for renewals or non-canceled subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">days_canceled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_days_canceled"></div><b>📃 Summary:</b> Number of days the subscription was canceled<br><b>❓ Missing:</b> Not applicable for active subscriptions or renewals<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_event_date"></div><b>📃 Summary:</b> Date of the subscription event<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">original_start_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_original_start_date"></div><b>📃 Summary:</b> Initial date of subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">previous_subscription_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_previous_subscription_name"></div><b>📃 Summary:</b> Name of previous subscription<br><b>❓ Missing:</b> Not applicable for first-time subscribers<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_apple_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_subscription_apple_id"></div><b>📃 Summary:</b> Apple ID of the subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_group_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_subscription_group_id"></div><b>📃 Summary:</b> Group ID for the subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_offer_duration</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_subscription_offer_duration"></div><b>📃 Summary:</b> Duration of subscription offer<br><b>❓ Missing:</b> Not applicable if no special offer was applied<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_offer_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_subscription_offer_type"></div><b>📃 Summary:</b> Type of subscription offer<br><b>❓ Missing:</b> Not applicable if no special offer was applied<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">vendor_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_vendor_number"></div><b>📃 Summary:</b> Vendor identification number<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about subscription events for an app. It includes details like account number, event date, app name, subscription name, event type (renew/cancel), consecutive paid periods, subscription duration, country, and device. Each row represents a specific subscription event with associated attributes like renewal status, cancellation reasons, and promotional offers.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>7</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>_filename</td>
+      <td>Name of the source file</td>
+      <td>source_file</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>account_number</td>
+      <td>Unique identifier for the user account</td>
+      <td>account_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>vendor_number</td>
+      <td>Vendor identification number</td>
+      <td>vendor_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>_index</td>
+      <td>Row index in the source file</td>
+      <td>row_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>event_date</td>
+      <td>Date of the subscription event</td>
+      <td>event_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>app_name</td>
+      <td>Name of the application</td>
+      <td>app_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>days_canceled</td>
+      <td>Number of days the subscription was canceled</td>
+      <td>days_canceled</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>subscription_name</td>
+      <td>Name of the subscription</td>
+      <td>subscription_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>consecutive_paid_periods</td>
+      <td>Number of consecutive paid subscription periods</td>
+      <td>consecutive_paid_periods</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>previous_subscription_name</td>
+      <td>Name of previous subscription</td>
+      <td>previous_subscription_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>cancellation_reason</td>
+      <td>Reason for subscription cancellation</td>
+      <td>cancellation_reason</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>proceeds_reason</td>
+      <td>Reason for proceeds change</td>
+      <td>proceeds_reason</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>subscription_apple_id</td>
+      <td>Apple ID of the subscription</td>
+      <td>subscription_apple_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>standard_subscription_duration</td>
+      <td>Duration of standard subscription</td>
+      <td>standard_subscription_duration</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>original_start_date</td>
+      <td>Initial date of subscription</td>
+      <td>original_start_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>device</td>
+      <td>Device used for the subscription</td>
+      <td>device_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>days_before_canceling</td>
+      <td>Days between subscription start and cancellation</td>
+      <td>days_before_canceling</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>quantity</td>
+      <td>Quantity of subscriptions</td>
+      <td>subscription_quantity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>marketing_opt_in_duration</td>
+      <td>Duration of marketing opt-in</td>
+      <td>marketing_opt_in_duration</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>promotional_offer_name</td>
+      <td>Name of promotional offer</td>
+      <td>promotional_offer_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>state</td>
+      <td>State or region of the user</td>
+      <td>user_state</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>previous_subscription_apple_id</td>
+      <td>Apple ID of previous subscription</td>
+      <td>previous_subscription_apple_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>event</td>
+      <td>Type of subscription event (e.g., Renew, Cancel)</td>
+      <td>event_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>subscription_group_id</td>
+      <td>Group ID for the subscription</td>
+      <td>subscription_group_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>country</td>
+      <td>Country code of the user</td>
+      <td>country_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>promotional_offer_id</td>
+      <td>Identifier for promotional offer</td>
+      <td>promotional_offer_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>app_apple_id</td>
+      <td>Apple ID of the application</td>
+      <td>app_apple_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>subscription_offer_type</td>
+      <td>Type of subscription offer</td>
+      <td>subscription_offer_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>subscription_offer_duration</td>
+      <td>Duration of subscription offer</td>
+      <td>subscription_offer_duration</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>✂️ 3. Leading and Trailing Whitespace</h2><br>
+                🔍 <b>8</b> columns have leading and trailing whitespace<br>
+                ✔️ <b>8</b> columns have been trimmed<br><br><br><h2>🚧 4. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>user_state</b>: 'KA' is unusual because it's not a standard US state abbreviation. It might be a typo for 'KS' (Kansas).<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>KA</td>
+      <td>KS</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ON</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 5. Disguised Missing Values</h2><br>
+                🔍 <b>8</b> columns have disguised missing values<br>
+                ✔️ <b>8</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>days_canceled</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>cancellation_reason</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>days_before_canceling</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>marketing_opt_in_duration</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>promotional_offer_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>user_state</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>previous_subscription_apple_id</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>promotional_offer_id</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 6. Data Type</h2><br>
+                ✔️ <b>12</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_number</td>
+      <td>CAST("account_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'account_number' column from INT to VARCHAR, we can use the CAST function in DuckDB.  The CAST function allows us to explicitly convert a value from one data type to another. In this case, we will cast the 'account_number' column to the VARCHAR type.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>app_apple_id</td>
+      <td>CAST("app_apple_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'app_apple_id' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function. The CAST function allows us to convert a value from one data type to another. In this case, we will cast the 'app_apple_id' column to the 'VARCHAR' data type.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>days_before_canceling</td>
+      <td>CAST("days_before_canceling" AS INT)</td>
+      <td>To transform the 'days_before_canceling' column from VARCHAR to INT, we can use a simple CAST function. Since the values in the column are already numeric strings ('176' and '70'), we don't need to use REGEXP_EXTRACT. We can directly cast the column to INT.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>days_canceled</td>
+      <td>CAST("days_canceled" AS INT)</td>
+      <td>To transform the 'days_canceled' column from VARCHAR to INT, we can use a simple CAST function. Since the column contains only empty values (as indicated by the distinct values being an empty list []), we don't need to use any complex regex extraction. A straightforward CAST should suffice. This will convert any empty strings to NULL in the INT column, which is typically the desired behavior for empty numeric fields.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>event_date</td>
+      <td>CAST("event_date" AS DATE)</td>
+      <td>The 'event_date' column already has values in the 'YYYY-MM-DD' format which matches the default format for the DATE data type in SQL. Therefore, we can directly cast the 'event_date' column to the DATE data type without needing to use the strptime function for parsing.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>original_start_date</td>
+      <td>CAST("original_start_date" AS DATE)</td>
+      <td>To transform the 'original_start_date' column from VARCHAR to DATE, we can simply use the CAST function. The data is already in the correct 'YYYY-MM-DD' format, so no additional parsing with strptime is needed. Directly casting to DATE will convert the string representation to the DATE data type.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>previous_subscription_name</td>
+      <td>CAST("previous_subscription_name" AS VARCHAR)</td>
+      <td>The 'previous_subscription_name' column is empty, so casting it from DECIMAL to VARCHAR will not change any actual data values. The CAST function in DuckDB can be used to convert the declared type of the column from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>subscription_apple_id</td>
+      <td>CAST("subscription_apple_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subscription_apple_id' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function. The CAST function allows us to explicitly convert the data type of an expression to the specified target data type. In this case, we will cast the 'subscription_apple_id' column to 'VARCHAR' data type.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>subscription_group_id</td>
+      <td>CAST("subscription_group_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subscription_group_id' column from 'INT' to 'VARCHAR',  we simply need to use the CAST function in DuckDB. The CAST function allows us to convert the data type of a column or expression to a specified target data type. In this case, we will cast 'subscription_group_id' to 'VARCHAR'.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>subscription_offer_duration</td>
+      <td>CAST("subscription_offer_duration" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subscription_offer_duration' column from DECIMAL to VARCHAR in DuckDB, we can simply use the CAST function in the following way:\nCAST(subscription_offer_duration AS VARCHAR)\nThis will cast the values in the 'subscription_offer_duration' column to the VARCHAR data type.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>subscription_offer_type</td>
+      <td>CAST("subscription_offer_type" AS VARCHAR)</td>
+      <td>The subscription_offer_type column has no distinct values, so it appears to be an empty array []. However, we can still transform the data type from DECIMAL to VARCHAR using a simple CAST clause in DuckDB. This will convert any existing DECIMAL values to a string representation.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>vendor_number</td>
+      <td>CAST("vendor_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'vendor_number' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function.  The CAST function allows us to explicitly convert the data type of an expression to a specified target data type. In this case, we will cast the 'vendor_number' column to 'VARCHAR'.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 7. Missing Values</h2><br>
+                🔍 <b>12</b> columns have missing values<br>
+                ✔️ <b>9</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>cancellation_reason</td>
+      <td>80</td>
+      <td>True</td>
+      <td>Not applicable for renewals or non-canceled subscriptions</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>days_before_canceling</td>
+      <td>80</td>
+      <td>True</td>
+      <td>Not applicable for renewals or non-canceled subscriptions</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>days_canceled</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for active subscriptions or renewals</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>marketing_opt_in_duration</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>previous_subscription_apple_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for first-time subscribers</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>previous_subscription_name</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for first-time subscribers</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>proceeds_reason</td>
+      <td>60</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>promotional_offer_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if no promotional offer was used</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>promotional_offer_name</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if no promotional offer was used</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>subscription_offer_duration</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if no special offer was applied</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>subscription_offer_type</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if no special offer was applied</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>user_state</td>
+      <td>30</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>marketing_opt_in_duration</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>proceeds_reason</td>
+      <td>60</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>user_state</td>
+      <td>30</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Canceled', 'value': 100.0}];
+    drawBarChart("bar_viz_cancellation_reason", data);
+data = [];
+    drawBarChart("bar_viz_promotional_offer_name", data);
+data = [{'label': 'CA', 'value': 42.857142857142854}, {'label': 'NJ', 'value': 14.285714285714285}, {'label': 'FL', 'value': 14.285714285714285}, {'label': 'KS', 'value': 14.285714285714285}, {'label': 'MO', 'value': 14.285714285714285}];
+    drawBarChart("bar_viz_user_state", data);
+data = [];
+    drawBarChart("bar_viz_previous_subscription_apple_id", data);
+data = [];
+    drawBarChart("bar_viz_promotional_offer_id", data);
+data = [{'label': 'Super Cool Name', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_name", data);
+data = [{'x': 12.6, 'y': 1}, {'x': 19.799999999999997, 'y': 0}, {'x': 27.0, 'y': 1}, {'x': 34.2, 'y': 0}, {'x': 41.4, 'y': 1}, {'x': 48.6, 'y': 0}, {'x': 55.8, 'y': 1}, {'x': 63.0, 'y': 0}, {'x': 70.19999999999999, 'y': 1}, {'x': 77.4, 'y': 0}];
+    binWidth = 7.2;
+    drawHistogram("hist_viz_row_index", data, binWidth);
+data = [{'label': 'Subscription_Ev...', 'value': 100.0}];
+    drawBarChart("bar_viz_source_file", data);
+data = [{'x': 1.325, 'y': 3}, {'x': 1.9749999999999999, 'y': 1}, {'x': 2.625, 'y': 0}, {'x': 3.2750000000000004, 'y': 3}, {'x': 3.925, 'y': 0}, {'x': 4.575, 'y': 0}, {'x': 5.225, 'y': 0}, {'x': 5.875, 'y': 0}, {'x': 6.525, 'y': 0}, {'x': 7.175000000000001, 'y': 0}];
+    binWidth = 0.65;
+    drawHistogram("hist_viz_consecutive_paid_periods", data, binWidth);
+data = [{'label': 'Renew', 'value': 70.0}, {'label': 'Cancel', 'value': 20.0}, {'label': 'Subscribe', 'value': 10.0}];
+    drawBarChart("bar_viz_event_type", data);
+data = [{'label': 'iPhone', 'value': 80.0}, {'label': 'iPad', 'value': 20.0}];
+    drawBarChart("bar_viz_device_type", data);
+data = [{'label': '1 Month', 'value': 70.0}, {'label': '1 Year', 'value': 30.0}];
+    drawBarChart("bar_viz_standard_subscription_duration", data);
+data = [{'label': 'Rate After One ...', 'value': 100.0}];
+    drawBarChart("bar_viz_proceeds_reason", data);
+data = [{'label': 'US', 'value': 60.0}, {'label': 'AT', 'value': 10.0}, {'label': 'IN', 'value': 10.0}, {'label': 'GB', 'value': 10.0}, {'label': 'CA', 'value': 10.0}];
+    drawBarChart("bar_viz_country_code", data);
+data = [{'x': 1, 'y': 10}];
+    binWidth = 1;
+    drawHistogram("hist_viz_subscription_quantity", data, binWidth);
+data = [{'label': 'Super Cool Name', 'value': 100.0}];
+    drawBarChart("bar_viz_app_name", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_account_number", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_app_apple_id", data);
+data = [{'x': 72.65, 'y': 1}, {'x': 77.94999999999999, 'y': 0}, {'x': 83.25, 'y': 0}, {'x': 88.55000000000001, 'y': 0}, {'x': 93.85, 'y': 0}, {'x': 99.15, 'y': 0}, {'x': 104.44999999999999, 'y': 0}, {'x': 109.75, 'y': 0}, {'x': 115.05, 'y': 0}, {'x': 120.35, 'y': 0}];
+    binWidth = 5.3;
+    drawHistogram("hist_viz_days_before_canceling", data, binWidth);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_days_canceled", data, binWidth);
+data = [{'label': '2021-04-25 00:0...', 'value': 100.0}];
+    drawBarChart("bar_viz_event_date", data);
+data = [{'label': '2020-04-25', 'value': 30.0}, {'label': '2021-02-25', 'value': 20.0}, {'label': '2021-03-25', 'value': 10.0}, {'label': '2019-04-25', 'value': 10.0}, {'label': '2021-04-25', 'value': 10.0}, {'label': 'Other values', 'value': 20.0}];
+    drawBarChart("bar_viz_original_start_date", data);
+data = [];
+    drawBarChart("bar_viz_previous_subscription_name", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_apple_id", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_group_id", data);
+data = [];
+    drawBarChart("bar_viz_subscription_offer_duration", data);
+data = [];
+    drawBarChart("bar_viz_subscription_offer_type", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_vendor_number", data);
+
+
+</script>
+</body>
+</html>

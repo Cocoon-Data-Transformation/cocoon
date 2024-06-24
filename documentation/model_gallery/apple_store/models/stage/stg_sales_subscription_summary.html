@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sales_subscription_summary</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>proceeds_currency</th>
+      <th>state</th>
+      <th>grace_period</th>
+      <th>subscription_name</th>
+      <th>pay_as_you_go_promotional_offer_subscriptions</th>
+      <th>standard_subscription_duration</th>
+      <th>active_pay_as_you_go_introductory_offer_subscriptions</th>
+      <th>_filename</th>
+      <th>country</th>
+      <th>pay_up_front_promotional_offer_subscriptions</th>
+      <th>active_pay_up_front_introductory_offer_subscriptions</th>
+      <th>free_trial_promotional_offer_subscriptions</th>
+      <th>developer_proceeds</th>
+      <th>device</th>
+      <th>marketing_opt_ins</th>
+      <th>proceeds_reason</th>
+      <th>customer_price</th>
+      <th>active_free_trial_introductory_offer_subscriptions</th>
+      <th>active_standard_price_subscriptions</th>
+      <th>customer_currency</th>
+      <th>billing_retry</th>
+      <th>_index</th>
+      <th>app_name</th>
+      <th>account_number</th>
+      <th>app_apple_id</th>
+      <th>subscription_apple_id</th>
+      <th>subscription_group_id</th>
+      <th>vendor_number</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>EUR</td>
+      <td></td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>FR</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>24.72</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>42.99</td>
+      <td>0</td>
+      <td>30</td>
+      <td>EUR</td>
+      <td>0</td>
+      <td>9</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>EUR</td>
+      <td></td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>FI</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>24.27</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>42.99</td>
+      <td>0</td>
+      <td>2</td>
+      <td>EUR</td>
+      <td>0</td>
+      <td>25</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td></td>
+      <td>MI</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>IT</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>24.20</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>42.99</td>
+      <td>0</td>
+      <td>1</td>
+      <td>EUR</td>
+      <td>0</td>
+      <td>41</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>USD</td>
+      <td>MS</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Month</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3.50</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>4.99</td>
+      <td>0</td>
+      <td>5</td>
+      <td>USD</td>
+      <td>0</td>
+      <td>57</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td></td>
+      <td>NJ</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Month</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3.50</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>4.99</td>
+      <td>0</td>
+      <td>7</td>
+      <td>USD</td>
+      <td>2</td>
+      <td>73</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>KRW</td>
+      <td>부산</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>KR</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>31182.00</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>49000.00</td>
+      <td>0</td>
+      <td>1</td>
+      <td>KRW</td>
+      <td>0</td>
+      <td>89</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td></td>
+      <td>AA</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Month</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3.50</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>4.99</td>
+      <td>0</td>
+      <td>1</td>
+      <td>USD</td>
+      <td>0</td>
+      <td>105</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td></td>
+      <td>DC</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>33.99</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>Rate After One Year</td>
+      <td>39.99</td>
+      <td>0</td>
+      <td>6</td>
+      <td>USD</td>
+      <td>0</td>
+      <td>121</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td></td>
+      <td>AZ</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Month</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3.50</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>4.99</td>
+      <td>0</td>
+      <td>6</td>
+      <td>USD</td>
+      <td>0</td>
+      <td>137</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>EUR</td>
+      <td>PO</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>IT</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>29.67</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>Rate After One Year</td>
+      <td>42.99</td>
+      <td>0</td>
+      <td>1</td>
+      <td>EUR</td>
+      <td>0</td>
+      <td>153</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>proceeds_currency</th>
+      <th>customer_state</th>
+      <th>grace_period_days</th>
+      <th>subscription_name</th>
+      <th>pay_as_you_go_promo_subs</th>
+      <th>standard_sub_duration</th>
+      <th>active_pay_as_you_go_intro_subs</th>
+      <th>source_file</th>
+      <th>customer_country</th>
+      <th>pay_up_front_promo_subs</th>
+      <th>active_pay_up_front_intro_subs</th>
+      <th>free_trial_promo_subs</th>
+      <th>developer_proceeds</th>
+      <th>device_type</th>
+      <th>marketing_opt_in_count</th>
+      <th>proceeds_reason</th>
+      <th>customer_price</th>
+      <th>active_free_trial_intro_subs</th>
+      <th>active_standard_subs</th>
+      <th>customer_currency</th>
+      <th>billing_retry_count</th>
+      <th>row_index</th>
+      <th>app_name</th>
+      <th>account_number</th>
+      <th>app_apple_id</th>
+      <th>subscription_apple_id</th>
+      <th>subscription_group_id</th>
+      <th>vendor_number</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>EUR</td>
+      <td>None</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>FR</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>24.72</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>42.99</td>
+      <td>0</td>
+      <td>30</td>
+      <td>EUR</td>
+      <td>0</td>
+      <td>9</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>EUR</td>
+      <td>None</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>FI</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>24.27</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>42.99</td>
+      <td>0</td>
+      <td>2</td>
+      <td>EUR</td>
+      <td>0</td>
+      <td>25</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>None</td>
+      <td>MI</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>IT</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>24.20</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>42.99</td>
+      <td>0</td>
+      <td>1</td>
+      <td>EUR</td>
+      <td>0</td>
+      <td>41</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>USD</td>
+      <td>MS</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Month</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3.50</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>4.99</td>
+      <td>0</td>
+      <td>5</td>
+      <td>USD</td>
+      <td>0</td>
+      <td>57</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>None</td>
+      <td>NJ</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Month</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3.50</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>4.99</td>
+      <td>0</td>
+      <td>7</td>
+      <td>USD</td>
+      <td>2</td>
+      <td>73</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>KRW</td>
+      <td>None</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>KR</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>31182.00</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>49000.00</td>
+      <td>0</td>
+      <td>1</td>
+      <td>KRW</td>
+      <td>0</td>
+      <td>89</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>None</td>
+      <td>AZ</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Month</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3.50</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>4.99</td>
+      <td>0</td>
+      <td>1</td>
+      <td>USD</td>
+      <td>0</td>
+      <td>105</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>None</td>
+      <td>DC</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>33.99</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>Rate After One Year</td>
+      <td>39.99</td>
+      <td>0</td>
+      <td>6</td>
+      <td>USD</td>
+      <td>0</td>
+      <td>121</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>None</td>
+      <td>AZ</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Month</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>US</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3.50</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>None</td>
+      <td>4.99</td>
+      <td>0</td>
+      <td>6</td>
+      <td>USD</td>
+      <td>0</td>
+      <td>137</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>EUR</td>
+      <td>None</td>
+      <td>0</td>
+      <td>Super Cool Name</td>
+      <td>0</td>
+      <td>1 Year</td>
+      <td>0</td>
+      <td>Subscription_12345678_20210712_V1_2.txt.gz</td>
+      <td>IT</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>29.67</td>
+      <td>iPhone</td>
+      <td>0</td>
+      <td>Rate After One Year</td>
+      <td>42.99</td>
+      <td>0</td>
+      <td>1</td>
+      <td>EUR</td>
+      <td>0</td>
+      <td>153</td>
+      <td>Super Cool Name</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+      <td>12345</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">proceeds_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_proceeds_currency"></div><b>📃 Summary:</b> Currency of the proceeds<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='AL'>AL</option><option value='AK'>AK</option><option value='AZ'>AZ</option><option value='AR'>AR</option><option value='CA'>CA</option><option value='CO'>CO</option><option value='CT'>CT</option><option value='DE'>DE</option><option value='FL'>FL</option><option value='GA'>GA</option><option value='HI'>HI</option><option value='ID'>ID</option><option value='IL'>IL</option><option value='IN'>IN</option><option value='IA'>IA</option><option value='KS'>KS</option><option value='KY'>KY</option><option value='LA'>LA</option><option value='ME'>ME</option><option value='MD'>MD</option><option value='MA'>MA</option><option value='MI'>MI</option><option value='MN'>MN</option><option value='MS'>MS</option><option value='MO'>MO</option><option value='MT'>MT</option><option value='NE'>NE</option><option value='NV'>NV</option><option value='NH'>NH</option><option value='NJ'>NJ</option><option value='NM'>NM</option><option value='NY'>NY</option><option value='NC'>NC</option><option value='ND'>ND</option><option value='OH'>OH</option><option value='OK'>OK</option><option value='OR'>OR</option><option value='PA'>PA</option><option value='RI'>RI</option><option value='SC'>SC</option><option value='SD'>SD</option><option value='TN'>TN</option><option value='TX'>TX</option><option value='UT'>UT</option><option value='VT'>VT</option><option value='VA'>VA</option><option value='WA'>WA</option><option value='WV'>WV</option><option value='WI'>WI</option><option value='WY'>WY</option><option value='DC'>DC</option><option value='AS'>AS</option><option value='GU'>GU</option><option value='MP'>MP</option><option value='PR'>PR</option><option value='VI'>VI</option><option value='AB'>AB</option><option value='BC'>BC</option><option value='MB'>MB</option><option value='NB'>NB</option><option value='NL'>NL</option><option value='NS'>NS</option><option value='NT'>NT</option><option value='NU'>NU</option><option value='ON'>ON</option><option value='PE'>PE</option><option value='QC'>QC</option><option value='SK'>SK</option><option value='YT'>YT</option></select></span><br><br><div id="bar_viz_customer_state"></div><b>📃 Summary:</b> State or province of the customer<br><b>❓ Missing:</b> Not applicable for non-US customers or countries without states.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">grace_period_days</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_grace_period_days"></div><b>📃 Summary:</b> Number of grace period days<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_subscription_name"></div><b>📃 Summary:</b> Name of the subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pay_as_you_go_promo_subs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_pay_as_you_go_promo_subs"></div><b>📃 Summary:</b> Count of pay-as-you-go promo offer subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">standard_sub_duration</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='1 Week'>1 Week</option><option value='2 Weeks'>2 Weeks</option><option value='1 Month'>1 Month</option><option value='3 Months'>3 Months</option><option value='6 Months'>6 Months</option><option value='1 Year'>1 Year</option><option value='2 Years'>2 Years</option><option value='3 Years'>3 Years</option><option value='5 Years'>5 Years</option></select></span><br><br><div id="bar_viz_standard_sub_duration"></div><b>📃 Summary:</b> Duration of the standard subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">active_pay_as_you_go_intro_subs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_active_pay_as_you_go_intro_subs"></div><b>📃 Summary:</b> Count of active pay-as-you-go intro offer subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">source_file</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_source_file"></div><b>📃 Summary:</b> Name of the source file<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_country</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_customer_country"></div><b>📃 Summary:</b> Country code of the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pay_up_front_promo_subs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_pay_up_front_promo_subs"></div><b>📃 Summary:</b> Count of pay-up-front promo offer subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">active_pay_up_front_intro_subs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_active_pay_up_front_intro_subs"></div><b>📃 Summary:</b> Count of active pay-up-front intro offer subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">free_trial_promo_subs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_free_trial_promo_subs"></div><b>📃 Summary:</b> Count of free trial promo offer subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">developer_proceeds</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_developer_proceeds"></div><b>📃 Summary:</b> Amount received by the developer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">device_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='iPhone'>iPhone</option><option value='Android phone'>Android phone</option><option value='iPad'>iPad</option><option value='Android tablet'>Android tablet</option><option value='Windows PC'>Windows PC</option><option value='Mac'>Mac</option><option value='Linux PC'>Linux PC</option><option value='Smart TV'>Smart TV</option><option value='Gaming console'>Gaming console</option><option value='Smartwatch'>Smartwatch</option><option value='E-reader'>E-reader</option><option value='Smart speaker'>Smart speaker</option><option value='Other'>Other</option></select></span><br><br><div id="bar_viz_device_type"></div><b>📃 Summary:</b> Type of device used<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">marketing_opt_in_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_marketing_opt_in_count"></div><b>📃 Summary:</b> Number of marketing opt-ins<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">proceeds_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_proceeds_reason"></div><b>📃 Summary:</b> Reason for the proceeds<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_customer_price"></div><b>📃 Summary:</b> Price paid by the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">active_free_trial_intro_subs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_active_free_trial_intro_subs"></div><b>📃 Summary:</b> Count of active free trial intro offer subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">active_standard_subs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_active_standard_subs"></div><b>📃 Summary:</b> Count of active standard price subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_customer_currency"></div><b>📃 Summary:</b> Currency used by the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_retry_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_billing_retry_count"></div><b>📃 Summary:</b> Number of billing retry attempts<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_index"></div><b>📃 Summary:</b> Row index in the source file<br><b>🦄 Unique:</b> This column represents the row index in the source file. For this table, each row is a unique subscription sale. The row_index appears to be unique across rows in the given sample.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">app_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_app_name"></div><b>📃 Summary:</b> Name of the app<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_number"></div><b>📃 Summary:</b> Unique identifier for the account<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">app_apple_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_app_apple_id"></div><b>📃 Summary:</b> Apple ID of the app<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_apple_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_subscription_apple_id"></div><b>📃 Summary:</b> Apple ID of the subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_group_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_subscription_group_id"></div><b>📃 Summary:</b> ID of the subscription group<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">vendor_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_vendor_number"></div><b>📃 Summary:</b> Unique identifier for the vendor<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about app subscription sales. It contains details such as account number, vendor number, app name, subscription name, and customer information. Each row represents a subscription sale, including financial data like developer proceeds and customer price. It also tracks subscription types, durations, and promotional offers. The table includes geographic information and device types used for subscriptions.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>18</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>_filename</td>
+      <td>Name of the source file</td>
+      <td>source_file</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>account_number</td>
+      <td>Unique identifier for the account</td>
+      <td>account_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>vendor_number</td>
+      <td>Unique identifier for the vendor</td>
+      <td>vendor_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>_index</td>
+      <td>Row index in the source file</td>
+      <td>row_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>developer_proceeds</td>
+      <td>Amount received by the developer</td>
+      <td>developer_proceeds</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>app_name</td>
+      <td>Name of the app</td>
+      <td>app_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>free_trial_promotional_offer_subscriptions</td>
+      <td>Count of free trial promo offer subscriptions</td>
+      <td>free_trial_promo_subs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>proceeds_currency</td>
+      <td>Currency of the proceeds</td>
+      <td>proceeds_currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>subscription_name</td>
+      <td>Name of the subscription</td>
+      <td>subscription_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>pay_as_you_go_promotional_offer_subscriptions</td>
+      <td>Count of pay-as-you-go promo offer subscriptions</td>
+      <td>pay_as_you_go_promo_subs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>customer_currency</td>
+      <td>Currency used by the customer</td>
+      <td>customer_currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>marketing_opt_ins</td>
+      <td>Number of marketing opt-ins</td>
+      <td>marketing_opt_in_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>pay_up_front_promotional_offer_subscriptions</td>
+      <td>Count of pay-up-front promo offer subscriptions</td>
+      <td>pay_up_front_promo_subs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>billing_retry</td>
+      <td>Number of billing retry attempts</td>
+      <td>billing_retry_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>proceeds_reason</td>
+      <td>Reason for the proceeds</td>
+      <td>proceeds_reason</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>subscription_apple_id</td>
+      <td>Apple ID of the subscription</td>
+      <td>subscription_apple_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>active_standard_price_subscriptions</td>
+      <td>Count of active standard price subscriptions</td>
+      <td>active_standard_subs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>standard_subscription_duration</td>
+      <td>Duration of the standard subscription</td>
+      <td>standard_sub_duration</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>grace_period</td>
+      <td>Number of grace period days</td>
+      <td>grace_period_days</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>device</td>
+      <td>Type of device used</td>
+      <td>device_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>active_pay_up_front_introductory_offer_subscriptions</td>
+      <td>Count of active pay-up-front intro offer subscriptions</td>
+      <td>active_pay_up_front_intro_subs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>customer_price</td>
+      <td>Price paid by the customer</td>
+      <td>customer_price</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>promotional_offer_name</td>
+      <td>Name of the promotional offer</td>
+      <td>promo_offer_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>state</td>
+      <td>State or province of the customer</td>
+      <td>customer_state</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>active_pay_as_you_go_introductory_offer_subscriptions</td>
+      <td>Count of active pay-as-you-go intro offer subscriptions</td>
+      <td>active_pay_as_you_go_intro_subs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>subscription_group_id</td>
+      <td>ID of the subscription group</td>
+      <td>subscription_group_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>country</td>
+      <td>Country code of the customer</td>
+      <td>customer_country</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>active_free_trial_introductory_offer_subscriptions</td>
+      <td>Count of active free trial intro offer subscriptions</td>
+      <td>active_free_trial_intro_subs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>promotional_offer_id</td>
+      <td>ID of the promotional offer</td>
+      <td>promo_offer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>app_apple_id</td>
+      <td>Apple ID of the app</td>
+      <td>app_apple_id</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>✂️ 3. Leading and Trailing Whitespace</h2><br>
+                🔍 <b>4</b> columns have leading and trailing whitespace<br>
+                ✔️ <b>4</b> columns have been trimmed<br><br><br><h2>🚧 4. Erroneous Values</h2><br>
+            🔍 <b>2</b> columns have erroneous values<br><ol><li><b>customer_state</b>: '' (empty), 'AA', 'PO', and '부산' are unusual because they don't fit standard US state abbreviations.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>AA</td>
+      <td>AZ</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>PO</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>부산</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>promo_offer_id</b>: '' (empty string) is unusual because it does not identify any promotional offer.<br>❌ The column has not been cleaned<br><br></li></ol><br><h2>🕵️‍♂️ 5. Disguised Missing Values</h2><br>
+                🔍 <b>4</b> columns have disguised missing values<br>
+                ✔️ <b>4</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>proceeds_currency</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>promo_offer_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>customer_state</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>promo_offer_id</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 6. Data Type</h2><br>
+                ✔️ <b>5</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_number</td>
+      <td>CAST("account_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'account_number' column from INT to VARCHAR, we can use the CAST function in DuckDB.  The CAST function allows us to explicitly convert a value from one data type to another. In this case, we will cast the 'account_number' column to the VARCHAR type.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>app_apple_id</td>
+      <td>CAST("app_apple_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'app_apple_id' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function. The CAST function allows us to convert a value from one data type to another. In this case, we will cast the 'app_apple_id' column to the 'VARCHAR' data type.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>subscription_apple_id</td>
+      <td>CAST("subscription_apple_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subscription_apple_id' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function. The CAST function allows us to explicitly convert the data type of an expression to the specified target data type. In this case, we will cast the 'subscription_apple_id' column to 'VARCHAR' data type.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>subscription_group_id</td>
+      <td>CAST("subscription_group_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subscription_group_id' column from 'INT' to 'VARCHAR',  we simply need to use the CAST function in DuckDB. The CAST function allows us to convert the data type of a column or expression to a specified target data type. In this case, we will cast 'subscription_group_id' to 'VARCHAR'.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>vendor_number</td>
+      <td>CAST("vendor_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'vendor_number' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function.  The CAST function allows us to explicitly convert the data type of an expression to a specified target data type. In this case, we will cast the 'vendor_number' column to 'VARCHAR'.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 7. Missing Values</h2><br>
+                🔍 <b>5</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>customer_state</td>
+      <td>40</td>
+      <td>True</td>
+      <td>Not applicable for non-US customers or countries without states.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>proceeds_currency</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>proceeds_reason</td>
+      <td>80</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>promo_offer_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>promo_offer_name</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>proceeds_currency</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>proceeds_reason</td>
+      <td>80</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>promo_offer_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>promo_offer_name</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'EUR', 'value': 60.0}, {'label': 'KRW', 'value': 20.0}, {'label': 'USD', 'value': 20.0}];
+    drawBarChart("bar_viz_proceeds_currency", data);
+data = [{'label': 'AZ', 'value': 33.33333333333333}, {'label': 'NJ', 'value': 16.666666666666664}, {'label': 'MI', 'value': 16.666666666666664}, {'label': 'MS', 'value': 16.666666666666664}, {'label': 'DC', 'value': 16.666666666666664}];
+    drawBarChart("bar_viz_customer_state", data);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_grace_period_days", data, binWidth);
+data = [{'label': 'Super Cool Name', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_name", data);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_pay_as_you_go_promo_subs", data, binWidth);
+data = [{'label': '1 Year', 'value': 60.0}, {'label': '1 Month', 'value': 40.0}];
+    drawBarChart("bar_viz_standard_sub_duration", data);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_active_pay_as_you_go_intro_subs", data, binWidth);
+data = [{'label': 'Subscription_12...', 'value': 100.0}];
+    drawBarChart("bar_viz_source_file", data);
+data = [{'label': 'US', 'value': 50.0}, {'label': 'IT', 'value': 20.0}, {'label': 'FI', 'value': 10.0}, {'label': 'FR', 'value': 10.0}, {'label': 'KR', 'value': 10.0}];
+    drawBarChart("bar_viz_customer_country", data);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_pay_up_front_promo_subs", data, binWidth);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_active_pay_up_front_intro_subs", data, binWidth);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_free_trial_promo_subs", data, binWidth);
+data = [{'x': 782.9625, 'y': 9}, {'x': 2341.8875, 'y': 0}, {'x': 3900.8125, 'y': 0}, {'x': 5459.737499999999, 'y': 0}, {'x': 7018.6625, 'y': 0}, {'x': 8577.5875, 'y': 0}, {'x': 10136.5125, 'y': 0}, {'x': 11695.4375, 'y': 0}, {'x': 13254.3625, 'y': 0}, {'x': 14813.287499999999, 'y': 0}];
+    binWidth = 1558.925;
+    drawHistogram("hist_viz_developer_proceeds", data, binWidth);
+data = [{'label': 'iPhone', 'value': 100.0}];
+    drawBarChart("bar_viz_device_type", data);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_marketing_opt_in_count", data, binWidth);
+data = [{'label': 'Rate After One ...', 'value': 100.0}];
+    drawBarChart("bar_viz_proceeds_reason", data);
+data = [{'x': 1229.8652499999998, 'y': 9}, {'x': 3679.61575, 'y': 0}, {'x': 6129.36625, 'y': 0}, {'x': 8579.116750000001, 'y': 0}, {'x': 11028.86725, 'y': 0}, {'x': 13478.617750000001, 'y': 0}, {'x': 15928.36825, 'y': 0}, {'x': 18378.11875, 'y': 0}, {'x': 20827.869250000003, 'y': 0}, {'x': 23277.619750000005, 'y': 0}];
+    binWidth = 2449.7505;
+    drawHistogram("hist_viz_customer_price", data, binWidth);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_active_free_trial_intro_subs", data, binWidth);
+data = [{'x': 1.725, 'y': 5}, {'x': 3.175, 'y': 0}, {'x': 4.625, 'y': 1}, {'x': 6.074999999999999, 'y': 2}, {'x': 7.525, 'y': 1}, {'x': 8.975, 'y': 0}, {'x': 10.425, 'y': 0}, {'x': 11.875, 'y': 0}, {'x': 13.325, 'y': 0}, {'x': 14.774999999999999, 'y': 0}];
+    binWidth = 1.45;
+    drawHistogram("hist_viz_active_standard_subs", data, binWidth);
+data = [{'label': 'USD', 'value': 50.0}, {'label': 'EUR', 'value': 40.0}, {'label': 'KRW', 'value': 10.0}];
+    drawBarChart("bar_viz_customer_currency", data);
+data = [{'x': 0.05, 'y': 9}, {'x': 0.15000000000000002, 'y': 0}, {'x': 0.25, 'y': 0}, {'x': 0.35000000000000003, 'y': 0}, {'x': 0.45, 'y': 0}, {'x': 0.55, 'y': 0}, {'x': 0.6500000000000001, 'y': 0}, {'x': 0.75, 'y': 0}, {'x': 0.8500000000000001, 'y': 0}, {'x': 0.95, 'y': 0}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_billing_retry_count", data, binWidth);
+data = [{'x': 12.6, 'y': 1}, {'x': 19.799999999999997, 'y': 0}, {'x': 27.0, 'y': 1}, {'x': 34.2, 'y': 0}, {'x': 41.4, 'y': 1}, {'x': 48.6, 'y': 0}, {'x': 55.8, 'y': 1}, {'x': 63.0, 'y': 0}, {'x': 70.19999999999999, 'y': 1}, {'x': 77.4, 'y': 0}];
+    binWidth = 7.2;
+    drawHistogram("hist_viz_row_index", data, binWidth);
+data = [{'label': 'Super Cool Name', 'value': 100.0}];
+    drawBarChart("bar_viz_app_name", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_account_number", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_app_apple_id", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_apple_id", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_group_id", data);
+data = [{'label': '12345', 'value': 100.0}];
+    drawBarChart("bar_viz_vendor_number", data);
+
+
+</script>
+</body>
+</html>
