@@ -44,6 +44,7 @@ data_types_database = {
         "TIMESTAMP": ["DATETIME", "TIMESTAMP", "TIMESTAMPTZ", "TIMESTAMP WITH TIME ZONE"],
         "VARCHAR": ["CHAR", "BPCHAR", "TEXT", "STRING", "VARCHAR"],
         "ARRAY": ["ARRAY"],
+        "JSON": ["JSON"],
         "INTERVAL": ["INTERVAL"],
         "UUID": ["UUID"],
     }

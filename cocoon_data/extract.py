@@ -63,3 +63,17 @@ yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
 
+
+def custom_constructor(loader, node):
+    value = loader.construct_scalar(node)
+    if value in ['true', 'True', 'TRUE']:
+        return True
+    elif value in ['false', 'False', 'FALSE']:
+        return False
+    return str(value)
+
+yaml.SafeLoader.add_constructor('tag:yaml.org,2002:bool', custom_constructor)
+yaml.SafeLoader.add_constructor('tag:yaml.org,2002:str', custom_constructor)
+
+
+

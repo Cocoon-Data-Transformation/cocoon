@@ -574,59 +574,109 @@ cocoon_html_share_block = """<p style="text-align: right">Share Cocoon with the 
 
 </div>"""
 
-cocoon_html_style_block = """
+cocoon_table_style = """
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+"""
+
+cocoon_html_style_block = f"""
 <style>
-  html {
+  html {{
     height: 100%; /* Ensure the html element covers the full height */
     background-color: #f0f0f0; /* Set your desired background color */
-  }
+  }}
 
-  body {
+  body {{
     /* Scale the entire content to 70% */
     transform: scale(0.75);
     transform-origin: top left; /* Adjust as needed */
     width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
     height: 133.33%; /* Adjust height similarly if necessary */
     overflow: auto; /* Add scrollbars if content overflows */
-  }
+  }}
 
-  body, h1, h2, p {
+  body, h1, h2, p {{
     margin: 0;
     padding: 0;
     font-family: 'Arial', sans-serif;
-  }
+  }}
 
-  .container {
+  .container {{
     display: flex;
     justify-content: space-between;
     align-items: center; /* This ensures the items are aligned in the middle vertically */
-  }
+  }}
 
-  .map-container {
+  .map-container {{
     width: 300px;
     height: 200px;
     border: 1px solid black;
-  }
+  }}
   
-  .histogram-container {
+  .histogram-container {{
     width: 300px;
     height: 100px;
     border: 1px solid black;
-  }
+  }}
 
-  .chart-container { /* Style for the container */
+  .chart-container {{ /* Style for the container */
     width: 200px;
     height: 80px;
     border: 1px solid black;
-  }
+  }}
   
-  .bar-chart-container {
+  .bar-chart-container {{
     width: 300px;
     height: 100px;
     border: 1px solid black;
-  }
+  }}
 
-  .dashboard {
+  .dashboard {{
     display: grid;
     grid-template-areas:
       "main-panel right-panel"
@@ -636,9 +686,9 @@ cocoon_html_style_block = """
     height: 130vh;
     padding: 10px;
     background-color: #f0f0f0;
-  }
+  }}
 
-  .main-panel {
+  .main-panel {{
     grid-area: main-panel;
     background-color: #ffffff;
     padding: 20px;
@@ -647,32 +697,32 @@ cocoon_html_style_block = """
     overflow: hidden;
     display: flex;
     flex-direction: column; /* Stack the children vertically */
-  }
+  }}
 
-  .table-container {
+  .table-container {{
     overflow-x: auto; /* Allows horizontal scrolling for the table */
     overflow-y: auto; /* Allows vertical scrolling for the table */
     flex-grow: 1;
     max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
     display: none;
-  }
+  }}
 
-  .right-panel {
+  .right-panel {{
     grid-area: right-panel;
     background-color: #fff;
     padding: 15px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     overflow-y: auto; /* Enable scrolling for the panel */
     width: 360px;
-  }
+  }}
 
-  .indent {
+  .indent {{
     padding-left: 5px; /* Increase as needed for deeper indents */
     font-size: small;
     display: none;
-  }
+  }}
 
-  .card-item {
+  .card-item {{
     display: flex;
     align-items: center;
     background-color: #626262; /* White background for the card */
@@ -683,28 +733,28 @@ cocoon_html_style_block = """
     padding: 3px;
     padding-left: 10px;
     width: 320px;
-  }
+  }}
 
-  .card-item-collapsed {
+  .card-item-collapsed {{
     background-color: #d0d0d0; /* Lighter background for collapsed card */
     border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
     color: black; /* Change text color for better contrast on light background */
-  }
+  }}
 
-  .icon {
+  .icon {{
     /* Styles for the icon, you can replace it with an actual icon font or image */
     padding-right: 20px;
-  }
+  }}
 
-  .field-name {
+  .field-name {{
     /* Styles for the field name */
     flex-grow: 1;
     padding-right: 20px;
     font-size: 14px;
 
-  }
+  }}
 
-  .circle {
+  .circle {{
     background-color: red;
     font-size: small;
     border-radius: 50%;
@@ -715,9 +765,9 @@ cocoon_html_style_block = """
       width: 16px;         /* Fixed width */
       height: 16px;        /* Fixed height */
       line-height: 16px;   /* Center the number vertically */
-  }
+  }}
 
-  .circle2 {
+  .circle2 {{
     background-color: green;
     font-size: small;
     border-radius: 50%;
@@ -729,14 +779,14 @@ cocoon_html_style_block = """
       width: 16px;         /* Fixed width */
       height: 16px;        /* Fixed height */
       line-height: 16px;   /* Center the number vertically */
-  }
+  }}
 
-  .card-controls {
+  .card-controls {{
     display: flex;
-  }
+  }}
 
   .drop-down-btn,
-  .add-btn {
+  .add-btn {{
     /* Shared styles for buttons */
     background-color: #4CAF50; /* Green background */
     color: white;
@@ -745,120 +795,74 @@ cocoon_html_style_block = """
     cursor: pointer;
     padding: 2px 6px; /* Smaller padding for a compact look */
     margin-left: 4px; /* Spacing between buttons */
-  }
+  }}
 
   .drop-down-btn:hover,
-  .add-btn:hover {
+  .add-btn:hover {{
     background-color: #45a049; /* Darker green on hover */
-  }
+  }}
 
-  .bottom-panel {
+  .bottom-panel {{
     grid-area: bottom-panel;
     background-color: #ffffff;
     padding: 20px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     overflow-x: auto;
-  }
+  }}
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    font-size: 0.9em;
-    border-radius: 8px;
-    overflow: hidden;
-  }
+  {cocoon_table_style}
 
-  th, td {
-    padding: 6px 8px;
-    text-align: left;
-    border-bottom: 1px solid #dddddd;
-    border-right: 1px solid #dddddd;
-  }
-
-  th:last-child, td:last-child {
-    border-right: none; /* Removes the border from the last cell of each row */
-  }
-
-  thead tr {
-    background-color: #009879; /* Changed color for header */
-    color: #ffffff; /* Changed text color for better contrast */
-    text-align: left;
-    font-weight: bold;
-    font-size: 14px;
-  }
-
-  th {
-    position: sticky;
-    top: 0;
-    background-color: #bebebe; /* Ensure the sticky header has the same background color */
-  }
-
-  tbody tr {
-    background-color: #f9f9f9; /* Lighter color for content rows */
-    font-size: 14px
-  }
-
-  tbody tr:last-of-type {
-    border-bottom: 2px solid #009879;
-  }
-
-  tbody tr.active-row {
-    font-weight: bold;
-    color: #009879;
-  }
-
-  .link {
+  .link {{
       fill: none;
       stroke: #555;
       stroke-opacity: 0.4;
       stroke-width: 1.5px;
-  }
+  }}
 
-  .node {
+  .node {{
       cursor: pointer;
-  }
+  }}
 
-  .node circle {
+  .node circle {{
       fill: #999;
       stroke: black;
       stroke-width: 1.5px;
-  }
+  }}
 
-  .node text {
+  .node text {{
       font: 12px sans-serif;
       fill: #555;
-  }
+  }}
 
-  .icons {
+  .icons {{
     /* Making the icon larger */
     font-size: 20px; /* You can adjust this value as needed */
     color: white; /* Icon color */
     background-color: black; /* Background color */
     padding: 6px 6px; /* Top/bottom padding and left/right padding */
     border-radius: 3px; /* Making the corners sharp for a rectangular look */
-  }
+  }}
 
-  .switch-container {
+  .switch-container {{
     display: flex;
     align-items: center;
-  }
+  }}
 
-  .switch {
+  .switch {{
     position: relative;
     display: inline-block;
     width: 60px;
     height: 34px;
     margin: 0 10px;
-  }
+  }}
 
-  .switch input {
+  .switch input {{
     opacity: 0;
     width: 0;
     height: 0;
-  }
+  }}
 
-  .slider {
+  .slider {{
     position: absolute;
     cursor: pointer;
     top: 0;
@@ -868,9 +872,9 @@ cocoon_html_style_block = """
     background-color: #ccc;
     transition: .4s;
     border-radius: 34px;
-  }
+  }}
 
-  .slider:before {
+  .slider:before {{
     position: absolute;
     content: "";
     height: 26px;
@@ -880,58 +884,58 @@ cocoon_html_style_block = """
     background-color: white;
     transition: .4s;
     border-radius: 50%;
-  }
+  }}
 
-  input:checked + .slider {
+  input:checked + .slider {{
     background-color: #2196F3;
-  }
+  }}
 
-  input:checked + .slider:before {
+  input:checked + .slider:before {{
     transform: translateX(26px);
-  }
+  }}
 
-  .label-text {
+  .label-text {{
     font-family: Verdana, sans-serif;
     font-size: 14px;
-  }
+  }}
 
-  .table-container.active {
+  .table-container.active {{
     display: block;
-  }
+  }}
 
-.tag {
+.tag {{
   display: inline-block;
   padding: 2px 6px;
   font-size: 12px;
   margin-right: 6px;
   border-radius: 4px;
-}
+}}
 
-.tag-red {
+.tag-red {{
   background-color: #ffcccb;
   color: #ff0000;
   border: 1px solid #ff0000;
-}
+}}
 
-.tag-blue {
+.tag-blue {{
   background-color: #e0f2ff;
   color: #0066ff;
   border: 1px solid #0066ff;
-}
+}}
 
-.tag-purple {
+.tag-purple {{
   background-color: #e6ccff;
   color: #9900ff;
   border: 1px solid #9900ff;
-}
+}}
 
-code {
+code {{
   font-family: Consolas,"courier new";
   color: crimson;
   background-color: #f1f1f1;
   padding: 2px;
   font-size: 105%;
-}
+}}
 </style>"""
 
 def create_cocoon_logo(header, footer):

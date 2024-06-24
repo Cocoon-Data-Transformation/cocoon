@@ -545,7 +545,10 @@ def create_selection_grid(columns1, columns2, table1_name, table2_name, call_bac
     grid[-1, :] = submit_button
     return grid
 
-def create_column_selector(columns, callback, default=False):
+def create_column_selector(columns, default=False, except_columns=None):
+    if except_columns is None:
+        except_columns = []
+    
     multi_select = widgets.SelectMultiple(
         options=[(column, i) for i, column in enumerate(columns)],
         disabled=False,
@@ -564,7 +567,6 @@ def create_column_selector(columns, callback, default=False):
     select_all_button = widgets.Button(description="Select All", button_style='info', icon='check-square')
     deselect_all_button = widgets.Button(description="Deselect All", button_style='danger', icon='square-o')
     reverse_selection_button = widgets.Button(description="Reverse Selection", button_style='warning', icon='exchange')
-    submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
     
     def select_all(b):
         multi_select.value = tuple(range(len(columns)))
@@ -578,21 +580,22 @@ def create_column_selector(columns, callback, default=False):
         new_selection = tuple(all_indices - current_selection)
         multi_select.value = new_selection
     
-    def submit(b):
-        selected_indices = multi_select.value
-        callback(selected_indices)
-    
     select_all_button.on_click(select_all)
     deselect_all_button.on_click(deselect_all)
     reverse_selection_button.on_click(reverse_selection)
-    submit_button.on_click(submit)
     
     buttons = widgets.HBox([select_all_button, deselect_all_button, reverse_selection_button])
-    ui = widgets.VBox([instructions, multi_select, buttons, submit_button])
+    ui = widgets.VBox([instructions, multi_select, buttons])
     display(ui)
     
     if default:
-        multi_select.value = tuple(range(len(columns)))
+        initial_selection = [i for i, column in enumerate(columns) if column not in except_columns]
+        multi_select.value = tuple(initial_selection)
+    else:
+        initial_selection = [i for i, column in enumerate(columns) if column in except_columns]
+        multi_select.value = tuple(initial_selection)
+        
+    return multi_select
 
 
 

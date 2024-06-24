@@ -12,7 +12,7 @@ import io
 from pygments import highlight
 from pygments.lexers import PythonLexer, SqlLexer, YamlLexer
 from pygments.formatters import Terminal256Formatter, HtmlFormatter
-
+import html
 
 def wrap_in_iframe(html_code, width=800, height=400):
 
@@ -678,11 +678,23 @@ def generate_seaborn_palette(n_colors):
     return hex_colors
 
 
-def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=400):
+
+
+
+
+
+
+
+
+
+
+
+
+def generate_workflow_image(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, format='svg'):
     if directional:
-        dot = Digraph(format='png')
+        dot = Digraph(format=format)
     else:
-        dot = Graph(format='png')
+        dot = Graph(format=format)
 
     highlight_color = '#FFA500'
 
@@ -693,25 +705,25 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
 
     node_style = {
         'style': 'filled',
-        'fillcolor': '#DAE8FC',
-        'color': '#6C8EBF',
+        'fillcolor': '#ffffff',
+        'color': '#000000',
         'shape': 'box',
-        'fontname': 'Helvetica',
+        'fontname': 'Segoe UI',
         'fontsize': '8',
-        'fontcolor': '#2E4057',
-        'margin': '0.1,0.02',
+        'margin': '0,0',
+        'fontcolor': '#000000',
         'height': '0.3',
         'width': '0.5'
     }
 
     highlighted_node_style = {
-        'fillcolor': '#FFD580',
-        'color': '#FFA500'
+        'fillcolor': '#e1f5fe',
+        'color': '#4fc3f7'
     }
 
     edge_style = {
-        'color': '#6C8EBF',
-        'arrowsize': '0.5',
+        'color': '#000000',
+        'arrowsize': '0.6',
         'penwidth': '0.6',
         'fontname': 'Helvetica',
         'fontsize': '8',
@@ -719,8 +731,8 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
     }
 
     highlighted_edge_style = {
-        'color': '#FFA500',
-        'penwidth': '2.0'
+        'color': '#4fc3f7',
+        'penwidth': '1.0'
     }
 
     for i, node in enumerate(nodes):
@@ -744,16 +756,76 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
             else:
                 dot.edge(nodes[tail], nodes[head], label=label, dir='none', **edge_style)
 
-    png_image = dot.pipe()
 
-    encoded_image = base64.b64encode(png_image).decode()
+    image = dot.pipe()
+    return image
 
-    scrollable_html = f"""
-    <div style="max-height: {height}px; overflow: auto; border: 1px solid #cccccc;">
-        <img src="data:image/png;base64,{encoded_image}" alt="Workflow Diagram" style="display: block; max-width: none; height: auto;">
-    </div>
-    """
+def wrap_image_in_html(image_data, height=None, format='svg'):
+    height_str = f'max-height: {height}px; ' if height else ''
+    if format == 'svg':
+        svg_content = image_data.decode('utf-8')
+        scrollable_html = f"""
+        <div style="{height_str}overflow: auto; border: 1px solid #cccccc;">
+            {svg_content}
+        </div>
+        """
+    else:
+        encoded_image = base64.b64encode(image_data).decode()
+        mime_type = f'image/{format}'
+        scrollable_html = f"""
+        <div style="m{height_str}overflow: auto; border: 1px solid #cccccc;">
+            <img src="data:{mime_type};base64,{encoded_image}" alt="Workflow Diagram" style="display: block; max-width: none; height: auto;">
+        </div>
+        """
     return scrollable_html
+
+def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=None, format='svg'):
+    image_data = generate_workflow_image(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, format)
+    return wrap_image_in_html(image_data, height, format)
+
+def generate_mermaid_code(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True):
+    mermaid_code = []
+    mermaid_code.append("graph TD")
+
+    shape_map = {
+        "circle": "(({}))",
+        "box": "[{}]",
+        "diamond": "{{{}}}",
+        "oval": "([{}])",
+        "hexagon": "{{{{{}}}}}",
+        "parallelogram": "[/{}/]",
+        "trapezoid": "[\\{}/]"
+    }
+
+    for i, node in enumerate(nodes):
+        shape = shape_map.get(node_shape[i] if node_shape else "box", "[{}]")
+        mermaid_code.append(f"    {chr(65 + i)}{shape.format(html.escape(node))}")
+
+    for i, (start, end) in enumerate(edges):
+        connector = "-->" if directional else "---"
+        edge_label = ""
+        if edge_labels and i < len(edge_labels):
+            edge_label = f"|{html.escape(edge_labels[i])}|"
+        edge_str = f"    {chr(65 + start)}{connector}{edge_label}{chr(65 + end)}"
+        
+        mermaid_code.append(edge_str)
+
+    mermaid_code.append("    classDef default fill:#f9f9f9,stroke:#999,stroke-width:1px;")
+     
+    if highlight_nodes_indices or highlight_edges_indices:
+        mermaid_code.append("    classDef highlight fill:#e1f5fe,stroke:#4fc3f7,stroke-width:2px;")
+    
+    if highlight_nodes_indices:
+        highlight_nodes = ",".join([chr(65 + i) for i in highlight_nodes_indices])
+        mermaid_code.append(f"    class {highlight_nodes} highlight;")
+    
+    mermaid_code.append("    linkStyle default stroke:#999,stroke-width:1px;")
+    if highlight_edges_indices:
+        highlight_edges = ",".join(map(str, highlight_edges_indices))
+        mermaid_code.append(f"    linkStyle {highlight_edges} stroke:#4fc3f7,stroke-width:2px;")
+    
+    return mermaid_code
+
 
 
 

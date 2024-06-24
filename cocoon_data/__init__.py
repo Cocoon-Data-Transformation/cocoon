@@ -68,6 +68,8 @@ LOG_MESSAGE_HISTORY = False
 DEBUG_MODE = False
 cocoon_comment_start = "-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE\n"
 cocoon_comment_end = "-- COCOON BLOCK END\n"
+sys.setrecursionlimit(5000)
+
 
 def yml_from_name(table_name):
 
@@ -199,12 +201,12 @@ def generate_draggable_graph_html_dynamically(graph_data):
     number_nodes = len(graph_data["nodes"])
     svg_width = min(800, 300 + 50 * number_nodes)
     svg_height = 100 + number_nodes * 30
-    return svg_width, svg_height, generate_draggable_graph_html(graph_data, svg_height, svg_width)
+    return svg_width, svg_height, generate_draggable_graph_html_color(graph_data, svg_height, svg_width)
 
 
 def display_draggable_graph_html(graph_data):
     _, svg_height, html_content = generate_draggable_graph_html_dynamically(graph_data)
-    display_html_iframe(html_content, width="100%", height=f"{svg_height+50}px")
+    display_html_iframe(html_content, width="100%", height=f"{svg_height+20}px")
 
 def cluster_tables(tables, threshold=0.5, num_perm=128):
 
@@ -14445,7 +14447,7 @@ Return the result in yml
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
 
         return summary
 
@@ -15227,32 +15229,85 @@ class DataProject:
         
         self.entities = {}
     
-    def join_graph_yaml(self):
-        models = []
-
-        for table_name in self.tables:
-            if table_name in self.primary_key:
-                table_entry = {
-                    'name': table_name,
-                    'primary_key': {
-                        'column': self.primary_key[table_name]
-                    }
-                }
-
-                if (table_name, self.primary_key[table_name]) in self.foreign_key:
-                    foreign_keys = []
-                    for fk_table_name, fk_column_name in self.foreign_key[(table_name, self.primary_key[table_name])]:
-                        foreign_keys.append({
-                            'table': fk_table_name,
-                            'column': fk_column_name
-                        })
-                    table_entry['primary_key']['foreign_keys'] = foreign_keys
-
-                models.append(table_entry)
-
-        yaml_output = yaml.dump({'models': models}, default_flow_style=False)
-        return yaml_output
+    def change_table_name(self, old_table_name, new_table_name):
+        if old_table_name not in self.tables:
+            raise KeyError(f"Table '{old_table_name}' does not exist.")
+        
+        if new_table_name in self.tables:
+            raise ValueError(f"Table '{new_table_name}' already exists.")
+        
+        self.tables[new_table_name] = self.tables.pop(old_table_name)
+        
+        if old_table_name in self.table_object:
+            self.table_object[new_table_name] = self.table_object.pop(old_table_name)
+        
+        if old_table_name in self.links:
+            self.links[new_table_name] = self.links.pop(old_table_name)
+        for table in self.links:
+            if old_table_name in self.links[table]:
+                self.links[table][new_table_name] = self.links[table].pop(old_table_name)
+        
+        if old_table_name in self.primary_key:
+            self.primary_key[new_table_name] = self.primary_key.pop(old_table_name)
+        
+        new_foreign_key = {}
+        for (pk_table, pk), fk_list in self.foreign_key.items():
+            if pk_table == old_table_name:
+                new_key = (new_table_name, pk)
+            else:
+                new_key = (pk_table, pk)
             
+            new_value = [(new_table_name if t == old_table_name else t, fk) for t, fk in fk_list]
+            new_foreign_key[new_key] = new_value
+        self.foreign_key = new_foreign_key
+        
+        if old_table_name in self.fks:
+            self.fks[new_table_name] = self.fks.pop(old_table_name)
+        
+        if old_table_name in self.entities:
+            self.entities[new_table_name] = self.entities.pop(old_table_name)
+    
+
+    def join_graph_dict(self):
+        models = OrderedDict()
+
+        for (pk_table_name, pk), fk_list in self.foreign_key.items():
+            if pk_table_name not in models:
+                models[pk_table_name] = OrderedDict({
+                    'table_name': pk_table_name,
+                    'primary_key': pk,
+                    'foreign_keys': []
+                })
+            else:
+                if 'primary_key' not in models[pk_table_name]:
+                    models[pk_table_name]['primary_key'] = pk
+
+            for fk_table_name, fk in fk_list:
+                fk_entry = OrderedDict({
+                    'column': fk,
+                    'reference': OrderedDict({
+                        'table_name': pk_table_name,
+                        'column': pk
+                    })
+                })
+
+                if fk_table_name not in models:
+                    models[fk_table_name] = OrderedDict({
+                        'table_name': fk_table_name,
+                        'foreign_keys': [fk_entry]
+                    })
+                else:
+                    if 'foreign_keys' not in models[fk_table_name]:
+                        models[fk_table_name]['foreign_keys'] = []
+                    models[fk_table_name]['foreign_keys'].append(fk_entry)
+
+        return OrderedDict({'join_graph': list(models.values())})
+        
+    def join_graph_yaml(self):
+        join_graph_dict = self.join_graph_dict()
+        yml_content = yaml.dump(join_graph_dict, default_flow_style=False)
+        return yml_content
+        
     
     def add_foreign_key_to_primary_key(self, fk_table_name, fk, pk_table_name, pk):
         if (pk_table_name, pk) not in self.foreign_key:
@@ -15262,8 +15317,6 @@ class DataProject:
         
     def add_table_primay_key(self, table_name, primary_key):
         self.primary_key[table_name] = primary_key
-    
-    
     
     def construct_links_from_pk_fk(self):
         for (pk_table_name, pk), fk_list in self.foreign_key.items():
@@ -15312,7 +15365,6 @@ class DataProject:
     def remove_table(self, table_name):
         if table_name in self.tables:
             del self.tables[table_name]
-
         else:
             pass
         
@@ -15364,6 +15416,61 @@ class DataProject:
         graph_data["links"] = links
 
         display_draggable_graph_html(graph_data)
+
+    def generate_nodes_edges(self):
+        return generate_nodes_edges(self.foreign_key)
+
+    def display_graph_static(self):
+        nodes, edges = self.generate_nodes_edges()
+        html_output = generate_workflow_html_multiple(nodes, edges, directional=True)
+        display(HTML(html_output))
+
+
+def generate_nodes_edges(foreign_key):
+    table_names = set()
+    for (pk_table, _), fk_list in foreign_key.items():
+        table_names.add(pk_table)
+        for fk_table, _ in fk_list:
+            table_names.add(fk_table)
+    
+    nodes = list(table_names)
+    
+    table_to_index = {table: idx for idx, table in enumerate(nodes)}
+    
+    edges = []
+    for (pk_table, _), fk_list in foreign_key.items():
+        pk_idx = table_to_index[pk_table]
+        for fk_table, _ in fk_list:
+            fk_idx = table_to_index[fk_table]
+            edges.append((fk_idx, pk_idx))
+    
+    return nodes, edges
+
+def reverse_join_graph(join_graph_dict):
+    foreign_key = OrderedDict()
+
+    for table in join_graph_dict['join_graph']:
+        table_name = table['table_name']
+        primary_key = table.get('primary_key')
+
+        if primary_key:
+            key = (table_name, primary_key)
+            if key not in foreign_key:
+                foreign_key[key] = []
+
+        if 'foreign_keys' in table:
+            for fk in table['foreign_keys']:
+                ref_table = fk['reference']['table_name']
+                ref_column = fk['reference']['column']
+                fk_column = fk['column']
+
+                key = (ref_table, ref_column)
+                if key not in foreign_key:
+                    foreign_key[key] = []
+                foreign_key[key].append((table_name, fk_column))
+
+    return foreign_key
+
 
 
 
@@ -15594,22 +15701,38 @@ class DecideProjection(Node):
                 new_table_name = f"{table_pipeline}_projected"
                 selection_clause = ',\n'.join(document['selected_columns'])
                 sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM "{table_pipeline}"'
-                sql_query = f"-- Projection: Selecting {len(document['selected_columns'])} out of {num_cols} columns\n" + sql_query
+                comment = f"-- Projection: Selecting {len(document['selected_columns'])} out of {num_cols} columns\n"
+                if num_cols - len(selected_indices) < 10:
+                    not_selected_columns = [column_names[i] for i in range(num_cols) if i not in selected_indices]
+                    comment += f"-- Columns projected out: {not_selected_columns}\n"
+                sql_query = comment + sql_query
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 step.run_codes()
                 table_pipeline.add_step_to_final(step)
 
             callback(document)
-            
-        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
-            callback_next(list(range(num_cols)))
             return
+
             
             
         display(HTML(f"🧐 Please select the columns to <b>include</b>.<br> 😊 Cocoon is currently not robust for >50 columns. Support for wide table is under development."))
-        create_column_selector(column_names, callback_next, default=True)
+        except_columns = ["_fivetran_synced"]
+        multi_select = create_column_selector(column_names, default=True, except_columns = except_columns)
 
-
+        submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
+        
+        def submit(b):
+            selected_indices = multi_select.value
+            callback_next(selected_indices)
+            return 
+        
+        submit_button.on_click(submit)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            submit(submit_button)
+            return
+        
+        display(submit_button)
 
 class CreateColumnGrouping(Node):
     default_name = 'Create Column Grouping'
@@ -16096,7 +16219,7 @@ patterns: # leave empty if free texts
             self.messages.append(messages)
 
             yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-            summary = yaml.safe_load(yml_code)
+            summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
             
             if "patterns" not in summary or summary["patterns"] is None or len(summary["patterns"]) == 0:
                 summary["patterns"] = []
@@ -16911,6 +17034,7 @@ class DecideUnique(Node):
         clear_output(wait=True)
         
         table_pipeline = self.para["table_pipeline"]
+        table_object = self.para["table_object"]
         table_name = table_pipeline.get_final_step().name
 
         display(HTML(f"🔍 Checking uniqueness for <i>{table_name}</i>..."))
@@ -16926,39 +17050,50 @@ class DecideUnique(Node):
 
         unique_columns = []
         highly_unique_columns = []
-
+        column_descs = ""
         for col in columns:
             distinct_count, total_count = compute_unique_ratio(con, table_name, col, allow_null=True)
+            if total_count  == 0:
+                continue
             if distinct_count/total_count > 0.9:
                 highly_unique_columns.append(col)
+                column_desc = table_object.column_desc.get(col, "")
+                column_descs = column_descs + f"{col}: {column_desc}\n"
+                
             if distinct_count == total_count:            
                 unique_columns.append(col)
-                
+        
+        table_desc = table_object.table_summary
+          
         all_columns = ', '.join(f'"{col}"' for col in columns)
         sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_name}" LIMIT {sample_size}')
         sample_df_str = sample_df.to_csv(index=False, quoting=1)    
 
-        return unique_columns, sample_df_str, table_name, columns, highly_unique_columns
+        return unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns
 
     def run(self, extract_output, use_cache=True):
         
-        unique_columns, sample_df_str, table_name, columns, highly_unique_columns = extract_output
+        unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns = extract_output
         
         if len(highly_unique_columns) == 0:
             return {"reasoning": "No single column that can be candidate key.", "candidate_key": {}}
         
 
 
-        template = f"""You have the following table:
+        template = f"""You have the following table: {table_desc}
+        
+Samples:
 {sample_df_str}
 
-The following columns have high uniqueness: {highly_unique_columns}
-Identify the column that can be candidate key.
+The following columns may be candidate key: {highly_unique_columns}
+{column_descs}
+
+Identify the column that can actually be candidate key.
 First, identify continuous columns can't be candidate key (e.g., temperature)
-Then, walk through each remain key.
+Then, walk through each remaining key.
 E.g., for a table of customer, "customer_id" is can be candidate key.
 But "first_name" is not always, as there can be multiple customers with the same first name.
-"region_id" is not the candidate key for customer table, because multiple customers can be in the same region.
+"region_id" is not the candidate key for customer table, where each row is a customer, because multiple customers (rows) can be in the same region.
 But "region_id" could be the candidate key for region table.
 
 Return in the following format:
@@ -16976,7 +17111,7 @@ non_continuous_columns:
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
@@ -17004,7 +17139,7 @@ non_continuous_columns:
         
         self.progress.value += 1
         json_code = run_output
-        unique_columns, sample_df_str, table_name, columns, highly_unique_columns = extract_output
+        unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns = extract_output
         
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
@@ -17171,11 +17306,16 @@ def replace_df_html_col_with_dropdown(df, df_html, col_name):
 
 def build_histogram_inputs(con, column, tablename):
     num_bins = 20
-    query_min_max = f'SELECT MIN("{column}") AS min_val, MAX("{column}") AS max_val FROM "{tablename}";'
-    min_val, max_val = run_sql_return_df(con, query_min_max).iloc[0]
+    query_min_max = f'SELECT MIN("{column}") AS min_val, MAX("{column}") AS max_val FROM "{tablename}" WHERE "{column}" IS NOT NULL;'
+    result_df = run_sql_return_df(con, query_min_max)
+
+    if result_df.empty or result_df.iloc[0].isnull().any():
+        return [], 0, []
+
+    min_val, max_val = result_df.iloc[0]
 
     if min_val == max_val:
-        total_count_query = f'SELECT COUNT(*) FROM "{tablename}";'
+        total_count_query = f'SELECT COUNT(*) FROM "{tablename}" WHERE "{column}" IS NOT NULL;'
         total_count = run_sql_return_df(con, total_count_query).iloc[0][0]
         return [total_count], min_val, [min_val]
 
@@ -17209,17 +17349,19 @@ def build_histogram_inputs(con, column, tablename):
             CASE {case_statement} ELSE NULL END AS BIN,
             COUNT(*) AS COUNT
         FROM "{tablename}"
+        WHERE "{column}" IS NOT NULL
         GROUP BY BIN
     ) COUNTS ON BINS.BIN = COUNTS.BIN
     ORDER BY BINS.BIN;
     '''
-
+    
     result_df = run_sql_return_df(con, query)
 
     counts = result_df['COUNT'].tolist()
     bin_centers = [(bin_edges[i] + bin_edges[i+1]) / 2 for i in range(num_bins)]
 
     return counts, bin_width, bin_centers
+
 
 def df_to_list(df):
     return [tuple(row) for row in df.itertuples(index=False, name=None)]
@@ -17262,7 +17404,7 @@ def build_barchat_input(con, column, tablename, limit=6):
         '''
 
     result = df_to_list(run_sql_return_df(con, fetch_query))
-    result_dict = {row[0]: row[1] for row in result}
+    result_dict = {str(row[0]): row[1] for row in result}
     return result_dict
 
 
@@ -18387,7 +18529,7 @@ mapping: # just the values need to be changed; remember to escape quote in yml (
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         summary["projection"] = False 
         summary["could_clean"] = True
         
@@ -18576,7 +18718,8 @@ class CleanUnusualForAll(MultipleNode):
     def extract(self, item):
         clear_output(wait=True)
 
-        document = self.get_sibling_document("Decide Unusual String For All")["Decide String Unusual"]
+        
+        document = self.get_sibling_document("Decide Unusual String For All").get("Decide String Unusual", {})
 
         columns = list(document.keys())
         self.elements = []
@@ -18997,7 +19140,7 @@ cast_clause: |
         self.messages.append(messages)
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         reasoning = summary["reasoning"]
         
         def clean_clause(clause):
@@ -19055,7 +19198,7 @@ cast_clause: |
                 self.messages.append(messages)
 
                 yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-                summary = yaml.safe_load(yml_code)
+                summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
                 summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
                 
         if i == max_iterations - 1:
@@ -19637,6 +19780,7 @@ models:
 
 
 
+
 class WriteStageYMLCode(Node):
     default_name = 'Write Stage Code'
     default_description = 'This node allows users to write the code for the stage.'
@@ -19693,9 +19837,11 @@ class WriteStageYMLCode(Node):
         if "yaml_only" not in self.class_para or not self.class_para["yaml_only"]:
             
             sql_query = f'SELECT * FROM "{table_pipeline}"'
-            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
-            step.run_codes()
-            table_pipeline.add_step_to_final(step)
+            final_table_name = table_pipeline.get_final_step().name
+            if final_table_name != new_table_name:
+                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+                step.run_codes()
+                table_pipeline.add_step_to_final(step)
             formatter = HtmlFormatter(style='default')
             css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
             combined_css = css_style + border_style
@@ -19944,12 +20090,15 @@ class WriteStageYMLCode(Node):
     
         
         if "dbt_directory" in self.para:
+            if not os.path.exists(os.path.join(self.para["dbt_directory"], "stage")):
+                os.makedirs(os.path.join(self.para["dbt_directory"], "stage"))
             file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
        
         create_progress_bar_with_numbers(4, doc_steps)
         display(HTML(f"🎉 Congratulations! Below is the stage codes."))
         display(tabs)
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        save_files_click(save_button)  
         
         def on_button_clicked(b):
             clear_output(wait=True)
@@ -19980,7 +20129,6 @@ class WriteStageYMLCode(Node):
         
         
         display(submit_button)
-        
 
 def create_stage_workflow(table_name, con, viewer=True):
     query_widget = QueryWidget(con)
@@ -20040,23 +20188,28 @@ class CreateShortTableSummary(Node):
         table_desc = sample_df.to_csv(index=False, quoting=1)
 
         self.sample_df = sample_df
+        source_name =  table_pipeline.get_source_step().name
 
-        return f"{table_pipeline}", table_desc
+        return f"{table_pipeline}", table_desc, source_name
     
     def run(self, extract_output, use_cache=True):
-        table_name, table_desc = extract_output
+        table_name, table_desc, source_name = extract_output
 
-        template = f"""You have the table '{table_name}' with samples:
+        template = f"""You have the table '{source_name}' with samples:
 {table_desc}
 
-Summarize the table. Start with the big picture. Then explain what are the details mentioned.
+Summarize the table. If it is a relation with multiple entities, explains how they are related.
+If it has single entity, explains what the details are
 
 Example: 
-The table is about ... It discusses customers and their orders.
+The table is the xx relation between abc...
+The table is about x, with details of ...
+
 Now, your summary in short simple SVO sentences and < 500 chars
 Return in the following format:
 ```yml
-table_summary: "The table is about ... It discusses customers and their orders."
+reasoning: It has single entity/multiple enities ...
+table_summary: The table is about the orders made by customers...
 ```
 """
 
@@ -20069,7 +20222,7 @@ table_summary: "The table is about ... It discusses customers and their orders."
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         return summary["table_summary"]
     
     def run_but_fail(self, extract_output, use_cache=True):
@@ -20082,7 +20235,7 @@ table_summary: "The table is about ... It discusses customers and their orders."
 
         self.progress.value += 1
 
-        table_name, _ = extract_output
+        table_name, _, _ = extract_output
         query_widget = self.item["query_widget"]
 
         create_explore_button(query_widget, table_name)
@@ -20375,8 +20528,8 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
     main_workflow.add_to_leaf(SelectTable())
     main_workflow.add_to_leaf(DecideColumnsPattern())
     main_workflow.add_to_leaf(DecideProjection())
-    main_workflow.add_to_leaf(CreateShortTableSummaryContinue())
-    main_workflow.add_to_leaf(DescribeColumnsListAndTableSummary())
+    main_workflow.add_to_leaf(CreateShortTableSummary())
+    main_workflow.add_to_leaf(DescribeColumnsList())
     main_workflow.add_to_leaf(DecideDuplicate())
     main_workflow.add_to_leaf(DecideTrim())
     main_workflow.add_to_leaf(DecideStringUnusualForAll())
@@ -20402,7 +20555,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
 
     
 
-def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False):
+def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_directory="./"):
 
     if query_widget is None:
         query_widget = QueryWidget(con)
@@ -20416,16 +20569,20 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False):
                             item = item, 
                             description="A workflow to build data vault",
                             para = {"data_project": DataProject(),
-                                    "dbt_directory": "./"})
-
+                                    "dbt_directory": dbt_directory})
+    
+    main_workflow.add_to_leaf(StartDisplaySteps())
     main_workflow.add_to_leaf(SelectTables(viewer=True))
-    main_workflow.add_to_leaf(SourceProjectStoryUnderstanding())
-    main_workflow.add_to_leaf(SourceTableUnderstand())
     main_workflow.add_to_leaf(StageForAll())
-    main_workflow.add_to_leaf(DecidePKforAll())
+    main_workflow.add_to_leaf(DecidePKforAll(viewer=True))
     main_workflow.add_to_leaf(DecideFKForAll())
+    main_workflow.add_to_leaf(DisplayJoinGraph())
+    
+    main_workflow.add_to_leaf(EntityUnderstanding())
+    main_workflow.add_to_leaf(RelationUnderstandingForAll())
+    main_workflow.add_to_leaf(ReorderRelationToStory())
+    main_workflow.add_to_leaf(BuildERStory())
     return query_widget, main_workflow
-
 
 class DescribeColumnsList(ListNode):
     default_name = 'Describe Columns'
@@ -20601,13 +20758,14 @@ Return in the following format:
                     
                     if old_name != new_name:
                         comment += f"-- {old_name} -> {new_name}\n"
-                        selection_clauses.append(f"{old_name} AS {new_name}")
+                        selection_clauses.append(f'"{old_name}" AS "{new_name}"')
                     else:
-                        selection_clauses.append(f"{old_name}")
+                        selection_clauses.append(f'"{old_name}"')
                 
                 selection_clause = ',\n'.join(selection_clauses)
-                sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}"
+                sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM "{table_pipeline}"'
                 sql_query = comment + sql_query
+                
                 con = self.item["con"]
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 step.run_codes()
@@ -21143,7 +21301,7 @@ patterns:
     response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
     messages.append(response['choices'][0]['message'])
     yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-    summary = yaml.safe_load(yml_code)
+    summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
     return summary
 
 
@@ -22164,6 +22322,7 @@ FROM {run_output['source_table']}
         
         
             
+
 class DecideStringCategoricalForAll(MultipleNode):
     default_name = 'Decide If Categorical For All'
     default_description = 'This node allows users to decide if a string column should be free text or categorical.'
@@ -22286,8 +22445,8 @@ class DecideStringCategoricalForAll(MultipleNode):
         display(HTML(f"😎 We have detected categorical columns. Please verify its domain:"))
         display(grid)
         display(HBox([reject_button, next_button]))
-
-
+        
+        
 class DecideStringCategoricalForAllContinue(DecideStringCategoricalForAll):
     def display_after_finish_workflow(self, callback, document):
         clear_output(wait=True)
@@ -22388,17 +22547,20 @@ class VerifyTests(Node):
             on_button_clicked(next_button)
             return
         
-    
+
 class DecideStringCategorical(Node):
     default_name = 'Decide If Categorical'
     default_description = 'This node allows users to decide if a string column should be free text or categorical.'
-    default_sample_size = 50
+    default_sample_size = 30
 
     def extract(self, input_item):
         clear_output(wait=True)
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
+        table_object = self.para["table_object"]
+        
         column_name = self.para["column_name"]
+        column_desc = table_object.column_desc.get(column_name, "")
         
         display(HTML(f"🔍 Detecting category for <i>{table_pipeline}[{column_name}]</i>..."))
         create_progress_bar_with_numbers(3, doc_steps)
@@ -22413,12 +22575,11 @@ class DecideStringCategorical(Node):
 
         sample_values = create_sample_distinct(con, table_pipeline, column_name, sample_size)
         total_distinct_count = count_total_distinct(con, table_pipeline, column_name)
-
-        return column_name, sample_values, sample_size, total_distinct_count
+        return column_name, column_desc, sample_values, sample_size, total_distinct_count
 
 
     def run(self, extract_output, use_cache=True):
-        column_name, sample_values, sample_size, total_distinct_count = extract_output
+        column_name, column_desc, sample_values, sample_size, total_distinct_count = extract_output
         
         if len(sample_values) == 0:
             return {"explanation": "Column is fully missing", "can_enumerate": False}
@@ -22426,24 +22587,32 @@ class DecideStringCategorical(Node):
         if sample_size < total_distinct_count:
             return {"explanation": "The column has too many distinct values.", "can_enumerate": False}
 
-        template = f"""{column_name} has the following distinct values:
-{sample_values.to_csv(index=False, header=False, quoting=1, quotechar="'")}
 
-Review if the column is categorical with a limited domain of acceptable values that you CAN enumerate.
-If so, enumerate the FULL domain with Jinja template. E.g.,
-[{{% for i in range(1, 10) %}}'x_{{{{ i }}}}'{{% if not loop.last %}},{{% endif %}}{{% endfor %}}]
-['cat', 'dog', 'fish', 'mom\\'s hat'] # note how to escape!
+
+        
+        template = f"""{column_name} is: {column_desc}
+        
+The CURRENT DOMAIN: {sample_values.to_csv(index=False, header=False, quoting=1, quotechar="'")}
+
+Task: from CURRENT DOMAIN, extrapolate FULL DOMAIN of all possible values
+
+First, check if the potential FULL DOMAIN has
+(1) a limited domain size (<{sample_size}) 
+(2) well-know values you CAN enumerate.
+If so, enumerate the FULL DOMAIN:
 
 Now, respond in yml:
 ```yml
 explanation: >
-    The column means ... The domain contains... 
-    The full domain follows ... pattern. It cannot/can be fully enumerated by Jinja that ...
-can_enumerate: true/false
-current_full: true/false # if categorical is true, are the current distinct values already the full domain? 
-# Jinja template that creates a list, to the best of you knowledge, WITHOUT referencing any var
-full_domain: >
-    [{{% for i in range(1, 10) %}}'x_{{{{ i }}}}'{{% if not loop.last %}},{{% endif %}}{{% endfor %}}] 
+    The column means ... The CURRENT DOMAIN contains ...
+    The FULL DOMAIN will contains X elements, which is above/below {sample_size}
+    The domain values are (not) well known to enumerate
+limited_size: true/false # depend on whether below/above {sample_size}
+well_known: true/false # are the values well known?
+current_full: true/false # if both above are true, is the current domain full
+full_domain: # only if limited_size, well_known, and not current_full
+    - value_1
+    - ...
 ```"""
 
         messages = [{"role": "user", "content": template}]
@@ -22452,49 +22621,44 @@ full_domain: >
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
             (lambda jc: "explanation" in jc, "The 'explanation' key is missing in the JSON code."),
-            (lambda jc: "can_enumerate" in jc, "The 'can_enumerate' key is missing in the JSON code."),
-            (lambda jc: isinstance(jc["can_enumerate"], bool), "The value of 'can_enumerate' must be a boolean."),
-            (lambda jc: "current_full" in jc if jc["can_enumerate"] else True, "The 'current_full' key is missing when 'can_enumerate' is True."),
-            (lambda jc: isinstance(jc["current_full"], bool) if "current_full" in jc else True, "The value of 'current_full' must be a boolean."),
-            (lambda jc: "full_domain" in jc if jc.get("current_full") is False and jc["can_enumerate"] else True, "The 'full_domain' key is missing when 'current_full' is False and 'can_enumerate' is True."),
+            (lambda jc: "limited_size" in jc, "The 'can_enumerate' key is missing in the JSON code."),
+            (lambda jc: "well_known" in jc, "The 'can_enumerate' key is missing in the JSON code."),
+            (lambda jc: isinstance(jc["limited_size"], bool), "The value of 'can_enumerate' must be a boolean."),
+            (lambda jc: isinstance(jc["well_known"], bool), "The value of 'can_enumerate' must be a boolean."),
+
         ]
 
         for check, error_message in checks:
             if not check(summary):
                 raise ValueError(f"Validation failed: {error_message}")
         
+        if summary["limited_size"] and summary["well_known"]:
+            summary["can_enumerate"] = True
+        else:
+            summary["can_enumerate"] = False
+        
         summary["domain"] = sample_values[column_name].tolist()
         
-        if "full_domain" in summary:
-            full_domain = summary["full_domain"]
             
-            if isinstance(full_domain, list):
-                pass
-            elif full_domain.strip() == "":
-                full_domain = []
-            elif full_domain.strip().startswith("#"):
-                full_domain = []
-            else:
-                full_domain = evaluate_jinja(full_domain)
-                if not isinstance(full_domain, list):
-                    raise ValueError("The 'full_domain' must be a list.")
-                summary["full_domain"] = full_domain
+        
+        if (not summary["can_enumerate"]) or summary["current_full"]:
+            summary["full_domain"] = []
         
         if "full_domain" in summary and len(summary["full_domain"]) == 0 :
             summary["current_full"] = True
             
-        if len(summary["full_domain"]) > 100:
+        if "full_domain" in summary and len(summary["full_domain"]) > 100:
             summary["can_enumerate"] = False
-            summary["explanation"] += "The domain is too large to enumerate."
+            summary["explanation"] = "The domain is too large to enumerate."
             del summary["full_domain"]
             del summary["current_full"]
             
-        if "full_domain" in summary and summary["can_enumerate"]:
+        if "full_domain" in summary and summary["can_enumerate"] and not summary["current_full"]:
             missing_values = set(summary["domain"]) - set(summary["full_domain"])
             if missing_values:
                 summary["full_domain"].extend(list(missing_values))
@@ -22529,13 +22693,15 @@ class SelectTables(Node):
         next_button = widgets.Button(description="Next", button_style='success')
 
         def on_button_click(b):
+            table_names = []
             selected_tables = multi_select.value
             data_project = self.para["data_project"]
             for table_id in selected_tables:
                 table_name = tables[table_id]
+                table_names.append(table_name)
                 data_project.add_table(table_name, get_table_schema(con, table_name))
                 
-            callback({"selected_tables": selected_tables})
+            callback({"selected_tables": table_names})
                 
         next_button.on_click(on_button_click)
         display(next_button)
@@ -22580,8 +22746,7 @@ class StageTablesForAll(MultipleNode):
         self.nodes = {}
 
         idx = 0
-        for table_id in selected_tables:
-            table_name = get_table_names(self.input_item["con"])[table_id]
+        for table_name in selected_tables:
             self.elements.append(table_name)
             self.nodes[table_name] = self.construct_node(table_name, idx, len(selected_tables))
             idx += 1
@@ -23093,7 +23258,7 @@ description: A do B, C do D... # leave empty if contain_hubs < 2
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
@@ -23170,7 +23335,7 @@ reference_tables:
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
@@ -23301,7 +23466,7 @@ similar_links:
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
@@ -23679,7 +23844,7 @@ one_one_columns: [column1, column2, ...]
         self.messages.append(messages)
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
@@ -24057,20 +24222,31 @@ class Table:
             category_string += f"'{column}': {categories}\n"
         return category_string.strip()
     
-    def print_column_desc(self, columns=None):
+    def print_column_desc(self, columns=None, show_category=False, 
+                          show_unique=False, show_pattern=False):
         column_desc_string = ""
         if columns is None:
             columns = self.columns
         for column in columns:
             if column in self.column_desc:
-                desc = self.column_desc.get(column, "")
-                if column in self.category:
+                desc = self.column_desc.get(column, "") + "\n"
+                
+                if show_category and column in self.category:
                     categories = self.category[column]
-                    desc += f". Domain: {categories}"
-                column_desc_string += f"'{column}': {desc}\n"
+                    desc += f"  Column domain: {categories}\n"
+                
+                if show_unique and column in self.uniqueness:
+                    desc += f"  Column is unique: {self.uniqueness[column]}\n"
+                
+                if show_pattern and column in self.patterns:
+                    desc += "   Column has regex patterns:\n"
+                    for pattern in self.patterns[column]:
+                        desc += f"      - {pattern['summary']}: {pattern['regex']}\n"
+                
+                column_desc_string += f"'{column}': {desc}"
         return column_desc_string.strip()
     
-    def create_dbt_schema_dict(self):
+    def create_dbt_schema_dict(self, table_cocoon_meta=None):
         data = OrderedDict([
             ("version", 2),
             ("models", [
@@ -24079,8 +24255,12 @@ class Table:
                     ("description", self.table_summary),
                     ("columns", [])
                 ])
-            ])
+            ]),
         ])
+        
+        if table_cocoon_meta is not None:
+            data["cocoon_meta"] = table_cocoon_meta
+            
 
         for column in self.columns:
             columndesc_key = next((key for key in self.column_desc if key.lower() == column.lower()), None)
@@ -24145,7 +24325,6 @@ class Table:
     
     def create_dbt_schema_yml(self):
         data = self.create_dbt_schema_dict()
-        yaml.add_representer(OrderedDict, represent_ordereddict)
         yml_content = yaml.dump(data, default_flow_style=False)
         return yml_content
     
@@ -24502,6 +24681,7 @@ class StageProgress(Node):
             file_names = [f"{new_table_name}.sql",  f"{new_table_name}.yml",]
             
             if "dbt_directory" in self.para:
+
                 file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
             
             if all([os.path.exists(file_name) for file_name in file_names]):
@@ -25088,7 +25268,6 @@ class StartDisplaySteps(Node):
         
         
 
-        
 class DecidePKforAll(Node):
     default_name = 'Decide PK for All'
     default_description = 'This decides the PK for all tables'
@@ -25141,6 +25320,7 @@ Return in the following format:
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
 
+        table_unique_columns, table_summarys = extract_output
         table_to_pk_mapping = run_output
         
         self.progress.value += 1
@@ -25159,9 +25339,10 @@ Return in the following format:
         
         for table_name, table_object in data_project.table_object.items():
             data['Table'].append(table_name)
+            
             columns = [""] + table_object.columns
 
-            primary_key = table_to_pk_mapping[table_name]
+            primary_key = table_to_pk_mapping.get(table_name, "")
             
             foreign_keys = [col for col in columns if col.lower().endswith("_id")]
 
@@ -25216,6 +25397,7 @@ Return in the following format:
         display(next_button)
         
         
+        
 class EntityUnderstanding(Node):
     default_name = 'Entity  Understand'
     default_description = 'This understands the entity of the tables'
@@ -25250,7 +25432,7 @@ Return in the following format:
         self.messages.append(messages)
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
 
         return summary
     
@@ -25372,109 +25554,28 @@ class RelationUnderstandingForAll(MultipleNode):
         display(next_button)
         
 
-class RelationUnderstanding(Node):
-    default_name = 'Relation Understand'
-    default_description = 'This understands the relation of the table'
 
-    def extract(self, item):
-        clear_output(wait=True)
         
-        idx = self.para["table_idx"]
-        total = self.para["table_total"]
-        table_name = self.para["table_name"]
-        con = self.item["con"]
 
-        display(HTML(f"🔍 Reading relation in {table_name} ..."))
-        create_progress_bar_with_numbers(3, doc_steps)
 
-        self.input_item = item
 
-        show_progress(max_value=total, value=idx)
 
-        data_project = self.para["data_project"]
-        main_entity = data_project.entities[table_name]
-        
-        fk_unique = {}
-        total_participation = {}
-        
-        pk = data_project.primary_key[table_name]
-        fk_unique[main_entity] = check_column_uniqueness(con, table_name, pk, allow_null=True)
-        total_participation[main_entity] = True
         
         
-        related_entity = set()
-        for pk_table_name, pk in data_project.foreign_key:
-            for fk_table_name, fk in data_project.foreign_key[(pk_table_name, pk)]:
-                if fk_table_name == table_name:
-                    entity = data_project.entities[pk_table_name]
-                    related_entity.add(entity)
+        
+        
                     
-                    fk_unique[entity] = check_column_uniqueness(con, fk_table_name, fk, allow_null=True)
-                    only1, only2, overlap = generate_queries_for_overlap(pk_table_name, [pk], table_name, [fk], con)
-                    total_participation[entity] = (only1 == 0)
                     
-        table_object = data_project.table_object[table_name]
-        table_summary = table_object.table_summary        
-        return main_entity, related_entity, table_summary, fk_unique, total_participation
     
-    def run(self, extract_output, use_cache=True):
-        main_entity, related_entity, table_summary, fk_unique, total_participation = extract_output
         
-        multiplicity_desc = []
-        for entity in fk_unique:
-            if fk_unique[entity]:
-                multiplicity_desc += f"1-1 to {entity}"
-            else:
-                multiplicity_desc += f"1-M to {entity}"
         
-        participation_desc = []
-        for entity in total_participation:
-            if total_participation[entity]:
-                participation_desc += f"{entity} is total"
-            else:
-                participation_desc += f"{entity} is partial"
                 
 
-        template = f"""You have a relation: {table_summary}
         
-It is about {len(related_entity) + 1} entities: '{[main_entity] + list(related_entity)}'
-For multiplicity, the relation is {", ".join(multiplicity_desc)}
-For participation, {", ".join(participation_desc)}
 
-First, describe the relation between the entities:
-(1). Include all entities
-(2). Simple SVO sentence (<10 words)
-(3). Use descriptive words (not just 'relates', 'has', ...)
-Then, pick a name for the relation.
-Next, explain multiplicity and participation.
 
-Return in the following format:
-```yml
-relation_desc: Customer make Order to buy Item
-relation_name: CustomerOrderItem
-multiplicity: 
-    Order: Each Order is uniquely identified by this relation # Relation is 1-1 to Order
-    Customer: Customers can make multiple Orders # Relation is 1-M to Customer
-    Item: Items can be purchased by multiple Orders # Relation is 1-M to Item
-participation:
-    Order: Order is created from this relation # Relation is total to Order
-    Customer: Not every customer makes any Order # Relation is partial to Customer
-    Item: Not every Item is purchased by any Order # Relation is partial to Item
-```"""
-        messages = [{"role": "user", "content": template}]
-        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-        messages.append(response['choices'][0]['message'])
-        self.messages.append(messages)
 
-        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
-        summary['entities'] = [main_entity] + list(related_entity)
-        summary['multiplicity']['cocoon_meta'] = fk_unique
-        summary['participation']['cocoon_meta'] = total_participation
-        return summary
     
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        callback(run_output)
    
         
 class ReorderRelationToStory(Node):
@@ -25519,7 +25620,7 @@ story: # Reorder the relations
         self.messages.append(messages)
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.safe_load(yml_code)
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
 
         return summary
     
@@ -25572,16 +25673,16 @@ def generate_workflow_graph(relation_map, relation_details):
 
 def create_html_content_er_story(relation_map, relation_details, df_display=None, page_no=0):
 
-    list_of_descriptions = "<ol>"
+    list_of_descriptions = '<p>Story behind the relationships <small class="text-muted"> (only for those connect >= 2 entities)</small></p><ol class="small">'
 
     for i in range(page_no):
         entry = relation_details[i]
         relation_name, relation_desc = entry['relation_name'], entry['relation_desc']
-        list_of_descriptions += f"<li><u>{relation_name}</u>: {relation_desc}</li>"
+        list_of_descriptions += f"<li>[{relation_name}]: {relation_desc}</li>"
     
     entry = relation_details[page_no]
     relation_name, relation_desc = entry['relation_name'], entry['relation_desc']
-    list_of_descriptions += f"<li><b><u>{relation_name}</u>: {relation_desc}</b></li>"
+    list_of_descriptions += f"<li><b>[{relation_name}]: {relation_desc}</b></li>"
     list_of_descriptions += "</ol>"
 
     relation_details = relation_details[:page_no+1]
