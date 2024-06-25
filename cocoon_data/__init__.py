@@ -20741,12 +20741,18 @@ Return in the following format:
             renamed = (new_df["Column"] != new_df["New Column Name"]).any()
             
             if renamed:
-                if new_df["New Column Name"].duplicated().any():
+                duplicates = new_df["New Column Name"].duplicated(keep=False)
+                
+                if duplicates.any():
                     print(f"⚠️ Please provide unique names for the columns. The following columns have duplicated names:")
-                    duplicate_names = new_df[new_df["New Column Name"].duplicated()]
-                    print(", ".join(duplicate_names["New Column Name"].tolist()))
-                    return
-
+                    duplicate_names = new_df[duplicates]["New Column Name"].unique()
+                    print(", ".join(duplicate_names))
+                    
+                    if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+                        new_df.loc[duplicates, "New Column Name"] = new_df.loc[duplicates, "Column"]
+                        print("Duplicated names have been reset to their original values.")
+                    else:
+                        return
 
                 new_table_name = f"{table_pipeline}_renamed"
                 comment = f"-- Rename: Renaming columns\n"

@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>shopify_fulfillment_event_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>city</th>
+      <th>zip</th>
+      <th>latitude</th>
+      <th>longitude</th>
+      <th>message</th>
+      <th>province</th>
+      <th>status</th>
+      <th>_fivetran_deleted</th>
+      <th>country</th>
+      <th>estimated_delivery_at</th>
+      <th>created_at</th>
+      <th>id</th>
+      <th>happened_at</th>
+      <th>updated_at</th>
+      <th>fulfillment_id</th>
+      <th>order_id</th>
+      <th>shop_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>delivered</td>
+      <td>False</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-08-29 20:52:39.000000</td>
+      <td>451435</td>
+      <td>2022-08-29 20:52:39.000000</td>
+      <td>2022-08-29 20:52:39.000000</td>
+      <td>40495</td>
+      <td>4502987</td>
+      <td>89440612</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>LONDON</td>
+      <td>CR0</td>
+      <td>101.349998</td>
+      <td>-14.033300</td>
+      <td>Delay</td>
+      <td>None</td>
+      <td>out_for_delivery</td>
+      <td>False</td>
+      <td>GB</td>
+      <td>None</td>
+      <td>2022-09-13 08:07:57.000000</td>
+      <td>48779</td>
+      <td>2022-08-15 12:41:00.000000</td>
+      <td>2022-09-13 08:07:57.000000</td>
+      <td>4064737</td>
+      <td>4588203</td>
+      <td>320612</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ECHO PARK</td>
+      <td>2759</td>
+      <td>-3.797699</td>
+      <td>190.783958</td>
+      <td>Delay</td>
+      <td>None</td>
+      <td>delayed</td>
+      <td>False</td>
+      <td>AU</td>
+      <td>2022-09-14 08:00:00.000000</td>
+      <td>2022-09-14 14:16:52.000000</td>
+      <td>1481515</td>
+      <td>2022-09-14 01:26:00.000000</td>
+      <td>2022-09-14 14:16:52.000000</td>
+      <td>4019339</td>
+      <td>451915</td>
+      <td>89320612</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>LAZYTOWN</td>
+      <td>01505</td>
+      <td>22.337700</td>
+      <td>-71.731003</td>
+      <td>Delay</td>
+      <td>MA</td>
+      <td>in_transit</td>
+      <td>False</td>
+      <td>US</td>
+      <td>None</td>
+      <td>2022-08-13 12:40:26.000000</td>
+      <td>558955</td>
+      <td>2022-03-01 10:36:39.000000</td>
+      <td>2022-08-13 12:40:26.000000</td>
+      <td>402947</td>
+      <td>429188587</td>
+      <td>89420612</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>LA</td>
+      <td>01760</td>
+      <td>12.287498</td>
+      <td>-21.357399</td>
+      <td>Delay</td>
+      <td>MA</td>
+      <td>in_transit</td>
+      <td>False</td>
+      <td>US</td>
+      <td>2022-08-24 23:59:59.000000</td>
+      <td>2022-08-24 06:29:21.000000</td>
+      <td>6904235</td>
+      <td>2022-08-24 05:30:57.000000</td>
+      <td>2022-08-24 06:29:21.000000</td>
+      <td>4060491</td>
+      <td>4242667</td>
+      <td>89420612</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>shipping_city</th>
+      <th>shipping_zip_code</th>
+      <th>shipping_latitude</th>
+      <th>shipping_longitude</th>
+      <th>event_message</th>
+      <th>shipping_province</th>
+      <th>fulfillment_status</th>
+      <th>is_deleted</th>
+      <th>shipping_country_code</th>
+      <th>estimated_delivery_at</th>
+      <th>event_created_at</th>
+      <th>event_id</th>
+      <th>event_occurred_at</th>
+      <th>event_updated_at</th>
+      <th>fulfillment_id</th>
+      <th>order_id</th>
+      <th>shop_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>delivered</td>
+      <td>False</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>2022-08-29 20:52:39</td>
+      <td>451435</td>
+      <td>2022-08-29 20:52:39</td>
+      <td>2022-08-29 20:52:39</td>
+      <td>40495</td>
+      <td>4502987</td>
+      <td>89440612</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>LONDON</td>
+      <td>None</td>
+      <td>101.349998</td>
+      <td>-14.033300</td>
+      <td>Delay</td>
+      <td>None</td>
+      <td>out_for_delivery</td>
+      <td>False</td>
+      <td>GB</td>
+      <td>NaT</td>
+      <td>2022-09-13 08:07:57</td>
+      <td>48779</td>
+      <td>2022-08-15 12:41:00</td>
+      <td>2022-09-13 08:07:57</td>
+      <td>4064737</td>
+      <td>4588203</td>
+      <td>320612</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ECHO PARK</td>
+      <td>02759</td>
+      <td>-3.797699</td>
+      <td>190.783958</td>
+      <td>Delay</td>
+      <td>None</td>
+      <td>delayed</td>
+      <td>False</td>
+      <td>AU</td>
+      <td>2022-09-14 08:00:00</td>
+      <td>2022-09-14 14:16:52</td>
+      <td>1481515</td>
+      <td>2022-09-14 01:26:00</td>
+      <td>2022-09-14 14:16:52</td>
+      <td>4019339</td>
+      <td>451915</td>
+      <td>89320612</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>None</td>
+      <td>01505</td>
+      <td>22.337700</td>
+      <td>-71.731003</td>
+      <td>Delay</td>
+      <td>MA</td>
+      <td>in_transit</td>
+      <td>False</td>
+      <td>US</td>
+      <td>NaT</td>
+      <td>2022-08-13 12:40:26</td>
+      <td>558955</td>
+      <td>2022-03-01 10:36:39</td>
+      <td>2022-08-13 12:40:26</td>
+      <td>402947</td>
+      <td>429188587</td>
+      <td>89420612</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>LOS ANGELES</td>
+      <td>01760</td>
+      <td>12.287498</td>
+      <td>-21.357399</td>
+      <td>Delay</td>
+      <td>MA</td>
+      <td>in_transit</td>
+      <td>False</td>
+      <td>US</td>
+      <td>2022-08-24 23:59:59</td>
+      <td>2022-08-24 06:29:21</td>
+      <td>6904235</td>
+      <td>2022-08-24 05:30:57</td>
+      <td>2022-08-24 06:29:21</td>
+      <td>4060491</td>
+      <td>4242667</td>
+      <td>89420612</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_city"></div><b>📃 Summary:</b> City of the shipping destination<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_zip_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_zip_code"></div><b>📃 Summary:</b> Postal or ZIP code of the shipping destination<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_latitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_shipping_latitude"></div><b>📃 Summary:</b> Latitude coordinate of the shipping destination<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_longitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_shipping_longitude"></div><b>📃 Summary:</b> Longitude coordinate of the shipping destination<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_message</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Delay'>Delay</option><option value='Cancellation'>Cancellation</option><option value='On Time'>On Time</option><option value='Early'>Early</option><option value='Rescheduled'>Rescheduled</option><option value='Postponed'>Postponed</option><option value='Extended'>Extended</option><option value='Shortened'>Shortened</option><option value='Moved'>Moved</option><option value='Merged'>Merged</option><option value='Split'>Split</option><option value='Modified'>Modified</option><option value='Completed'>Completed</option><option value='In Progress'>In Progress</option><option value='Not Started'>Not Started</option><option value='Suspended'>Suspended</option><option value='Resumed'>Resumed</option></select></span><br><br><div id="bar_viz_event_message"></div><b>📃 Summary:</b> Additional information or notes about the event<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_province</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_province"></div><b>📃 Summary:</b> Province or state of the shipping destination<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fulfillment_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='pending'>pending</option><option value='processing'>processing</option><option value='in_transit'>in_transit</option><option value='delayed'>delayed</option><option value='out_for_delivery'>out_for_delivery</option><option value='delivered'>delivered</option><option value='cancelled'>cancelled</option><option value='returned'>returned</option></select></span><br><br><div id="bar_viz_fulfillment_status"></div><b>📃 Summary:</b> Current status of the fulfillment<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record has been deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_country_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_country_code"></div><b>📃 Summary:</b> Country code of the shipping destination<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">estimated_delivery_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_estimated_delivery_at"></div><b>📃 Summary:</b> Estimated delivery date and time<br><b>❓ Missing:</b> Not applicable for already delivered or in-transit items.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_event_created_at"></div><b>📃 Summary:</b> Timestamp when the event was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_event_id"></div><b>📃 Summary:</b> Unique identifier for the event<br><b>🦄 Unique:</b> This column represents a unique identifier for each event in the fulfillment process. For this table, each row is a distinct event, and event_id appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_occurred_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_event_occurred_at"></div><b>📃 Summary:</b> Timestamp when the event occurred<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_updated_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_event_updated_at"></div><b>📃 Summary:</b> Timestamp when the event was last updated<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fulfillment_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_fulfillment_id"></div><b>📃 Summary:</b> Unique identifier for the fulfillment<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_order_id"></div><b>📃 Summary:</b> Unique identifier for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shop_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shop_id"></div><b>📃 Summary:</b> Unique identifier for the shop<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about Shopify fulfillment events. It contains details of order shipments. Each row represents an event in the fulfillment process. The table includes information such as order ID, fulfillment ID, shipping address, status, and timestamps. It tracks various stages of delivery like in_transit, out_for_delivery, and delivered. The table also records any delays or issues during shipment.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>14</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the event</td>
+      <td>event_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>address_1</td>
+      <td>First line of shipping address</td>
+      <td>shipping_address_line1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>city</td>
+      <td>City of the shipping destination</td>
+      <td>shipping_city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>country</td>
+      <td>Country code of the shipping destination</td>
+      <td>shipping_country_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>created_at</td>
+      <td>Timestamp when the event was created</td>
+      <td>event_created_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>estimated_delivery_at</td>
+      <td>Estimated delivery date and time</td>
+      <td>estimated_delivery_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>fulfillment_id</td>
+      <td>Unique identifier for the fulfillment</td>
+      <td>fulfillment_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>happened_at</td>
+      <td>Timestamp when the event occurred</td>
+      <td>event_occurred_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>latitude</td>
+      <td>Latitude coordinate of the shipping destination</td>
+      <td>shipping_latitude</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>longitude</td>
+      <td>Longitude coordinate of the shipping destination</td>
+      <td>shipping_longitude</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>message</td>
+      <td>Additional information or notes about the event</td>
+      <td>event_message</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>order_id</td>
+      <td>Unique identifier for the order</td>
+      <td>order_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>province</td>
+      <td>Province or state of the shipping destination</td>
+      <td>shipping_province</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>shop_id</td>
+      <td>Unique identifier for the shop</td>
+      <td>shop_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>status</td>
+      <td>Current status of the fulfillment</td>
+      <td>fulfillment_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>updated_at</td>
+      <td>Timestamp when the event was last updated</td>
+      <td>event_updated_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>zip</td>
+      <td>Postal or ZIP code of the shipping destination</td>
+      <td>shipping_zip_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record has been deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>2</b> columns have erroneous values<br><ol><li><b>shipping_city</b>: 'LA' is likely an abbreviation for 'Los Angeles', inconsistent with the full names used for other cities.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>LA</td>
+      <td>LOS ANGELES</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>LAZYTOWN</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_zip_code</b>: '2759' is missing a leading zero. 'CR0' is not a US zip code format.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2759</td>
+      <td>02759</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CR0</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>2</b> columns have disguised missing values<br>
+                ✔️ <b>2</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>shipping_city</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>shipping_zip_code</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>9</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>estimated_delivery_at</td>
+      <td>CAST("estimated_delivery_at" AS TIMESTAMP)</td>
+      <td>To transform the 'estimated_delivery_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The given values are already in a format that can be directly interpreted as timestamps (YYYY-MM-DD HH:MM:SS.SSSSSS), so we don't need to use strptime() for parsing. DuckDB's CAST function can automatically convert this string format to a TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>event_created_at</td>
+      <td>CAST("event_created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'event_created_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date-time format in the given examples is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically parse this format.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>event_id</td>
+      <td>CAST("event_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'event_id' column from 'INT' to 'VARCHAR', we need to use a CAST function in DuckDB. This will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to implement.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>event_occurred_at</td>
+      <td>CAST("event_occurred_at" AS TIMESTAMP)</td>
+      <td>To transform the 'event_occurred_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date-time format in the given examples is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.SSSSSS), which is directly compatible with the TIMESTAMP data type in most SQL databases, including DuckDB. Therefore, we don't need to use the strptime function for parsing; a simple CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>event_updated_at</td>
+      <td>CAST("event_updated_at" AS TIMESTAMP)</td>
+      <td>To transform the 'event_updated_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The current format of the dates in the column is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.SSSSSS), which is directly compatible with the TIMESTAMP data type in DuckDB. Therefore, we don't need to use the strptime function for parsing; a simple CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>fulfillment_id</td>
+      <td>CAST("fulfillment_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'fulfillment_id' column from INT to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'fulfillment_id' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>order_id</td>
+      <td>CAST("order_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'order_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>shipping_address_line1</td>
+      <td>CAST("shipping_address_line1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'shipping_address_line1' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>shop_id</td>
+      <td>CAST("shop_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shop_id' column from 'INT' to 'VARCHAR', we need to use the CAST function in DuckDB. This will convert each integer value to its string representation. The CAST function in DuckDB follows the standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>9</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>estimated_delivery_at</td>
+      <td>60</td>
+      <td>True</td>
+      <td>Not applicable for already delivered or in-transit items.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>event_message</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>shipping_address_line1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>shipping_city</td>
+      <td>40</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>shipping_country_code</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>shipping_latitude</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>shipping_longitude</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>shipping_province</td>
+      <td>60</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>shipping_zip_code</td>
+      <td>40</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>event_message</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>shipping_address_line1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>shipping_city</td>
+      <td>40</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>shipping_country_code</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>shipping_latitude</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>shipping_longitude</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>shipping_province</td>
+      <td>60</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>shipping_zip_code</td>
+      <td>40</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'LONDON', 'value': 33.33333333333333}, {'label': 'ECHO PARK', 'value': 33.33333333333333}, {'label': 'LOS ANGELES', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_shipping_city", data);
+data = [{'label': '02759', 'value': 33.33333333333333}, {'label': '01760', 'value': 33.33333333333333}, {'label': '01505', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_shipping_zip_code", data);
+data = [{'x': -1.1690065383911135, 'y': 1}, {'x': 4.08837833404541, 'y': 0}, {'x': 9.345763206481934, 'y': 0}, {'x': 14.603148078918455, 'y': 1}, {'x': 19.86053295135498, 'y': 1}];
+    binWidth = 5.257384872436523;
+    drawHistogram("hist_viz_shipping_latitude", data, binWidth);
+data = [{'x': -65.16812878234863, 'y': 1}, {'x': -52.04238073181152, 'y': 0}, {'x': -38.91663268127442, 'y': 0}, {'x': -25.79088463073731, 'y': 1}, {'x': -12.665136580200198, 'y': 1}];
+    binWidth = 13.125748050537108;
+    drawHistogram("hist_viz_shipping_longitude", data, binWidth);
+data = [{'label': 'Delay', 'value': 100.0}];
+    drawBarChart("bar_viz_event_message", data);
+data = [{'label': 'MA', 'value': 100.0}];
+    drawBarChart("bar_viz_shipping_province", data);
+data = [{'label': 'in_transit', 'value': 40.0}, {'label': 'out_for_deliver...', 'value': 20.0}, {'label': 'delivered', 'value': 20.0}, {'label': 'delayed', 'value': 20.0}];
+    drawBarChart("bar_viz_fulfillment_status", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'US', 'value': 50.0}, {'label': 'GB', 'value': 25.0}, {'label': 'AU', 'value': 25.0}];
+    drawBarChart("bar_viz_shipping_country_code", data);
+data = [{'label': '2022-09-14 08:0...', 'value': 50.0}, {'label': '2022-08-24 23:5...', 'value': 50.0}];
+    drawBarChart("bar_viz_estimated_delivery_at", data);
+data = [{'label': '2022-09-13 08:0...', 'value': 20.0}, {'label': '2022-09-14 14:1...', 'value': 20.0}, {'label': '2022-08-24 06:2...', 'value': 20.0}, {'label': '2022-08-29 20:5...', 'value': 20.0}, {'label': '2022-08-13 12:4...', 'value': 20.0}];
+    drawBarChart("bar_viz_event_created_at", data);
+data = [{'label': '451435', 'value': 20.0}, {'label': '6904235', 'value': 20.0}, {'label': '48779', 'value': 20.0}, {'label': '1481515', 'value': 20.0}, {'label': '558955', 'value': 20.0}];
+    drawBarChart("bar_viz_event_id", data);
+data = [{'label': '2022-08-29 20:5...', 'value': 20.0}, {'label': '2022-09-14 01:2...', 'value': 20.0}, {'label': '2022-03-01 10:3...', 'value': 20.0}, {'label': '2022-08-24 05:3...', 'value': 20.0}, {'label': '2022-08-15 12:4...', 'value': 20.0}];
+    drawBarChart("bar_viz_event_occurred_at", data);
+data = [{'label': '2022-09-13 08:0...', 'value': 20.0}, {'label': '2022-08-24 06:2...', 'value': 20.0}, {'label': '2022-08-29 20:5...', 'value': 20.0}, {'label': '2022-09-14 14:1...', 'value': 20.0}, {'label': '2022-08-13 12:4...', 'value': 20.0}];
+    drawBarChart("bar_viz_event_updated_at", data);
+data = [{'label': '40495', 'value': 20.0}, {'label': '4064737', 'value': 20.0}, {'label': '4019339', 'value': 20.0}, {'label': '402947', 'value': 20.0}, {'label': '4060491', 'value': 20.0}];
+    drawBarChart("bar_viz_fulfillment_id", data);
+data = [{'label': '4502987', 'value': 20.0}, {'label': '451915', 'value': 20.0}, {'label': '429188587', 'value': 20.0}, {'label': '4588203', 'value': 20.0}, {'label': '4242667', 'value': 20.0}];
+    drawBarChart("bar_viz_order_id", data);
+data = [{'label': '89420612', 'value': 40.0}, {'label': '89440612', 'value': 20.0}, {'label': '320612', 'value': 20.0}, {'label': '89320612', 'value': 20.0}];
+    drawBarChart("bar_viz_shop_id", data);
+
+
+</script>
+</body>
+</html>

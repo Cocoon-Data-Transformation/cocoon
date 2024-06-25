@@ -1,0 +1,2348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>email_event_forward_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>browser</th>
+      <th>location</th>
+      <th>user_agent</th>
+      <th>id</th>
+      <th>ip_address</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>WYZrPceIW6ZcxygcXcRTbw==</td>
+      <td>F8KYmezvrn9o/qKlsAVh8Q==</td>
+      <td>WDth2cRihFSzZcbvMAV4Kw==</td>
+      <td>7cdf3c59-c285-3f8d-be03-7d34fa2a5870</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>qH92INzmESwbSIQgcXSejg==</td>
+      <td>45rZ1Usg5Tm8Ur1cT3RX4g==</td>
+      <td>BY7HIGDN21G1USA3YJud7w==</td>
+      <td>ca8acf6c-d34c-383a-9b20-f2d46a3f2229</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>dwyuYeNZEbtDTT7EJerawQ==</td>
+      <td>MDitHNlggJWZ+T1HFnPfhA==</td>
+      <td>cc549191-bf36-3d1b-b6df-4d12fbeda0f9</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>s5SfqCCY7I1BOeyTR+6rXA==</td>
+      <td>h+yLHrzHUNgJqdD2vHn+Hw==</td>
+      <td>41de88df-5d4f-3afd-93cd-d301cd088e12</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>N6IC9KVYuhKobdYde5ZN+w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>81cfb00d-c87a-30d5-8f76-182dd5ae1c4d</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>5x0LjgC8k2Yp6Ds3eJ5cNw==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>758ac675-40e7-31e9-b18a-2ff310ec9380</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>5pLfzClnwQsrmfxg0vc0+w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>548ed010-752e-33a9-82bd-934d9da31ee7</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>eAkrp+d4YkAFXo2H+5LfFg==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>5ef18023-b764-3822-8dc7-8416b7189257</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>I3x0a34RazubToczsZgw1A==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>bfe7dde1-b5db-3cf3-bc5f-d1fe1656b8cd</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>d1GJNSL7pOHlYqlsU90AxA==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>f51ada66-3f8e-3aac-bbfd-743fa74ded0f</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>mtzM0G0zgBW9xEr2fwvE9Q==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>6b94002b-8d93-31d3-ae88-d22159596fce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>Vype0MTbFEvOzlgzTOObaA==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>fbe7f30a-5601-31c5-beaf-c80aa9216397</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>EVmLmu7b+op0buBNKdU9VQ==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>6634122c-2667-3b73-9da4-fa9d1ba559ad</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>WeW8vu+4dlA1gDu3D1B4+g==</td>
+      <td>mOPK+ecU+AQirvDLUbsJag==</td>
+      <td>18889dd8-455b-33a5-b88d-1abfc03f4422</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Y+HNnHPslPFbBrKnD2qqDg==</td>
+      <td>0KW1op22hg5fmvps0sMP2A==</td>
+      <td>TvO3cedQ5Z9kwnmSj1WQjw==</td>
+      <td>e1df8ae4-6285-38b4-bb55-b891b78656ec</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>1sqfNC5CnBa6jjTzI0WAyA==</td>
+      <td>g7hRcrhMWH0PNQ9PvAc5pg==</td>
+      <td>F/PSYYLZ/nUgZ8hsALJJ/Q==</td>
+      <td>0045bda0-0da8-314d-b91c-96a777fa8fb3</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>8cba7a9b-2d73-32f4-ac05-644070947ec3</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>9d4301c7-aa88-39ee-87cb-34e7724e477f</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>c437f372-4425-36e2-a065-d7c0048ac47f</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>23e5c6ce-8ae1-3a6e-8ab5-69054d7e18b6</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>f95ea09a-67b9-3480-8191-201b60cade0a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>da80eb9e-1ffa-3832-b372-99bf032f04cd</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>96b4e5ea-0a77-332b-b584-d23efc9deeaf</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>1556c9ed-bdbf-3d8d-a626-573fc6507bfa</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>0e30b04a-573a-33b8-8397-7e541d57a857</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>95296505-83dc-3a5a-8437-843840325791</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>3f23bcdd-d207-3c80-bf76-472b519489bd</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>f92d0796-55f1-37f6-843e-6b23c360dd72</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>a90ff1cb-ce25-3686-941c-6fc6dbb8052d</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>4d9cdfb5-4fe6-3405-a3e1-11f84d1225d1</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>670f7624-2064-3b8b-80fc-c7af8383e3a8</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>9f89d2bc-a7a1-3423-a8d1-0db5d42a924f</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>a05b63d3-6488-352e-a845-540a90164772</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>TvO3cedQ5Z9kwnmSj1WQjw==</td>
+      <td>8012b2d6-8284-3bd9-94af-6538879f36ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>oFBFNP51eoood80q4nIBFQ==</td>
+      <td>Odtvw7MthsNhWRFxmL1zqg==</td>
+      <td>a3d5603b-5647-3fc2-bd55-2aac11db5f6c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>oFBFNP51eoood80q4nIBFQ==</td>
+      <td>Odtvw7MthsNhWRFxmL1zqg==</td>
+      <td>3ef1b9fb-956e-3081-bfc3-4d47b8139ad6</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>rV6xHOfxpPrg3oNMxb0npQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>50ab4b98-1c1b-3c4c-957f-275b2cfdb6c1</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>rV6xHOfxpPrg3oNMxb0npQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>e78c6b5c-a503-3846-b65b-705d70c878c7</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>ae128e25-ad82-3925-a0be-44081e7c8aa6</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>16b5007e-d42c-3cf0-a566-c636ce890252</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>b3e9a71d-4591-3732-a82d-32e2136e1dd2</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>c5d3476c-98a6-36ee-a43b-a49891393e08</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>284f0959-6566-3ad2-b1c1-fbdea0c8fcca</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Y+HNnHPslPFbBrKnD2qqDg==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>TvO3cedQ5Z9kwnmSj1WQjw==</td>
+      <td>ea986494-6c71-3bd1-813b-2387b9a812e5</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>coOxOS5Sgl9bg/Hexi3nAg==</td>
+      <td>c0bee651-b2cb-3075-ac8d-2174c466ea61</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>coOxOS5Sgl9bg/Hexi3nAg==</td>
+      <td>71c9adb8-a7c4-374d-bca8-d6022a025351</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>198139ee-4de5-3809-b724-7c4a93c69dec</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>7bbc19a8-2f04-3c2d-bc85-ad3076300e68</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>9933e8e8-a0e5-3b2b-9ef1-b3286d4be375</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>49fbc95a-b91a-3279-b97d-87dc4584d192</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>5fc429a9-cea9-3347-8bde-d9be23f12cb6</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>a8a3c778-e27b-38e1-bda3-36d4c46150f1</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>45dd0863-3972-3a91-b604-04451391fb34</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>9aede68a-3f63-3948-8b10-4aa4578f90d2</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>55ae827f-15e3-3425-9dbf-1e487904ab1a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>2f6fe21a-817e-39c2-bee3-bc193c6b5f11</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>add30eba-8808-3797-985b-3d9b796657ec</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>314e5301-3f7b-3060-a6d0-ae352d3e5a35</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>40843ccc-73d1-3c2c-94d0-8ca8ae488934</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>e386c573-7d00-3bdf-992b-e7cd291ad276</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>627bbdbe-309b-3bba-94c3-ed271828d79e</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>01440454-dd1f-38c3-a492-fda22c63f6cd</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>eaf55aeb-e030-388b-aeed-c48578dfcb7a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>37e90729-d5e3-341e-abf5-2b70faac26c4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>cd600e1b-e93f-3961-9b70-c7a09b911df8</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>27547d3d-54d6-31f8-ba1b-a6c3814efba3</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>558b0025-7916-3d12-9179-47557e027630</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>df713af4-2237-3c54-873a-c8be5217367b</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>221dc9bf-5237-30c4-95d7-b796095d0684</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>2953dfb5-7766-3ff7-b805-5b20936dc0e7</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>0091e92d-e991-330f-ac9e-87dbc6797ff9</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>394790c2-8d5e-37cb-b045-44d2544c1cd1</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>5c95d7a5-cb9f-3b67-b5c3-ba300acb71d1</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>1b699164-cc9c-3953-b49b-40c253ccdac4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>e1db5de4-8eb5-3b08-abc1-a4ebf18fd989</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>bdd859da-3f03-36be-8002-b32feb50c18d</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>ec91feaa-d745-3457-b881-309739d0d4f8</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>7e4aee65-3cce-3c68-8c40-cebf0b3ed75a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>8094087a-07fa-3f14-9613-9d28c28e7623</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>5e89c409-2148-3018-987f-0a4eb75fbede</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>9a4247f8-96c0-325f-be45-6ece19c64096</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>72ae0216-cf29-376e-8de3-9ad3c8f37dd5</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>94f04f55-ae02-34b8-862f-81885afe7d5f</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>24cf44a0-8108-3d3d-a610-7a755cf16ffd</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>5e0b9784-2823-3866-b04b-e1869fffc28c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>4d86d9ea-9fc7-39ce-a355-1273afb52d16</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>0b1e485c-f815-34fb-a051-2166f809b17d</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>e49912bd-8d9d-325a-92b8-e2287e80c766</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>b7b2ab73-855f-3775-b3ec-1768cacf063d</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>eba61b75-8a15-3282-8879-8d551452690d</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>36582bb0-e491-311e-ad44-cdc5217dfa98</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>f1955407-d898-3efa-9db0-91de460c86a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>a3add427-8bc7-336c-b5cd-1a5a56a27043</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>44c02d7a-d6bd-341d-b9c1-73606acd4d4f</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>2JOH0rKFNIcJGJtvJQ0jEw==</td>
+      <td>37d97bdf-61ae-37e2-a4a3-f34ea6e9a6c8</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>8d3a049c-baa8-31c5-8611-1af1c7f1c3ad</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>ab483b5b-8b4e-3198-abc4-ed625522ab6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>a03eb9e5-6788-390c-af38-71d71dedf569</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>380a1b9d-cd6c-316d-812e-a8afb9a6988f</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>7fadc0e0-0ea1-3572-b2ca-7edb45b20f5e</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>encrypted_browser</th>
+      <th>encrypted_location</th>
+      <th>encrypted_user_agent</th>
+      <th>event_id</th>
+      <th>forwarding_ip</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>WYZrPceIW6ZcxygcXcRTbw==</td>
+      <td>F8KYmezvrn9o/qKlsAVh8Q==</td>
+      <td>WDth2cRihFSzZcbvMAV4Kw==</td>
+      <td>7cdf3c59-c285-3f8d-be03-7d34fa2a5870</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>qH92INzmESwbSIQgcXSejg==</td>
+      <td>45rZ1Usg5Tm8Ur1cT3RX4g==</td>
+      <td>BY7HIGDN21G1USA3YJud7w==</td>
+      <td>ca8acf6c-d34c-383a-9b20-f2d46a3f2229</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>dwyuYeNZEbtDTT7EJerawQ==</td>
+      <td>MDitHNlggJWZ+T1HFnPfhA==</td>
+      <td>cc549191-bf36-3d1b-b6df-4d12fbeda0f9</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>s5SfqCCY7I1BOeyTR+6rXA==</td>
+      <td>h+yLHrzHUNgJqdD2vHn+Hw==</td>
+      <td>41de88df-5d4f-3afd-93cd-d301cd088e12</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>N6IC9KVYuhKobdYde5ZN+w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>81cfb00d-c87a-30d5-8f76-182dd5ae1c4d</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>5x0LjgC8k2Yp6Ds3eJ5cNw==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>758ac675-40e7-31e9-b18a-2ff310ec9380</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>5pLfzClnwQsrmfxg0vc0+w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>548ed010-752e-33a9-82bd-934d9da31ee7</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>eAkrp+d4YkAFXo2H+5LfFg==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>5ef18023-b764-3822-8dc7-8416b7189257</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>I3x0a34RazubToczsZgw1A==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>bfe7dde1-b5db-3cf3-bc5f-d1fe1656b8cd</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>d1GJNSL7pOHlYqlsU90AxA==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>f51ada66-3f8e-3aac-bbfd-743fa74ded0f</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>mtzM0G0zgBW9xEr2fwvE9Q==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>6b94002b-8d93-31d3-ae88-d22159596fce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>Vype0MTbFEvOzlgzTOObaA==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>fbe7f30a-5601-31c5-beaf-c80aa9216397</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>EVmLmu7b+op0buBNKdU9VQ==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>6634122c-2667-3b73-9da4-fa9d1ba559ad</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>WeW8vu+4dlA1gDu3D1B4+g==</td>
+      <td>mOPK+ecU+AQirvDLUbsJag==</td>
+      <td>18889dd8-455b-33a5-b88d-1abfc03f4422</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Y+HNnHPslPFbBrKnD2qqDg==</td>
+      <td>0KW1op22hg5fmvps0sMP2A==</td>
+      <td>TvO3cedQ5Z9kwnmSj1WQjw==</td>
+      <td>e1df8ae4-6285-38b4-bb55-b891b78656ec</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>1sqfNC5CnBa6jjTzI0WAyA==</td>
+      <td>g7hRcrhMWH0PNQ9PvAc5pg==</td>
+      <td>F/PSYYLZ/nUgZ8hsALJJ/Q==</td>
+      <td>0045bda0-0da8-314d-b91c-96a777fa8fb3</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>8cba7a9b-2d73-32f4-ac05-644070947ec3</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>9d4301c7-aa88-39ee-87cb-34e7724e477f</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>c437f372-4425-36e2-a065-d7c0048ac47f</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>23e5c6ce-8ae1-3a6e-8ab5-69054d7e18b6</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>f95ea09a-67b9-3480-8191-201b60cade0a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>da80eb9e-1ffa-3832-b372-99bf032f04cd</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>96b4e5ea-0a77-332b-b584-d23efc9deeaf</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>1556c9ed-bdbf-3d8d-a626-573fc6507bfa</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>0e30b04a-573a-33b8-8397-7e541d57a857</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>95296505-83dc-3a5a-8437-843840325791</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>3f23bcdd-d207-3c80-bf76-472b519489bd</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>f92d0796-55f1-37f6-843e-6b23c360dd72</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>a90ff1cb-ce25-3686-941c-6fc6dbb8052d</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>4d9cdfb5-4fe6-3405-a3e1-11f84d1225d1</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>670f7624-2064-3b8b-80fc-c7af8383e3a8</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>9f89d2bc-a7a1-3423-a8d1-0db5d42a924f</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>a05b63d3-6488-352e-a845-540a90164772</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>AtP8vcsOL2v9oAqaqoXW1w==</td>
+      <td>TvO3cedQ5Z9kwnmSj1WQjw==</td>
+      <td>8012b2d6-8284-3bd9-94af-6538879f36ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>oFBFNP51eoood80q4nIBFQ==</td>
+      <td>Odtvw7MthsNhWRFxmL1zqg==</td>
+      <td>a3d5603b-5647-3fc2-bd55-2aac11db5f6c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>oFBFNP51eoood80q4nIBFQ==</td>
+      <td>Odtvw7MthsNhWRFxmL1zqg==</td>
+      <td>3ef1b9fb-956e-3081-bfc3-4d47b8139ad6</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>rV6xHOfxpPrg3oNMxb0npQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>50ab4b98-1c1b-3c4c-957f-275b2cfdb6c1</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>rV6xHOfxpPrg3oNMxb0npQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>e78c6b5c-a503-3846-b65b-705d70c878c7</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>ae128e25-ad82-3925-a0be-44081e7c8aa6</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>16b5007e-d42c-3cf0-a566-c636ce890252</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>b3e9a71d-4591-3732-a82d-32e2136e1dd2</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>c5d3476c-98a6-36ee-a43b-a49891393e08</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>284f0959-6566-3ad2-b1c1-fbdea0c8fcca</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Y+HNnHPslPFbBrKnD2qqDg==</td>
+      <td>LkKtbEKeMYHJ59jEPGZj4Q==</td>
+      <td>TvO3cedQ5Z9kwnmSj1WQjw==</td>
+      <td>ea986494-6c71-3bd1-813b-2387b9a812e5</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>coOxOS5Sgl9bg/Hexi3nAg==</td>
+      <td>c0bee651-b2cb-3075-ac8d-2174c466ea61</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>coOxOS5Sgl9bg/Hexi3nAg==</td>
+      <td>71c9adb8-a7c4-374d-bca8-d6022a025351</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>198139ee-4de5-3809-b724-7c4a93c69dec</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>7bbc19a8-2f04-3c2d-bc85-ad3076300e68</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>9933e8e8-a0e5-3b2b-9ef1-b3286d4be375</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>49fbc95a-b91a-3279-b97d-87dc4584d192</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>5fc429a9-cea9-3347-8bde-d9be23f12cb6</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>T/594312FW9nHssNPJQJ+w==</td>
+      <td>duj+eZjN3RvPn4PpYx6L4w==</td>
+      <td>LWie8tFxoL5N3kijhJoDwQ==</td>
+      <td>a8a3c778-e27b-38e1-bda3-36d4c46150f1</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>45dd0863-3972-3a91-b604-04451391fb34</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>9aede68a-3f63-3948-8b10-4aa4578f90d2</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>55ae827f-15e3-3425-9dbf-1e487904ab1a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>2f6fe21a-817e-39c2-bee3-bc193c6b5f11</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>add30eba-8808-3797-985b-3d9b796657ec</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>314e5301-3f7b-3060-a6d0-ae352d3e5a35</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>40843ccc-73d1-3c2c-94d0-8ca8ae488934</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>e386c573-7d00-3bdf-992b-e7cd291ad276</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>627bbdbe-309b-3bba-94c3-ed271828d79e</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>01440454-dd1f-38c3-a492-fda22c63f6cd</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Ws7FWR5JKC2YjbNkKkKyyQ==</td>
+      <td>eaf55aeb-e030-388b-aeed-c48578dfcb7a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>37e90729-d5e3-341e-abf5-2b70faac26c4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>cd600e1b-e93f-3961-9b70-c7a09b911df8</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>27547d3d-54d6-31f8-ba1b-a6c3814efba3</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>558b0025-7916-3d12-9179-47557e027630</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>df713af4-2237-3c54-873a-c8be5217367b</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>221dc9bf-5237-30c4-95d7-b796095d0684</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>2953dfb5-7766-3ff7-b805-5b20936dc0e7</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>0091e92d-e991-330f-ac9e-87dbc6797ff9</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>394790c2-8d5e-37cb-b045-44d2544c1cd1</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>5c95d7a5-cb9f-3b67-b5c3-ba300acb71d1</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>1b699164-cc9c-3953-b49b-40c253ccdac4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>e1db5de4-8eb5-3b08-abc1-a4ebf18fd989</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>bdd859da-3f03-36be-8002-b32feb50c18d</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>ec91feaa-d745-3457-b881-309739d0d4f8</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>7e4aee65-3cce-3c68-8c40-cebf0b3ed75a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>8094087a-07fa-3f14-9613-9d28c28e7623</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>5e89c409-2148-3018-987f-0a4eb75fbede</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>9a4247f8-96c0-325f-be45-6ece19c64096</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>72ae0216-cf29-376e-8de3-9ad3c8f37dd5</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>94f04f55-ae02-34b8-862f-81885afe7d5f</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>24cf44a0-8108-3d3d-a610-7a755cf16ffd</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>5e0b9784-2823-3866-b04b-e1869fffc28c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>4d86d9ea-9fc7-39ce-a355-1273afb52d16</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>0b1e485c-f815-34fb-a051-2166f809b17d</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>e49912bd-8d9d-325a-92b8-e2287e80c766</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>b7b2ab73-855f-3775-b3ec-1768cacf063d</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>eba61b75-8a15-3282-8879-8d551452690d</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>36582bb0-e491-311e-ad44-cdc5217dfa98</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>f1955407-d898-3efa-9db0-91de460c86a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>a3add427-8bc7-336c-b5cd-1a5a56a27043</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>SlPHKhnR4kd8ZOgxszGYlA==</td>
+      <td>44c02d7a-d6bd-341d-b9c1-73606acd4d4f</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>2JOH0rKFNIcJGJtvJQ0jEw==</td>
+      <td>37d97bdf-61ae-37e2-a4a3-f34ea6e9a6c8</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>8d3a049c-baa8-31c5-8611-1af1c7f1c3ad</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>bevrYO0XcMCJNgtGKRsRQA==</td>
+      <td>ab483b5b-8b4e-3198-abc4-ed625522ab6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>a03eb9e5-6788-390c-af38-71d71dedf569</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>380a1b9d-cd6c-316d-812e-a8afb9a6988f</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>LylS8dTDCOeXwdRksNQeQA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>FhHVpPtwQAPTebQlBTXHSg==</td>
+      <td>7fadc0e0-0ea1-3572-b2ca-7edb45b20f5e</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_browser</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_browser"></div><b>📃 Summary:</b> Encrypted browser information used for email forwarding<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_location</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_location"></div><b>📃 Summary:</b> Encrypted location data of the forwarding device<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_user_agent</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_user_agent"></div><b>📃 Summary:</b> Encrypted user agent string of the forwarding device<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_event_id"></div><b>📃 Summary:</b> Unique identifier for each email forwarding event<br><b>🦄 Unique:</b> This column represents a unique identifier for each email forwarding event. For this table, each row represents a distinct email forwarding event. The event_id appears to be a UUID, which is designed to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">forwarding_ip</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_forwarding_ip"></div><b>📃 Summary:</b> IP address of the device used for forwarding (currently empty)<br><b>❓ Missing:</b> No forwarding IP used for these direct connections.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about email forwarding events. It contains unique IDs for each event. The table includes encrypted information on the browser, IP address, location, and user agent associated with each forward. The IP address field appears to be empty in the sample data. This table likely tracks and stores details about when and how emails are forwarded by users.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>5</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for each email forwarding event</td>
+      <td>event_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>browser</td>
+      <td>Encrypted browser information used for email forwarding</td>
+      <td>encrypted_browser</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ip_address</td>
+      <td>IP address of the device used for forwarding (currently empty)</td>
+      <td>forwarding_ip</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>location</td>
+      <td>Encrypted location data of the forwarding device</td>
+      <td>encrypted_location</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>user_agent</td>
+      <td>Encrypted user agent string of the forwarding device</td>
+      <td>encrypted_user_agent</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>2</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>event_id</td>
+      <td>CAST("event_id" AS UUID)</td>
+      <td>To transform the 'event_id' column from VARCHAR to UUID, we need to use a simple CAST function. In DuckDB, the UUID data type is supported, and we can directly cast a properly formatted string to UUID. The values provided are already in the correct UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward CAST operation will work.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>forwarding_ip</td>
+      <td>CAST("forwarding_ip" AS VARCHAR)</td>
+      <td>To transform the data type of the 'forwarding_ip' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>1</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>forwarding_ip</td>
+      <td>100</td>
+      <td>True</td>
+      <td>No forwarding IP used for these direct connections.</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'LylS8dTDCOeXwdR...', 'value': 87.0}, {'label': 'T/594312FW9nHss...', 'value': 8.0}, {'label': 'Y+HNnHPslPFbBrK...', 'value': 2.0}, {'label': '1sqfNC5CnBa6jjT...', 'value': 1.0}, {'label': 'qH92INzmESwbSIQ...', 'value': 1.0}, {'label': 'WYZrPceIW6Zcxyg...', 'value': 1.0}];
+    drawBarChart("bar_viz_encrypted_browser", data);
+data = [{'label': '8A+t+1y7scUIKVy...', 'value': 48.0}, {'label': 'AtP8vcsOL2v9oAq...', 'value': 18.0}, {'label': 'duj+eZjN3RvPn4P...', 'value': 8.0}, {'label': 'LkKtbEKeMYHJ59j...', 'value': 6.0}, {'label': 'oFBFNP51eoood80...', 'value': 2.0}, {'label': 'Other values', 'value': 18.0}];
+    drawBarChart("bar_viz_encrypted_location", data);
+data = [{'label': 'SlPHKhnR4kd8ZOg...', 'value': 40.0}, {'label': 'bevrYO0XcMCJNgt...', 'value': 19.0}, {'label': 'Ws7FWR5JKC2YjbN...', 'value': 11.0}, {'label': 'FhHVpPtwQAPTebQ...', 'value': 10.0}, {'label': 'LWie8tFxoL5N3ki...', 'value': 6.0}, {'label': 'Other values', 'value': 14.000000000000002}];
+    drawBarChart("bar_viz_encrypted_user_agent", data);
+data = [{'label': '18889dd8-455b-3...', 'value': 1.0}, {'label': '8cba7a9b-2d73-3...', 'value': 1.0}, {'label': 'f95ea09a-67b9-3...', 'value': 1.0}, {'label': '96b4e5ea-0a77-3...', 'value': 1.0}, {'label': '670f7624-2064-3...', 'value': 1.0}, {'label': 'Other values', 'value': 95.0}];
+    drawBarChart("bar_viz_event_id", data);
+data = [];
+    drawBarChart("bar_viz_forwarding_ip", data);
+
+
+</script>
+</body>
+</html>

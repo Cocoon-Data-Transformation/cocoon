@@ -1,0 +1,3080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sf_user_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>name</th>
+      <th>first_name</th>
+      <th>phone</th>
+      <th>manager_id</th>
+      <th>small_banner_photo_url</th>
+      <th>community_nickname</th>
+      <th>default_group_notification_frequency</th>
+      <th>last_name</th>
+      <th>forecast_enabled</th>
+      <th>username</th>
+      <th>alias</th>
+      <th>banner_photo_url</th>
+      <th>medium_banner_photo_url</th>
+      <th>email_encoding_key</th>
+      <th>badge_text</th>
+      <th>email_preferences_auto_bcc</th>
+      <th>is_profile_photo_active</th>
+      <th>profile_id</th>
+      <th>_fivetran_active</th>
+      <th>locale_sid_key</th>
+      <th>user_role_id</th>
+      <th>small_photo_url</th>
+      <th>is_active</th>
+      <th>receives_admin_info_emails</th>
+      <th>user_type</th>
+      <th>time_zone_sid_key</th>
+      <th>_fivetran_deleted</th>
+      <th>id</th>
+      <th>receives_info_emails</th>
+      <th>email</th>
+      <th>full_photo_url</th>
+      <th>delegated_approver_id</th>
+      <th>last_login_date</th>
+      <th>last_referenced_date</th>
+      <th>last_viewed_date</th>
+      <th>individual_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Brandon Zinn</td>
+      <td>VL0FVo9TB+culjkuqg52bQ==</td>
+      <td>None</td>
+      <td>tfjEwBIFrT7IKUXp/ObBNA==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>zYOn49YYBw9z+c1AbjrzcA==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>1NZWXYLqo5CiFyFOT2EBJA==</td>
+      <td>True</td>
+      <td>xv6xgJYOh/ZMPRNDPbzueQ==</td>
+      <td>D4b1Qin+gQP3CpRZBVVTzw==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>q+POjJLmN0AEkFmTx/DVmg==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>BK8ye8s2vCtRuIzk3Iy7Og==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>c8PRyKwR7IqEd0+3VZY6gQ==</td>
+      <td>False</td>
+      <td>0051G00000600MlQAI</td>
+      <td>False</td>
+      <td>G5JZeErb0oYU8jQrAJylYw==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>None</td>
+      <td>2019-08-05 18:13:35</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Eric Welsh</td>
+      <td>d9zVVfOLll0iChOjuwgCYA==</td>
+      <td>None</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>busRLQgm3BlE5gft7AXW5Q==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>u7D6SbUlxCZPStegatw+Bw==</td>
+      <td>True</td>
+      <td>Iqqj3G/cliOsvvTCAdP+TA==</td>
+      <td>gpl2aeOp9ql5nOAs+5gF9A==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0XwCP3LN1EcBDVvCIK3NCw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>False</td>
+      <td>0051G000005Mx8dQAC</td>
+      <td>False</td>
+      <td>cwB0dYdfvqwxMf4ilgNByw==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2019-11-26 19:46:44</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Saurabh Kapadia</td>
+      <td>JMGykJnIdJGUeW3++LUKQA==</td>
+      <td>None</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>j74RDGGp6qpCT9+y75BpbQ==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>89+z/rKPszB4G/pKIw1fAw==</td>
+      <td>False</td>
+      <td>yFjyN6ai5qiWqyS6fBWBkw==</td>
+      <td>decEUNZtz8K0/rVaHGGx6w==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>False</td>
+      <td>00555000003F3Q6AAK</td>
+      <td>False</td>
+      <td>aJCyq0bMBmwFIa7BYuGaqg==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>None</td>
+      <td>2019-11-16 00:13:23</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Jodie Navarre</td>
+      <td>prRu04oqXV0uNf6Lo1Va6w==</td>
+      <td>GiIWsKPHcUq7qMJlqOKAWQ==</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>io7DTej1IHP8rPTJdKfOoA==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>HqQOq8TX4AO/sIuPSgR2Ug==</td>
+      <td>True</td>
+      <td>veeuTX4ZgDX/1UVD/ZGfpA==</td>
+      <td>prRu04oqXV0uNf6Lo1Va6w==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>False</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>True</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>c8PRyKwR7IqEd0+3VZY6gQ==</td>
+      <td>False</td>
+      <td>00537000004EpGKAA0</td>
+      <td>True</td>
+      <td>ZLYqq+RDyk6Te7xVdheciA==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>None</td>
+      <td>2019-11-12 16:48:38</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Nomadmktg Nomadmktg</td>
+      <td>/gHwN0rApZymtoP6fxl3XA==</td>
+      <td>None</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>abkaAGpuJILYJ9hOA4Be0g==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>/gHwN0rApZymtoP6fxl3XA==</td>
+      <td>True</td>
+      <td>A/y3WQRrjTc0Q6xbsGmujA==</td>
+      <td>RghnQ3IiPoK6c2tbUocbPw==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>a21b1bWPBhKAAug5Jxk73g==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>True</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>False</td>
+      <td>00537000004jJQPAA2</td>
+      <td>True</td>
+      <td>7Q1bgZpigij+8LTy229aww==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>None</td>
+      <td>2019-11-12 20:09:24</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Artyom Vasilyev</td>
+      <td>tkqLcoeCxxgs6yI4gT/9yw==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>tkqLcoeCxxgs6yI4gT/9yw==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>lmOrvYek51oJsBc+3v9rSA==</td>
+      <td>False</td>
+      <td>sfr1qhkoa01jph0cN406sA==</td>
+      <td>hzoNezv89sMonh/jHBrCNg==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>b/9XvWwwuZ6GthzYSc/fmg==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>None</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>True</td>
+      <td>005q0000004XRtzAAG</td>
+      <td>False</td>
+      <td>46l0uz6Yx0/A9LYo0WpgXg==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>2019-03-14 19:00:29</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>empty account</td>
+      <td>ouSCKpgzcoPjn3tgrPheyQ==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>otDd6eocvI7CTXTEE6iX8Q==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>4mhEPkPZPat+vvMDu+lkLw==</td>
+      <td>False</td>
+      <td>BrgwJpKXta8Zj4di1C7DFQ==</td>
+      <td>6OrI2Np3L4GCar2dFYxWZQ==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>U4E6aqzPODD0RiUPm3B8rA==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>None</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>False</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>c8PRyKwR7IqEd0+3VZY6gQ==</td>
+      <td>True</td>
+      <td>005q0000004k6QEAAY</td>
+      <td>False</td>
+      <td>6rfEElWza4sHeeyzP0TXBQ==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Justin Clark</td>
+      <td>BkdRdNki59y7PtNMAjbb3w==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>U92cYAXzzfxaacXAc4gBbQ==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>qX/tvOMOz7xfd/I3ibDuAA==</td>
+      <td>False</td>
+      <td>rzM8hF45+JLWxiSDOYlwUQ==</td>
+      <td>Xax7nNae5oQ3kWF4QHq/rQ==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>U4E6aqzPODD0RiUPm3B8rA==</td>
+      <td>False</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>7IHceHBUAWjctCBt2VZXiA==</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>c8PRyKwR7IqEd0+3VZY6gQ==</td>
+      <td>True</td>
+      <td>005q0000004k6NjAAI</td>
+      <td>False</td>
+      <td>scEwenaKqevd6yTLT1ltpw==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Christian Kletzl</td>
+      <td>22AXvR8nEY1ECDoXKoJAnw==</td>
+      <td>None</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>lG3Ke8bREpt0SeoDgN/3+g==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>E15NIN/JJbyu6RY90uJ5NQ==</td>
+      <td>False</td>
+      <td>AMmh7ibU+xNFUG7Q5Fc2Tw==</td>
+      <td>HWRtNym1u++RiSIY/YATyg==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>True</td>
+      <td>005q00000053KTAAA2</td>
+      <td>False</td>
+      <td>AMmh7ibU+xNFUG7Q5Fc2Tw==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>2019-04-01 22:38:13</td>
+      <td>2019-03-11 22:30:18</td>
+      <td>2019-03-11 22:30:18</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Andrey Lukyanov</td>
+      <td>vWwLXUQeD7u9IvmI79ThcQ==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>cpjVy4nqrYDiBsDMqUD08g==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>qwtVcSBsz2/Q9KWmP9i1jA==</td>
+      <td>False</td>
+      <td>c7ZgbZS/+xi/ESP1ey4+eA==</td>
+      <td>+PsAbGnYCR23KLQiekSsJQ==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>True</td>
+      <td>005q00000053uuWAAQ</td>
+      <td>False</td>
+      <td>nU9FSqobhYTBGN9rJR2Khw==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>2019-03-29 18:46:02</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>full_name</th>
+      <th>first_name</th>
+      <th>phone</th>
+      <th>manager_id</th>
+      <th>small_banner_url</th>
+      <th>community_nickname</th>
+      <th>group_notification_frequency</th>
+      <th>last_name</th>
+      <th>forecast_enabled</th>
+      <th>username</th>
+      <th>user_alias</th>
+      <th>banner_photo_url</th>
+      <th>medium_banner_url</th>
+      <th>email_encoding_key</th>
+      <th>badge_text</th>
+      <th>auto_bcc_enabled</th>
+      <th>is_photo_active</th>
+      <th>profile_id</th>
+      <th>_fivetran_active</th>
+      <th>locale_key</th>
+      <th>role_id</th>
+      <th>small_photo_url</th>
+      <th>is_active</th>
+      <th>receives_admin_emails</th>
+      <th>user_type</th>
+      <th>user_time_zone</th>
+      <th>is_deleted</th>
+      <th>user_id</th>
+      <th>receives_info_emails</th>
+      <th>email</th>
+      <th>full_photo_url</th>
+      <th>delegated_approver_id</th>
+      <th>last_login</th>
+      <th>last_referenced</th>
+      <th>last_viewed</th>
+      <th>secondary_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Brandon Zinn</td>
+      <td>VL0FVo9TB+culjkuqg52bQ==</td>
+      <td>None</td>
+      <td>tfjEwBIFrT7IKUXp/ObBNA==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>zYOn49YYBw9z+c1AbjrzcA==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>1NZWXYLqo5CiFyFOT2EBJA==</td>
+      <td>True</td>
+      <td>xv6xgJYOh/ZMPRNDPbzueQ==</td>
+      <td>D4b1Qin+gQP3CpRZBVVTzw==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>q+POjJLmN0AEkFmTx/DVmg==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>BK8ye8s2vCtRuIzk3Iy7Og==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>c8PRyKwR7IqEd0+3VZY6gQ==</td>
+      <td>False</td>
+      <td>0051G00000600MlQAI</td>
+      <td>False</td>
+      <td>G5JZeErb0oYU8jQrAJylYw==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>None</td>
+      <td>2019-08-05 18:13:35</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Eric Welsh</td>
+      <td>d9zVVfOLll0iChOjuwgCYA==</td>
+      <td>None</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>busRLQgm3BlE5gft7AXW5Q==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>u7D6SbUlxCZPStegatw+Bw==</td>
+      <td>True</td>
+      <td>Iqqj3G/cliOsvvTCAdP+TA==</td>
+      <td>gpl2aeOp9ql5nOAs+5gF9A==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0XwCP3LN1EcBDVvCIK3NCw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>False</td>
+      <td>0051G000005Mx8dQAC</td>
+      <td>False</td>
+      <td>cwB0dYdfvqwxMf4ilgNByw==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2019-11-26 19:46:44</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Saurabh Kapadia</td>
+      <td>JMGykJnIdJGUeW3++LUKQA==</td>
+      <td>None</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>j74RDGGp6qpCT9+y75BpbQ==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>89+z/rKPszB4G/pKIw1fAw==</td>
+      <td>False</td>
+      <td>yFjyN6ai5qiWqyS6fBWBkw==</td>
+      <td>decEUNZtz8K0/rVaHGGx6w==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>False</td>
+      <td>00555000003F3Q6AAK</td>
+      <td>False</td>
+      <td>aJCyq0bMBmwFIa7BYuGaqg==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>None</td>
+      <td>2019-11-16 00:13:23</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Jodie Navarre</td>
+      <td>prRu04oqXV0uNf6Lo1Va6w==</td>
+      <td>GiIWsKPHcUq7qMJlqOKAWQ==</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>io7DTej1IHP8rPTJdKfOoA==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>HqQOq8TX4AO/sIuPSgR2Ug==</td>
+      <td>True</td>
+      <td>veeuTX4ZgDX/1UVD/ZGfpA==</td>
+      <td>prRu04oqXV0uNf6Lo1Va6w==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>False</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>True</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>c8PRyKwR7IqEd0+3VZY6gQ==</td>
+      <td>False</td>
+      <td>00537000004EpGKAA0</td>
+      <td>True</td>
+      <td>ZLYqq+RDyk6Te7xVdheciA==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>None</td>
+      <td>2019-11-12 16:48:38</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Nomadmktg</td>
+      <td>/gHwN0rApZymtoP6fxl3XA==</td>
+      <td>None</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>abkaAGpuJILYJ9hOA4Be0g==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>/gHwN0rApZymtoP6fxl3XA==</td>
+      <td>True</td>
+      <td>A/y3WQRrjTc0Q6xbsGmujA==</td>
+      <td>RghnQ3IiPoK6c2tbUocbPw==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>a21b1bWPBhKAAug5Jxk73g==</td>
+      <td>+Rxw9GW0v2EzZhKzJjofjA==</td>
+      <td>True</td>
+      <td>True</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>False</td>
+      <td>00537000004jJQPAA2</td>
+      <td>True</td>
+      <td>7Q1bgZpigij+8LTy229aww==</td>
+      <td>fm397Qb0Cp93iLEx/qKV2g==</td>
+      <td>None</td>
+      <td>2019-11-12 20:09:24</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Artyom Vasilyev</td>
+      <td>tkqLcoeCxxgs6yI4gT/9yw==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>tkqLcoeCxxgs6yI4gT/9yw==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>lmOrvYek51oJsBc+3v9rSA==</td>
+      <td>False</td>
+      <td>sfr1qhkoa01jph0cN406sA==</td>
+      <td>hzoNezv89sMonh/jHBrCNg==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>b/9XvWwwuZ6GthzYSc/fmg==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>None</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>True</td>
+      <td>005q0000004XRtzAAG</td>
+      <td>False</td>
+      <td>46l0uz6Yx0/A9LYo0WpgXg==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>2019-03-14 19:00:29</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>None</td>
+      <td>ouSCKpgzcoPjn3tgrPheyQ==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>otDd6eocvI7CTXTEE6iX8Q==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>4mhEPkPZPat+vvMDu+lkLw==</td>
+      <td>False</td>
+      <td>BrgwJpKXta8Zj4di1C7DFQ==</td>
+      <td>6OrI2Np3L4GCar2dFYxWZQ==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>U4E6aqzPODD0RiUPm3B8rA==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>None</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>False</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>c8PRyKwR7IqEd0+3VZY6gQ==</td>
+      <td>True</td>
+      <td>005q0000004k6QEAAY</td>
+      <td>False</td>
+      <td>6rfEElWza4sHeeyzP0TXBQ==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Justin Clark</td>
+      <td>BkdRdNki59y7PtNMAjbb3w==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>U92cYAXzzfxaacXAc4gBbQ==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>qX/tvOMOz7xfd/I3ibDuAA==</td>
+      <td>False</td>
+      <td>rzM8hF45+JLWxiSDOYlwUQ==</td>
+      <td>Xax7nNae5oQ3kWF4QHq/rQ==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>U4E6aqzPODD0RiUPm3B8rA==</td>
+      <td>False</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>7IHceHBUAWjctCBt2VZXiA==</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>c8PRyKwR7IqEd0+3VZY6gQ==</td>
+      <td>True</td>
+      <td>005q0000004k6NjAAI</td>
+      <td>False</td>
+      <td>scEwenaKqevd6yTLT1ltpw==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Christian Kletzl</td>
+      <td>22AXvR8nEY1ECDoXKoJAnw==</td>
+      <td>None</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>lG3Ke8bREpt0SeoDgN/3+g==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>E15NIN/JJbyu6RY90uJ5NQ==</td>
+      <td>False</td>
+      <td>AMmh7ibU+xNFUG7Q5Fc2Tw==</td>
+      <td>HWRtNym1u++RiSIY/YATyg==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>True</td>
+      <td>005q00000053KTAAA2</td>
+      <td>False</td>
+      <td>AMmh7ibU+xNFUG7Q5Fc2Tw==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>2019-04-01 22:38:13</td>
+      <td>2019-03-11 22:30:18</td>
+      <td>2019-03-11 22:30:18</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Andrey Lukyanov</td>
+      <td>vWwLXUQeD7u9IvmI79ThcQ==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2ERJSzi6mHg8kR1RS4zqig==</td>
+      <td>cpjVy4nqrYDiBsDMqUD08g==</td>
+      <td>jZwwfLfzxKMoIqUZItHOqg==</td>
+      <td>qwtVcSBsz2/Q9KWmP9i1jA==</td>
+      <td>False</td>
+      <td>c7ZgbZS/+xi/ESP1ey4+eA==</td>
+      <td>+PsAbGnYCR23KLQiekSsJQ==</td>
+      <td>+ZTO2mf2LuH+iHMMN5CTbA==</td>
+      <td>Aah0gJhzMf8W4MSufRJi5w==</td>
+      <td>Dku078MOwSnlADoY6iEDzw==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>QvzqVksmGmwST2MANzS9Nw==</td>
+      <td>True</td>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td>aDWPUItc1uc9iqJvMkP82Q==</td>
+      <td>2+OnpJlgo7jyGDcvqrluzA==</td>
+      <td>True</td>
+      <td>False</td>
+      <td>622K5vICg3VbM5wNwnOYiw==</td>
+      <td>eobciA3TwKWJw+xVP4bGaQ==</td>
+      <td>True</td>
+      <td>005q00000053uuWAAQ</td>
+      <td>False</td>
+      <td>nU9FSqobhYTBGN9rJR2Khw==</td>
+      <td>M3gnKLhZJGDc/r8mEFKtKA==</td>
+      <td>None</td>
+      <td>2019-03-29 18:46:02</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">full_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_full_name"></div><b>📃 Summary:</b> User's full name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">first_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_first_name"></div><b>📃 Summary:</b> User's first name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">phone</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_phone"></div><b>📃 Summary:</b> User's phone number<br><b>❓ Missing:</b> Not all users may have or provide a phone number.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manager_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_manager_id"></div><b>📃 Summary:</b> Identifier for the user's manager<br><b>❓ Missing:</b> Not all employees have a manager in the system.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">small_banner_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_small_banner_url"></div><b>📃 Summary:</b> URL for small-sized banner photo<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">community_nickname</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_community_nickname"></div><b>📃 Summary:</b> User's nickname in the community<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_notification_frequency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Never'>Never</option><option value='Immediately'>Immediately</option><option value='Daily'>Daily</option><option value='Weekly'>Weekly</option><option value='Monthly'>Monthly</option><option value='Custom'>Custom</option><option value='jZwwfLfzxKMoIqUZItHOqg=='>jZwwfLfzxKMoIqUZItHOqg==</option></select></span><br><br><div id="bar_viz_group_notification_frequency"></div><b>📃 Summary:</b> Frequency of group notifications<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_name"></div><b>📃 Summary:</b> User's last name (encrypted)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">forecast_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_forecast_enabled"></div><b>📃 Summary:</b> Indicates if forecasting is enabled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">username</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_username"></div><b>📃 Summary:</b> Unique username for Salesforce login<br><b>🦄 Unique:</b> This column represents the unique username for Salesforce login. In Salesforce, usernames are required to be unique across the entire organization.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_alias</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_user_alias"></div><b>📃 Summary:</b> User's alternate name or nickname<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">banner_photo_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_banner_photo_url"></div><b>📃 Summary:</b> URL of user's banner photo<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">medium_banner_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_medium_banner_url"></div><b>📃 Summary:</b> URL for medium-sized banner photo<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">email_encoding_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_email_encoding_key"></div><b>📃 Summary:</b> Key for encoding user's emails<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">badge_text</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_badge_text"></div><b>📃 Summary:</b> Text displayed on user's badge<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">auto_bcc_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_auto_bcc_enabled"></div><b>📃 Summary:</b> Auto BCC preference for emails<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_photo_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_photo_active"></div><b>📃 Summary:</b> Indicates if user's profile photo is active<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">profile_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_profile_id"></div><b>📃 Summary:</b> Identifier for the user's profile<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">_fivetran_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz__fivetran_active"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">locale_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_locale_key"></div><b>📃 Summary:</b> Locale-specific identifier key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">role_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_role_id"></div><b>📃 Summary:</b> Unique identifier for user's role in Salesforce<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">small_photo_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_small_photo_url"></div><b>📃 Summary:</b> URL for small-sized profile photo<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_active"></div><b>📃 Summary:</b> Indicates if the user record is active<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">receives_admin_emails</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_receives_admin_emails"></div><b>📃 Summary:</b> Indicates if user receives admin emails<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='standard'>standard</option><option value='partner'>partner</option><option value='customer'>customer</option><option value='admin'>admin</option><option value='guest'>guest</option><option value='premium'>premium</option><option value='free'>free</option><option value='business'>business</option><option value='enterprise'>enterprise</option><option value='developer'>developer</option><option value='622K5vICg3VbM5wNwnOYiw=='>622K5vICg3VbM5wNwnOYiw==</option></select></span><br><br><div id="bar_viz_user_type"></div><b>📃 Summary:</b> Category of user (e.g., standard, partner, customer)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_time_zone</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_user_time_zone"></div><b>📃 Summary:</b> User's preferred time zone setting<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the user record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_user_id"></div><b>📃 Summary:</b> Unique identifier for the user<br><b>🦄 Unique:</b> This column represents a unique identifier for the user. User IDs in Salesforce are system-generated and guaranteed to be unique for each user.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">receives_info_emails</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_receives_info_emails"></div><b>📃 Summary:</b> Indicates if user receives info emails<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_email"></div><b>📃 Summary:</b> User's email address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">full_photo_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_full_photo_url"></div><b>📃 Summary:</b> URL of user's full-size photo<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">delegated_approver_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_delegated_approver_id"></div><b>📃 Summary:</b> ID of user's delegated approver<br><b>❓ Missing:</b> Not all users have or need a delegated approver.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_login</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_login"></div><b>📃 Summary:</b> Date and time of user's last login<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_referenced</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_last_referenced"></div><b>📃 Summary:</b> Date the user was last referenced<br><b>❓ Missing:</b> New or inactive users may not have been referenced.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_viewed</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_last_viewed"></div><b>📃 Summary:</b> Date the user last viewed content<br><b>❓ Missing:</b> New or inactive users may not have been viewed.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">secondary_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_secondary_id"></div><b>📃 Summary:</b> Secondary identifier for the individual<br><b>❓ Missing:</b> Optional additional identifier, not always needed for users.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about Salesforce user data. It contains personal and account details for users, including names, email addresses, roles, and preferences. Some fields are encrypted. The table tracks active status, login dates, and system settings for each user. It appears to be a comprehensive user profile database for a Salesforce instance.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>25</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the user record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>about_me</td>
+      <td>User's self-description or bio</td>
+      <td>user_bio</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>account_id</td>
+      <td>Unique identifier for the user's account</td>
+      <td>account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>alias</td>
+      <td>User's alternate name or nickname</td>
+      <td>user_alias</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>badge_text</td>
+      <td>Text displayed on user's badge</td>
+      <td>badge_text</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>banner_photo_url</td>
+      <td>URL of user's banner photo</td>
+      <td>banner_photo_url</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>call_center_id</td>
+      <td>Identifier for associated call center</td>
+      <td>call_center_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>city</td>
+      <td>User's city of residence</td>
+      <td>city</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>community_nickname</td>
+      <td>User's nickname in the community</td>
+      <td>community_nickname</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>company_name</td>
+      <td>Name of the user's company</td>
+      <td>company_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>contact_id</td>
+      <td>Unique identifier for user's contact record</td>
+      <td>contact_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>country</td>
+      <td>User's country of residence</td>
+      <td>country</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>country_code</td>
+      <td>Code representing user's country</td>
+      <td>country_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>default_group_notification_frequency</td>
+      <td>Frequency of group notifications</td>
+      <td>group_notification_frequency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>delegated_approver_id</td>
+      <td>ID of user's delegated approver</td>
+      <td>delegated_approver_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>department</td>
+      <td>User's department within the company</td>
+      <td>department</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>digest_frequency</td>
+      <td>Frequency of digest emails</td>
+      <td>digest_frequency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>division</td>
+      <td>User's division within the company</td>
+      <td>division</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>email</td>
+      <td>User's email address</td>
+      <td>email</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>email_encoding_key</td>
+      <td>Key for encoding user's emails</td>
+      <td>email_encoding_key</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>email_preferences_auto_bcc</td>
+      <td>Auto BCC preference for emails</td>
+      <td>auto_bcc_enabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>employee_number</td>
+      <td>User's employee identification number</td>
+      <td>employee_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>extension</td>
+      <td>User's phone extension</td>
+      <td>phone_extension</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>fax</td>
+      <td>User's fax number</td>
+      <td>fax_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>federation_identifier</td>
+      <td>Identifier for federated authentication</td>
+      <td>federation_identifier</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>first_name</td>
+      <td>User's first name</td>
+      <td>first_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>forecast_enabled</td>
+      <td>Indicates if forecasting is enabled</td>
+      <td>forecast_enabled</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>full_photo_url</td>
+      <td>URL of user's full-size photo</td>
+      <td>full_photo_url</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>geocode_accuracy</td>
+      <td>Accuracy of user's geocoded location</td>
+      <td>geocode_accuracy</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>id</td>
+      <td>Unique identifier for the user</td>
+      <td>user_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>individual_id</td>
+      <td>Secondary identifier for the individual</td>
+      <td>secondary_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>is_active</td>
+      <td>Indicates if the user account is active</td>
+      <td>is_active</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>is_profile_photo_active</td>
+      <td>Indicates if user's profile photo is active</td>
+      <td>is_photo_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>language_locale_key</td>
+      <td>User's preferred language and locale</td>
+      <td>language_locale</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>last_login_date</td>
+      <td>Date and time of user's last login</td>
+      <td>last_login</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>last_name</td>
+      <td>User's last name (encrypted)</td>
+      <td>last_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>last_referenced_date</td>
+      <td>Date the user was last referenced</td>
+      <td>last_referenced</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>last_viewed_date</td>
+      <td>Date the user last viewed content</td>
+      <td>last_viewed</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>latitude</td>
+      <td>User's geographical latitude</td>
+      <td>latitude</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>locale_sid_key</td>
+      <td>Locale-specific identifier key</td>
+      <td>locale_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>longitude</td>
+      <td>User's geographical longitude</td>
+      <td>longitude</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>manager_id</td>
+      <td>Identifier for the user's manager</td>
+      <td>manager_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>medium_banner_photo_url</td>
+      <td>URL for medium-sized banner photo</td>
+      <td>medium_banner_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>mobile_phone</td>
+      <td>User's mobile phone number</td>
+      <td>mobile_phone</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>name</td>
+      <td>User's full name</td>
+      <td>full_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>offline_trial_expiration_date</td>
+      <td>Expiration date for offline trial</td>
+      <td>offline_trial_expiration</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>phone</td>
+      <td>User's phone number</td>
+      <td>phone</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>postal_code</td>
+      <td>User's postal code</td>
+      <td>postal_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>profile_id</td>
+      <td>Identifier for the user's profile</td>
+      <td>profile_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>receives_admin_info_emails</td>
+      <td>Indicates if user receives admin emails</td>
+      <td>receives_admin_emails</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>receives_info_emails</td>
+      <td>Indicates if user receives info emails</td>
+      <td>receives_info_emails</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>sender_email</td>
+      <td>User's sender email address</td>
+      <td>sender_email</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>sender_name</td>
+      <td>Name used for sending emails</td>
+      <td>sender_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>signature</td>
+      <td>User's email signature</td>
+      <td>email_signature</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>small_banner_photo_url</td>
+      <td>URL for small-sized banner photo</td>
+      <td>small_banner_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>small_photo_url</td>
+      <td>URL for small-sized profile photo</td>
+      <td>small_photo_url</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>state</td>
+      <td>User's state of residence</td>
+      <td>state</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>state_code</td>
+      <td>Code for user's state</td>
+      <td>state_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>street</td>
+      <td>User's street address</td>
+      <td>street_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>time_zone_sid_key</td>
+      <td>User's preferred time zone setting</td>
+      <td>user_time_zone</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>title</td>
+      <td>User's job title or position</td>
+      <td>job_title</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>user_role_id</td>
+      <td>Unique identifier for user's role in Salesforce</td>
+      <td>role_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>user_type</td>
+      <td>Category of user (e.g., standard, partner, customer)</td>
+      <td>user_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>username</td>
+      <td>Unique username for Salesforce login</td>
+      <td>username</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>_fivetran_active</td>
+      <td>Indicates if the user record is active</td>
+      <td>_fivetran_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>6</b> columns have erroneous values<br><ol><li><b>country</b>: The value '8lPv4wLTKrJkp24M5lvnaQ==' is unusual because it's an encoded string, not a country name.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>8lPv4wLTKrJkp24M5lvnaQ==</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>country_code</b>: The encoded string 'dRb9Q62qXguKZaZyw5hF0g==' is unusual for a country code field.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>dRb9Q62qXguKZaZyw5hF0g==</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>digest_frequency</b>: The Base64 encoded string is unusual for a digest_frequency field, as it doesn't directly represent a frequency.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>9iPnWvMOYrvXPW31tQu3tQ==</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>language_locale</b>: The value 'cQlcVsZB8sSk8Ym53816OA==' is unusual because it's not a standard language locale format.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>cQlcVsZB8sSk8Ym53816OA==</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>full_name</b>: 'Nomadmktg Nomadmktg' repeats a term. 'empty account' is not a name but a placeholder or system-generated entry.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Nomadmktg Nomadmktg</td>
+      <td>Nomadmktg</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>empty account</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>job_title</b>: The value 'ieakxsZwGEBdpS1879Gv/Q==' is unusual because it's likely an encoded string rather than a readable job title.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>ieakxsZwGEBdpS1879Gv/Q==</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>6</b> columns have disguised missing values<br>
+                ✔️ <b>6</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>country</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>country_code</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>digest_frequency</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>language_locale</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>full_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>job_title</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>26</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_id</td>
+      <td>CAST("account_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'account_id' column from DECIMAL to VARCHAR in DuckDB,  we can use a simple CAST function in the SELECT clause. The CAST function allows converting a value from one data type to another compatible data type. Since 'account_id' has no  distinct values, the CAST will not encounter any issues.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>call_center_id</td>
+      <td>CAST("call_center_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'call_center_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Since the column is currently empty (as indicated by the empty list of distinct values), this transformation will not affect any existing data but will change the column's data type for future insertions.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>city</td>
+      <td>CAST("city" AS VARCHAR)</td>
+      <td>To transform the data type of the 'city' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name 'city' in the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>company_name</td>
+      <td>CAST("company_name" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'company_name' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column 'company_name' is likely already storing text data (company names are typically strings, not numbers), this transformation might be correcting a data type mismatch rather than changing the actual content.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>contact_id</td>
+      <td>CAST("contact_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'contact_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>department</td>
+      <td>CAST("department" AS VARCHAR)</td>
+      <td>To transform the data type of the 'department' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'department' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>division</td>
+      <td>CAST("division" AS VARCHAR)</td>
+      <td>To transform the column 'division' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>email_signature</td>
+      <td>CAST("email_signature" AS VARCHAR)</td>
+      <td>To transform the data type of the 'email_signature' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>employee_number</td>
+      <td>CAST("employee_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'employee_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR conversion.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>fax_number</td>
+      <td>CAST("fax_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'fax_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert each value in the column to its string representation. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future values added to this column will be stored as strings rather than decimal numbers.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>federation_identifier</td>
+      <td>CAST("federation_identifier" AS VARCHAR)</td>
+      <td>To transform the data type of the 'federation_identifier' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently a DECIMAL and we want to convert it to a VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>geocode_accuracy</td>
+      <td>CAST("geocode_accuracy" AS VARCHAR)</td>
+      <td>To transform the data type of the 'geocode_accuracy' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numerical values to their string representations. Even though the distinct values list is empty, we can still perform this cast operation on the column.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>last_login</td>
+      <td>CAST("last_login" AS TIMESTAMP)</td>
+      <td>To transform the 'last_login' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given examples is already in a standard format that can be directly interpreted as a timestamp (YYYY-MM-DD HH:MM:SS). Therefore, we don't need to use the strptime function for parsing. A straightforward CAST to TIMESTAMP will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>last_referenced</td>
+      <td>CAST("last_referenced" AS TIMESTAMP)</td>
+      <td>To transform the 'last_referenced' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The given date format '2019-03-11 22:30:18' is already in a standard timestamp format (YYYY-MM-DD HH:MM:SS), which can be directly cast to TIMESTAMP without needing to use strptime() for parsing.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>last_viewed</td>
+      <td>CAST("last_viewed" AS TIMESTAMP)</td>
+      <td>To transform the 'last_viewed' column from VARCHAR to TIMESTAMP, we don't need to use the strptime function because the date-time format in the column is already in a standard format that can be directly cast to TIMESTAMP. The format '2019-03-11 22:30:18' is compatible with the default TIMESTAMP format in most SQL databases, including DuckDB. Therefore, we can use a simple CAST function to perform this transformation.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>mobile_phone</td>
+      <td>CAST("mobile_phone" AS VARCHAR)</td>
+      <td>To transform the data type of the 'mobile_phone' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently DECIMAL and we want to change it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>offline_trial_expiration</td>
+      <td>CAST("offline_trial_expiration" AS TIMESTAMP)</td>
+      <td>To transform the 'offline_trial_expiration' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column has no distinct values (it's empty), we don't need to worry about specific date formats or conversions. A straightforward CAST to TIMESTAMP should suffice.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>phone_extension</td>
+      <td>CAST("phone_extension" AS VARCHAR)</td>
+      <td>To transform the data type of the 'phone_extension' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>postal_code</td>
+      <td>CAST("postal_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'postal_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert each value in the column to a string representation. Since the column currently contains DECIMAL values, casting to VARCHAR will preserve the numeric information as text. This is a straightforward operation in DuckDB and doesn't require any additional preprocessing.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>secondary_id</td>
+      <td>CAST("secondary_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'secondary_id' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. Since the column has no distinct values (it's empty), this transformation should be straightforward and won't affect any existing data. The CAST function will convert any potential future decimal values to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>sender_email</td>
+      <td>CAST("sender_email" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sender_email' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we'll proceed with the cast as requested.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>sender_name</td>
+      <td>CAST("sender_name" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sender_name' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This operation will convert the numeric values to their string representations. Even though the distinct values list is empty, we can still perform the cast operation as it's a general transformation that will work for any decimal values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>state</td>
+      <td>CAST("state" AS VARCHAR)</td>
+      <td>To transform the data type of the 'state' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters since we're not specifying a length for the VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>state_code</td>
+      <td>CAST("state_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'state_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently DECIMAL, casting it to VARCHAR will ensure that all values are treated as text, which is appropriate for state codes.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>street_address</td>
+      <td>CAST("street_address" AS VARCHAR)</td>
+      <td>To transform the data type of the 'street_address' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>user_bio</td>
+      <td>CAST("user_bio" AS VARCHAR)</td>
+      <td>To transform the data type of the 'user_bio' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the expression from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward in DuckDB, and it doesn't require any additional parameters for this particular conversion.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>38</b> columns have missing values<br>
+                ✔️ <b>6</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>call_center_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>city</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>company_name</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>contact_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>country</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>country_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>delegated_approver_id</td>
+      <td>90</td>
+      <td>True</td>
+      <td>Not all users have or need a delegated approver.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>department</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>digest_frequency</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>division</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>email_signature</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>employee_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>fax_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>federation_identifier</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>full_name</td>
+      <td>10</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>geocode_accuracy</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>job_title</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>language_locale</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>last_login</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>last_referenced</td>
+      <td>90</td>
+      <td>True</td>
+      <td>New or inactive users may not have been referenced.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>last_viewed</td>
+      <td>90</td>
+      <td>True</td>
+      <td>New or inactive users may not have been viewed.</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>latitude</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>longitude</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>manager_id</td>
+      <td>40</td>
+      <td>True</td>
+      <td>Not all employees have a manager in the system.</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>mobile_phone</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>offline_trial_expiration</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>phone</td>
+      <td>90</td>
+      <td>True</td>
+      <td>Not all users may have or provide a phone number.</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>phone_extension</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>postal_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>role_id</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>secondary_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Optional additional identifier, not always needed for users.</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>sender_email</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>sender_name</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>state</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>state_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>street_address</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>user_bio</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>call_center_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>city</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>company_name</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>contact_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>country</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>country_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>department</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>digest_frequency</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>division</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>email_signature</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>employee_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>fax_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>federation_identifier</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>full_name</td>
+      <td>10</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>geocode_accuracy</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>job_title</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>language_locale</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>last_login</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>latitude</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>longitude</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>mobile_phone</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>offline_trial_expiration</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>phone_extension</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>postal_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>role_id</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>sender_email</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>sender_name</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>state</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>state_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>street_address</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>user_bio</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Saurabh Kapadia', 'value': 11.11111111111111}, {'label': 'Christian Kletz...', 'value': 11.11111111111111}, {'label': 'Artyom Vasilyev', 'value': 11.11111111111111}, {'label': 'Andrey Lukyanov', 'value': 11.11111111111111}, {'label': 'Nomadmktg', 'value': 11.11111111111111}, {'label': 'Other values', 'value': 44.44444444444444}];
+    drawBarChart("bar_viz_full_name", data);
+data = [{'label': 'VL0FVo9TB+culjk...', 'value': 10.0}, {'label': 'd9zVVfOLll0iChO...', 'value': 10.0}, {'label': 'JMGykJnIdJGUeW3...', 'value': 10.0}, {'label': 'ouSCKpgzcoPjn3t...', 'value': 10.0}, {'label': '/gHwN0rApZymtoP...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_first_name", data);
+data = [{'label': 'GiIWsKPHcUq7qMJ...', 'value': 100.0}];
+    drawBarChart("bar_viz_phone", data);
+data = [{'label': 'TLZtnkcZltX8lij...', 'value': 83.33333333333334}, {'label': 'tfjEwBIFrT7IKUX...', 'value': 16.666666666666664}];
+    drawBarChart("bar_viz_manager_id", data);
+data = [{'label': '2ERJSzi6mHg8kR1...', 'value': 100.0}];
+    drawBarChart("bar_viz_small_banner_url", data);
+data = [{'label': 'busRLQgm3BlE5gf...', 'value': 10.0}, {'label': 'cpjVy4nqrYDiBsD...', 'value': 10.0}, {'label': 'abkaAGpuJILYJ9h...', 'value': 10.0}, {'label': 'tkqLcoeCxxgs6yI...', 'value': 10.0}, {'label': 'zYOn49YYBw9z+c1...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_community_nickname", data);
+data = [{'label': 'jZwwfLfzxKMoIqU...', 'value': 100.0}];
+    drawBarChart("bar_viz_group_notification_frequency", data);
+data = [{'label': 'HqQOq8TX4AO/sIu...', 'value': 10.0}, {'label': '/gHwN0rApZymtoP...', 'value': 10.0}, {'label': '4mhEPkPZPat+vvM...', 'value': 10.0}, {'label': 'qX/tvOMOz7xfd/I...', 'value': 10.0}, {'label': '1NZWXYLqo5CiFyF...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_last_name", data);
+data = [{'label': 'False', 'value': 60.0}, {'label': 'True', 'value': 40.0}];
+    drawBarChart("bar_viz_forecast_enabled", data);
+data = [{'label': 'Iqqj3G/cliOsvvT...', 'value': 10.0}, {'label': 'yFjyN6ai5qiWqyS...', 'value': 10.0}, {'label': 'BrgwJpKXta8Zj4d...', 'value': 10.0}, {'label': 'xv6xgJYOh/ZMPRN...', 'value': 10.0}, {'label': 'A/y3WQRrjTc0Q6x...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_username", data);
+data = [{'label': 'gpl2aeOp9ql5nOA...', 'value': 10.0}, {'label': 'decEUNZtz8K0/rV...', 'value': 10.0}, {'label': 'RghnQ3IiPoK6c2t...', 'value': 10.0}, {'label': 'hzoNezv89sMonh/...', 'value': 10.0}, {'label': '6OrI2Np3L4GCar2...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_user_alias", data);
+data = [{'label': '+ZTO2mf2LuH+iHM...', 'value': 100.0}];
+    drawBarChart("bar_viz_banner_photo_url", data);
+data = [{'label': 'Aah0gJhzMf8W4MS...', 'value': 100.0}];
+    drawBarChart("bar_viz_medium_banner_url", data);
+data = [{'label': 'Dku078MOwSnlADo...', 'value': 100.0}];
+    drawBarChart("bar_viz_email_encoding_key", data);
+data = [{'label': '1B2M2Y8AsgTpgAm...', 'value': 100.0}];
+    drawBarChart("bar_viz_badge_text", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_auto_bcc_enabled", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_photo_active", data);
+data = [{'label': 'QvzqVksmGmwST2M...', 'value': 50.0}, {'label': 'U4E6aqzPODD0RiU...', 'value': 20.0}, {'label': 'b/9XvWwwuZ6Gthz...', 'value': 10.0}, {'label': 'q+POjJLmN0AEkFm...', 'value': 10.0}, {'label': '0XwCP3LN1EcBDVv...', 'value': 10.0}];
+    drawBarChart("bar_viz_profile_id", data);
+data = [{'label': 'True', 'value': 80.0}, {'label': 'False', 'value': 20.0}];
+    drawBarChart("bar_viz__fivetran_active", data);
+data = [{'label': 'cQlcVsZB8sSk8Ym...', 'value': 100.0}];
+    drawBarChart("bar_viz_locale_key", data);
+data = [{'label': 'aDWPUItc1uc9iqJ...', 'value': 62.5}, {'label': 'a21b1bWPBhKAAug...', 'value': 12.5}, {'label': 'BK8ye8s2vCtRuIz...', 'value': 12.5}, {'label': '7IHceHBUAWjctCB...', 'value': 12.5}];
+    drawBarChart("bar_viz_role_id", data);
+data = [{'label': '2+OnpJlgo7jyGDc...', 'value': 50.0}, {'label': '+Rxw9GW0v2EzZhK...', 'value': 50.0}];
+    drawBarChart("bar_viz_small_photo_url", data);
+data = [{'label': 'True', 'value': 90.0}, {'label': 'False', 'value': 10.0}];
+    drawBarChart("bar_viz_is_active", data);
+data = [{'label': 'False', 'value': 80.0}, {'label': 'True', 'value': 20.0}];
+    drawBarChart("bar_viz_receives_admin_emails", data);
+data = [{'label': '622K5vICg3VbM5w...', 'value': 100.0}];
+    drawBarChart("bar_viz_user_type", data);
+data = [{'label': 'eobciA3TwKWJw+x...', 'value': 60.0}, {'label': 'c8PRyKwR7IqEd0+...', 'value': 40.0}];
+    drawBarChart("bar_viz_user_time_zone", data);
+data = [{'label': 'True', 'value': 50.0}, {'label': 'False', 'value': 50.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': '0051G000005Mx8d...', 'value': 10.0}, {'label': '005q0000004k6Nj...', 'value': 10.0}, {'label': '005q00000053KTA...', 'value': 10.0}, {'label': '0051G00000600Ml...', 'value': 10.0}, {'label': '00555000003F3Q6...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_user_id", data);
+data = [{'label': 'False', 'value': 80.0}, {'label': 'True', 'value': 20.0}];
+    drawBarChart("bar_viz_receives_info_emails", data);
+data = [{'label': 'G5JZeErb0oYU8jQ...', 'value': 10.0}, {'label': 'aJCyq0bMBmwFIa7...', 'value': 10.0}, {'label': 'cwB0dYdfvqwxMf4...', 'value': 10.0}, {'label': '7Q1bgZpigij+8LT...', 'value': 10.0}, {'label': 'nU9FSqobhYTBGN9...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_email", data);
+data = [{'label': 'M3gnKLhZJGDc/r8...', 'value': 50.0}, {'label': 'fm397Qb0Cp93iLE...', 'value': 50.0}];
+    drawBarChart("bar_viz_full_photo_url", data);
+data = [{'label': 'TLZtnkcZltX8lij...', 'value': 100.0}];
+    drawBarChart("bar_viz_delegated_approver_id", data);
+data = [{'label': '2019-11-12 20:0...', 'value': 12.5}, {'label': '2019-11-12 16:4...', 'value': 12.5}, {'label': '2019-03-29 18:4...', 'value': 12.5}, {'label': '2019-08-05 18:1...', 'value': 12.5}, {'label': '2019-11-26 19:4...', 'value': 12.5}, {'label': 'Other values', 'value': 37.5}];
+    drawBarChart("bar_viz_last_login", data);
+data = [{'label': '2019-03-11 22:3...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_referenced", data);
+data = [{'label': '2019-03-11 22:3...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_viewed", data);
+data = [];
+    drawBarChart("bar_viz_secondary_id", data);
+
+
+</script>
+</body>
+</html>

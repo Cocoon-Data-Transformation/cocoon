@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>shopify_tender_transaction_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>amount</th>
+      <th>currency</th>
+      <th>payment_method</th>
+      <th>test</th>
+      <th>payment_details_credit_card_company</th>
+      <th>order_id</th>
+      <th>processed_at</th>
+      <th>id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2895.74</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>45379</td>
+      <td>2022-11-30 18:14:37.000000</td>
+      <td>34283</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>5900.75</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>45243</td>
+      <td>2022-12-01 02:00:39.000000</td>
+      <td>905707</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>-164.72</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>4559467</td>
+      <td>2022-11-30 14:29:13.000000</td>
+      <td>411</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>5180.19</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>2022-11-30 23:55:45.000000</td>
+      <td>55179</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>3004.30</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>45955</td>
+      <td>2022-12-01 02:09:47.000000</td>
+      <td>16923</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>transaction_amount</th>
+      <th>currency</th>
+      <th>payment_method</th>
+      <th>is_test_transaction</th>
+      <th>credit_card_company</th>
+      <th>order_id</th>
+      <th>processing_timestamp</th>
+      <th>transaction_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2895.74</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>None</td>
+      <td>45379</td>
+      <td>2022-11-30 18:14:37</td>
+      <td>34283</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>5900.75</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>None</td>
+      <td>45243</td>
+      <td>2022-12-01 02:00:39</td>
+      <td>905707</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>-164.72</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>None</td>
+      <td>4559467</td>
+      <td>2022-11-30 14:29:13</td>
+      <td>411</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>5180.19</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>None</td>
+      <td>35</td>
+      <td>2022-11-30 23:55:45</td>
+      <td>55179</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>3004.30</td>
+      <td>USD</td>
+      <td>other</td>
+      <td>False</td>
+      <td>None</td>
+      <td>45955</td>
+      <td>2022-12-01 02:09:47</td>
+      <td>16923</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_transaction_amount"></div><b>📃 Summary:</b> Transaction amount in USD<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency"></div><b>📃 Summary:</b> Currency code of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payment_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='cash'>cash</option><option value='credit card'>credit card</option><option value='debit card'>debit card</option><option value='bank transfer'>bank transfer</option><option value='check'>check</option><option value='money order'>money order</option><option value='PayPal'>PayPal</option><option value='Apple Pay'>Apple Pay</option><option value='Google Pay'>Google Pay</option><option value='cryptocurrency'>cryptocurrency</option><option value='gift card'>gift card</option><option value='store credit'>store credit</option><option value='loyalty points'>loyalty points</option><option value='installment plan'>installment plan</option><option value='wire transfer'>wire transfer</option><option value='mobile payment'>mobile payment</option><option value='contactless payment'>contactless payment</option><option value='electronic wallet'>electronic wallet</option><option value='direct debit'>direct debit</option><option value='other'>other</option></select></span><br><br><div id="bar_viz_payment_method"></div><b>📃 Summary:</b> Method used for payment<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_test_transaction</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_test_transaction"></div><b>📃 Summary:</b> Indicates if this is a test transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">credit_card_company</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_credit_card_company"></div><b>📃 Summary:</b> Name of the credit card company<br><b>❓ Missing:</b> Payment method is 'other', not a credit card.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_order_id"></div><b>📃 Summary:</b> ID of the associated order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">processing_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_processing_timestamp"></div><b>📃 Summary:</b> Date and time of transaction processing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_transaction_id"></div><b>📃 Summary:</b> Unique identifier for the transaction<br><b>🦄 Unique:</b> This column is a unique identifier for the transaction. For this table, each row is a financial transaction. As it's designed to be a unique identifier, it should be unique across all rows.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about financial transactions in a Shopify store. It includes details such as transaction ID, amount, currency, order ID, payment method, processing time, and whether it was a test transaction. The table captures both positive and negative amounts, suggesting it covers both sales and refunds. All transactions are in USD and use the "other" payment method.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>7</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the transaction</td>
+      <td>transaction_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>amount</td>
+      <td>Transaction amount in USD</td>
+      <td>transaction_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>currency</td>
+      <td>Currency code of the transaction</td>
+      <td>currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>order_id</td>
+      <td>ID of the associated order</td>
+      <td>order_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>payment_details_credit_card_company</td>
+      <td>Name of the credit card company</td>
+      <td>credit_card_company</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>payment_details_credit_card_number</td>
+      <td>Masked credit card number</td>
+      <td>masked_card_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>payment_method</td>
+      <td>Method used for payment</td>
+      <td>payment_method</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>processed_at</td>
+      <td>Date and time of transaction processing</td>
+      <td>processing_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>remote_reference</td>
+      <td>External reference number for the transaction</td>
+      <td>external_reference</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>test</td>
+      <td>Indicates if this is a test transaction</td>
+      <td>is_test_transaction</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>user_id</td>
+      <td>ID of the user associated with the transaction</td>
+      <td>user_id</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>7</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>credit_card_company</td>
+      <td>CAST("credit_card_company" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'credit_card_company' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column has no distinct values (empty list provided), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>external_reference</td>
+      <td>CAST("external_reference" AS VARCHAR)</td>
+      <td>To transform the data type of the 'external_reference' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type. This will convert all values in the column to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>masked_card_number</td>
+      <td>CAST("masked_card_number" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'masked_card_number' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>order_id</td>
+      <td>CAST("order_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'order_id' column from 'INT' to 'VARCHAR', we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_data_type). In this case, we're casting the 'order_id' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>processing_timestamp</td>
+      <td>CAST("processing_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'processing_timestamp' column from VARCHAR to TIMESTAMP in DuckDB, we can use a simple CAST function. The existing format of the timestamps ('2022-11-30 14:29:13.000000') is already in a standard format that DuckDB can automatically interpret. Therefore, we don't need to use the strptime function to specify a custom format. A straightforward CAST to TIMESTAMP will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>transaction_id</td>
+      <td>CAST("transaction_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'transaction_id' column from INT to VARCHAR, we need to use the CAST function in DuckDB. This function will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>user_id</td>
+      <td>CAST("user_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'user_id' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each numeric value in the 'user_id' column to its string representation. Since the column is already of type DECIMAL, we don't need any additional formatting or manipulation before casting to VARCHAR.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>4</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>credit_card_company</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Payment method is 'other', not a credit card.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>external_reference</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>masked_card_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>user_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>external_reference</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>masked_card_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>user_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': -13.083249999999992, 'y': 1}, {'x': 290.19025, 'y': 0}, {'x': 593.46375, 'y': 0}, {'x': 896.73725, 'y': 0}, {'x': 1200.01075, 'y': 0}];
+    binWidth = 303.2735;
+    drawHistogram("hist_viz_transaction_amount", data, binWidth);
+data = [{'label': 'USD', 'value': 100.0}];
+    drawBarChart("bar_viz_currency", data);
+data = [{'label': 'other', 'value': 100.0}];
+    drawBarChart("bar_viz_payment_method", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_test_transaction", data);
+data = [];
+    drawBarChart("bar_viz_credit_card_company", data);
+data = [{'label': '4559467', 'value': 20.0}, {'label': '35', 'value': 20.0}, {'label': '45243', 'value': 20.0}, {'label': '45955', 'value': 20.0}, {'label': '45379', 'value': 20.0}];
+    drawBarChart("bar_viz_order_id", data);
+data = [{'label': '2022-11-30 18:1...', 'value': 20.0}, {'label': '2022-12-01 02:0...', 'value': 20.0}, {'label': '2022-12-01 02:0...', 'value': 20.0}, {'label': '2022-11-30 14:2...', 'value': 20.0}, {'label': '2022-11-30 23:5...', 'value': 20.0}];
+    drawBarChart("bar_viz_processing_timestamp", data);
+data = [{'label': '34283', 'value': 20.0}, {'label': '411', 'value': 20.0}, {'label': '905707', 'value': 20.0}, {'label': '55179', 'value': 20.0}, {'label': '16923', 'value': 20.0}];
+    drawBarChart("bar_viz_transaction_id", data);
+
+
+</script>
+</body>
+</html>

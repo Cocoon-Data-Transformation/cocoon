@@ -1,0 +1,2562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>contact_property_history_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>contact_id</th>
+      <th>source</th>
+      <th>name</th>
+      <th>value_</th>
+      <th>source_id</th>
+      <th>timestamp_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>12831901</td>
+      <td>EMAIL</td>
+      <td>7/VuV07HiY+Gu5IUAO6JCw==</td>
+      <td>jr+Mt/OfuiQPNwca+2uRYA==</td>
+      <td>None</td>
+      <td>2020-06-05 15:38:08.001</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>12831901</td>
+      <td>ANALYTICS</td>
+      <td>HYExAWyACtRIo4xwnT+pSA==</td>
+      <td>11J3zf/vmVpGrlm9rvHbhg==</td>
+      <td>vcSXuKwMkyjD/mr268dPkg==</td>
+      <td>2019-07-11 18:02:11.037</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>16909801</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>jee5YZ9HsUtdNl5GEMNFZA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024084</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>HTtGpkrhEaYgN2W9yOXf7w==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-03-09 06:37:17.054</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>17641001</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>R1tFOwdW1MEoE17Ter/KTg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>12740001</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>kgWpvzXqspMpl59Zn5u4VQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-07-09 19:54:34.893</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>13702651</td>
+      <td>BCC_TO_CRM</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>qEIHvJns5t7Tf+slrzoXeQ==</td>
+      <td>x95QzXglxE83idbApGcdew==</td>
+      <td>2019-08-02 17:51:36.518</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>14708951</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>dPEhHi+tIPC9vqa2NzyTOQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 05:38:28.258</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>23780651</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>u68UrK3FoSV6RME/eELTVg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-01-11 16:08:32.601</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>14723328</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>GEyVKxwl8++AVj5m5LroBA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 10:38:55.055</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>19325701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>KLAsTAV04F10aQf/wAxreA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-12 21:44:19.031</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>19035151</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>7LQVAjyvq37JFrm5lb3XFQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-09 00:18:55.872</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>14938901</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>ST5klNOjuF8Ze6bXrTt+fw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>32294351</td>
+      <td>CONVERSATIONS</td>
+      <td>MxA8tC0gCFYlmRupALH0pg==</td>
+      <td>vtpA1UFypP6M1LGrg+qn3Q==</td>
+      <td>None</td>
+      <td>2020-05-14 15:20:25.018</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>13250551</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>LrpXVtUPGuH39Dx7ROZH0g==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>30628651</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>f0DQqQN/+H6TFH1JQR6Zeg==</td>
+      <td>None</td>
+      <td>2020-05-20 08:22:12.870</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>15290251</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>3KT1F/XecS7ru3n7wGP4YA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>13524051</td>
+      <td>MEETINGS</td>
+      <td>dumN0ZqOcydVl8uG2VkrvQ==</td>
+      <td>DIP1fHhqC0o576sjcxx+vA==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-07-29 17:21:35.263</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>26644101</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>WN9z8tXbFl9iPq3syIPaWA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-14 23:24:07.112</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>8605301</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>1Xq15SNfvx9ZeLCDY4OmmQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.640</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>23230651</td>
+      <td>EXTENSION</td>
+      <td>k8cx8cOoTvBc1U0ETDeeqg==</td>
+      <td>7LSfDClpqNrpGIHfOeknpA==</td>
+      <td>o2wjpPyUfzBfq9OSt9I2NQ==</td>
+      <td>2020-01-03 21:49:17.962</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>17775451</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>1uFq/cgzkHq8O60PZW6tYQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-17 21:01:43.004</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>2024223</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>h2NL3mhXKOxvsZwQyUTRww==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-03-09 06:44:10.159</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>15014501</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>vMsvfK8VRkZSOezTIu3pfA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-09-01 15:37:06.672</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>6983251</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>lmE/e0FMZfOGbv6yViO7dg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-04-29 13:42:03.515</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>14066601</td>
+      <td>MEETINGS</td>
+      <td>arEiBT9jTqVVo3/E9gdsVg==</td>
+      <td>ozIU0B60AvmidJP7m1EvVw==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-08-10 17:15:30.401</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27654801</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>UOhAZGhDXfq6dLrFLeb6Sw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-27 18:33:59.170</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>12093851</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>wk5If9E9MEH8vDtjYSIxRg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-07-01 04:38:01.089</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>27615701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>56sk5ag+/vy+yLZopb1cSw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-27 10:07:34.550</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>13697701</td>
+      <td>BCC_TO_CRM</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>s74mzrUtmD7Jizocme86lQ==</td>
+      <td>x95QzXglxE83idbApGcdew==</td>
+      <td>2019-08-02 15:52:24.379</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>17836501</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>KXi7Q/2pnhDj9sOdY2H5UQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>27050851</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>28W7+VqSSoHW1O6NKCwGAA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>14251001</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>ZikpHsppnFaJgYA3tWuz3w==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-14 14:51:34.929</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>13702651</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>ciopy3VEw0M4ZaagjTYgFg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-02 17:51:37.504</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>3581851</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>16J3aeS+M+P1uokL68UEXg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-03-19 16:35:02.555</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>17757001</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>WI+v6/sdHmHqaoo/ReMJcA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2019859</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>v+luEGYhKhhjH7dYZaMeYg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>14720713</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>xktzhqUBDqFcXGLbURtSNg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 08:46:51.497</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>26556801</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>eS1taWgyCcHtqf0mZ2spNQ==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2020-02-13 21:13:25.605</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>14712394</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>5pQ1KAf8nvRRBqnGW++ptg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 06:40:48.927</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>14405801</td>
+      <td>BCC_TO_CRM</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>Rp2NS76Ip3fsWHaAOwQ5OA==</td>
+      <td>x95QzXglxE83idbApGcdew==</td>
+      <td>2019-08-19 13:03:36.611</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>26114551</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>56sk5ag+/vy+yLZopb1cSw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-08 15:45:53.933</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>9631701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>ntqcYolkIKyHonDGLSNVmQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-05-30 13:43:43.926</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>24225801</td>
+      <td>MEETINGS</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>Z+7hg7IQv3oyMRm2aijS2Q==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2020-01-17 20:30:11.946</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>16995701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>THNd7tdBt+d7k7Myj1rrxw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-08 01:42:29.353</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>14722621</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Mim2dhrCn1tXc2yaTHuglw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 10:06:20.417</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>22680901</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>4oBj7s3bQFhRV3TCiJxUVg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>24637451</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>3SHP7JlQkYET8zNHb6gHzQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>26132651</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>AcTdHG5wFVQLqA35tYOaug==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-08 19:24:22.272</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>28129551</td>
+      <td>EXTENSION</td>
+      <td>k8cx8cOoTvBc1U0ETDeeqg==</td>
+      <td>3k5ZBHbGi6X+n4mrqJ9FNQ==</td>
+      <td>o2wjpPyUfzBfq9OSt9I2NQ==</td>
+      <td>2020-03-04 14:08:38.682</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>15206301</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Fx7uv7RIZj6kc6XIBVx2dw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-09-04 23:36:41.314</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>22284701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>OVRWwtVe/NhLd1QNx6AjlQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-12-19 08:51:31.026</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>14717873</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>WHM1Qx8jXEklq2e7z840ww==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 07:14:56.115</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>21798351</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>7LQVAjyvq37JFrm5lb3XFQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-12-12 17:46:26.712</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>17910701</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>xk+INw/FG8TVFpVb7vCkrg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>15714551</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>KIPWdbC7x/p0sVuCUuFe0A==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>1998011</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>L3rpGvmtFA6p28qy5J9LWA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>22693652</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>N0044/LnwJrnzicWwUHVsA==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2019-12-26 17:16:38.646</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>8159751</td>
+      <td>MEETINGS</td>
+      <td>dumN0ZqOcydVl8uG2VkrvQ==</td>
+      <td>DIP1fHhqC0o576sjcxx+vA==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-05-13 18:30:19.583</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>33788701</td>
+      <td>CONVERSATIONS</td>
+      <td>MxA8tC0gCFYlmRupALH0pg==</td>
+      <td>vtpA1UFypP6M1LGrg+qn3Q==</td>
+      <td>None</td>
+      <td>2020-06-08 16:17:51.839</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>12012851</td>
+      <td>MEETINGS</td>
+      <td>arEiBT9jTqVVo3/E9gdsVg==</td>
+      <td>ozIU0B60AvmidJP7m1EvVw==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-07-03 12:22:18.054</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>14736613</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>0M9VRw3OwL7YR6oeImg+fQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 15:48:57.160</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>24052551</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>TTTgIEvAoifZYR2ghqOiLw==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2020-01-15 14:27:40.824</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>14711331</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>sOtcRb7kbsCUrY9z3lt7fg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 06:12:18.209</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>22093851</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>G+OT3H7/YQzhKbl3Grhe1Q==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>23900701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>HIZhaFItsTaYtCTUkBeoHQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-01-13 05:54:09.305</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>17757251</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>he8gzZfd4A3AHK/shL5RFw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>27153901</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>2CJ5Y5SiDXddXxuCIzvbRQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-20 20:30:08.374</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>30554701</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>P5VBXS+n44gpO64Qm+0v7A==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>13984651</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>vg6OGoHR/poqVUNprlNtSw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>25254201</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>tvkXwEjvp9mhddZKSTZZgg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>32739601</td>
+      <td>EXTENSION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>H7luNAv1XXkAGFwpjtJZGw==</td>
+      <td>Kj/fLcvz2keI3YCAXrxt/Q==</td>
+      <td>2020-05-21 14:56:17.770</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>25903051</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>9bJN47mrwEUDm93M5SztHw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-06 04:42:29.277</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>18442401</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>SsRSDjkFsX5Pm7nrGSBYgA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-30 01:34:55.259</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>13502001</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>e9FofcqLCBOJSuGeXqiJdA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>22267751</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>XWMXWmSvNPy3kSODiGF6gA==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2019-12-19 00:56:58.890</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>13121201</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>5oWR12FnP2ZIvlD34Sdmow==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>4501501</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>DRu6XilnmFdJYHnBODWrYw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-03-28 13:04:07.447</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>16911601</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Y1ud8QBc3semGiI2pY7HyQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-06 18:06:03.704</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>23914051</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>zp0v8rp75q/8DpQ8XtIa5g==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>12393551</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>76s3zIT+scM7dFge/WS/yg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>7725251</td>
+      <td>INTEGRATION</td>
+      <td>AxxZkC/6OuR6UWHp+xuKUA==</td>
+      <td>dcDr2CRGoAzmSfY2L2VR0g==</td>
+      <td>None</td>
+      <td>2020-04-11 15:10:55.583</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>12012851</td>
+      <td>MEETINGS</td>
+      <td>dumN0ZqOcydVl8uG2VkrvQ==</td>
+      <td>DIP1fHhqC0o576sjcxx+vA==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-07-03 12:22:18.054</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>22376401</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>WBpRtVgJ1koe0PKJpGamMw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>26538801</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Y7FO8rESQKxJzdPMy/h9Bg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-13 17:22:18.037</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>18406651</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>DWY98KUNLdqQqm5pzTgBLQ==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2019-10-29 14:34:49.532</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>8748401</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>rv9fN7k0yB6nV3ZsEIizhw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.640</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>23660651</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>/QWiVEb7Y9LwDzQX4dAobw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-01-09 20:49:48.078</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>23024751</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>ZVtXl7bB2MxPJGegTzbSoQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>24222251</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>VVecpXiSUZ3z/yeP2zPXwQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>19836451</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>8POI+mC7+WZNwuTZUAQEAg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-18 16:59:15.782</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>19369601</td>
+      <td>EXTENSION</td>
+      <td>k8cx8cOoTvBc1U0ETDeeqg==</td>
+      <td>LMjePdNO1sO/SQt7a4GcHA==</td>
+      <td>o2wjpPyUfzBfq9OSt9I2NQ==</td>
+      <td>2019-11-13 15:57:21.096</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>20406101</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>6nt8C1f84ZGimG1Lv0y0iw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>33121451</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>LMtjqteK1ON6ECFBT+FJ0A==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2020-05-27 21:16:55.981</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>18812101</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>HGQj6TsXAeHAWlKBYwZtBg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>18812051</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Y4Lk5p7RX64bghwW+3qU0g==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-05 19:07:12.468</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>15768501</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>H1SF5yhxZvUX6HKXey0mcg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-09-14 11:20:13.490</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>20037451</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>56sk5ag+/vy+yLZopb1cSw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-20 23:35:44.850</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>17295701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>S6Oqo8B5ajGD5Vp0gE+FuQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-11 18:26:23.144</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>19369651</td>
+      <td>EXTENSION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>mg8ta1HltuUOlxDp2GwCoQ==</td>
+      <td>o2wjpPyUfzBfq9OSt9I2NQ==</td>
+      <td>2019-11-13 15:58:42.544</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>contact_id</th>
+      <th>source</th>
+      <th>property_name</th>
+      <th>property_value</th>
+      <th>source_id</th>
+      <th>change_timestamp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>12831901</td>
+      <td>EMAIL</td>
+      <td>7/VuV07HiY+Gu5IUAO6JCw==</td>
+      <td>jr+Mt/OfuiQPNwca+2uRYA==</td>
+      <td>None</td>
+      <td>2020-06-05 15:38:08.001</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>12831901</td>
+      <td>ANALYTICS</td>
+      <td>HYExAWyACtRIo4xwnT+pSA==</td>
+      <td>11J3zf/vmVpGrlm9rvHbhg==</td>
+      <td>vcSXuKwMkyjD/mr268dPkg==</td>
+      <td>2019-07-11 18:02:11.037</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>16909801</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>jee5YZ9HsUtdNl5GEMNFZA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024084</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>HTtGpkrhEaYgN2W9yOXf7w==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-03-09 06:37:17.054</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>17641001</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>R1tFOwdW1MEoE17Ter/KTg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>12740001</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>kgWpvzXqspMpl59Zn5u4VQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-07-09 19:54:34.893</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>13702651</td>
+      <td>BCC_TO_CRM</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>qEIHvJns5t7Tf+slrzoXeQ==</td>
+      <td>x95QzXglxE83idbApGcdew==</td>
+      <td>2019-08-02 17:51:36.518</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>14708951</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>dPEhHi+tIPC9vqa2NzyTOQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 05:38:28.258</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>23780651</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>u68UrK3FoSV6RME/eELTVg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-01-11 16:08:32.601</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>14723328</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>GEyVKxwl8++AVj5m5LroBA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 10:38:55.055</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>19325701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>KLAsTAV04F10aQf/wAxreA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-12 21:44:19.031</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>19035151</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>7LQVAjyvq37JFrm5lb3XFQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-09 00:18:55.872</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>14938901</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>ST5klNOjuF8Ze6bXrTt+fw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>32294351</td>
+      <td>CONVERSATIONS</td>
+      <td>MxA8tC0gCFYlmRupALH0pg==</td>
+      <td>vtpA1UFypP6M1LGrg+qn3Q==</td>
+      <td>None</td>
+      <td>2020-05-14 15:20:25.018</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>13250551</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>LrpXVtUPGuH39Dx7ROZH0g==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>30628651</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>f0DQqQN/+H6TFH1JQR6Zeg==</td>
+      <td>None</td>
+      <td>2020-05-20 08:22:12.870</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>15290251</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>3KT1F/XecS7ru3n7wGP4YA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>13524051</td>
+      <td>MEETINGS</td>
+      <td>dumN0ZqOcydVl8uG2VkrvQ==</td>
+      <td>DIP1fHhqC0o576sjcxx+vA==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-07-29 17:21:35.263</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>26644101</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>WN9z8tXbFl9iPq3syIPaWA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-14 23:24:07.112</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>8605301</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>1Xq15SNfvx9ZeLCDY4OmmQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.640</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>23230651</td>
+      <td>EXTENSION</td>
+      <td>k8cx8cOoTvBc1U0ETDeeqg==</td>
+      <td>7LSfDClpqNrpGIHfOeknpA==</td>
+      <td>o2wjpPyUfzBfq9OSt9I2NQ==</td>
+      <td>2020-01-03 21:49:17.962</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>17775451</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>1uFq/cgzkHq8O60PZW6tYQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-17 21:01:43.004</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>2024223</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>h2NL3mhXKOxvsZwQyUTRww==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-03-09 06:44:10.159</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>15014501</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>vMsvfK8VRkZSOezTIu3pfA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-09-01 15:37:06.672</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>6983251</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>lmE/e0FMZfOGbv6yViO7dg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-04-29 13:42:03.515</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>14066601</td>
+      <td>MEETINGS</td>
+      <td>arEiBT9jTqVVo3/E9gdsVg==</td>
+      <td>ozIU0B60AvmidJP7m1EvVw==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-08-10 17:15:30.401</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27654801</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>UOhAZGhDXfq6dLrFLeb6Sw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-27 18:33:59.170</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>12093851</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>wk5If9E9MEH8vDtjYSIxRg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-07-01 04:38:01.089</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>27615701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>56sk5ag+/vy+yLZopb1cSw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-27 10:07:34.550</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>13697701</td>
+      <td>BCC_TO_CRM</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>s74mzrUtmD7Jizocme86lQ==</td>
+      <td>x95QzXglxE83idbApGcdew==</td>
+      <td>2019-08-02 15:52:24.379</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>17836501</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>KXi7Q/2pnhDj9sOdY2H5UQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>27050851</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>28W7+VqSSoHW1O6NKCwGAA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>14251001</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>ZikpHsppnFaJgYA3tWuz3w==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-14 14:51:34.929</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>13702651</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>ciopy3VEw0M4ZaagjTYgFg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-02 17:51:37.504</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>3581851</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>16J3aeS+M+P1uokL68UEXg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-03-19 16:35:02.555</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>17757001</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>WI+v6/sdHmHqaoo/ReMJcA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2019859</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>v+luEGYhKhhjH7dYZaMeYg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>14720713</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>xktzhqUBDqFcXGLbURtSNg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 08:46:51.497</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>26556801</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>eS1taWgyCcHtqf0mZ2spNQ==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2020-02-13 21:13:25.605</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>14712394</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>5pQ1KAf8nvRRBqnGW++ptg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 06:40:48.927</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>14405801</td>
+      <td>BCC_TO_CRM</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>Rp2NS76Ip3fsWHaAOwQ5OA==</td>
+      <td>x95QzXglxE83idbApGcdew==</td>
+      <td>2019-08-19 13:03:36.611</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>26114551</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>56sk5ag+/vy+yLZopb1cSw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-08 15:45:53.933</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>9631701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>ntqcYolkIKyHonDGLSNVmQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-05-30 13:43:43.926</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>24225801</td>
+      <td>MEETINGS</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>Z+7hg7IQv3oyMRm2aijS2Q==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2020-01-17 20:30:11.946</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>16995701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>THNd7tdBt+d7k7Myj1rrxw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-08 01:42:29.353</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>14722621</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Mim2dhrCn1tXc2yaTHuglw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 10:06:20.417</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>22680901</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>4oBj7s3bQFhRV3TCiJxUVg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>24637451</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>3SHP7JlQkYET8zNHb6gHzQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>26132651</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>AcTdHG5wFVQLqA35tYOaug==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-08 19:24:22.272</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>28129551</td>
+      <td>EXTENSION</td>
+      <td>k8cx8cOoTvBc1U0ETDeeqg==</td>
+      <td>3k5ZBHbGi6X+n4mrqJ9FNQ==</td>
+      <td>o2wjpPyUfzBfq9OSt9I2NQ==</td>
+      <td>2020-03-04 14:08:38.682</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>15206301</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Fx7uv7RIZj6kc6XIBVx2dw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-09-04 23:36:41.314</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>22284701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>OVRWwtVe/NhLd1QNx6AjlQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-12-19 08:51:31.026</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>14717873</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>WHM1Qx8jXEklq2e7z840ww==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 07:14:56.115</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>21798351</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>7LQVAjyvq37JFrm5lb3XFQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-12-12 17:46:26.712</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>17910701</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>xk+INw/FG8TVFpVb7vCkrg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>15714551</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>KIPWdbC7x/p0sVuCUuFe0A==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>1998011</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>L3rpGvmtFA6p28qy5J9LWA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>22693652</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>N0044/LnwJrnzicWwUHVsA==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2019-12-26 17:16:38.646</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>8159751</td>
+      <td>MEETINGS</td>
+      <td>dumN0ZqOcydVl8uG2VkrvQ==</td>
+      <td>DIP1fHhqC0o576sjcxx+vA==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-05-13 18:30:19.583</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>33788701</td>
+      <td>CONVERSATIONS</td>
+      <td>MxA8tC0gCFYlmRupALH0pg==</td>
+      <td>vtpA1UFypP6M1LGrg+qn3Q==</td>
+      <td>None</td>
+      <td>2020-06-08 16:17:51.839</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>12012851</td>
+      <td>MEETINGS</td>
+      <td>arEiBT9jTqVVo3/E9gdsVg==</td>
+      <td>ozIU0B60AvmidJP7m1EvVw==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-07-03 12:22:18.054</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>14736613</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>0M9VRw3OwL7YR6oeImg+fQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 15:48:57.160</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>24052551</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>TTTgIEvAoifZYR2ghqOiLw==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2020-01-15 14:27:40.824</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>14711331</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>sOtcRb7kbsCUrY9z3lt7fg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-08-24 06:12:18.209</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>22093851</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>G+OT3H7/YQzhKbl3Grhe1Q==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>23900701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>HIZhaFItsTaYtCTUkBeoHQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-01-13 05:54:09.305</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>17757251</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>he8gzZfd4A3AHK/shL5RFw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>27153901</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>2CJ5Y5SiDXddXxuCIzvbRQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-20 20:30:08.374</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>30554701</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>P5VBXS+n44gpO64Qm+0v7A==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>13984651</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>vg6OGoHR/poqVUNprlNtSw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>25254201</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>tvkXwEjvp9mhddZKSTZZgg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>32739601</td>
+      <td>EXTENSION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>H7luNAv1XXkAGFwpjtJZGw==</td>
+      <td>Kj/fLcvz2keI3YCAXrxt/Q==</td>
+      <td>2020-05-21 14:56:17.770</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>25903051</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>9bJN47mrwEUDm93M5SztHw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-06 04:42:29.277</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>18442401</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>SsRSDjkFsX5Pm7nrGSBYgA==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-30 01:34:55.259</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>13502001</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>e9FofcqLCBOJSuGeXqiJdA==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>22267751</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>XWMXWmSvNPy3kSODiGF6gA==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2019-12-19 00:56:58.890</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>13121201</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>5oWR12FnP2ZIvlD34Sdmow==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>4501501</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>DRu6XilnmFdJYHnBODWrYw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-03-28 13:04:07.447</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>16911601</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Y1ud8QBc3semGiI2pY7HyQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-06 18:06:03.704</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>23914051</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>zp0v8rp75q/8DpQ8XtIa5g==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>12393551</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>76s3zIT+scM7dFge/WS/yg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.638</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>7725251</td>
+      <td>INTEGRATION</td>
+      <td>AxxZkC/6OuR6UWHp+xuKUA==</td>
+      <td>dcDr2CRGoAzmSfY2L2VR0g==</td>
+      <td>None</td>
+      <td>2020-04-11 15:10:55.583</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>12012851</td>
+      <td>MEETINGS</td>
+      <td>dumN0ZqOcydVl8uG2VkrvQ==</td>
+      <td>DIP1fHhqC0o576sjcxx+vA==</td>
+      <td>+70ihokt68RuoQzWVLZqhg==</td>
+      <td>2019-07-03 12:22:18.054</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>22376401</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>WBpRtVgJ1koe0PKJpGamMw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>26538801</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Y7FO8rESQKxJzdPMy/h9Bg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-02-13 17:22:18.037</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>18406651</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>DWY98KUNLdqQqm5pzTgBLQ==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2019-10-29 14:34:49.532</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>8748401</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>rv9fN7k0yB6nV3ZsEIizhw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.640</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>23660651</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>/QWiVEb7Y9LwDzQX4dAobw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2020-01-09 20:49:48.078</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>23024751</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>ZVtXl7bB2MxPJGegTzbSoQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>24222251</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>VVecpXiSUZ3z/yeP2zPXwQ==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>19836451</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>8POI+mC7+WZNwuTZUAQEAg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-18 16:59:15.782</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>19369601</td>
+      <td>EXTENSION</td>
+      <td>k8cx8cOoTvBc1U0ETDeeqg==</td>
+      <td>LMjePdNO1sO/SQt7a4GcHA==</td>
+      <td>o2wjpPyUfzBfq9OSt9I2NQ==</td>
+      <td>2019-11-13 15:57:21.096</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>20406101</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>6nt8C1f84ZGimG1Lv0y0iw==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>33121451</td>
+      <td>EMAIL_INTEGRATION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>LMtjqteK1ON6ECFBT+FJ0A==</td>
+      <td>4tW5JVKSmKpfX5uxadmtdQ==</td>
+      <td>2020-05-27 21:16:55.981</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>18812101</td>
+      <td>MIGRATION</td>
+      <td>qX2fhW9GbEQnUAKSmM2edA==</td>
+      <td>HGQj6TsXAeHAWlKBYwZtBg==</td>
+      <td>None</td>
+      <td>2020-05-08 02:32:59.639</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>18812051</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>Y4Lk5p7RX64bghwW+3qU0g==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-05 19:07:12.468</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>15768501</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>H1SF5yhxZvUX6HKXey0mcg==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-09-14 11:20:13.490</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>20037451</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>56sk5ag+/vy+yLZopb1cSw==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-11-20 23:35:44.850</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>17295701</td>
+      <td>ASSOCIATIONS</td>
+      <td>8fUr1Wwn4ytZC91+JzXpyw==</td>
+      <td>S6Oqo8B5ajGD5Vp0gE+FuQ==</td>
+      <td>TltxIEVirA6t9UVXQDL4UA==</td>
+      <td>2019-10-11 18:26:23.144</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>19369651</td>
+      <td>EXTENSION</td>
+      <td>qTDHP4BXxe5FHXIq0cyoSA==</td>
+      <td>mg8ta1HltuUOlxDp2GwCoQ==</td>
+      <td>o2wjpPyUfzBfq9OSt9I2NQ==</td>
+      <td>2019-11-13 15:58:42.544</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">contact_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_contact_id"></div><b>📃 Summary:</b> Unique identifier for the contact<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">source</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_source"></div><b>📃 Summary:</b> Origin of the property change<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">property_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_property_name"></div><b>📃 Summary:</b> Encrypted name of the contact property<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">property_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_property_value"></div><b>📃 Summary:</b> Encrypted value of the contact property<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">source_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_source_id"></div><b>📃 Summary:</b> Identifier for the specific source<br><b>❓ Missing:</b> Not applicable for sources that don't use IDs.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">change_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_change_timestamp"></div><b>📃 Summary:</b> Date and time of the property change<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about contact property history data. It includes details like contact ID, timestamp, source, property name, property value, and source ID. The data appears to be encrypted, with values stored as hashed strings. It tracks changes to contact properties over time from different sources like email, analytics, and migrations.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>3</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>contact_id</td>
+      <td>Unique identifier for the contact</td>
+      <td>contact_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>timestamp_</td>
+      <td>Date and time of the property change</td>
+      <td>change_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>source</td>
+      <td>Origin of the property change</td>
+      <td>source</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>name</td>
+      <td>Encrypted name of the contact property</td>
+      <td>property_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>value_</td>
+      <td>Encrypted value of the contact property</td>
+      <td>property_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>source_id</td>
+      <td>Identifier for the specific source</td>
+      <td>source_id</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>1</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>change_timestamp</td>
+      <td>CAST("change_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'change_timestamp' column from VARCHAR to TIMESTAMP, we can use a simple CAST function in DuckDB. The format of the timestamps in the given values is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.SSS), which DuckDB can automatically parse without needing a specific format string. Therefore, we can directly cast the column to TIMESTAMP without using the strptime function.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>1</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>source_id</td>
+      <td>35</td>
+      <td>True</td>
+      <td>Not applicable for sources that don't use IDs.</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 2792778.25, 'y': 5}, {'x': 4382312.75, 'y': 1}, {'x': 5971847.25, 'y': 0}, {'x': 7561381.75, 'y': 3}, {'x': 9150916.25, 'y': 3}, {'x': 10740450.75, 'y': 0}, {'x': 12329985.25, 'y': 8}, {'x': 13919519.75, 'y': 13}, {'x': 15509054.25, 'y': 11}, {'x': 17098588.75, 'y': 9}, {'x': 18688123.25, 'y': 9}, {'x': 20277657.75, 'y': 3}, {'x': 21867192.25, 'y': 5}, {'x': 23456726.75, 'y': 11}, {'x': 25046261.25, 'y': 2}, {'x': 26635795.75, 'y': 8}, {'x': 28225330.25, 'y': 3}, {'x': 29814864.75, 'y': 1}, {'x': 31404399.25, 'y': 1}, {'x': 32993933.75, 'y': 4}];
+    binWidth = 1589534.5;
+    drawHistogram("hist_viz_contact_id", data, binWidth);
+data = [{'label': 'ASSOCIATIONS', 'value': 44.0}, {'label': 'MIGRATION', 'value': 31.0}, {'label': 'MEETINGS', 'value': 6.0}, {'label': 'EMAIL_INTEGRATI...', 'value': 6.0}, {'label': 'EXTENSION', 'value': 5.0}, {'label': 'Other values', 'value': 8.0}];
+    drawBarChart("bar_viz_source", data);
+data = [{'label': '8fUr1Wwn4ytZC91...', 'value': 44.0}, {'label': 'qX2fhW9GbEQnUAK...', 'value': 31.0}, {'label': 'qTDHP4BXxe5FHXI...', 'value': 12.0}, {'label': 'k8cx8cOoTvBc1U0...', 'value': 3.0}, {'label': 'dumN0ZqOcydVl8u...', 'value': 3.0}, {'label': 'Other values', 'value': 7.000000000000001}];
+    drawBarChart("bar_viz_property_name", data);
+data = [{'label': 'DIP1fHhqC0o576s...', 'value': 3.0}, {'label': '56sk5ag+/vy+yLZ...', 'value': 3.0}, {'label': 'vtpA1UFypP6M1LG...', 'value': 2.0}, {'label': '7LQVAjyvq37JFrm...', 'value': 2.0}, {'label': 'ozIU0B60AvmidJP...', 'value': 2.0}, {'label': 'Other values', 'value': 88.0}];
+    drawBarChart("bar_viz_property_value", data);
+data = [{'label': 'TltxIEVirA6t9UV...', 'value': 67.6923076923077}, {'label': '+70ihokt68RuoQz...', 'value': 9.230769230769232}, {'label': '4tW5JVKSmKpfX5u...', 'value': 9.230769230769232}, {'label': 'o2wjpPyUfzBfq9O...', 'value': 6.153846153846154}, {'label': 'x95QzXglxE83idb...', 'value': 4.615384615384616}, {'label': 'Other values', 'value': 3.076923076923077}];
+    drawBarChart("bar_viz_source_id", data);
+data = [{'label': '2020-05-08 02:3...', 'value': 15.0}, {'label': '2020-05-08 02:3...', 'value': 13.0}, {'label': '2020-05-08 02:3...', 'value': 2.0}, {'label': '2019-07-03 12:2...', 'value': 2.0}, {'label': '2019-09-01 15:3...', 'value': 1.0}, {'label': 'Other values', 'value': 67.0}];
+    drawBarChart("bar_viz_change_timestamp", data);
+
+
+</script>
+</body>
+</html>

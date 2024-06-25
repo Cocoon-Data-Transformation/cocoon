@@ -1,0 +1,2760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>contact_list_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>_fivetran_deleted</th>
+      <th>deleteable</th>
+      <th>dynamic</th>
+      <th>metadata_processing</th>
+      <th>metadata_size</th>
+      <th>portal_id</th>
+      <th>name</th>
+      <th>created_at</th>
+      <th>metadata_last_processing_state_change_at</th>
+      <th>metadata_last_size_change_at</th>
+      <th>updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>330</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>VP8DfG5/mkHNKZ6EglulZA==</td>
+      <td>2019-07-16 15:47:36.446</td>
+      <td>2019-07-16 15:48:05.574</td>
+      <td>2019-07-16 15:48:05.601</td>
+      <td>2019-07-16 15:47:36.446</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>226</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>1</td>
+      <td>4727653</td>
+      <td>7jvC5GpQ/pqnEEZhlX7Gww==</td>
+      <td>2019-04-12 13:13:34.414</td>
+      <td>2019-04-12 13:13:34.550</td>
+      <td>2019-04-12 13:13:35.275</td>
+      <td>2019-04-12 13:13:34.414</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>225</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>4</td>
+      <td>4727653</td>
+      <td>sSFJaXqXZpsMxgs+ylJlPw==</td>
+      <td>2019-04-12 13:13:34.047</td>
+      <td>2019-04-12 13:13:34.150</td>
+      <td>2019-04-12 13:13:35.291</td>
+      <td>2019-04-12 13:13:34.047</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>227</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>5</td>
+      <td>4727653</td>
+      <td>m1Cd/1rc6ajZ8oA3s9UckQ==</td>
+      <td>2019-04-12 13:13:34.753</td>
+      <td>2019-04-12 13:13:34.883</td>
+      <td>2019-04-12 13:13:35.574</td>
+      <td>2019-04-12 13:13:34.753</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>824</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>GwGXVzsOzQBNVQEN/6y07Q==</td>
+      <td>2020-04-07 17:07:59.078</td>
+      <td>2020-04-07 17:09:36.906</td>
+      <td>2020-04-07 17:09:36.900</td>
+      <td>2020-04-07 17:07:59.078</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>310</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>u5hJ+NcyJCX24XPB5IfCpQ==</td>
+      <td>2019-07-12 19:21:25.785</td>
+      <td>2019-07-12 19:21:46.539</td>
+      <td>2019-07-12 19:21:46.543</td>
+      <td>2019-07-12 19:21:25.785</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>334</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>ko3/O+862Fuqe6m/KUyyYg==</td>
+      <td>2019-07-19 14:25:33.813</td>
+      <td>2019-07-19 14:25:53.687</td>
+      <td>2019-07-19 14:25:53.719</td>
+      <td>2019-07-19 14:25:33.813</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>333</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>GoPxtYNTexpsjDgf0ZLwew==</td>
+      <td>2019-07-19 14:24:38.260</td>
+      <td>2019-07-19 14:24:58.903</td>
+      <td>2019-07-19 14:24:58.929</td>
+      <td>2019-07-19 14:24:38.260</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>332</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>B4QHFDXuOBWbmOZ9Nn81MQ==</td>
+      <td>2019-07-19 14:23:38.520</td>
+      <td>2019-07-19 14:24:00.052</td>
+      <td>2019-07-19 14:24:00.056</td>
+      <td>2019-07-19 14:23:38.520</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>331</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>7</td>
+      <td>4727653</td>
+      <td>rsBK6UJaJdWa2REJjUnqlQ==</td>
+      <td>2019-07-16 19:57:20.349</td>
+      <td>2019-07-16 19:57:40.989</td>
+      <td>2019-07-16 19:57:40.994</td>
+      <td>2019-07-16 19:57:20.349</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>329</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>7</td>
+      <td>4727653</td>
+      <td>Gksakje0BhHUz52OF9zXzg==</td>
+      <td>2019-07-16 15:42:11.062</td>
+      <td>2019-07-16 15:42:34.539</td>
+      <td>2019-07-16 15:42:34.543</td>
+      <td>2019-07-16 15:42:11.062</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>328</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>7</td>
+      <td>4727653</td>
+      <td>bwAO6ZWofSUTYQvtbI7pjQ==</td>
+      <td>2019-07-16 15:41:00.583</td>
+      <td>2019-07-16 15:41:18.559</td>
+      <td>2019-07-16 15:41:18.598</td>
+      <td>2019-07-16 15:41:00.583</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>327</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>7</td>
+      <td>4727653</td>
+      <td>15+UzrPncnoAwZw8/f+Gew==</td>
+      <td>2019-07-16 15:40:54.391</td>
+      <td>2019-07-16 15:41:18.559</td>
+      <td>2019-07-16 15:41:18.570</td>
+      <td>2019-07-16 15:40:54.391</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1032</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>11</td>
+      <td>4727653</td>
+      <td>HM9Ka7JNV9RSg67DNq0QQg==</td>
+      <td>2020-05-13 16:01:29.943</td>
+      <td>2020-05-13 16:02:56.743</td>
+      <td>2020-05-13 16:02:56.736</td>
+      <td>2020-05-13 16:01:29.943</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>625</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>11</td>
+      <td>4727653</td>
+      <td>lUZ7+0dvk1bz1oVXsRapAw==</td>
+      <td>2020-02-06 13:58:27.999</td>
+      <td>2020-02-06 13:58:59.230</td>
+      <td>2020-02-06 13:58:59.234</td>
+      <td>2020-02-06 13:58:27.999</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>401</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>13</td>
+      <td>4727653</td>
+      <td>8888t1Miu4dTUvj8eiAfuA==</td>
+      <td>2019-09-25 20:45:43.981</td>
+      <td>2019-09-25 20:46:13.591</td>
+      <td>2019-09-25 20:46:13.597</td>
+      <td>2019-09-25 20:45:43.981</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1204</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>17</td>
+      <td>4727653</td>
+      <td>Zwf/b0vJY2UwpYbtAf2CBA==</td>
+      <td>2020-06-17 15:59:48.197</td>
+      <td>2020-06-17 16:02:34.214</td>
+      <td>2020-06-17 16:02:34.146</td>
+      <td>2020-06-17 15:59:48.197</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>55</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>17</td>
+      <td>4727653</td>
+      <td>mnq+Sz4/SCcoUEdS+LBSIg==</td>
+      <td>2019-03-04 18:10:43.303</td>
+      <td>2019-03-04 18:11:53.255</td>
+      <td>2019-03-04 18:11:53.200</td>
+      <td>2019-03-04 18:10:43.303</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>974</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>20</td>
+      <td>4727653</td>
+      <td>Gn488rv0a3Ie/IWhFuaGGQ==</td>
+      <td>2020-04-23 15:23:06.387</td>
+      <td>2020-04-23 15:24:32.869</td>
+      <td>2020-04-23 15:24:32.865</td>
+      <td>2020-04-23 15:23:06.387</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>975</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>20</td>
+      <td>4727653</td>
+      <td>g/mmSdFt715pboogejnP4w==</td>
+      <td>2020-04-23 15:24:45.163</td>
+      <td>2020-04-23 15:26:42.432</td>
+      <td>2020-04-23 15:26:42.427</td>
+      <td>2020-04-23 15:24:45.163</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>782</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>1566</td>
+      <td>4727653</td>
+      <td>6qNURPpCXIodsl53DaTxPQ==</td>
+      <td>2020-03-27 21:09:06.393</td>
+      <td>2020-03-27 21:10:05.239</td>
+      <td>2020-03-27 21:10:05.236</td>
+      <td>2020-03-27 21:09:06.393</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>393</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>39</td>
+      <td>4727653</td>
+      <td>bLeKFUNOJ4jsZ4pkPsSLXw==</td>
+      <td>2019-09-23 19:34:18.706</td>
+      <td>2019-09-23 19:34:48.643</td>
+      <td>2019-09-23 19:34:48.646</td>
+      <td>2019-09-23 19:34:18.706</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>408</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>45</td>
+      <td>4727653</td>
+      <td>SXBYnVh+MqFbiGLoTnGyPw==</td>
+      <td>2019-09-25 21:07:40.780</td>
+      <td>2019-09-25 21:08:19.420</td>
+      <td>2019-09-25 21:08:19.443</td>
+      <td>2019-09-25 21:07:40.780</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>973</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>52</td>
+      <td>4727653</td>
+      <td>KVifN1FG0NgAnuQIYdmBDg==</td>
+      <td>2020-04-23 15:04:18.983</td>
+      <td>2020-04-23 15:05:47.165</td>
+      <td>2020-04-23 15:05:47.162</td>
+      <td>2020-04-23 15:04:18.983</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>624</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>61</td>
+      <td>4727653</td>
+      <td>IQVmtzo5pS7RslkpjPB4Dw==</td>
+      <td>2020-02-06 13:55:44.688</td>
+      <td>2020-02-06 13:56:15.670</td>
+      <td>2020-02-06 13:56:15.675</td>
+      <td>2020-02-06 13:55:44.688</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>400</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>63</td>
+      <td>4727653</td>
+      <td>WQiqy4guxiUIHKV/m1Tt3Q==</td>
+      <td>2019-09-25 20:34:20.302</td>
+      <td>2019-09-25 20:34:49.560</td>
+      <td>2019-09-25 20:34:49.564</td>
+      <td>2019-09-25 20:34:20.302</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>1071</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>69</td>
+      <td>4727653</td>
+      <td>vwJEngEYRxlDrCPixzeHFQ==</td>
+      <td>2020-06-01 15:21:26.934</td>
+      <td>2020-06-01 15:22:44.504</td>
+      <td>2020-06-01 15:22:44.501</td>
+      <td>2020-06-01 15:21:26.934</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>1070</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>69</td>
+      <td>4727653</td>
+      <td>ZmFzI47HQGUvjCy6MGyVhQ==</td>
+      <td>2020-06-01 15:20:06.204</td>
+      <td>2020-06-01 15:21:26.603</td>
+      <td>2020-06-01 15:21:26.592</td>
+      <td>2020-06-01 15:20:06.204</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>849</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>1120</td>
+      <td>4727653</td>
+      <td>CVq8aHXGQ8pGQ40V32763w==</td>
+      <td>2020-04-10 19:38:49.028</td>
+      <td>2020-04-10 19:39:47.588</td>
+      <td>2020-04-10 19:45:55.323</td>
+      <td>2020-04-10 19:38:49.028</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>348</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>101</td>
+      <td>4727653</td>
+      <td>t/ZdujEn0ww3bUGH5WOTwg==</td>
+      <td>2019-08-13 16:55:08.462</td>
+      <td>2019-08-13 16:55:30.569</td>
+      <td>2019-08-13 16:55:30.597</td>
+      <td>2019-08-13 16:55:08.462</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>399</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>1142</td>
+      <td>4727653</td>
+      <td>Cjp7P+vzJvyMMsKjxq2sOw==</td>
+      <td>2019-09-25 20:27:21.307</td>
+      <td>2019-09-25 20:27:56.059</td>
+      <td>2019-10-20 18:49:25.067</td>
+      <td>2019-09-25 20:27:21.307</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>402</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>387</td>
+      <td>4727653</td>
+      <td>6io80IZHxt+kCXffuQqWTA==</td>
+      <td>2019-09-25 20:49:26.561</td>
+      <td>2019-09-25 20:50:01.526</td>
+      <td>2019-09-25 20:50:01.532</td>
+      <td>2019-09-25 20:49:26.561</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>1183</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>144</td>
+      <td>4727653</td>
+      <td>Hs39BFzerp1HriIFGM3uVg==</td>
+      <td>2020-06-16 15:44:29.230</td>
+      <td>2020-06-16 15:46:09.413</td>
+      <td>2020-06-16 15:46:09.392</td>
+      <td>2020-06-16 15:44:29.230</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>1125</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>683</td>
+      <td>4727653</td>
+      <td>9vy8PUzTBuK6v01GHAmylg==</td>
+      <td>2020-06-05 14:26:00.285</td>
+      <td>2020-06-05 14:27:42.350</td>
+      <td>2020-06-05 14:27:42.345</td>
+      <td>2020-06-05 14:26:00.285</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>341</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>177</td>
+      <td>4727653</td>
+      <td>nnHF6FnaZeI9iomk51tHJg==</td>
+      <td>2019-07-23 15:38:20.569</td>
+      <td>2019-07-23 15:38:44.798</td>
+      <td>2019-07-23 15:38:44.805</td>
+      <td>2019-07-23 15:38:20.569</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>294</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>485</td>
+      <td>4727653</td>
+      <td>2RQfrPpf87da3Hvca+fv0Q==</td>
+      <td>2019-07-09 19:10:32.025</td>
+      <td>2019-07-09 19:11:08.847</td>
+      <td>2019-08-12 16:19:20.310</td>
+      <td>2019-07-09 19:10:32.025</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>359</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>510</td>
+      <td>4727653</td>
+      <td>EuQ3A1epRoY0RfbAHhd4ng==</td>
+      <td>2019-09-13 16:08:10.663</td>
+      <td>2019-09-13 16:08:44.794</td>
+      <td>2019-10-20 18:49:24.979</td>
+      <td>2019-09-13 16:08:10.663</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>190</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>T0eEdl8CXBXRop19HpcICQ==</td>
+      <td>2019-03-11 14:03:09.387</td>
+      <td>2019-03-26 22:52:45.350</td>
+      <td>2019-08-24 09:36:47.020</td>
+      <td>2019-03-26 22:52:25.962</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>3</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>kGTwkWh99gkoqTrFmQl6gQ==</td>
+      <td>2018-12-28 02:20:49.226</td>
+      <td>2018-12-28 02:21:05.312</td>
+      <td>2018-12-28 02:21:05.752</td>
+      <td>2019-05-15 04:21:13.230</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>199</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>TGDQHbCXJG71QaTn3OrRTg==</td>
+      <td>2019-03-11 19:24:20.052</td>
+      <td>2019-04-04 18:16:25.029</td>
+      <td>2019-08-24 16:15:24.979</td>
+      <td>2019-04-04 18:16:03.506</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>206</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>rlt4tUkRGlWV7X0P3AwN6w==</td>
+      <td>2019-03-29 15:07:55.166</td>
+      <td>2019-04-03 18:47:12.229</td>
+      <td>2019-04-11 20:53:44.610</td>
+      <td>2019-04-03 18:46:42.840</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>vsYNW0Z6uis0CS8jqID3wQ==</td>
+      <td>2018-12-28 02:20:48.813</td>
+      <td>2018-12-28 02:21:05.312</td>
+      <td>2018-12-28 02:21:05.538</td>
+      <td>2019-05-15 04:21:13.120</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>233</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>4Q7rYgsr53R+dRJIJ5SkAg==</td>
+      <td>2019-04-21 17:13:46.426</td>
+      <td>2019-04-21 17:15:07.530</td>
+      <td>2019-08-24 06:09:58.639</td>
+      <td>2019-04-21 17:14:46.531</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>212</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>HBky3cL9jIMizEVh9TyktA==</td>
+      <td>2019-04-05 17:28:16.316</td>
+      <td>2019-04-05 17:28:36.965</td>
+      <td>2019-07-09 19:22:05.983</td>
+      <td>2019-04-05 17:28:16.316</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>47</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>18+opal37MZ3BP53QI0YZQ==</td>
+      <td>2019-03-01 17:03:01.239</td>
+      <td>2019-04-03 18:50:31.651</td>
+      <td>2019-08-24 16:15:24.745</td>
+      <td>2019-04-03 18:50:10.142</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>2</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>zZDKz0PlYSLNCpjBK1wp9g==</td>
+      <td>2018-12-28 02:20:49.045</td>
+      <td>2018-12-28 02:21:05.312</td>
+      <td>2018-12-28 02:21:05.681</td>
+      <td>2019-05-15 04:21:13.174</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>45</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>CY7qPhkQXTVNWneDhlBwow==</td>
+      <td>2019-03-01 16:56:21.531</td>
+      <td>2019-04-03 18:50:51.001</td>
+      <td>2019-08-24 16:15:44.827</td>
+      <td>2019-04-03 18:50:27.526</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>191</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>qGiQDgp47fGBGfpU7LelmA==</td>
+      <td>2019-03-11 14:06:03.340</td>
+      <td>2019-03-11 14:06:24.491</td>
+      <td>2019-08-24 09:36:55.666</td>
+      <td>2019-03-11 14:06:38.011</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>223</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>Ub8RvrrXnMHSs131QV7Inw==</td>
+      <td>2019-04-11 20:52:10.414</td>
+      <td>2019-04-11 20:52:32.792</td>
+      <td>2019-07-09 19:22:05.876</td>
+      <td>2019-04-11 20:52:10.414</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>4</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>D4MxslfF67KbREZdTO2Rpw==</td>
+      <td>2018-12-28 02:20:49.496</td>
+      <td>2018-12-28 02:21:05.312</td>
+      <td>2018-12-28 02:21:05.903</td>
+      <td>2019-05-15 04:21:13.278</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>198</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>FjYkl+2m5VbhNrqLx6PAqw==</td>
+      <td>2019-03-11 19:22:40.636</td>
+      <td>2019-04-04 18:16:54.147</td>
+      <td>2019-08-24 16:15:45.420</td>
+      <td>2019-04-04 18:16:33.653</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>1237</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>1</td>
+      <td>4727653</td>
+      <td>e743B3Olmq/858Ij2WdO2Q==</td>
+      <td>2020-06-24 16:40:13.776</td>
+      <td>2020-06-24 16:41:51.862</td>
+      <td>2020-06-24 16:41:51.857</td>
+      <td>2020-06-24 16:40:13.776</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>48</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>3</td>
+      <td>4727653</td>
+      <td>7QEx2P1lNN/5dWh+zx2W8Q==</td>
+      <td>2019-03-01 17:04:22.674</td>
+      <td>2019-03-06 21:36:10.973</td>
+      <td>2019-08-24 16:15:40.632</td>
+      <td>2019-03-06 21:35:53.326</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>46</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>3</td>
+      <td>4727653</td>
+      <td>hSPOnwq/9It2tywpjGhbBg==</td>
+      <td>2019-03-01 16:58:34.622</td>
+      <td>2019-03-06 23:04:48.139</td>
+      <td>2019-09-27 15:05:11.535</td>
+      <td>2019-03-06 23:04:30.223</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>44</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>16</td>
+      <td>4727653</td>
+      <td>2pjnP3uvcS9TUwCBsGz3ew==</td>
+      <td>2019-03-01 16:54:48.778</td>
+      <td>2019-04-03 18:50:14.385</td>
+      <td>2019-08-24 16:15:32.434</td>
+      <td>2019-04-03 18:49:52.536</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>197</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>16</td>
+      <td>4727653</td>
+      <td>+fbFHNouXgzTHKFqUcmuMQ==</td>
+      <td>2019-03-11 19:21:42.045</td>
+      <td>2019-03-11 19:22:03.200</td>
+      <td>2019-08-24 16:15:47.853</td>
+      <td>2019-03-11 19:21:42.045</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>473</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>1328</td>
+      <td>4727653</td>
+      <td>A3NVnpBXuf2M2G6Kty8W/Q==</td>
+      <td>2019-10-22 15:28:50.140</td>
+      <td>2019-10-22 15:29:38.165</td>
+      <td>2020-07-09 03:24:04.152</td>
+      <td>2019-10-22 15:28:50.140</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>38</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>55</td>
+      <td>4727653</td>
+      <td>4a1KyvKZbbfQfTS/8Kk3Cw==</td>
+      <td>2019-02-28 21:22:59.337</td>
+      <td>2019-03-01 16:34:04.042</td>
+      <td>2020-07-09 11:00:31.110</td>
+      <td>2019-03-01 16:36:15.381</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>268</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>1079</td>
+      <td>4727653</td>
+      <td>BhKN3pjmiPRhAt0GWud85Q==</td>
+      <td>2019-06-17 18:55:38.937</td>
+      <td>2019-06-17 18:56:38.426</td>
+      <td>2020-07-08 16:05:29.756</td>
+      <td>2019-06-17 18:55:38.937</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>425</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>110</td>
+      <td>4727653</td>
+      <td>E5989ORIGtvS62Iznu6/fA==</td>
+      <td>2019-10-04 05:46:40.020</td>
+      <td>2019-10-04 05:47:07.586</td>
+      <td>2019-10-04 05:47:07.591</td>
+      <td>2019-10-04 05:46:40.020</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>list_id</th>
+      <th>is_deleted</th>
+      <th>is_deletable</th>
+      <th>is_dynamic</th>
+      <th>processing_state</th>
+      <th>list_size</th>
+      <th>portal_id</th>
+      <th>hashed_list_name</th>
+      <th>created_at</th>
+      <th>last_processing_state_change_at</th>
+      <th>last_size_change_at</th>
+      <th>updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>330</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>VP8DfG5/mkHNKZ6EglulZA==</td>
+      <td>2019-07-16 15:47:36.446</td>
+      <td>2019-07-16 15:48:05.574</td>
+      <td>2019-07-16 15:48:05.601</td>
+      <td>2019-07-16 15:47:36.446</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>226</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>1</td>
+      <td>4727653</td>
+      <td>7jvC5GpQ/pqnEEZhlX7Gww==</td>
+      <td>2019-04-12 13:13:34.414</td>
+      <td>2019-04-12 13:13:34.550</td>
+      <td>2019-04-12 13:13:35.275</td>
+      <td>2019-04-12 13:13:34.414</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>225</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>4</td>
+      <td>4727653</td>
+      <td>sSFJaXqXZpsMxgs+ylJlPw==</td>
+      <td>2019-04-12 13:13:34.047</td>
+      <td>2019-04-12 13:13:34.150</td>
+      <td>2019-04-12 13:13:35.291</td>
+      <td>2019-04-12 13:13:34.047</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>227</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>5</td>
+      <td>4727653</td>
+      <td>m1Cd/1rc6ajZ8oA3s9UckQ==</td>
+      <td>2019-04-12 13:13:34.753</td>
+      <td>2019-04-12 13:13:34.883</td>
+      <td>2019-04-12 13:13:35.574</td>
+      <td>2019-04-12 13:13:34.753</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>824</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>GwGXVzsOzQBNVQEN/6y07Q==</td>
+      <td>2020-04-07 17:07:59.078</td>
+      <td>2020-04-07 17:09:36.906</td>
+      <td>2020-04-07 17:09:36.900</td>
+      <td>2020-04-07 17:07:59.078</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>310</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>u5hJ+NcyJCX24XPB5IfCpQ==</td>
+      <td>2019-07-12 19:21:25.785</td>
+      <td>2019-07-12 19:21:46.539</td>
+      <td>2019-07-12 19:21:46.543</td>
+      <td>2019-07-12 19:21:25.785</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>334</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>ko3/O+862Fuqe6m/KUyyYg==</td>
+      <td>2019-07-19 14:25:33.813</td>
+      <td>2019-07-19 14:25:53.687</td>
+      <td>2019-07-19 14:25:53.719</td>
+      <td>2019-07-19 14:25:33.813</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>333</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>GoPxtYNTexpsjDgf0ZLwew==</td>
+      <td>2019-07-19 14:24:38.260</td>
+      <td>2019-07-19 14:24:58.903</td>
+      <td>2019-07-19 14:24:58.929</td>
+      <td>2019-07-19 14:24:38.260</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>332</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>6</td>
+      <td>4727653</td>
+      <td>B4QHFDXuOBWbmOZ9Nn81MQ==</td>
+      <td>2019-07-19 14:23:38.520</td>
+      <td>2019-07-19 14:24:00.052</td>
+      <td>2019-07-19 14:24:00.056</td>
+      <td>2019-07-19 14:23:38.520</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>331</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>7</td>
+      <td>4727653</td>
+      <td>rsBK6UJaJdWa2REJjUnqlQ==</td>
+      <td>2019-07-16 19:57:20.349</td>
+      <td>2019-07-16 19:57:40.989</td>
+      <td>2019-07-16 19:57:40.994</td>
+      <td>2019-07-16 19:57:20.349</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>329</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>7</td>
+      <td>4727653</td>
+      <td>Gksakje0BhHUz52OF9zXzg==</td>
+      <td>2019-07-16 15:42:11.062</td>
+      <td>2019-07-16 15:42:34.539</td>
+      <td>2019-07-16 15:42:34.543</td>
+      <td>2019-07-16 15:42:11.062</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>328</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>7</td>
+      <td>4727653</td>
+      <td>bwAO6ZWofSUTYQvtbI7pjQ==</td>
+      <td>2019-07-16 15:41:00.583</td>
+      <td>2019-07-16 15:41:18.559</td>
+      <td>2019-07-16 15:41:18.598</td>
+      <td>2019-07-16 15:41:00.583</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>327</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>7</td>
+      <td>4727653</td>
+      <td>15+UzrPncnoAwZw8/f+Gew==</td>
+      <td>2019-07-16 15:40:54.391</td>
+      <td>2019-07-16 15:41:18.559</td>
+      <td>2019-07-16 15:41:18.570</td>
+      <td>2019-07-16 15:40:54.391</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1032</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>11</td>
+      <td>4727653</td>
+      <td>HM9Ka7JNV9RSg67DNq0QQg==</td>
+      <td>2020-05-13 16:01:29.943</td>
+      <td>2020-05-13 16:02:56.743</td>
+      <td>2020-05-13 16:02:56.736</td>
+      <td>2020-05-13 16:01:29.943</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>625</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>11</td>
+      <td>4727653</td>
+      <td>lUZ7+0dvk1bz1oVXsRapAw==</td>
+      <td>2020-02-06 13:58:27.999</td>
+      <td>2020-02-06 13:58:59.230</td>
+      <td>2020-02-06 13:58:59.234</td>
+      <td>2020-02-06 13:58:27.999</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>401</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>13</td>
+      <td>4727653</td>
+      <td>8888t1Miu4dTUvj8eiAfuA==</td>
+      <td>2019-09-25 20:45:43.981</td>
+      <td>2019-09-25 20:46:13.591</td>
+      <td>2019-09-25 20:46:13.597</td>
+      <td>2019-09-25 20:45:43.981</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1204</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>17</td>
+      <td>4727653</td>
+      <td>Zwf/b0vJY2UwpYbtAf2CBA==</td>
+      <td>2020-06-17 15:59:48.197</td>
+      <td>2020-06-17 16:02:34.214</td>
+      <td>2020-06-17 16:02:34.146</td>
+      <td>2020-06-17 15:59:48.197</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>55</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>17</td>
+      <td>4727653</td>
+      <td>mnq+Sz4/SCcoUEdS+LBSIg==</td>
+      <td>2019-03-04 18:10:43.303</td>
+      <td>2019-03-04 18:11:53.255</td>
+      <td>2019-03-04 18:11:53.200</td>
+      <td>2019-03-04 18:10:43.303</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>974</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>20</td>
+      <td>4727653</td>
+      <td>Gn488rv0a3Ie/IWhFuaGGQ==</td>
+      <td>2020-04-23 15:23:06.387</td>
+      <td>2020-04-23 15:24:32.869</td>
+      <td>2020-04-23 15:24:32.865</td>
+      <td>2020-04-23 15:23:06.387</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>975</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>20</td>
+      <td>4727653</td>
+      <td>g/mmSdFt715pboogejnP4w==</td>
+      <td>2020-04-23 15:24:45.163</td>
+      <td>2020-04-23 15:26:42.432</td>
+      <td>2020-04-23 15:26:42.427</td>
+      <td>2020-04-23 15:24:45.163</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>782</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>1566</td>
+      <td>4727653</td>
+      <td>6qNURPpCXIodsl53DaTxPQ==</td>
+      <td>2020-03-27 21:09:06.393</td>
+      <td>2020-03-27 21:10:05.239</td>
+      <td>2020-03-27 21:10:05.236</td>
+      <td>2020-03-27 21:09:06.393</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>393</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>39</td>
+      <td>4727653</td>
+      <td>bLeKFUNOJ4jsZ4pkPsSLXw==</td>
+      <td>2019-09-23 19:34:18.706</td>
+      <td>2019-09-23 19:34:48.643</td>
+      <td>2019-09-23 19:34:48.646</td>
+      <td>2019-09-23 19:34:18.706</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>408</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>45</td>
+      <td>4727653</td>
+      <td>SXBYnVh+MqFbiGLoTnGyPw==</td>
+      <td>2019-09-25 21:07:40.780</td>
+      <td>2019-09-25 21:08:19.420</td>
+      <td>2019-09-25 21:08:19.443</td>
+      <td>2019-09-25 21:07:40.780</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>973</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>52</td>
+      <td>4727653</td>
+      <td>KVifN1FG0NgAnuQIYdmBDg==</td>
+      <td>2020-04-23 15:04:18.983</td>
+      <td>2020-04-23 15:05:47.165</td>
+      <td>2020-04-23 15:05:47.162</td>
+      <td>2020-04-23 15:04:18.983</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>624</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>61</td>
+      <td>4727653</td>
+      <td>IQVmtzo5pS7RslkpjPB4Dw==</td>
+      <td>2020-02-06 13:55:44.688</td>
+      <td>2020-02-06 13:56:15.670</td>
+      <td>2020-02-06 13:56:15.675</td>
+      <td>2020-02-06 13:55:44.688</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>400</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>63</td>
+      <td>4727653</td>
+      <td>WQiqy4guxiUIHKV/m1Tt3Q==</td>
+      <td>2019-09-25 20:34:20.302</td>
+      <td>2019-09-25 20:34:49.560</td>
+      <td>2019-09-25 20:34:49.564</td>
+      <td>2019-09-25 20:34:20.302</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>1071</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>69</td>
+      <td>4727653</td>
+      <td>vwJEngEYRxlDrCPixzeHFQ==</td>
+      <td>2020-06-01 15:21:26.934</td>
+      <td>2020-06-01 15:22:44.504</td>
+      <td>2020-06-01 15:22:44.501</td>
+      <td>2020-06-01 15:21:26.934</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>1070</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>69</td>
+      <td>4727653</td>
+      <td>ZmFzI47HQGUvjCy6MGyVhQ==</td>
+      <td>2020-06-01 15:20:06.204</td>
+      <td>2020-06-01 15:21:26.603</td>
+      <td>2020-06-01 15:21:26.592</td>
+      <td>2020-06-01 15:20:06.204</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>849</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>1120</td>
+      <td>4727653</td>
+      <td>CVq8aHXGQ8pGQ40V32763w==</td>
+      <td>2020-04-10 19:38:49.028</td>
+      <td>2020-04-10 19:39:47.588</td>
+      <td>2020-04-10 19:45:55.323</td>
+      <td>2020-04-10 19:38:49.028</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>348</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>101</td>
+      <td>4727653</td>
+      <td>t/ZdujEn0ww3bUGH5WOTwg==</td>
+      <td>2019-08-13 16:55:08.462</td>
+      <td>2019-08-13 16:55:30.569</td>
+      <td>2019-08-13 16:55:30.597</td>
+      <td>2019-08-13 16:55:08.462</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>399</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>1142</td>
+      <td>4727653</td>
+      <td>Cjp7P+vzJvyMMsKjxq2sOw==</td>
+      <td>2019-09-25 20:27:21.307</td>
+      <td>2019-09-25 20:27:56.059</td>
+      <td>2019-10-20 18:49:25.067</td>
+      <td>2019-09-25 20:27:21.307</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>402</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>387</td>
+      <td>4727653</td>
+      <td>6io80IZHxt+kCXffuQqWTA==</td>
+      <td>2019-09-25 20:49:26.561</td>
+      <td>2019-09-25 20:50:01.526</td>
+      <td>2019-09-25 20:50:01.532</td>
+      <td>2019-09-25 20:49:26.561</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>1183</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>144</td>
+      <td>4727653</td>
+      <td>Hs39BFzerp1HriIFGM3uVg==</td>
+      <td>2020-06-16 15:44:29.230</td>
+      <td>2020-06-16 15:46:09.413</td>
+      <td>2020-06-16 15:46:09.392</td>
+      <td>2020-06-16 15:44:29.230</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>1125</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>683</td>
+      <td>4727653</td>
+      <td>9vy8PUzTBuK6v01GHAmylg==</td>
+      <td>2020-06-05 14:26:00.285</td>
+      <td>2020-06-05 14:27:42.350</td>
+      <td>2020-06-05 14:27:42.345</td>
+      <td>2020-06-05 14:26:00.285</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>341</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>177</td>
+      <td>4727653</td>
+      <td>nnHF6FnaZeI9iomk51tHJg==</td>
+      <td>2019-07-23 15:38:20.569</td>
+      <td>2019-07-23 15:38:44.798</td>
+      <td>2019-07-23 15:38:44.805</td>
+      <td>2019-07-23 15:38:20.569</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>294</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>485</td>
+      <td>4727653</td>
+      <td>2RQfrPpf87da3Hvca+fv0Q==</td>
+      <td>2019-07-09 19:10:32.025</td>
+      <td>2019-07-09 19:11:08.847</td>
+      <td>2019-08-12 16:19:20.310</td>
+      <td>2019-07-09 19:10:32.025</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>359</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>DONE</td>
+      <td>510</td>
+      <td>4727653</td>
+      <td>EuQ3A1epRoY0RfbAHhd4ng==</td>
+      <td>2019-09-13 16:08:10.663</td>
+      <td>2019-09-13 16:08:44.794</td>
+      <td>2019-10-20 18:49:24.979</td>
+      <td>2019-09-13 16:08:10.663</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>190</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>T0eEdl8CXBXRop19HpcICQ==</td>
+      <td>2019-03-11 14:03:09.387</td>
+      <td>2019-03-26 22:52:45.350</td>
+      <td>2019-08-24 09:36:47.020</td>
+      <td>2019-03-26 22:52:25.962</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>3</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>kGTwkWh99gkoqTrFmQl6gQ==</td>
+      <td>2018-12-28 02:20:49.226</td>
+      <td>2018-12-28 02:21:05.312</td>
+      <td>2018-12-28 02:21:05.752</td>
+      <td>2019-05-15 04:21:13.230</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>199</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>TGDQHbCXJG71QaTn3OrRTg==</td>
+      <td>2019-03-11 19:24:20.052</td>
+      <td>2019-04-04 18:16:25.029</td>
+      <td>2019-08-24 16:15:24.979</td>
+      <td>2019-04-04 18:16:03.506</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>206</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>rlt4tUkRGlWV7X0P3AwN6w==</td>
+      <td>2019-03-29 15:07:55.166</td>
+      <td>2019-04-03 18:47:12.229</td>
+      <td>2019-04-11 20:53:44.610</td>
+      <td>2019-04-03 18:46:42.840</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>vsYNW0Z6uis0CS8jqID3wQ==</td>
+      <td>2018-12-28 02:20:48.813</td>
+      <td>2018-12-28 02:21:05.312</td>
+      <td>2018-12-28 02:21:05.538</td>
+      <td>2019-05-15 04:21:13.120</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>233</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>4Q7rYgsr53R+dRJIJ5SkAg==</td>
+      <td>2019-04-21 17:13:46.426</td>
+      <td>2019-04-21 17:15:07.530</td>
+      <td>2019-08-24 06:09:58.639</td>
+      <td>2019-04-21 17:14:46.531</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>212</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>HBky3cL9jIMizEVh9TyktA==</td>
+      <td>2019-04-05 17:28:16.316</td>
+      <td>2019-04-05 17:28:36.965</td>
+      <td>2019-07-09 19:22:05.983</td>
+      <td>2019-04-05 17:28:16.316</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>47</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>18+opal37MZ3BP53QI0YZQ==</td>
+      <td>2019-03-01 17:03:01.239</td>
+      <td>2019-04-03 18:50:31.651</td>
+      <td>2019-08-24 16:15:24.745</td>
+      <td>2019-04-03 18:50:10.142</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>2</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>zZDKz0PlYSLNCpjBK1wp9g==</td>
+      <td>2018-12-28 02:20:49.045</td>
+      <td>2018-12-28 02:21:05.312</td>
+      <td>2018-12-28 02:21:05.681</td>
+      <td>2019-05-15 04:21:13.174</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>45</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>CY7qPhkQXTVNWneDhlBwow==</td>
+      <td>2019-03-01 16:56:21.531</td>
+      <td>2019-04-03 18:50:51.001</td>
+      <td>2019-08-24 16:15:44.827</td>
+      <td>2019-04-03 18:50:27.526</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>191</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>qGiQDgp47fGBGfpU7LelmA==</td>
+      <td>2019-03-11 14:06:03.340</td>
+      <td>2019-03-11 14:06:24.491</td>
+      <td>2019-08-24 09:36:55.666</td>
+      <td>2019-03-11 14:06:38.011</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>223</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>Ub8RvrrXnMHSs131QV7Inw==</td>
+      <td>2019-04-11 20:52:10.414</td>
+      <td>2019-04-11 20:52:32.792</td>
+      <td>2019-07-09 19:22:05.876</td>
+      <td>2019-04-11 20:52:10.414</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>4</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>D4MxslfF67KbREZdTO2Rpw==</td>
+      <td>2018-12-28 02:20:49.496</td>
+      <td>2018-12-28 02:21:05.312</td>
+      <td>2018-12-28 02:21:05.903</td>
+      <td>2019-05-15 04:21:13.278</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>198</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>0</td>
+      <td>4727653</td>
+      <td>FjYkl+2m5VbhNrqLx6PAqw==</td>
+      <td>2019-03-11 19:22:40.636</td>
+      <td>2019-04-04 18:16:54.147</td>
+      <td>2019-08-24 16:15:45.420</td>
+      <td>2019-04-04 18:16:33.653</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>1237</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>1</td>
+      <td>4727653</td>
+      <td>e743B3Olmq/858Ij2WdO2Q==</td>
+      <td>2020-06-24 16:40:13.776</td>
+      <td>2020-06-24 16:41:51.862</td>
+      <td>2020-06-24 16:41:51.857</td>
+      <td>2020-06-24 16:40:13.776</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>48</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>3</td>
+      <td>4727653</td>
+      <td>7QEx2P1lNN/5dWh+zx2W8Q==</td>
+      <td>2019-03-01 17:04:22.674</td>
+      <td>2019-03-06 21:36:10.973</td>
+      <td>2019-08-24 16:15:40.632</td>
+      <td>2019-03-06 21:35:53.326</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>46</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>3</td>
+      <td>4727653</td>
+      <td>hSPOnwq/9It2tywpjGhbBg==</td>
+      <td>2019-03-01 16:58:34.622</td>
+      <td>2019-03-06 23:04:48.139</td>
+      <td>2019-09-27 15:05:11.535</td>
+      <td>2019-03-06 23:04:30.223</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>44</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>16</td>
+      <td>4727653</td>
+      <td>2pjnP3uvcS9TUwCBsGz3ew==</td>
+      <td>2019-03-01 16:54:48.778</td>
+      <td>2019-04-03 18:50:14.385</td>
+      <td>2019-08-24 16:15:32.434</td>
+      <td>2019-04-03 18:49:52.536</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>197</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>16</td>
+      <td>4727653</td>
+      <td>+fbFHNouXgzTHKFqUcmuMQ==</td>
+      <td>2019-03-11 19:21:42.045</td>
+      <td>2019-03-11 19:22:03.200</td>
+      <td>2019-08-24 16:15:47.853</td>
+      <td>2019-03-11 19:21:42.045</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>473</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>1328</td>
+      <td>4727653</td>
+      <td>A3NVnpBXuf2M2G6Kty8W/Q==</td>
+      <td>2019-10-22 15:28:50.140</td>
+      <td>2019-10-22 15:29:38.165</td>
+      <td>2020-07-09 03:24:04.152</td>
+      <td>2019-10-22 15:28:50.140</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>38</td>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>55</td>
+      <td>4727653</td>
+      <td>4a1KyvKZbbfQfTS/8Kk3Cw==</td>
+      <td>2019-02-28 21:22:59.337</td>
+      <td>2019-03-01 16:34:04.042</td>
+      <td>2020-07-09 11:00:31.110</td>
+      <td>2019-03-01 16:36:15.381</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>268</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>1079</td>
+      <td>4727653</td>
+      <td>BhKN3pjmiPRhAt0GWud85Q==</td>
+      <td>2019-06-17 18:55:38.937</td>
+      <td>2019-06-17 18:56:38.426</td>
+      <td>2020-07-08 16:05:29.756</td>
+      <td>2019-06-17 18:55:38.937</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>425</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>DONE</td>
+      <td>110</td>
+      <td>4727653</td>
+      <td>E5989ORIGtvS62Iznu6/fA==</td>
+      <td>2019-10-04 05:46:40.020</td>
+      <td>2019-10-04 05:47:07.586</td>
+      <td>2019-10-04 05:47:07.591</td>
+      <td>2019-10-04 05:46:40.020</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">list_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_list_id"></div><b>📃 Summary:</b> Unique identifier for the list<br><b>🦄 Unique:</b> This column represents a unique identifier for each list. For this table, each row represents a distinct contact list, and the list_id appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record has been deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deletable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_is_deletable"></div><b>📃 Summary:</b> Indicates if the list can be deleted<br><b>❓ Missing:</b> Not applicable for lists that cannot be deleted.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_dynamic</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_dynamic"></div><b>📃 Summary:</b> Indicates if the list is dynamic or static<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">processing_state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='NOT_STARTED'>NOT_STARTED</option><option value='IN_PROGRESS'>IN_PROGRESS</option><option value='PAUSED'>PAUSED</option><option value='DONE'>DONE</option><option value='ERROR'>ERROR</option><option value='CANCELLED'>CANCELLED</option></select></span><br><br><div id="bar_viz_processing_state"></div><b>📃 Summary:</b> Current processing state of the list<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">list_size</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_list_size"></div><b>📃 Summary:</b> Number of contacts in the list<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">portal_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_portal_id"></div><b>📃 Summary:</b> Identifier for the account or portal<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hashed_list_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_hashed_list_name"></div><b>📃 Summary:</b> Hashed name of the list<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_at"></div><b>📃 Summary:</b> Timestamp of when the list was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_processing_state_change_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_processing_state_change_at"></div><b>📃 Summary:</b> Timestamp of last processing state change<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_size_change_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_size_change_at"></div><b>📃 Summary:</b> Timestamp of last list size change<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">updated_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_updated_at"></div><b>📃 Summary:</b> Timestamp of when the list was last updated<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about contact lists in a CRM or marketing system. It contains details like creation date, update date, processing status, size, and a hashed name for each list. The 'portal_id' suggests these lists belong to a specific account or portal. The table tracks metadata about each list, including its processing state and size changes over time.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>10</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the list</td>
+      <td>list_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record has been deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>created_at</td>
+      <td>Timestamp of when the list was created</td>
+      <td>created_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>deleteable</td>
+      <td>Indicates if the list can be deleted</td>
+      <td>is_deletable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>dynamic</td>
+      <td>Indicates if the list is dynamic or static</td>
+      <td>is_dynamic</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>metadata_error</td>
+      <td>Error message for list processing, if any</td>
+      <td>processing_error</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>metadata_last_processing_state_change_at</td>
+      <td>Timestamp of last processing state change</td>
+      <td>last_processing_state_change_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>metadata_last_size_change_at</td>
+      <td>Timestamp of last list size change</td>
+      <td>last_size_change_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>metadata_processing</td>
+      <td>Current processing state of the list</td>
+      <td>processing_state</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>metadata_size</td>
+      <td>Number of contacts in the list</td>
+      <td>list_size</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>offset</td>
+      <td>Offset value, purpose unclear from given data</td>
+      <td>offset</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>portal_id</td>
+      <td>Identifier for the account or portal</td>
+      <td>portal_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>updated_at</td>
+      <td>Timestamp of when the list was last updated</td>
+      <td>updated_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>name</td>
+      <td>Hashed name of the list</td>
+      <td>hashed_list_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>6</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>created_at</td>
+      <td>CAST("created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'created_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date-time format in the given examples is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.mmm), which is directly compatible with SQL TIMESTAMP data type. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>last_processing_state_change_at</td>
+      <td>CAST("last_processing_state_change_at" AS TIMESTAMP)</td>
+      <td>To transform the 'last_processing_state_change_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The given dates are already in a format that can be directly cast to TIMESTAMP without needing to use strptime(). The format of the dates ('YYYY-MM-DD HH:MM:SS.sss') is standard and can be automatically recognized by most SQL databases, including DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>last_size_change_at</td>
+      <td>CAST("last_size_change_at" AS TIMESTAMP)</td>
+      <td>To transform the 'last_size_change_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date-time format in the given values is already in a standard format that can be directly interpreted as a timestamp (YYYY-MM-DD HH:MM:SS.SSS). Therefore, we don't need to use the strptime function for parsing. A straightforward CAST to TIMESTAMP will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>offset</td>
+      <td>CAST("offset" AS VARCHAR)</td>
+      <td>To transform the data type of the 'offset' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case). This will convert each value in the 'offset' column to its string representation.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>processing_error</td>
+      <td>CAST("processing_error" AS VARCHAR)</td>
+      <td>To transform the data type of the 'processing_error' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>updated_at</td>
+      <td>CAST("updated_at" AS TIMESTAMP)</td>
+      <td>To transform the 'updated_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The dates in the 'updated_at' column are already in a format that can be directly converted to TIMESTAMP without needing to use strptime(). The format '2019-03-01 16:36:15.381' is a standard ISO 8601 format that DuckDB can automatically parse when casting to TIMESTAMP.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>3</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>is_deletable</td>
+      <td>73.33</td>
+      <td>True</td>
+      <td>Not applicable for lists that cannot be deleted.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>offset</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>processing_error</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>offset</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>processing_error</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 31.9, 'y': 11}, {'x': 93.69999999999999, 'y': 0}, {'x': 155.5, 'y': 0}, {'x': 217.29999999999998, 'y': 12}, {'x': 279.1, 'y': 2}, {'x': 340.9, 'y': 12}, {'x': 402.69999999999993, 'y': 7}, {'x': 464.5, 'y': 1}, {'x': 526.3, 'y': 0}, {'x': 588.0999999999999, 'y': 0}, {'x': 649.9, 'y': 2}, {'x': 711.6999999999999, 'y': 0}, {'x': 773.5, 'y': 1}, {'x': 835.3, 'y': 2}, {'x': 897.0999999999999, 'y': 0}, {'x': 958.9, 'y': 3}, {'x': 1020.6999999999999, 'y': 1}, {'x': 1082.5, 'y': 2}, {'x': 1144.3, 'y': 1}, {'x': 1206.1, 'y': 3}];
+    binWidth = 61.8;
+    drawHistogram("hist_viz_list_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deletable", data);
+data = [{'label': 'False', 'value': 61.66666666666667}, {'label': 'True', 'value': 38.333333333333336}];
+    drawBarChart("bar_viz_is_dynamic", data);
+data = [{'label': 'DONE', 'value': 100.0}];
+    drawBarChart("bar_viz_processing_state", data);
+data = [{'x': 39.15, 'y': 47}, {'x': 117.44999999999999, 'y': 3}, {'x': 195.75, 'y': 1}, {'x': 274.04999999999995, 'y': 0}, {'x': 352.35, 'y': 1}, {'x': 430.65, 'y': 0}, {'x': 508.95, 'y': 2}, {'x': 587.25, 'y': 0}, {'x': 665.55, 'y': 1}, {'x': 743.8499999999999, 'y': 0}, {'x': 822.15, 'y': 0}, {'x': 900.4499999999999, 'y': 0}, {'x': 978.75, 'y': 0}, {'x': 1057.05, 'y': 1}, {'x': 1135.35, 'y': 2}, {'x': 1213.65, 'y': 0}, {'x': 1291.9499999999998, 'y': 1}, {'x': 1370.25, 'y': 0}, {'x': 1448.55, 'y': 0}, {'x': 1526.85, 'y': 1}];
+    binWidth = 78.3;
+    drawHistogram("hist_viz_list_size", data, binWidth);
+data = [{'x': 4727653, 'y': 60}];
+    binWidth = 4727653;
+    drawHistogram("hist_viz_portal_id", data, binWidth);
+data = [{'label': 'bwAO6ZWofSUTYQv...', 'value': 1.6666666666666667}, {'label': 'HM9Ka7JNV9RSg67...', 'value': 1.6666666666666667}, {'label': 'lUZ7+0dvk1bz1oV...', 'value': 1.6666666666666667}, {'label': '8888t1Miu4dTUvj...', 'value': 1.6666666666666667}, {'label': 'bLeKFUNOJ4jsZ4p...', 'value': 1.6666666666666667}, {'label': 'Other values', 'value': 91.66666666666666}];
+    drawBarChart("bar_viz_hashed_list_name", data);
+data = [{'label': '2019-04-12 13:1...', 'value': 1.6666666666666667}, {'label': '2020-04-07 17:0...', 'value': 1.6666666666666667}, {'label': '2019-07-12 19:2...', 'value': 1.6666666666666667}, {'label': '2020-02-06 13:5...', 'value': 1.6666666666666667}, {'label': '2020-04-23 15:2...', 'value': 1.6666666666666667}, {'label': 'Other values', 'value': 91.66666666666666}];
+    drawBarChart("bar_viz_created_at", data);
+data = [{'label': '2018-12-28 02:2...', 'value': 6.666666666666667}, {'label': '2019-07-16 15:4...', 'value': 3.3333333333333335}, {'label': '2019-07-19 14:2...', 'value': 1.6666666666666667}, {'label': '2019-07-19 14:2...', 'value': 1.6666666666666667}, {'label': '2019-07-16 15:4...', 'value': 1.6666666666666667}, {'label': 'Other values', 'value': 85.0}];
+    drawBarChart("bar_viz_last_processing_state_change_at", data);
+data = [{'label': '2019-04-12 13:1...', 'value': 1.6666666666666667}, {'label': '2020-04-07 17:0...', 'value': 1.6666666666666667}, {'label': '2019-07-12 19:2...', 'value': 1.6666666666666667}, {'label': '2019-07-19 14:2...', 'value': 1.6666666666666667}, {'label': '2019-07-19 14:2...', 'value': 1.6666666666666667}, {'label': 'Other values', 'value': 91.66666666666666}];
+    drawBarChart("bar_viz_last_size_change_at", data);
+data = [{'label': '2019-04-12 13:1...', 'value': 1.6666666666666667}, {'label': '2019-07-16 15:4...', 'value': 1.6666666666666667}, {'label': '2019-07-16 15:4...', 'value': 1.6666666666666667}, {'label': '2019-03-04 18:1...', 'value': 1.6666666666666667}, {'label': '2019-09-25 20:3...', 'value': 1.6666666666666667}, {'label': 'Other values', 'value': 91.66666666666666}];
+    drawBarChart("bar_viz_updated_at", data);
+
+
+</script>
+</body>
+</html>

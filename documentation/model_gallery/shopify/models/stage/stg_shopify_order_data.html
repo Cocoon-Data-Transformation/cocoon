@@ -1,0 +1,3316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>shopify_order_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>shipping_address_company</th>
+      <th>shipping_address_address_2</th>
+      <th>billing_address_name</th>
+      <th>billing_address_first_name</th>
+      <th>billing_address_last_name</th>
+      <th>billing_address_company</th>
+      <th>billing_address_phone</th>
+      <th>billing_address_address_1</th>
+      <th>billing_address_address_2</th>
+      <th>billing_address_city</th>
+      <th>billing_address_country</th>
+      <th>billing_address_country_code</th>
+      <th>billing_address_province</th>
+      <th>billing_address_zip</th>
+      <th>source_name</th>
+      <th>referring_site</th>
+      <th>financial_status</th>
+      <th>number</th>
+      <th>name</th>
+      <th>token</th>
+      <th>note</th>
+      <th>total_discounts</th>
+      <th>subtotal_price</th>
+      <th>landing_site_base_url</th>
+      <th>total_line_items_price</th>
+      <th>browser_ip</th>
+      <th>checkout_token</th>
+      <th>email</th>
+      <th>currency</th>
+      <th>total_price</th>
+      <th>taxes_included</th>
+      <th>test</th>
+      <th>shipping_address_address_1</th>
+      <th>fulfillment_status</th>
+      <th>processing_method</th>
+      <th>cart_token</th>
+      <th>buyer_accepts_marketing</th>
+      <th>order_number</th>
+      <th>billing_address_latitude</th>
+      <th>billing_address_longitude</th>
+      <th>billing_address_province_code</th>
+      <th>cancel_reason</th>
+      <th>cancelled_at</th>
+      <th>closed_at</th>
+      <th>created_at</th>
+      <th>customer_id</th>
+      <th>updated_at</th>
+      <th>id</th>
+      <th>total_tax</th>
+      <th>total_weight</th>
+      <th>processed_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>bc9b8576178dcd886639ba718f1d45c8</td>
+      <td>8b121314a4d97bc9dc15bfba8518ec88</td>
+      <td>f0962b7a185488ecb752cedac1038349</td>
+      <td>aa35cb67c26e64bb81a1bf3f17e858ba</td>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>d6f4a399883df85d9d4b3a02bf6e738a</td>
+      <td>bc9b8576178dcd886639ba718f1d45c8</td>
+      <td>ac08c606d455cde42980f980524a8038</td>
+      <td>89f9c9f489be2a83cf57e53b9197d288</td>
+      <td>79cba1185463850dedba31f172f1dc5b</td>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>00079ce435afddc28205639142773870</td>
+      <td>294517</td>
+      <td>None</td>
+      <td>paid</td>
+      <td>4135</td>
+      <td>d1743fc58a1e4d78769eaac49994a994</td>
+      <td>0f9c2880de17f71511eee5542c29b999</td>
+      <td>71509c29301d2cc14e37ecb53f735608</td>
+      <td>2.8</td>
+      <td>2.8</td>
+      <td>None</td>
+      <td>5.6</td>
+      <td>None</td>
+      <td>None</td>
+      <td>021cb20b5c78751fc7ddc091b6b69b3e</td>
+      <td>GBP</td>
+      <td>2.80</td>
+      <td>True</td>
+      <td>False</td>
+      <td>d6f4a399883df85d9d4b3a02bf6e738a</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>True</td>
+      <td>5135</td>
+      <td>d97319f64674c02595f2989019970fc8</td>
+      <td>c08dae474c5d4d3326fd6764d2a0ebe6</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2020-09-11 19:35:42.000</td>
+      <td>3589760876641</td>
+      <td>2020-09-11 19:35:46.000</td>
+      <td>2674098602081</td>
+      <td>0</td>
+      <td>0</td>
+      <td>2020-09-11 19:35:42.000</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>70111f8840ccbd8b1007cc3f387ced6b</td>
+      <td>c8189c7add9755e66391b58ecc12b3e2</td>
+      <td>d3bae70c9d49bb7cb5a74cdd0eae7fc4</td>
+      <td>0dd89cff60965dff8f9ea2bc952a5474</td>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>1ff1de774005f8da13f42943881c655f</td>
+      <td>70111f8840ccbd8b1007cc3f387ced6b</td>
+      <td>1ac412baeba98370017c73df41c98a07</td>
+      <td>89f9c9f489be2a83cf57e53b9197d288</td>
+      <td>79cba1185463850dedba31f172f1dc5b</td>
+      <td>None</td>
+      <td>2357e65b582faa0a2da3603b16fa4a7f</td>
+      <td>web</td>
+      <td>2cc983716a820bc713b793a6e8e73f42</td>
+      <td>paid</td>
+      <td>4066</td>
+      <td>4fcb884b5b46413bae526a6e7e49d706</td>
+      <td>fb489b3ccc0ae36ce47744d7595e9746</td>
+      <td>None</td>
+      <td>0.0</td>
+      <td>2.8</td>
+      <td>8584e97b29b0802fb393fa453a8b6a7a</td>
+      <td>2.8</td>
+      <td>109.249.185.68</td>
+      <td>7bdb994e1196de3e4f34586e357613f9</td>
+      <td>dce90c7b4e52e045e5975836aff49cf1</td>
+      <td>GBP</td>
+      <td>3.79</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1ff1de774005f8da13f42943881c655f</td>
+      <td>fulfilled</td>
+      <td>direct</td>
+      <td>b1ff04883dfeab658cd5211050476729</td>
+      <td>False</td>
+      <td>5066</td>
+      <td>75c29d6dd29594a652fcbd7c4c279a29</td>
+      <td>75468fbebc28e02ec5d4f54f4cbd4099</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-09-10 15:38:26.000</td>
+      <td>2020-09-09 23:01:54.000</td>
+      <td>3584045351009</td>
+      <td>2020-09-10 15:38:26.000</td>
+      <td>2669516488801</td>
+      <td>0</td>
+      <td>0</td>
+      <td>2020-09-09 23:01:53.000</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>70111f8840ccbd8b1007cc3f387ced6b</td>
+      <td>c8189c7add9755e66391b58ecc12b3e2</td>
+      <td>d3bae70c9d49bb7cb5a74cdd0eae7fc4</td>
+      <td>0dd89cff60965dff8f9ea2bc952a5474</td>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>1ff1de774005f8da13f42943881c655f</td>
+      <td>70111f8840ccbd8b1007cc3f387ced6b</td>
+      <td>1ac412baeba98370017c73df41c98a07</td>
+      <td>89f9c9f489be2a83cf57e53b9197d288</td>
+      <td>79cba1185463850dedba31f172f1dc5b</td>
+      <td>None</td>
+      <td>2357e65b582faa0a2da3603b16fa4a7f</td>
+      <td>web</td>
+      <td>2cc983716a820bc713b793a6e8e73f42</td>
+      <td>paid</td>
+      <td>4065</td>
+      <td>9e346f2e912c60e16679f4a4c8d29422</td>
+      <td>e44b7f04610a8f4032530cc7f12663de</td>
+      <td>None</td>
+      <td>0.0</td>
+      <td>4.4</td>
+      <td>8584e97b29b0802fb393fa453a8b6a7a</td>
+      <td>4.4</td>
+      <td>109.249.185.68</td>
+      <td>cf0a9fe2c7c606b86559007dbb890a62</td>
+      <td>dce90c7b4e52e045e5975836aff49cf1</td>
+      <td>GBP</td>
+      <td>5.39</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1ff1de774005f8da13f42943881c655f</td>
+      <td>fulfilled</td>
+      <td>direct</td>
+      <td>9600543f4d4613db59ac58a1009ecbb9</td>
+      <td>False</td>
+      <td>5065</td>
+      <td>75c29d6dd29594a652fcbd7c4c279a29</td>
+      <td>75468fbebc28e02ec5d4f54f4cbd4099</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-09-10 15:38:25.000</td>
+      <td>2020-09-09 22:57:51.000</td>
+      <td>3584045351009</td>
+      <td>2020-09-10 15:38:25.000</td>
+      <td>2669509541985</td>
+      <td>0</td>
+      <td>0</td>
+      <td>2020-09-09 22:57:50.000</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>shipping_company</th>
+      <th>shipping_address_line2</th>
+      <th>billing_full_name</th>
+      <th>billing_first_name</th>
+      <th>billing_last_name</th>
+      <th>billing_company</th>
+      <th>billing_phone</th>
+      <th>billing_address_line1</th>
+      <th>billing_address_line2</th>
+      <th>billing_city</th>
+      <th>billing_country</th>
+      <th>billing_country_code</th>
+      <th>billing_province</th>
+      <th>billing_zip</th>
+      <th>order_source</th>
+      <th>referring_site</th>
+      <th>payment_status</th>
+      <th>order_number</th>
+      <th>order_identifier</th>
+      <th>order_token</th>
+      <th>order_notes</th>
+      <th>total_discounts</th>
+      <th>subtotal_price</th>
+      <th>landing_page_url</th>
+      <th>total_line_items_price</th>
+      <th>customer_ip</th>
+      <th>checkout_token</th>
+      <th>customer_email</th>
+      <th>currency</th>
+      <th>order_total</th>
+      <th>taxes_included</th>
+      <th>is_test_order</th>
+      <th>shipping_address_line1</th>
+      <th>shipping_status</th>
+      <th>processing_method</th>
+      <th>cart_token</th>
+      <th>marketing_consent</th>
+      <th>alt_order_number</th>
+      <th>billing_latitude</th>
+      <th>billing_longitude</th>
+      <th>billing_province_code</th>
+      <th>cancel_reason</th>
+      <th>cancelled_at</th>
+      <th>closed_at</th>
+      <th>created_at</th>
+      <th>customer_id</th>
+      <th>last_updated</th>
+      <th>order_id</th>
+      <th>order_tax</th>
+      <th>order_weight</th>
+      <th>processed_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>paid</td>
+      <td>4135</td>
+      <td>d1743fc58a1e4d78769eaac49994a994</td>
+      <td>0f9c2880de17f71511eee5542c29b999</td>
+      <td>71509c29301d2cc14e37ecb53f735608</td>
+      <td>2.8</td>
+      <td>2.8</td>
+      <td>None</td>
+      <td>5.6</td>
+      <td>None</td>
+      <td>None</td>
+      <td>021cb20b5c78751fc7ddc091b6b69b3e</td>
+      <td>GBP</td>
+      <td>2.80</td>
+      <td>True</td>
+      <td>False</td>
+      <td>d6f4a399883df85d9d4b3a02bf6e738a</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>True</td>
+      <td>5135</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>NaT</td>
+      <td>2020-09-11 19:35:42</td>
+      <td>3589760876641</td>
+      <td>2020-09-11 19:35:46</td>
+      <td>2674098602081</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2020-09-11 19:35:42</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>web</td>
+      <td>2cc983716a820bc713b793a6e8e73f42</td>
+      <td>paid</td>
+      <td>4066</td>
+      <td>4fcb884b5b46413bae526a6e7e49d706</td>
+      <td>fb489b3ccc0ae36ce47744d7595e9746</td>
+      <td>None</td>
+      <td>0.0</td>
+      <td>2.8</td>
+      <td>8584e97b29b0802fb393fa453a8b6a7a</td>
+      <td>2.8</td>
+      <td>109.249.185.68</td>
+      <td>7bdb994e1196de3e4f34586e357613f9</td>
+      <td>dce90c7b4e52e045e5975836aff49cf1</td>
+      <td>GBP</td>
+      <td>3.79</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1ff1de774005f8da13f42943881c655f</td>
+      <td>fulfilled</td>
+      <td>direct</td>
+      <td>b1ff04883dfeab658cd5211050476729</td>
+      <td>False</td>
+      <td>5066</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>2020-09-10 15:38:26</td>
+      <td>2020-09-09 23:01:54</td>
+      <td>3584045351009</td>
+      <td>2020-09-10 15:38:26</td>
+      <td>2669516488801</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2020-09-09 23:01:53</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>web</td>
+      <td>2cc983716a820bc713b793a6e8e73f42</td>
+      <td>paid</td>
+      <td>4065</td>
+      <td>9e346f2e912c60e16679f4a4c8d29422</td>
+      <td>e44b7f04610a8f4032530cc7f12663de</td>
+      <td>None</td>
+      <td>0.0</td>
+      <td>4.4</td>
+      <td>8584e97b29b0802fb393fa453a8b6a7a</td>
+      <td>4.4</td>
+      <td>109.249.185.68</td>
+      <td>cf0a9fe2c7c606b86559007dbb890a62</td>
+      <td>dce90c7b4e52e045e5975836aff49cf1</td>
+      <td>GBP</td>
+      <td>5.39</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1ff1de774005f8da13f42943881c655f</td>
+      <td>fulfilled</td>
+      <td>direct</td>
+      <td>9600543f4d4613db59ac58a1009ecbb9</td>
+      <td>False</td>
+      <td>5065</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>2020-09-10 15:38:25</td>
+      <td>2020-09-09 22:57:51</td>
+      <td>3584045351009</td>
+      <td>2020-09-10 15:38:25</td>
+      <td>2669509541985</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2020-09-09 22:57:50</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_company</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_company"></div><b>📃 Summary:</b> Company name in shipping address<br><b>❓ Missing:</b> No company associated with this shipping address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_address_line2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_address_line2"></div><b>📃 Summary:</b> Second line of shipping address<br><b>❓ Missing:</b> No secondary shipping address line needed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_full_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_full_name"></div><b>📃 Summary:</b> Full name in billing address<br><b>❓ Missing:</b> No billing name provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_first_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_first_name"></div><b>📃 Summary:</b> First name in billing address<br><b>❓ Missing:</b> No billing name provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_last_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_last_name"></div><b>📃 Summary:</b> Last name in billing address<br><b>❓ Missing:</b> No billing name provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_company</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_company"></div><b>📃 Summary:</b> Company name in billing address<br><b>❓ Missing:</b> No company associated with this billing address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_phone</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_phone"></div><b>📃 Summary:</b> Phone number in billing address<br><b>❓ Missing:</b> No billing phone number provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_address_line1</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_address_line1"></div><b>📃 Summary:</b> First line of billing address<br><b>❓ Missing:</b> No billing address provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_address_line2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_address_line2"></div><b>📃 Summary:</b> Second line of billing address<br><b>❓ Missing:</b> No secondary billing address line needed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_city"></div><b>📃 Summary:</b> City of billing address<br><b>❓ Missing:</b> No billing city provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_country</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_country"></div><b>📃 Summary:</b> Country of billing address<br><b>❓ Missing:</b> No billing country provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_country_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_country_code"></div><b>📃 Summary:</b> Country code of billing address<br><b>❓ Missing:</b> No billing country code provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_province</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_province"></div><b>📃 Summary:</b> Province or state in billing address<br><b>❓ Missing:</b> No billing province/state provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_zip</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_zip"></div><b>📃 Summary:</b> Zip or postal code of billing address<br><b>❓ Missing:</b> No billing zip/postal code provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_source</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='web'>web</option><option value='mobile_app'>mobile_app</option><option value='phone'>phone</option><option value='in_store'>in_store</option><option value='email'>email</option><option value='fax'>fax</option><option value='mail_order'>mail_order</option><option value='social_media'>social_media</option><option value='third_party_marketplace'>third_party_marketplace</option><option value='kiosk'>kiosk</option><option value='voice_assistant'>voice_assistant</option><option value='sms'>sms</option><option value='chatbot'>chatbot</option></select></span><br><br><div id="bar_viz_order_source"></div><b>📃 Summary:</b> Source of the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">referring_site</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_referring_site"></div><b>📃 Summary:</b> Website that referred the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payment_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='paid'>paid</option><option value='pending'>pending</option><option value='failed'>failed</option><option value='refunded'>refunded</option><option value='cancelled'>cancelled</option><option value='partially_paid'>partially_paid</option></select></span><br><br><div id="bar_viz_payment_status"></div><b>📃 Summary:</b> Payment status of the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_order_number"></div><b>📃 Summary:</b> Order number<br><b>🦄 Unique:</b> This column represents a unique identifier for each order. For this table, each row is for a distinct order, and order_number appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_identifier</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_order_identifier"></div><b>📃 Summary:</b> Order name or identifier<br><b>🦄 Unique:</b> This column seems to be a unique identifier for each order, possibly in a different format. For this table, each row represents a distinct order, and order_identifier appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_token</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_order_token"></div><b>📃 Summary:</b> Unique token for the order<br><b>🦄 Unique:</b> This column appears to be a unique token associated with each order. For this table, each row represents a distinct order, and order_token seems to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_notes</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_order_notes"></div><b>📃 Summary:</b> Additional notes for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_discounts</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_discounts"></div><b>📃 Summary:</b> Total discounts applied to the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subtotal_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_subtotal_price"></div><b>📃 Summary:</b> Subtotal price of the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">landing_page_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_landing_page_url"></div><b>📃 Summary:</b> Base URL of the landing page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_line_items_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_line_items_price"></div><b>📃 Summary:</b> Total price of all line items<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_ip</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_customer_ip"></div><b>📃 Summary:</b> IP address of customer's browser<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">checkout_token</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_checkout_token"></div><b>📃 Summary:</b> Unique identifier for checkout process<br><b>🦄 Unique:</b> This column represents a unique identifier for the checkout process. For this table, each row represents a distinct order, and checkout_token appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_customer_email"></div><b>📃 Summary:</b> Customer's email address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='GBP'>GBP</option><option value='USD'>USD</option><option value='EUR'>EUR</option><option value='JPY'>JPY</option><option value='CHF'>CHF</option><option value='CAD'>CAD</option><option value='AUD'>AUD</option><option value='CNY'>CNY</option><option value='HKD'>HKD</option><option value='NZD'>NZD</option><option value='SEK'>SEK</option><option value='NOK'>NOK</option><option value='DKK'>DKK</option><option value='SGD'>SGD</option><option value='MXN'>MXN</option><option value='INR'>INR</option><option value='BRL'>BRL</option><option value='ZAR'>ZAR</option><option value='RUB'>RUB</option><option value='TRY'>TRY</option></select></span><br><br><div id="bar_viz_currency"></div><b>📃 Summary:</b> Currency used for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_total</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_order_total"></div><b>📃 Summary:</b> Total price of the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">taxes_included</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_taxes_included"></div><b>📃 Summary:</b> Indicates if taxes are included in price<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_test_order</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_test_order"></div><b>📃 Summary:</b> Indicates if this is a test order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_address_line1</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_address_line1"></div><b>📃 Summary:</b> First line of shipping address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='fulfilled'>fulfilled</option><option value='pending'>pending</option><option value='shipped'>shipped</option><option value='delivered'>delivered</option><option value='cancelled'>cancelled</option><option value='returned'>returned</option><option value='processing'>processing</option><option value='on hold'>on hold</option><option value='backordered'>backordered</option><option value='partial'>partial</option></select></span><br><br><div id="bar_viz_shipping_status"></div><b>📃 Summary:</b> Shipping status of the order<br><b>❓ Missing:</b> Not applicable for orders that haven't been shipped yet.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">processing_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='direct'>direct</option><option value='online'>online</option><option value='phone'>phone</option><option value='mail'>mail</option><option value='in-store'>in-store</option><option value='fax'>fax</option><option value='email'>email</option><option value='mobile app'>mobile app</option><option value='third-party marketplace'>third-party marketplace</option><option value='social media'>social media</option><option value='voice assistant'>voice assistant</option><option value='text message'>text message</option></select></span><br><br><div id="bar_viz_processing_method"></div><b>📃 Summary:</b> Method used to process the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cart_token</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_cart_token"></div><b>📃 Summary:</b> Unique identifier for shopping cart<br><b>🦄 Unique:</b> This column represents a unique identifier for the shopping cart. For this table, each row represents a distinct order, and cart_token appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">marketing_consent</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_marketing_consent"></div><b>📃 Summary:</b> Customer's marketing preferences<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">alt_order_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_alt_order_number"></div><b>📃 Summary:</b> Alternative order number<br><b>🦄 Unique:</b> This column seems to be an alternative order number. For this table, each row represents a distinct order, and alt_order_number appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_latitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_billing_latitude"></div><b>📃 Summary:</b> Latitude of billing address<br><b>❓ Missing:</b> No billing location coordinates provided<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_longitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_billing_longitude"></div><b>📃 Summary:</b> Longitude of billing address<br><b>❓ Missing:</b> No billing location coordinates provided<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_province_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_province_code"></div><b>📃 Summary:</b> Province or state code in billing address<br><b>❓ Missing:</b> No billing province/state code provided for this order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cancel_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cancel_reason"></div><b>📃 Summary:</b> Reason for order cancellation<br><b>❓ Missing:</b> Order not cancelled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cancelled_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cancelled_at"></div><b>📃 Summary:</b> Timestamp of order cancellation<br><b>❓ Missing:</b> Order not cancelled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">closed_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_closed_at"></div><b>📃 Summary:</b> Timestamp when order was closed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_at"></div><b>📃 Summary:</b> Timestamp when order was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_customer_id"></div><b>📃 Summary:</b> Unique identifier for the user who placed the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_updated</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_updated"></div><b>📃 Summary:</b> Timestamp of the last update to the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_order_id"></div><b>📃 Summary:</b> Unique identifier for the order<br><b>🦄 Unique:</b> This column is a unique identifier for the order. For this table, each row represents a unique order. Order IDs are typically designed to be unique for each order in e-commerce systems. Based on the sample data, we can see that each row has a different order_id, suggesting it's unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_tax</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_order_tax"></div><b>📃 Summary:</b> Total tax amount for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_weight</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_order_weight"></div><b>📃 Summary:</b> Total weight of the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">processed_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_processed_at"></div><b>📃 Summary:</b> Timestamp of order processing<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about Shopify orders. It includes order details like ID, total price, currency, and timestamps. Customer information such as email and shipping/billing addresses are provided. Order status, payment details, and fulfillment information are also included. Each row represents a unique order with its associated data.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>49</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the order</td>
+      <td>order_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>note</td>
+      <td>Additional notes for the order</td>
+      <td>order_notes</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>email</td>
+      <td>Customer's email address</td>
+      <td>customer_email</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>taxes_included</td>
+      <td>Indicates if taxes are included in price</td>
+      <td>taxes_included</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>currency</td>
+      <td>Currency used for the order</td>
+      <td>currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>subtotal_price</td>
+      <td>Subtotal price of the order</td>
+      <td>subtotal_price</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>total_tax</td>
+      <td>Total tax amount for the order</td>
+      <td>order_tax</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>total_price</td>
+      <td>Total price of the order</td>
+      <td>order_total</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>created_at</td>
+      <td>Timestamp when order was created</td>
+      <td>created_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>updated_at</td>
+      <td>Timestamp of the last update to the order</td>
+      <td>last_updated</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>name</td>
+      <td>Order name or identifier</td>
+      <td>order_identifier</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>shipping_address_name</td>
+      <td>Full name in shipping address</td>
+      <td>shipping_full_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>shipping_address_first_name</td>
+      <td>First name in shipping address</td>
+      <td>shipping_first_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>shipping_address_last_name</td>
+      <td>Last name in shipping address</td>
+      <td>shipping_last_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>shipping_address_company</td>
+      <td>Company name in shipping address</td>
+      <td>shipping_company</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>shipping_address_phone</td>
+      <td>Phone number in shipping address</td>
+      <td>shipping_phone</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>shipping_address_address_1</td>
+      <td>First line of shipping address</td>
+      <td>shipping_address_line1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>shipping_address_address_2</td>
+      <td>Second line of shipping address</td>
+      <td>shipping_address_line2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>shipping_address_city</td>
+      <td>City of shipping address</td>
+      <td>shipping_city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>shipping_address_country</td>
+      <td>Country of shipping address</td>
+      <td>shipping_country</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>shipping_address_country_code</td>
+      <td>Country code of shipping address</td>
+      <td>shipping_country_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>shipping_address_province</td>
+      <td>Province or state of shipping address</td>
+      <td>shipping_province</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>shipping_address_province_code</td>
+      <td>Province or state code of shipping address</td>
+      <td>shipping_province_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>shipping_address_zip</td>
+      <td>ZIP or postal code of shipping address</td>
+      <td>shipping_zip</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>shipping_address_latitude</td>
+      <td>Latitude of shipping address</td>
+      <td>shipping_latitude</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>shipping_address_longitude</td>
+      <td>Longitude of shipping address</td>
+      <td>shipping_longitude</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>billing_address_name</td>
+      <td>Full name in billing address</td>
+      <td>billing_full_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>billing_address_first_name</td>
+      <td>First name in billing address</td>
+      <td>billing_first_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>billing_address_last_name</td>
+      <td>Last name in billing address</td>
+      <td>billing_last_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>billing_address_company</td>
+      <td>Company name in billing address</td>
+      <td>billing_company</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>billing_address_phone</td>
+      <td>Phone number in billing address</td>
+      <td>billing_phone</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>billing_address_address_1</td>
+      <td>First line of billing address</td>
+      <td>billing_address_line1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>billing_address_address_2</td>
+      <td>Second line of billing address</td>
+      <td>billing_address_line2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>billing_address_city</td>
+      <td>City of billing address</td>
+      <td>billing_city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>billing_address_country</td>
+      <td>Country of billing address</td>
+      <td>billing_country</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>billing_address_country_code</td>
+      <td>Country code of billing address</td>
+      <td>billing_country_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>billing_address_province</td>
+      <td>Province or state in billing address</td>
+      <td>billing_province</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>billing_address_province_code</td>
+      <td>Province or state code in billing address</td>
+      <td>billing_province_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>billing_address_zip</td>
+      <td>Zip or postal code of billing address</td>
+      <td>billing_zip</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>billing_address_latitude</td>
+      <td>Latitude of billing address</td>
+      <td>billing_latitude</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>billing_address_longitude</td>
+      <td>Longitude of billing address</td>
+      <td>billing_longitude</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>customer_id</td>
+      <td>Unique identifier for the customer</td>
+      <td>customer_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>location_id</td>
+      <td>Store location identifier</td>
+      <td>store_location_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>user_id</td>
+      <td>Unique identifier for the user who placed the order</td>
+      <td>user_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>number</td>
+      <td>Order number</td>
+      <td>order_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>order_number</td>
+      <td>Alternative order number</td>
+      <td>alt_order_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>financial_status</td>
+      <td>Payment status of the order</td>
+      <td>payment_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>fulfillment_status</td>
+      <td>Shipping status of the order</td>
+      <td>shipping_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>processed_at</td>
+      <td>Timestamp of order processing</td>
+      <td>processed_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>processing_method</td>
+      <td>Method used to process the order</td>
+      <td>processing_method</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>referring_site</td>
+      <td>Website that referred the order</td>
+      <td>referring_site</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>cancel_reason</td>
+      <td>Reason for order cancellation</td>
+      <td>cancel_reason</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>cancelled_at</td>
+      <td>Timestamp of order cancellation</td>
+      <td>cancelled_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>closed_at</td>
+      <td>Timestamp when order was closed</td>
+      <td>closed_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>total_discounts</td>
+      <td>Total discounts applied to the order</td>
+      <td>total_discounts</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>total_line_items_price</td>
+      <td>Total price of all line items</td>
+      <td>total_line_items_price</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>total_weight</td>
+      <td>Total weight of the order</td>
+      <td>order_weight</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>source_name</td>
+      <td>Source of the order</td>
+      <td>order_source</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>browser_ip</td>
+      <td>IP address of customer's browser</td>
+      <td>customer_ip</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>buyer_accepts_marketing</td>
+      <td>Customer's marketing preferences</td>
+      <td>marketing_consent</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>token</td>
+      <td>Unique token for the order</td>
+      <td>order_token</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>cart_token</td>
+      <td>Unique identifier for shopping cart</td>
+      <td>cart_token</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>checkout_token</td>
+      <td>Unique identifier for checkout process</td>
+      <td>checkout_token</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>test</td>
+      <td>Indicates if this is a test order</td>
+      <td>is_test_order</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>landing_site_base_url</td>
+      <td>Base URL of the landing page</td>
+      <td>landing_page_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>28</b> columns have erroneous values<br><ol><li><b>shipping_full_name</b>: Both values are unusual because they are hashed/encrypted strings rather than human-readable full names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>c8189c7add9755e66391b58ecc12b3e2</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>8b121314a4d97bc9dc15bfba8518ec88</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_first_name</b>: Both values are unusual because they are hashed/encrypted data instead of readable first names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d3bae70c9d49bb7cb5a74cdd0eae7fc4</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>f0962b7a185488ecb752cedac1038349</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_last_name</b>: Both values are unusual because they are likely hashed or encrypted strings instead of actual last names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0dd89cff60965dff8f9ea2bc952a5474</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>aa35cb67c26e64bb81a1bf3f17e858ba</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_company</b>: The MD5 hash value is unusual for a shipping company name, possibly indicating an error or placeholder.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_phone</b>: The MD5 hash value is unusual because phone numbers are typically numeric or formatted with hyphens/parentheses.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_address_line2</b>: Both values are unusual because they are hexadecimal strings instead of typical address information.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>70111f8840ccbd8b1007cc3f387ced6b</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>bc9b8576178dcd886639ba718f1d45c8</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_city</b>: Both values are unusual because they are hashed/encrypted strings instead of readable city names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1ac412baeba98370017c73df41c98a07</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ac08c606d455cde42980f980524a8038</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_country</b>: The value is unusual because it's not a recognizable country name and looks like an encoded string.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>89f9c9f489be2a83cf57e53b9197d288</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_country_code</b>: The value '79cba1185463850dedba31f172f1dc5b' is unusual because it's not a standard country code format.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>79cba1185463850dedba31f172f1dc5b</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_province</b>: The MD5 hash value is unusual because it's not a recognizable province name or abbreviation.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_zip</b>: Both values are unusual because they are hashed/encrypted strings instead of standard ZIP codes.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2357e65b582faa0a2da3603b16fa4a7f</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>00079ce435afddc28205639142773870</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_latitude</b>: Both values are unusual because they are hash-like strings instead of numerical latitude values.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>75c29d6dd29594a652fcbd7c4c279a29</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>d97319f64674c02595f2989019970fc8</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>shipping_longitude</b>: Both values are unusual because they are not numeric longitude representations, but appear to be hashed or encoded strings.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>75468fbebc28e02ec5d4f54f4cbd4099</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>c08dae474c5d4d3326fd6764d2a0ebe6</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_full_name</b>: Both values are unusual because they are encrypted/hashed strings instead of human-readable names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>c8189c7add9755e66391b58ecc12b3e2</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>8b121314a4d97bc9dc15bfba8518ec88</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_first_name</b>: Both values are unusual because they are hashed/encrypted strings instead of actual first names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d3bae70c9d49bb7cb5a74cdd0eae7fc4</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>f0962b7a185488ecb752cedac1038349</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_last_name</b>: Both values are unusual because they are hashed/encrypted strings instead of readable last names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0dd89cff60965dff8f9ea2bc952a5474</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>aa35cb67c26e64bb81a1bf3f17e858ba</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_company</b>: The MD5 hash value is unusual because it's not a recognizable company name and likely represents encrypted or placeholder data.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_phone</b>: The MD5 hash value is unusual because phone numbers are typically numeric or formatted with dashes/parentheses.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_address_line1</b>: Both values are unusual because they appear to be hashed or encrypted strings rather than readable address information.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1ff1de774005f8da13f42943881c655f</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>d6f4a399883df85d9d4b3a02bf6e738a</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_address_line2</b>: Both values are unusual for address lines as they appear to be hashed or encrypted data rather than readable text.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>70111f8840ccbd8b1007cc3f387ced6b</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>bc9b8576178dcd886639ba718f1d45c8</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_city</b>: Both values are unusual because they are hashed/encrypted strings instead of readable city names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1ac412baeba98370017c73df41c98a07</td>
+      <td>UNKNOWN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ac08c606d455cde42980f980524a8038</td>
+      <td>UNKNOWN</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_country</b>: The value is unusual because it's a 32-character alphanumeric string, likely a hash, not a country name.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>89f9c9f489be2a83cf57e53b9197d288</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_country_code</b>: The value '79cba1185463850dedba31f172f1dc5b' is unusual because it's not a standard country code format.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>79cba1185463850dedba31f172f1dc5b</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_province</b>: The hash-like string is unusual because it doesn't represent a readable province name.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_zip</b>: Both values are unusual because they are long alphanumeric strings, not standard ZIP code formats.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2357e65b582faa0a2da3603b16fa4a7f</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>00079ce435afddc28205639142773870</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_latitude</b>: Both values are unusual because they are hashed strings instead of numerical latitude values.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>75c29d6dd29594a652fcbd7c4c279a29</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>d97319f64674c02595f2989019970fc8</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_longitude</b>: Both values are unusual because they are not numeric longitude values, but appear to be hashed or encrypted data.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>75468fbebc28e02ec5d4f54f4cbd4099</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>c08dae474c5d4d3326fd6764d2a0ebe6</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>order_source</b>: '294517' is unusual because it's a numeric string that doesn't clearly represent an order source.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>294517</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>28</b> columns have disguised missing values<br>
+                ✔️ <b>28</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>shipping_full_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>shipping_first_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>shipping_last_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>shipping_company</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>shipping_phone</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>shipping_address_line2</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>shipping_city</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>shipping_country</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>shipping_country_code</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>shipping_province</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>shipping_zip</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>shipping_latitude</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>shipping_longitude</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>billing_full_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>billing_first_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>billing_last_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>billing_company</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>billing_phone</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>billing_address_line1</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>billing_address_line2</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>billing_city</td>
+      <td>[UNKNOWN]</td>
+      <td>True</td>
+      <td>UNKNOWN</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>billing_country</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>billing_country_code</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>billing_province</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>billing_zip</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>billing_latitude</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>billing_longitude</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>order_source</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>19</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>alt_order_number</td>
+      <td>CAST("alt_order_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'alt_order_number' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer (INT) to a variable-length character string (VARCHAR). The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>billing_latitude</td>
+      <td>CAST("billing_latitude" AS DECIMAL)</td>
+      <td>To transform the 'billing_latitude' column from VARCHAR to DECIMAL, we can use a simple CAST function. Since the column already contains numeric values (as it represents latitude), we don't need to use REGEXP_EXTRACT to isolate the numeric part. We can directly cast the entire column to DECIMAL.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_longitude</td>
+      <td>CAST("billing_longitude" AS DECIMAL)</td>
+      <td>To transform the 'billing_longitude' column from VARCHAR to DECIMAL, we can use a simple CAST function. Since the column already contains numeric values (as implied by it being a longitude), we don't need to use REGEXP_EXTRACT to isolate the numeric part. We can directly cast the entire column to DECIMAL.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>billing_province_code</td>
+      <td>CAST("billing_province_code" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'billing_province_code' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the distinct values list is empty, we'll proceed with the cast operation as requested.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>cancel_reason</td>
+      <td>CAST("cancel_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cancel_reason' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the current distinct values are empty, this cast will ensure that any future decimal values in this column will be properly converted to strings.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>cancelled_at</td>
+      <td>CAST("cancelled_at" AS TIMESTAMP)</td>
+      <td>To transform the 'cancelled_at' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column contains only empty values (as indicated by the distinct values being an empty list []), we don't need to worry about converting specific date-time formats. A straightforward CAST to TIMESTAMP should suffice.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>closed_at</td>
+      <td>CAST("closed_at" AS TIMESTAMP)</td>
+      <td>To transform the 'closed_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the dates in the 'closed_at' column appears to be 'YYYY-MM-DD HH:MM:SS.sss', which is a standard format that can be directly cast to TIMESTAMP in DuckDB without needing to use strptime(). The CAST function in DuckDB can automatically interpret this format.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>created_at</td>
+      <td>CAST("created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'created_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function in DuckDB. The provided date-time strings are already in a format that DuckDB can automatically parse (ISO 8601 format), so we don't need to use the strptime function to specify a custom format. A straightforward CAST to TIMESTAMP will work.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>customer_id</td>
+      <td>CAST("customer_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'customer_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting the integer values to their string representations. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>last_updated</td>
+      <td>CAST("last_updated" AS TIMESTAMP)</td>
+      <td>To transform the 'last_updated' column from VARCHAR to TIMESTAMP, we don't need to use the strptime function because the date-time format in the provided values is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.mmm). DuckDB can automatically interpret this format when casting to TIMESTAMP. Therefore, we can use a simple CAST function to convert the column to TIMESTAMP data type.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>order_id</td>
+      <td>CAST("order_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'order_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. The CAST function allows us to convert one data type to another. In this case, we're converting from INT to VARCHAR. The syntax is straightforward: CAST(column_name AS new_data_type).\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>order_tax</td>
+      <td>CAST("order_tax" AS DECIMAL)</td>
+      <td>To transform the data type of the 'order_tax' column from INT to DECIMAL, we need to use a simple CAST function. Since the column only contains the value 0, a straightforward cast to DECIMAL will suffice. We don't need to specify precision or scale for the DECIMAL type in this case, as DuckDB will use default values.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>order_weight</td>
+      <td>CAST("order_weight" AS DECIMAL)</td>
+      <td>To transform the data type of the 'order_weight' column from INT to DECIMAL, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only the value 0, casting it to DECIMAL will not lose any information. The DECIMAL type in DuckDB is equivalent to NUMERIC and can store exact numeric values.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>processed_at</td>
+      <td>CAST("processed_at" AS TIMESTAMP)</td>
+      <td>To transform the 'processed_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The date-time format in the given examples is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.sss), which is directly compatible with DuckDB's TIMESTAMP type. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>shipping_latitude</td>
+      <td>CAST("shipping_latitude" AS DECIMAL)</td>
+      <td>To transform the 'shipping_latitude' column from VARCHAR to DECIMAL, we can use a simple CAST function. Since the distinct values are empty, we assume that the column already contains numeric values in string format. Therefore, we don't need to use REGEXP_EXTRACT to extract numbers from the string. A straightforward CAST should suffice to convert the VARCHAR to DECIMAL.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>shipping_longitude</td>
+      <td>CAST("shipping_longitude" AS DECIMAL)</td>
+      <td>To transform the 'shipping_longitude' column from VARCHAR to DECIMAL, we can use a simple CAST function. Since the column already contains numeric values (as implied by it being a longitude), we don't need to use REGEXP_EXTRACT. We can directly cast the column to DECIMAL.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>shipping_province_code</td>
+      <td>CAST("shipping_province_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_province_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the distinct values list is empty, we'll proceed with the cast as requested.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>store_location_id</td>
+      <td>CAST("store_location_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'store_location_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently a DECIMAL and we want to convert it to a string type, we'll use VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>user_id</td>
+      <td>CAST("user_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'user_id' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each numeric value in the 'user_id' column to its string representation. Since the column is already of type DECIMAL, we don't need any additional formatting or manipulation before casting to VARCHAR.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>43</b> columns have missing values<br>
+                ✔️ <b>20</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>billing_address_line1</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing address provided for this order</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>billing_address_line2</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No secondary billing address line needed</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_city</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing city provided for this order</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>billing_company</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No company associated with this billing address</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>billing_country</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing country provided for this order</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>billing_country_code</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing country code provided for this order</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>billing_first_name</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing name provided for this order</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>billing_full_name</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing name provided for this order</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>billing_last_name</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing name provided for this order</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>billing_latitude</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing location coordinates provided</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>billing_longitude</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing location coordinates provided</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>billing_phone</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing phone number provided for this order</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>billing_province</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing province/state provided for this order</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>billing_province_code</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing province/state code provided for this order</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>billing_zip</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing zip/postal code provided for this order</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>cancel_reason</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Order not cancelled</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>cancelled_at</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Order not cancelled</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>cart_token</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>checkout_token</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>closed_at</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>customer_ip</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>landing_page_url</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>order_notes</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>order_source</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>processing_method</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>referring_site</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>shipping_address_line2</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No secondary shipping address line needed</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>shipping_city</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>shipping_company</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No company associated with this shipping address</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>shipping_country</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>shipping_country_code</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>shipping_first_name</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>shipping_full_name</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>shipping_last_name</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>shipping_latitude</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>shipping_longitude</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>shipping_phone</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>shipping_province</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>shipping_province_code</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>shipping_status</td>
+      <td>33.33</td>
+      <td>True</td>
+      <td>Not applicable for orders that haven't been shipped yet.</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>shipping_zip</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>store_location_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>user_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>cart_token</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>checkout_token</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>closed_at</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>customer_ip</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>landing_page_url</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>order_notes</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>order_source</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>processing_method</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>referring_site</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>shipping_city</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>shipping_country</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>shipping_country_code</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>shipping_first_name</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>shipping_full_name</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>shipping_last_name</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>shipping_latitude</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>shipping_longitude</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>shipping_phone</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>shipping_province</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>shipping_province_code</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>shipping_zip</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>store_location_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>user_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [];
+    drawBarChart("bar_viz_shipping_company", data);
+data = [];
+    drawBarChart("bar_viz_shipping_address_line2", data);
+data = [];
+    drawBarChart("bar_viz_billing_full_name", data);
+data = [];
+    drawBarChart("bar_viz_billing_first_name", data);
+data = [];
+    drawBarChart("bar_viz_billing_last_name", data);
+data = [];
+    drawBarChart("bar_viz_billing_company", data);
+data = [];
+    drawBarChart("bar_viz_billing_phone", data);
+data = [];
+    drawBarChart("bar_viz_billing_address_line1", data);
+data = [];
+    drawBarChart("bar_viz_billing_address_line2", data);
+data = [];
+    drawBarChart("bar_viz_billing_city", data);
+data = [];
+    drawBarChart("bar_viz_billing_country", data);
+data = [];
+    drawBarChart("bar_viz_billing_country_code", data);
+data = [];
+    drawBarChart("bar_viz_billing_province", data);
+data = [];
+    drawBarChart("bar_viz_billing_zip", data);
+data = [{'label': 'web', 'value': 100.0}];
+    drawBarChart("bar_viz_order_source", data);
+data = [{'label': '2cc983716a820bc...', 'value': 100.0}];
+    drawBarChart("bar_viz_referring_site", data);
+data = [{'label': 'paid', 'value': 100.0}];
+    drawBarChart("bar_viz_payment_status", data);
+data = [{'x': 4066.75, 'y': 2}, {'x': 4070.25, 'y': 0}, {'x': 4073.75, 'y': 0}];
+    binWidth = 3.5;
+    drawHistogram("hist_viz_order_number", data, binWidth);
+data = [{'label': 'd1743fc58a1e4d7...', 'value': 33.33333333333333}, {'label': '4fcb884b5b46413...', 'value': 33.33333333333333}, {'label': '9e346f2e912c60e...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_order_identifier", data);
+data = [{'label': 'fb489b3ccc0ae36...', 'value': 33.33333333333333}, {'label': 'e44b7f04610a8f4...', 'value': 33.33333333333333}, {'label': '0f9c2880de17f71...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_order_token", data);
+data = [{'label': '71509c29301d2cc...', 'value': 100.0}];
+    drawBarChart("bar_viz_order_notes", data);
+data = [{'x': 0.06999999999999999, 'y': 2}, {'x': 0.20999999999999996, 'y': 0}, {'x': 0.35, 'y': 0}];
+    binWidth = 0.13999999999999999;
+    drawHistogram("hist_viz_total_discounts", data, binWidth);
+data = [{'x': 2.84, 'y': 2}, {'x': 2.92, 'y': 0}, {'x': 3.0, 'y': 0}];
+    binWidth = 0.08000000000000003;
+    drawHistogram("hist_viz_subtotal_price", data, binWidth);
+data = [{'label': '8584e97b29b0802...', 'value': 100.0}];
+    drawBarChart("bar_viz_landing_page_url", data);
+data = [{'x': 2.87, 'y': 1}, {'x': 3.01, 'y': 0}, {'x': 3.1499999999999995, 'y': 0}];
+    binWidth = 0.13999999999999999;
+    drawHistogram("hist_viz_total_line_items_price", data, binWidth);
+data = [{'label': '109.249.185.68', 'value': 100.0}];
+    drawBarChart("bar_viz_customer_ip", data);
+data = [{'label': 'cf0a9fe2c7c606b...', 'value': 50.0}, {'label': '7bdb994e1196de3...', 'value': 50.0}];
+    drawBarChart("bar_viz_checkout_token", data);
+data = [{'label': 'dce90c7b4e52e04...', 'value': 66.66666666666666}, {'label': '021cb20b5c78751...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_customer_email", data);
+data = [{'label': 'GBP', 'value': 100.0}];
+    drawBarChart("bar_viz_currency", data);
+data = [{'x': 2.86475, 'y': 1}, {'x': 2.99425, 'y': 0}, {'x': 3.12375, 'y': 0}];
+    binWidth = 0.1295;
+    drawHistogram("hist_viz_order_total", data, binWidth);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_taxes_included", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_test_order", data);
+data = [{'label': '1ff1de774005f8d...', 'value': 66.66666666666666}, {'label': 'd6f4a399883df85...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_shipping_address_line1", data);
+data = [{'label': 'fulfilled', 'value': 100.0}];
+    drawBarChart("bar_viz_shipping_status", data);
+data = [{'label': 'direct', 'value': 100.0}];
+    drawBarChart("bar_viz_processing_method", data);
+data = [{'label': '9600543f4d4613d...', 'value': 50.0}, {'label': 'b1ff04883dfeab6...', 'value': 50.0}];
+    drawBarChart("bar_viz_cart_token", data);
+data = [{'label': 'False', 'value': 66.66666666666666}, {'label': 'True', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_marketing_consent", data);
+data = [{'label': '5135', 'value': 33.33333333333333}, {'label': '5065', 'value': 33.33333333333333}, {'label': '5066', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_alt_order_number", data);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_billing_latitude", data, binWidth);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_billing_longitude", data, binWidth);
+data = [];
+    drawBarChart("bar_viz_billing_province_code", data);
+data = [];
+    drawBarChart("bar_viz_cancel_reason", data);
+data = [];
+    drawBarChart("bar_viz_cancelled_at", data);
+data = [{'label': '2020-09-10 15:3...', 'value': 50.0}, {'label': '2020-09-10 15:3...', 'value': 50.0}];
+    drawBarChart("bar_viz_closed_at", data);
+data = [{'label': '2020-09-11 19:3...', 'value': 33.33333333333333}, {'label': '2020-09-09 23:0...', 'value': 33.33333333333333}, {'label': '2020-09-09 22:5...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_created_at", data);
+data = [{'label': '3584045351009', 'value': 66.66666666666666}, {'label': '3589760876641', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_customer_id", data);
+data = [{'label': '2020-09-11 19:3...', 'value': 33.33333333333333}, {'label': '2020-09-10 15:3...', 'value': 33.33333333333333}, {'label': '2020-09-10 15:3...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_last_updated", data);
+data = [{'label': '2669509541985', 'value': 33.33333333333333}, {'label': '2674098602081', 'value': 33.33333333333333}, {'label': '2669516488801', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_order_id", data);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_order_tax", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_order_weight", data, binWidth);
+data = [{'label': '2020-09-11 19:3...', 'value': 33.33333333333333}, {'label': '2020-09-09 23:0...', 'value': 33.33333333333333}, {'label': '2020-09-09 22:5...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_processed_at", data);
+
+
+</script>
+</body>
+</html>

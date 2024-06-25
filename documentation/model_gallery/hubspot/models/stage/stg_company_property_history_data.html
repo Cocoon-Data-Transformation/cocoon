@@ -1,0 +1,2573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>company_property_history_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>source</th>
+      <th>name</th>
+      <th>value_</th>
+      <th>company_id</th>
+      <th>source_id</th>
+      <th>timestamp_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ivIU2HItRtUkqPwwukoy0Q==</td>
+      <td>2051482368</td>
+      <td>NaN</td>
+      <td>2019-09-10 22:01:17.446</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>e3t+Y47dr5xVZef9Berf8Q==</td>
+      <td>2051482368</td>
+      <td>NaN</td>
+      <td>2020-05-08 14:54:29.658</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>9WSrAL7+MRXDpJQPfj2TTA==</td>
+      <td>2353082624</td>
+      <td>NaN</td>
+      <td>2019-09-20 04:08:33.952</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>YIKDVhzHevrp7M4DR/2RuA==</td>
+      <td>2353083136</td>
+      <td>NaN</td>
+      <td>2020-04-06 11:25:45.634</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>LsqPhSJ8P/eXS9ZLSJMi2g==</td>
+      <td>2353071105</td>
+      <td>NaN</td>
+      <td>2020-04-06 11:40:12.857</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>vRHxf8QVJ0imZVYtVes/qw==</td>
+      <td>2353857793</td>
+      <td>NaN</td>
+      <td>2020-04-06 10:45:17.832</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>+pIFuA57AA4VfFHjjehGUQ==</td>
+      <td>3075061761</td>
+      <td>NaN</td>
+      <td>2020-03-06 16:01:04.203</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>b0HOBb+TGpURlFddq3utig==</td>
+      <td>2353081858</td>
+      <td>NaN</td>
+      <td>2019-08-24 08:29:10.587</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>c+KoTDrfBPthu3vWnJ9zlQ==</td>
+      <td>1714018818</td>
+      <td>NaN</td>
+      <td>2020-04-11 18:56:41.193</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>6m2msmS2o98ib+VYOajY0g==</td>
+      <td>1714018818</td>
+      <td>NaN</td>
+      <td>2020-04-11 21:34:25.855</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>kV47epWS7whfL4MBc4D1ZQ==</td>
+      <td>1714018818</td>
+      <td>NaN</td>
+      <td>2020-02-28 21:41:24.738</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>72DSs51Lah0lEdL888knAA==</td>
+      <td>1714018818</td>
+      <td>NaN</td>
+      <td>2020-05-15 19:31:58.761</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>MP8gVZvRl3gWc3PC0lnkRw==</td>
+      <td>1714018818</td>
+      <td>NaN</td>
+      <td>2020-03-03 22:57:41.499</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>uR20O5nX5lAl00apcG+a5w==</td>
+      <td>2774552067</td>
+      <td>NaN</td>
+      <td>2020-01-02 16:31:01.661</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>HKDn4fv+B4qjcI1bY6M0lQ==</td>
+      <td>2814024195</td>
+      <td>NaN</td>
+      <td>2020-05-08 15:20:25.186</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>b+NXm/47lnuSzqnUt7ayVQ==</td>
+      <td>2292829187</td>
+      <td>NaN</td>
+      <td>2019-08-03 11:25:10.180</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>SJ1xMpRd8FISdo1AZtkkXw==</td>
+      <td>2552104452</td>
+      <td>NaN</td>
+      <td>2020-05-08 14:53:16.513</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>GZ/rRfr1so4Lqymv03A0tQ==</td>
+      <td>2715623684</td>
+      <td>NaN</td>
+      <td>2020-04-06 10:47:09.386</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Usiq0WuWLWfs4iPWgXp3Ww==</td>
+      <td>1795651845</td>
+      <td>NaN</td>
+      <td>2020-02-21 05:42:29.620</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>PLebvvVAk/eIS/GGqKJy2g==</td>
+      <td>2353070854</td>
+      <td>NaN</td>
+      <td>2020-05-08 15:01:28.959</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>+iZLqVYLncNdvTVz29k7cg==</td>
+      <td>2451740678</td>
+      <td>NaN</td>
+      <td>2019-09-27 21:02:47.297</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>3miSXlPihCACvdc/DTOtZQ==</td>
+      <td>2315820038</td>
+      <td>NaN</td>
+      <td>2019-08-16 19:31:59.672</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>AKvdEAsrKzrQdfXzAtauJQ==</td>
+      <td>2569784838</td>
+      <td>NaN</td>
+      <td>2019-11-09 23:12:46.524</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>BKIAlvGXIJLlwmkXRxDBPQ==</td>
+      <td>2162254343</td>
+      <td>NaN</td>
+      <td>2020-05-08 15:04:59.386</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Twze8r1jZXtz/8hL/KbT4g==</td>
+      <td>862551303</td>
+      <td>NaN</td>
+      <td>2018-08-01 12:24:58.466</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>kyIlCgX1wcWjufcbrxSTxw==</td>
+      <td>2540946439</td>
+      <td>NaN</td>
+      <td>2020-02-21 05:42:27.768</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>5gy/8w+huEYisys3bDe/tw==</td>
+      <td>2540946439</td>
+      <td>NaN</td>
+      <td>2020-05-08 20:00:22.196</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>OeJFAByBvzvhd3LmFlCFsA==</td>
+      <td>1732115207</td>
+      <td>NaN</td>
+      <td>2019-04-09 10:49:26.673</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>77pNzR7016CEB08dpGePBA==</td>
+      <td>2412651272</td>
+      <td>NaN</td>
+      <td>2020-04-06 10:18:31.426</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>S68m3cqijJnoT/NX4HNMJQ==</td>
+      <td>2412651272</td>
+      <td>NaN</td>
+      <td>2019-09-26 14:14:08.857</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>DtxFbruAGxyNY+b9fbSwEg==</td>
+      <td>1968000009</td>
+      <td>NaN</td>
+      <td>2020-06-18 23:33:09.979</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>OnEsKex15Tkd/r8cc8XOwg==</td>
+      <td>1968000009</td>
+      <td>NaN</td>
+      <td>2020-04-30 12:57:18.717</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>NtV9r3ijQDhLiQ3R3/Dgug==</td>
+      <td>1968000009</td>
+      <td>NaN</td>
+      <td>2020-05-05 01:45:49.958</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>rG5E16BwWowRhlc8ZkA/fg==</td>
+      <td>1968000009</td>
+      <td>NaN</td>
+      <td>2020-07-08 22:12:22.295</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>bEYQQwImA5FavIhjPerDAg==</td>
+      <td>1968000009</td>
+      <td>NaN</td>
+      <td>2020-02-29 19:13:35.090</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>gyd+dbJRsNyktN+Xf4NlcA==</td>
+      <td>1968000009</td>
+      <td>NaN</td>
+      <td>2020-02-11 16:37:42.604</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Z6Cm7f+t/dz2x6gEcmqLkw==</td>
+      <td>2353160713</td>
+      <td>NaN</td>
+      <td>2019-08-24 07:16:15.518</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>B3JTZlMycPiYxP7hRHUZMg==</td>
+      <td>1714024969</td>
+      <td>NaN</td>
+      <td>2020-02-19 21:32:59.281</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>WKbkm4d0E+uO1aIV//gIvg==</td>
+      <td>2751553290</td>
+      <td>NaN</td>
+      <td>2019-12-23 16:20:26.971</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>3lz6cM5XKb4kVMpQtj+ZLQ==</td>
+      <td>2704410891</td>
+      <td>NaN</td>
+      <td>2020-03-04 15:22:31.862</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>reMVDdFzV+uLcryHQuFExQ==</td>
+      <td>2704410891</td>
+      <td>NaN</td>
+      <td>2020-01-06 17:28:26.279</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>cDNn0RFEfCCUP/hB57qQAA==</td>
+      <td>1715224587</td>
+      <td>NaN</td>
+      <td>2019-11-11 19:38:07.598</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>64GRESxnxJDsAxh1be/ucg==</td>
+      <td>2353880843</td>
+      <td>NaN</td>
+      <td>2020-05-08 15:06:23.129</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>zAQw75ascbNJuNu5hyBP6A==</td>
+      <td>2301410571</td>
+      <td>NaN</td>
+      <td>2019-08-06 15:25:30.554</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>4m39jt4rcTVfuXYLv4Z8dA==</td>
+      <td>2778403340</td>
+      <td>NaN</td>
+      <td>2020-03-17 09:11:38.626</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>y+T5JvIeZxjVFVSMJVIcIQ==</td>
+      <td>2697402636</td>
+      <td>NaN</td>
+      <td>2019-12-10 12:06:54.684</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>X91Jgomluhf2n6AzfnNQiA==</td>
+      <td>2109491212</td>
+      <td>NaN</td>
+      <td>2019-06-24 17:07:41.435</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>GU47WEA2ciQrirHwCjzE9g==</td>
+      <td>2353881868</td>
+      <td>NaN</td>
+      <td>2019-08-24 09:44:32.341</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>HbNzfXV3Yl8URjadJRdMUA==</td>
+      <td>2405109005</td>
+      <td>NaN</td>
+      <td>2019-09-12 12:19:01.425</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>xLsvBTirX+cfA0znz2iWjA==</td>
+      <td>1798787853</td>
+      <td>NaN</td>
+      <td>2020-04-06 10:19:49.644</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>9Fw6Sal9lrLAzg+nbdGjug==</td>
+      <td>2517132045</td>
+      <td>NaN</td>
+      <td>2019-10-22 13:25:41.623</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ulJlJsZJMktPXfKgDiFiQQ==</td>
+      <td>1756259853</td>
+      <td>NaN</td>
+      <td>2019-03-21 19:36:11.618</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ei/asz95ok2YzKG7CNFTJQ==</td>
+      <td>1695713293</td>
+      <td>NaN</td>
+      <td>2019-04-11 20:39:00.015</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Ilu9JTmnqTUaGwz2bEtyPw==</td>
+      <td>2380777485</td>
+      <td>NaN</td>
+      <td>2019-09-10 19:40:15.750</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>+96cDQDfEj723VhWM2ZNiw==</td>
+      <td>1687015181</td>
+      <td>NaN</td>
+      <td>2020-05-08 14:39:16.550</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>yXf/zG6CvgRGw5nkbWOHMA==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-04-21 19:53:10.970</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>zCgiCBZDZCIfQv3eXjHTeg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-31 17:26:56.548</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Gdv52k8vxgguG4MYxhWsng==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-26 18:38:27.843</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>8uD3zyLy6rx/8vXFvG3v+A==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-04-20 21:09:07.564</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>oiLn7Ls9g1pf6kXqn5XCUQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-03 13:30:10.587</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>nJ0V760ppxl3pCEMS4Qn8g==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-04-06 15:29:12.528</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>gvFM25Q9P5jZfbv1Ztvxxw==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-27 16:54:42.903</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>lehEEzFqOxr80j7rou/wrQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-24 17:54:12.653</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>EiI6oLp2NmdDsiwYNDJqCw==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-28 20:45:19.806</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>3+tN4BAZVoA+r5oVltt8Lg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-04-13 17:59:14.731</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ZohCp5nSodO+5QfrO61h2A==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-03 16:29:46.831</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>c5NRDwo9A3XPAFg1Jl5O9g==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-05-06 13:39:47.933</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>REWcNXRpSWu3cwAnOlgS/Q==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-31 16:25:32.460</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>uVP635DyEEquHsBWAcfjDg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-06-25 15:03:44.147</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Xg3ztG9xpEVmITx596okjQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-20 11:39:55.336</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>+a97xATAbxZScyS/KrYHAg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-13 19:09:25.697</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>mbCqr/VW1KC4UE2lxZc9/w==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-05 17:19:43.824</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>78C6JDtYlyhlUUlL/HhIFg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-02 18:00:04.530</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>w+XTwu4QGudHvgp25Kg2sQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-06-25 19:52:41.008</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>vPegIpJuhjWZgqlCG54G+g==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-04 19:40:14.403</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>L+NcWL9gGJnTObzy8DjGJg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-02 02:03:00.359</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>br/7s6RNTenDHf/tWMgceg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-20 23:03:03.600</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>CiwqpJxdw6B19SGV6P+zYw==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-19 21:49:52.453</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>lOfAQtfm3nSn+1Vk0+Qu0A==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-03 20:23:34.495</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>XAnDJ0rb8qG1vzq5S7AjPg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-19 15:59:48.434</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>2aaqcy2cm+rYnHyqqchhgg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-04-29 19:19:13.257</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>o7LzjOPeJtn6m9fcwhTGWA==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-18 13:55:09.554</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>2doKhglbKW84Pe/xl5ULAA==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-04-20 19:17:37.269</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>XUKXE5OzfOTSK1AjGVHKbA==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-04-06 19:00:24.665</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ujU/4JqwYwjC4aSutu11Ug==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-04-11 14:27:43.142</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>MJrmOITxqjkeJQj/DB2YEQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-05-11 13:42:30.409</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>yIzCW1hkB0deW26TKxfvHQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-31 12:44:34.450</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>fUlz5CNS3Ahf5WghZ2Uzcw==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-05-20 14:34:37.780</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>nez8Km7hlfO2H56ACh9h2w==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-06 13:03:43.535</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ik1PM1Xs1vvNa7DnijtBgg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-05-22 11:43:40.164</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>exkkEdGnQr91Kq/KNRKyTQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-06 15:56:26.681</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>aWGwOsbhlgWtUYDltpjVag==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-13 17:55:41.340</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>RJvCQAFrXcyb80LYrqRCXw==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-24 20:38:02.923</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>KBsR6PsL8DbGFA49HNhiXg==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-01 14:09:03.145</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>uQRiu/Lh53xoO+VlmryMLQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-07 22:55:14.311</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>EJABvpu5/cg3Bs3p+5r6HA==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-26 01:55:41.648</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>zOGxMiupTqXr3QCxp458sQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-04 18:14:03.514</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>8nJH6+mFNW2OPXow1a+ciQ==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-02-14 16:06:56.566</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>rQZ6lg6ebR6Myd+/eOEthw==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-03-10 14:53:27.838</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>NDHZi3SDPy7XuoFjLegaUw==</td>
+      <td>860870157</td>
+      <td>NaN</td>
+      <td>2020-06-20 19:02:13.958</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>data_source</th>
+      <th>property_name</th>
+      <th>property_value</th>
+      <th>company_id</th>
+      <th>source_id</th>
+      <th>update_timestamp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ivIU2HItRtUkqPwwukoy0Q==</td>
+      <td>2051482368</td>
+      <td>None</td>
+      <td>2019-09-10 22:01:17.446</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>e3t+Y47dr5xVZef9Berf8Q==</td>
+      <td>2051482368</td>
+      <td>None</td>
+      <td>2020-05-08 14:54:29.658</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>9WSrAL7+MRXDpJQPfj2TTA==</td>
+      <td>2353082624</td>
+      <td>None</td>
+      <td>2019-09-20 04:08:33.952</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>YIKDVhzHevrp7M4DR/2RuA==</td>
+      <td>2353083136</td>
+      <td>None</td>
+      <td>2020-04-06 11:25:45.634</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>LsqPhSJ8P/eXS9ZLSJMi2g==</td>
+      <td>2353071105</td>
+      <td>None</td>
+      <td>2020-04-06 11:40:12.857</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>vRHxf8QVJ0imZVYtVes/qw==</td>
+      <td>2353857793</td>
+      <td>None</td>
+      <td>2020-04-06 10:45:17.832</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>+pIFuA57AA4VfFHjjehGUQ==</td>
+      <td>3075061761</td>
+      <td>None</td>
+      <td>2020-03-06 16:01:04.203</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>b0HOBb+TGpURlFddq3utig==</td>
+      <td>2353081858</td>
+      <td>None</td>
+      <td>2019-08-24 08:29:10.587</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>c+KoTDrfBPthu3vWnJ9zlQ==</td>
+      <td>1714018818</td>
+      <td>None</td>
+      <td>2020-04-11 18:56:41.193</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>6m2msmS2o98ib+VYOajY0g==</td>
+      <td>1714018818</td>
+      <td>None</td>
+      <td>2020-04-11 21:34:25.855</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>kV47epWS7whfL4MBc4D1ZQ==</td>
+      <td>1714018818</td>
+      <td>None</td>
+      <td>2020-02-28 21:41:24.738</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>72DSs51Lah0lEdL888knAA==</td>
+      <td>1714018818</td>
+      <td>None</td>
+      <td>2020-05-15 19:31:58.761</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>MP8gVZvRl3gWc3PC0lnkRw==</td>
+      <td>1714018818</td>
+      <td>None</td>
+      <td>2020-03-03 22:57:41.499</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>uR20O5nX5lAl00apcG+a5w==</td>
+      <td>2774552067</td>
+      <td>None</td>
+      <td>2020-01-02 16:31:01.661</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>HKDn4fv+B4qjcI1bY6M0lQ==</td>
+      <td>2814024195</td>
+      <td>None</td>
+      <td>2020-05-08 15:20:25.186</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>b+NXm/47lnuSzqnUt7ayVQ==</td>
+      <td>2292829187</td>
+      <td>None</td>
+      <td>2019-08-03 11:25:10.180</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>SJ1xMpRd8FISdo1AZtkkXw==</td>
+      <td>2552104452</td>
+      <td>None</td>
+      <td>2020-05-08 14:53:16.513</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>GZ/rRfr1so4Lqymv03A0tQ==</td>
+      <td>2715623684</td>
+      <td>None</td>
+      <td>2020-04-06 10:47:09.386</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Usiq0WuWLWfs4iPWgXp3Ww==</td>
+      <td>1795651845</td>
+      <td>None</td>
+      <td>2020-02-21 05:42:29.620</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>PLebvvVAk/eIS/GGqKJy2g==</td>
+      <td>2353070854</td>
+      <td>None</td>
+      <td>2020-05-08 15:01:28.959</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>+iZLqVYLncNdvTVz29k7cg==</td>
+      <td>2451740678</td>
+      <td>None</td>
+      <td>2019-09-27 21:02:47.297</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>3miSXlPihCACvdc/DTOtZQ==</td>
+      <td>2315820038</td>
+      <td>None</td>
+      <td>2019-08-16 19:31:59.672</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>AKvdEAsrKzrQdfXzAtauJQ==</td>
+      <td>2569784838</td>
+      <td>None</td>
+      <td>2019-11-09 23:12:46.524</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>BKIAlvGXIJLlwmkXRxDBPQ==</td>
+      <td>2162254343</td>
+      <td>None</td>
+      <td>2020-05-08 15:04:59.386</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Twze8r1jZXtz/8hL/KbT4g==</td>
+      <td>862551303</td>
+      <td>None</td>
+      <td>2018-08-01 12:24:58.466</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>kyIlCgX1wcWjufcbrxSTxw==</td>
+      <td>2540946439</td>
+      <td>None</td>
+      <td>2020-02-21 05:42:27.768</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>5gy/8w+huEYisys3bDe/tw==</td>
+      <td>2540946439</td>
+      <td>None</td>
+      <td>2020-05-08 20:00:22.196</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>OeJFAByBvzvhd3LmFlCFsA==</td>
+      <td>1732115207</td>
+      <td>None</td>
+      <td>2019-04-09 10:49:26.673</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>77pNzR7016CEB08dpGePBA==</td>
+      <td>2412651272</td>
+      <td>None</td>
+      <td>2020-04-06 10:18:31.426</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>S68m3cqijJnoT/NX4HNMJQ==</td>
+      <td>2412651272</td>
+      <td>None</td>
+      <td>2019-09-26 14:14:08.857</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>DtxFbruAGxyNY+b9fbSwEg==</td>
+      <td>1968000009</td>
+      <td>None</td>
+      <td>2020-06-18 23:33:09.979</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>OnEsKex15Tkd/r8cc8XOwg==</td>
+      <td>1968000009</td>
+      <td>None</td>
+      <td>2020-04-30 12:57:18.717</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>NtV9r3ijQDhLiQ3R3/Dgug==</td>
+      <td>1968000009</td>
+      <td>None</td>
+      <td>2020-05-05 01:45:49.958</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>rG5E16BwWowRhlc8ZkA/fg==</td>
+      <td>1968000009</td>
+      <td>None</td>
+      <td>2020-07-08 22:12:22.295</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>bEYQQwImA5FavIhjPerDAg==</td>
+      <td>1968000009</td>
+      <td>None</td>
+      <td>2020-02-29 19:13:35.090</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>gyd+dbJRsNyktN+Xf4NlcA==</td>
+      <td>1968000009</td>
+      <td>None</td>
+      <td>2020-02-11 16:37:42.604</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Z6Cm7f+t/dz2x6gEcmqLkw==</td>
+      <td>2353160713</td>
+      <td>None</td>
+      <td>2019-08-24 07:16:15.518</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>B3JTZlMycPiYxP7hRHUZMg==</td>
+      <td>1714024969</td>
+      <td>None</td>
+      <td>2020-02-19 21:32:59.281</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>WKbkm4d0E+uO1aIV//gIvg==</td>
+      <td>2751553290</td>
+      <td>None</td>
+      <td>2019-12-23 16:20:26.971</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>3lz6cM5XKb4kVMpQtj+ZLQ==</td>
+      <td>2704410891</td>
+      <td>None</td>
+      <td>2020-03-04 15:22:31.862</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>reMVDdFzV+uLcryHQuFExQ==</td>
+      <td>2704410891</td>
+      <td>None</td>
+      <td>2020-01-06 17:28:26.279</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>cDNn0RFEfCCUP/hB57qQAA==</td>
+      <td>1715224587</td>
+      <td>None</td>
+      <td>2019-11-11 19:38:07.598</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>64GRESxnxJDsAxh1be/ucg==</td>
+      <td>2353880843</td>
+      <td>None</td>
+      <td>2020-05-08 15:06:23.129</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>zAQw75ascbNJuNu5hyBP6A==</td>
+      <td>2301410571</td>
+      <td>None</td>
+      <td>2019-08-06 15:25:30.554</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>4m39jt4rcTVfuXYLv4Z8dA==</td>
+      <td>2778403340</td>
+      <td>None</td>
+      <td>2020-03-17 09:11:38.626</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>y+T5JvIeZxjVFVSMJVIcIQ==</td>
+      <td>2697402636</td>
+      <td>None</td>
+      <td>2019-12-10 12:06:54.684</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>X91Jgomluhf2n6AzfnNQiA==</td>
+      <td>2109491212</td>
+      <td>None</td>
+      <td>2019-06-24 17:07:41.435</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>GU47WEA2ciQrirHwCjzE9g==</td>
+      <td>2353881868</td>
+      <td>None</td>
+      <td>2019-08-24 09:44:32.341</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>HbNzfXV3Yl8URjadJRdMUA==</td>
+      <td>2405109005</td>
+      <td>None</td>
+      <td>2019-09-12 12:19:01.425</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>xLsvBTirX+cfA0znz2iWjA==</td>
+      <td>1798787853</td>
+      <td>None</td>
+      <td>2020-04-06 10:19:49.644</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>9Fw6Sal9lrLAzg+nbdGjug==</td>
+      <td>2517132045</td>
+      <td>None</td>
+      <td>2019-10-22 13:25:41.623</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ulJlJsZJMktPXfKgDiFiQQ==</td>
+      <td>1756259853</td>
+      <td>None</td>
+      <td>2019-03-21 19:36:11.618</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ei/asz95ok2YzKG7CNFTJQ==</td>
+      <td>1695713293</td>
+      <td>None</td>
+      <td>2019-04-11 20:39:00.015</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Ilu9JTmnqTUaGwz2bEtyPw==</td>
+      <td>2380777485</td>
+      <td>None</td>
+      <td>2019-09-10 19:40:15.750</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>+96cDQDfEj723VhWM2ZNiw==</td>
+      <td>1687015181</td>
+      <td>None</td>
+      <td>2020-05-08 14:39:16.550</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>yXf/zG6CvgRGw5nkbWOHMA==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-04-21 19:53:10.970</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>zCgiCBZDZCIfQv3eXjHTeg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-31 17:26:56.548</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Gdv52k8vxgguG4MYxhWsng==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-26 18:38:27.843</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>8uD3zyLy6rx/8vXFvG3v+A==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-04-20 21:09:07.564</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>oiLn7Ls9g1pf6kXqn5XCUQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-03 13:30:10.587</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>nJ0V760ppxl3pCEMS4Qn8g==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-04-06 15:29:12.528</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>gvFM25Q9P5jZfbv1Ztvxxw==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-27 16:54:42.903</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>lehEEzFqOxr80j7rou/wrQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-24 17:54:12.653</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>EiI6oLp2NmdDsiwYNDJqCw==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-28 20:45:19.806</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>3+tN4BAZVoA+r5oVltt8Lg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-04-13 17:59:14.731</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ZohCp5nSodO+5QfrO61h2A==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-03 16:29:46.831</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>c5NRDwo9A3XPAFg1Jl5O9g==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-05-06 13:39:47.933</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>REWcNXRpSWu3cwAnOlgS/Q==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-31 16:25:32.460</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>uVP635DyEEquHsBWAcfjDg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-06-25 15:03:44.147</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>Xg3ztG9xpEVmITx596okjQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-20 11:39:55.336</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>+a97xATAbxZScyS/KrYHAg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-13 19:09:25.697</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>mbCqr/VW1KC4UE2lxZc9/w==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-05 17:19:43.824</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>78C6JDtYlyhlUUlL/HhIFg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-02 18:00:04.530</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>w+XTwu4QGudHvgp25Kg2sQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-06-25 19:52:41.008</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>vPegIpJuhjWZgqlCG54G+g==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-04 19:40:14.403</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>L+NcWL9gGJnTObzy8DjGJg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-02 02:03:00.359</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>br/7s6RNTenDHf/tWMgceg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-20 23:03:03.600</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>CiwqpJxdw6B19SGV6P+zYw==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-19 21:49:52.453</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>lOfAQtfm3nSn+1Vk0+Qu0A==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-03 20:23:34.495</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>XAnDJ0rb8qG1vzq5S7AjPg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-19 15:59:48.434</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>2aaqcy2cm+rYnHyqqchhgg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-04-29 19:19:13.257</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>o7LzjOPeJtn6m9fcwhTGWA==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-18 13:55:09.554</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>2doKhglbKW84Pe/xl5ULAA==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-04-20 19:17:37.269</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>XUKXE5OzfOTSK1AjGVHKbA==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-04-06 19:00:24.665</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ujU/4JqwYwjC4aSutu11Ug==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-04-11 14:27:43.142</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>MJrmOITxqjkeJQj/DB2YEQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-05-11 13:42:30.409</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>yIzCW1hkB0deW26TKxfvHQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-31 12:44:34.450</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>fUlz5CNS3Ahf5WghZ2Uzcw==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-05-20 14:34:37.780</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>nez8Km7hlfO2H56ACh9h2w==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-06 13:03:43.535</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>ik1PM1Xs1vvNa7DnijtBgg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-05-22 11:43:40.164</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>exkkEdGnQr91Kq/KNRKyTQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-06 15:56:26.681</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>aWGwOsbhlgWtUYDltpjVag==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-13 17:55:41.340</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>RJvCQAFrXcyb80LYrqRCXw==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-24 20:38:02.923</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>KBsR6PsL8DbGFA49HNhiXg==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-01 14:09:03.145</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>uQRiu/Lh53xoO+VlmryMLQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-07 22:55:14.311</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>EJABvpu5/cg3Bs3p+5r6HA==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-26 01:55:41.648</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>zOGxMiupTqXr3QCxp458sQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-04 18:14:03.514</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>8nJH6+mFNW2OPXow1a+ciQ==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-02-14 16:06:56.566</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>rQZ6lg6ebR6Myd+/eOEthw==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-03-10 14:53:27.838</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>CALCULATED</td>
+      <td>WRM+4i8iHBcBoIeVxhFUbA==</td>
+      <td>NDHZi3SDPy7XuoFjLegaUw==</td>
+      <td>860870157</td>
+      <td>None</td>
+      <td>2020-06-20 19:02:13.958</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">data_source</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='CALCULATED'>CALCULATED</option><option value='EXPERIMENTAL'>EXPERIMENTAL</option><option value='ESTIMATED'>ESTIMATED</option><option value='PREDICTED'>PREDICTED</option></select></span><br><br><div id="bar_viz_data_source"></div><b>📃 Summary:</b> Origin of the property data<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">property_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_property_name"></div><b>📃 Summary:</b> Encrypted name of the company property<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">property_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_property_value"></div><b>📃 Summary:</b> Encrypted value of the company property<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">company_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_company_id"></div><b>📃 Summary:</b> Unique identifier for the company<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">source_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_source_id"></div><b>📃 Summary:</b> Identifier for the data source (empty in this case)<br><b>❓ Missing:</b> Not applicable for CALCULATED data_source entries.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">update_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_update_timestamp"></div><b>📃 Summary:</b> Date and time of the property update<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about company property history data. It contains records of property changes for companies over time. Each row includes a company ID, timestamp, data source, property name, and property value. The property names and values appear to be encrypted. This table tracks how specific properties of companies change, allowing for historical analysis of company attributes.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>4</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>company_id</td>
+      <td>Unique identifier for the company</td>
+      <td>company_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>timestamp_</td>
+      <td>Date and time of the property update</td>
+      <td>update_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>source</td>
+      <td>Origin of the property data</td>
+      <td>data_source</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>source_id</td>
+      <td>Identifier for the data source (empty in this case)</td>
+      <td>source_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>name</td>
+      <td>Encrypted name of the company property</td>
+      <td>property_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>value_</td>
+      <td>Encrypted value of the company property</td>
+      <td>property_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>3</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>company_id</td>
+      <td>CAST("company_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'company_id' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this is straightforward. We simply wrap the column name in a CAST function and specify the target data type as VARCHAR. This will convert each integer value in the 'company_id' column to its string representation.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>source_id</td>
+      <td>CAST("source_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'source_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Since the question states that 'source_id' has no distinct values (an empty list), this transformation will effectively create an empty VARCHAR column, but the syntax remains the same regardless of the content.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>update_timestamp</td>
+      <td>CAST("update_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'update_timestamp' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date-time format in the given values is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.SSS), which is directly compatible with DuckDB's TIMESTAMP type. Therefore, we don't need to use the strptime function for parsing; a simple CAST will suffice.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>1</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>source_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for CALCULATED data_source entries.</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'CALCULATED', 'value': 100.0}];
+    drawBarChart("bar_viz_data_source", data);
+data = [{'label': 'WRM+4i8iHBcBoIe...', 'value': 100.0}];
+    drawBarChart("bar_viz_property_name", data);
+data = [{'label': 'e3t+Y47dr5xVZef...', 'value': 1.0}, {'label': 'YIKDVhzHevrp7M4...', 'value': 1.0}, {'label': '72DSs51Lah0lEdL...', 'value': 1.0}, {'label': 'gyd+dbJRsNyktN+...', 'value': 1.0}, {'label': '9WSrAL7+MRXDpJQ...', 'value': 1.0}, {'label': 'Other values', 'value': 95.0}];
+    drawBarChart("bar_viz_property_value", data);
+data = [{'label': '860870157', 'value': 45.0}, {'label': '1968000009', 'value': 6.0}, {'label': '1714018818', 'value': 5.0}, {'label': '2704410891', 'value': 2.0}, {'label': '2051482368', 'value': 2.0}, {'label': 'Other values', 'value': 40.0}];
+    drawBarChart("bar_viz_company_id", data);
+data = [];
+    drawBarChart("bar_viz_source_id", data);
+data = [{'label': '2020-04-06 11:2...', 'value': 1.0}, {'label': '2020-02-28 21:4...', 'value': 1.0}, {'label': '2019-11-09 23:1...', 'value': 1.0}, {'label': '2020-05-08 20:0...', 'value': 1.0}, {'label': '2020-07-08 22:1...', 'value': 1.0}, {'label': 'Other values', 'value': 95.0}];
+    drawBarChart("bar_viz_update_timestamp", data);
+
+
+</script>
+</body>
+</html>

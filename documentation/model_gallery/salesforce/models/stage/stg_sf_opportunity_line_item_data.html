@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sf_opportunity_line_item_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>sbqq_subscription_type_c</th>
+      <th>sbqq_parent_id_c</th>
+      <th>pricebook_entry_id</th>
+      <th>is_deleted</th>
+      <th>product_code</th>
+      <th>total_price</th>
+      <th>months_c</th>
+      <th>opportunity_id</th>
+      <th>sbqq_quote_line_c</th>
+      <th>product_family_c</th>
+      <th>name</th>
+      <th>id</th>
+      <th>quantity</th>
+      <th>hvr_use_case_c</th>
+      <th>last_modified_by_id</th>
+      <th>product_2_id</th>
+      <th>unit_price</th>
+      <th>created_by_id</th>
+      <th>created_date</th>
+      <th>last_modified_date</th>
+      <th>system_modstamp</th>
+      <th>list_price</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>X</td>
+      <td>None</td>
+      <td>01u1G000002Ks75QAC</td>
+      <td>False</td>
+      <td>a</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>0061G00000Ja7B6QAJ</td>
+      <td>a4R1G000000S2a6UAC</td>
+      <td>Usage</td>
+      <td>plan a</td>
+      <td>00k1G00000A3iyqQAB</td>
+      <td>1</td>
+      <td>False</td>
+      <td>0051G000005MumpQAC</td>
+      <td>01 1G000000bUE8QAM</td>
+      <td>0.00</td>
+      <td>0051G0000060rqhQAA</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>X</td>
+      <td>None</td>
+      <td>01u1G000002Kbu5QAC</td>
+      <td>NaN</td>
+      <td>b</td>
+      <td>5100.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhrUAC</td>
+      <td>None</td>
+      <td>plan b</td>
+      <td>00k1G000009ar5IQAQ</td>
+      <td>6</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH0WQAU</td>
+      <td>850.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1000</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KbuAQAS</td>
+      <td>NaN</td>
+      <td>d</td>
+      <td>38093.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XsCJUA0</td>
+      <td>None</td>
+      <td>self serve</td>
+      <td>00k1G000009a jwQAA</td>
+      <td>50</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH0bQAE</td>
+      <td>761.86</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1500</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KbuAQAS</td>
+      <td>NaN</td>
+      <td>e</td>
+      <td>84250.32</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhsUAC</td>
+      <td>None</td>
+      <td>sof  serve</td>
+      <td>00k1G000009ar5JQAQ</td>
+      <td>66</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH0bQAE</td>
+      <td>1276.52</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1500</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KbuwQAC</td>
+      <td>NaN</td>
+      <td>f</td>
+      <td>4000.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhoUAC</td>
+      <td>None</td>
+      <td>sof  ware</td>
+      <td>00k1G000009ar5GQAQ</td>
+      <td>4</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH1NQAU</td>
+      <td>1000.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1000</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KbvfQAC</td>
+      <td>NaN</td>
+      <td>p</td>
+      <td>162000.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhqUAC</td>
+      <td>None</td>
+      <td>plan d</td>
+      <td>00k1G000009ar5HQAQ</td>
+      <td>18</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH05QAE</td>
+      <td>9000.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>12000</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002Kc PQAS</td>
+      <td>NaN</td>
+      <td>l</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>0061G00000Is1  QAJ</td>
+      <td>a4R1G000000Xr kUAK</td>
+      <td>None</td>
+      <td>plan e</td>
+      <td>00k1G000009al6CQAQ</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH pQAE</td>
+      <td>0.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002Kc PQAS</td>
+      <td>NaN</td>
+      <td>m</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhmUAC</td>
+      <td>None</td>
+      <td>plan f</td>
+      <td>00k1G000009aYhMQAU</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH pQAE</td>
+      <td>0.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002Kc PQAS</td>
+      <td>NaN</td>
+      <td>n</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>0061G00000IsgqwQAB</td>
+      <td>a4R1G000000XsYWUA0</td>
+      <td>None</td>
+      <td>plan g</td>
+      <td>00k1G000009auVBQAY</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH pQAE</td>
+      <td>0.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Renewable</td>
+      <td>00k1G000009b6cAQAQ</td>
+      <td>01u1G000002Kc qQAC</td>
+      <td>NaN</td>
+      <td>s</td>
+      <td>2045.45</td>
+      <td>12</td>
+      <td>0061G00000I L0vQAF</td>
+      <td>a4R1G000000X xmUAC</td>
+      <td>None</td>
+      <td>plan h</td>
+      <td>00k1G000009b6cCQAQ</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH0yQAE</td>
+      <td>2045.45</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2000</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>subscription_type</th>
+      <th>sbqq_parent_id</th>
+      <th>pricebook_entry_id</th>
+      <th>is_deleted</th>
+      <th>product_code</th>
+      <th>total_price</th>
+      <th>duration_months</th>
+      <th>opportunity_id</th>
+      <th>sbqq_quote_line</th>
+      <th>product_family</th>
+      <th>product_name</th>
+      <th>line_item_id</th>
+      <th>quantity</th>
+      <th>hvr_use_case</th>
+      <th>last_modifier_id</th>
+      <th>product_id</th>
+      <th>unit_price</th>
+      <th>creator_id</th>
+      <th>creation_datetime</th>
+      <th>last_modified_datetime</th>
+      <th>last_modified_timestamp</th>
+      <th>list_price</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>None</td>
+      <td>01u1G000002Ks75QAC</td>
+      <td>False</td>
+      <td>a</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>0061G00000Ja7B6QAJ</td>
+      <td>a4R1G000000S2a6UAC</td>
+      <td>Usage</td>
+      <td>plan a</td>
+      <td>00k1G00000A3iyqQAB</td>
+      <td>1</td>
+      <td>False</td>
+      <td>0051G000005MumpQAC</td>
+      <td>01 1G000000bUE8QAM</td>
+      <td>0.00</td>
+      <td>0051G0000060rqhQAA</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>None</td>
+      <td>01u1G000002Kbu5QAC</td>
+      <td>NaN</td>
+      <td>b</td>
+      <td>5100.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhrUAC</td>
+      <td>None</td>
+      <td>plan b</td>
+      <td>00k1G000009ar5IQAQ</td>
+      <td>6</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH0WQAU</td>
+      <td>850.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1000.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KbuAQAS</td>
+      <td>NaN</td>
+      <td>d</td>
+      <td>38093.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XsCJUA0</td>
+      <td>None</td>
+      <td>plan k</td>
+      <td>00k1G000009a jwQAA</td>
+      <td>50</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH0bQAE</td>
+      <td>761.86</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1500.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KbuAQAS</td>
+      <td>NaN</td>
+      <td>e</td>
+      <td>84250.32</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhsUAC</td>
+      <td>None</td>
+      <td>plan i</td>
+      <td>00k1G000009ar5JQAQ</td>
+      <td>66</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH0bQAE</td>
+      <td>1276.52</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1500.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KbuwQAC</td>
+      <td>NaN</td>
+      <td>f</td>
+      <td>4000.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhoUAC</td>
+      <td>None</td>
+      <td>plan j</td>
+      <td>00k1G000009ar5GQAQ</td>
+      <td>4</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH1NQAU</td>
+      <td>1000.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1000.0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KbvfQAC</td>
+      <td>NaN</td>
+      <td>p</td>
+      <td>162000.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhqUAC</td>
+      <td>None</td>
+      <td>plan d</td>
+      <td>00k1G000009ar5HQAQ</td>
+      <td>18</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH05QAE</td>
+      <td>9000.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>12000.0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KcPQAS</td>
+      <td>NaN</td>
+      <td>l</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>0061G00000Is1QAJ</td>
+      <td>a4R1G000000XrkUAK</td>
+      <td>None</td>
+      <td>plan e</td>
+      <td>00k1G000009al6CQAQ</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH pQAE</td>
+      <td>0.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KcPQAS</td>
+      <td>NaN</td>
+      <td>m</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>0061G00000HhviAQAR</td>
+      <td>a4R1G000000XqhmUAC</td>
+      <td>None</td>
+      <td>plan f</td>
+      <td>00k1G000009aYhMQAU</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH pQAE</td>
+      <td>0.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Renewable</td>
+      <td>None</td>
+      <td>01u1G000002KcPQAS</td>
+      <td>NaN</td>
+      <td>n</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>0061G00000IsgqwQAB</td>
+      <td>a4R1G000000XsYWUA0</td>
+      <td>None</td>
+      <td>plan g</td>
+      <td>00k1G000009auVBQAY</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH pQAE</td>
+      <td>0.00</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Renewable</td>
+      <td>00k1G000009b6cAQAQ</td>
+      <td>01u1G000002KcqQAC</td>
+      <td>NaN</td>
+      <td>s</td>
+      <td>2045.45</td>
+      <td>12</td>
+      <td>0061G00000IL0vQAF</td>
+      <td>a4R1G000000XxmUAC</td>
+      <td>None</td>
+      <td>plan h</td>
+      <td>00k1G000009b6cCQAQ</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0051G000005MumuQAC</td>
+      <td>01 1G000000bH0yQAE</td>
+      <td>2045.45</td>
+      <td>0051G000005MumuQAC</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2000.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Renewable'>Renewable</option><option value='Non-renewable'>Non-renewable</option><option value='Monthly'>Monthly</option><option value='Quarterly'>Quarterly</option><option value='Annual'>Annual</option><option value='Lifetime'>Lifetime</option><option value='Free trial'>Free trial</option><option value='Pay-as-you-go'>Pay-as-you-go</option><option value='Basic'>Basic</option><option value='Premium'>Premium</option><option value='Enterprise'>Enterprise</option><option value='Student'>Student</option><option value='Family'>Family</option><option value='Individual'>Individual</option></select></span><br><br><div id="bar_viz_subscription_type"></div><b>📃 Summary:</b> Subscription type for the product or service<br><b>❓ Missing:</b> Not applicable for non-subscription products or services.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sbqq_parent_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_sbqq_parent_id"></div><b>📃 Summary:</b> Custom field for parent ID in SBQQ<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pricebook_entry_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_pricebook_entry_id"></div><b>📃 Summary:</b> ID of the associated pricebook entry<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='a'>a</option><option value='b'>b</option><option value='c'>c</option><option value='d'>d</option><option value='e'>e</option><option value='f'>f</option><option value='g'>g</option><option value='h'>h</option><option value='i'>i</option><option value='j'>j</option><option value='k'>k</option><option value='l'>l</option><option value='m'>m</option><option value='n'>n</option><option value='o'>o</option><option value='p'>p</option><option value='q'>q</option><option value='r'>r</option><option value='s'>s</option><option value='t'>t</option><option value='u'>u</option><option value='v'>v</option><option value='w'>w</option><option value='x'>x</option><option value='y'>y</option><option value='z'>z</option></select></span><br><br><div id="bar_viz_product_code"></div><b>📃 Summary:</b> Code identifying the product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_price"></div><b>📃 Summary:</b> Total price for the line item<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">duration_months</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_duration_months"></div><b>📃 Summary:</b> Custom field for duration in months<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">opportunity_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_opportunity_id"></div><b>📃 Summary:</b> ID of the associated opportunity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sbqq_quote_line</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_sbqq_quote_line"></div><b>📃 Summary:</b> Custom field for quote line in SBQQ<br><b>🦄 Unique:</b> This column appears to contain a unique identifier for each quote line. For this table, where each row represents a line item, this could potentially be unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_family</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_product_family"></div><b>📃 Summary:</b> Custom field for product family<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='plan a'>plan a</option><option value='plan b'>plan b</option><option value='plan c'>plan c</option><option value='plan d'>plan d</option><option value='plan e'>plan e</option><option value='plan f'>plan f</option><option value='plan g'>plan g</option><option value='plan h'>plan h</option><option value='plan i'>plan i</option><option value='plan j'>plan j</option><option value='plan k'>plan k</option><option value='plan l'>plan l</option><option value='plan m'>plan m</option><option value='plan n'>plan n</option><option value='plan o'>plan o</option><option value='plan p'>plan p</option><option value='plan q'>plan q</option><option value='plan r'>plan r</option><option value='plan s'>plan s</option><option value='plan t'>plan t</option><option value='plan u'>plan u</option><option value='plan v'>plan v</option><option value='plan w'>plan w</option><option value='plan x'>plan x</option><option value='plan y'>plan y</option><option value='plan z'>plan z</option></select></span><br><br><div id="bar_viz_product_name"></div><b>📃 Summary:</b> Name of the product or service<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">line_item_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_line_item_id"></div><b>📃 Summary:</b> Unique identifier for the line item<br><b>🦄 Unique:</b> This column appears to be a unique identifier for each line item. For this table, where each row represents a line item, this should be unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">quantity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_quantity"></div><b>📃 Summary:</b> Quantity of the product or service<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hvr_use_case</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_hvr_use_case"></div><b>📃 Summary:</b> Custom field for HVR use case<br><b>❓ Missing:</b> Might not apply to certain product types or categories.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modifier_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modifier_id"></div><b>📃 Summary:</b> ID of user who last modified the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_product_id"></div><b>📃 Summary:</b> ID of the associated product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unit_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_unit_price"></div><b>📃 Summary:</b> Price per unit of the product or service<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creator_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creator_id"></div><b>📃 Summary:</b> ID of the user who created the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_datetime"></div><b>📃 Summary:</b> Date and time when the record was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_datetime"></div><b>📃 Summary:</b> Date and time of last modification<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_timestamp"></div><b>📃 Summary:</b> Last modification timestamp of the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">list_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_list_price"></div><b>📃 Summary:</b> List price of the product or service<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about opportunity line items. It contains details of individual products or services within a sales opportunity. Each row represents a single item with information like product name, quantity, price, discounts, and related IDs. The table includes fields for dates, pricing, product codes, and custom fields specific to the sales process. It appears to be part of a larger customer relationship management (CRM) or sales force automation system.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>21</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>_fivetran_active</td>
+      <td>Indicates if the record is active in Fivetran</td>
+      <td>is_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>created_by_id</td>
+      <td>ID of the user who created the record</td>
+      <td>creator_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>created_date</td>
+      <td>Date and time when the record was created</td>
+      <td>creation_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>description</td>
+      <td>Description of the opportunity line item</td>
+      <td>item_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>discount</td>
+      <td>Discount applied to the line item</td>
+      <td>discount_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>event_volume_c</td>
+      <td>Custom field for event volume</td>
+      <td>event_volume</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>has_quantity_schedule</td>
+      <td>Indicates if item has a quantity schedule</td>
+      <td>has_quantity_schedule</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>has_revenue_schedule</td>
+      <td>Indicates if item has a revenue schedule</td>
+      <td>has_revenue_schedule</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>has_schedule</td>
+      <td>Indicates if item has a general schedule</td>
+      <td>has_schedule</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>hvr_use_case_c</td>
+      <td>Custom field for HVR use case</td>
+      <td>hvr_use_case</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>id</td>
+      <td>Unique identifier for the line item</td>
+      <td>line_item_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>is_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>last_modified_by_id</td>
+      <td>ID of user who last modified the record</td>
+      <td>last_modifier_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>last_modified_date</td>
+      <td>Date and time of last modification</td>
+      <td>last_modified_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>last_referenced_date</td>
+      <td>Date when the record was last referenced</td>
+      <td>last_referenced_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>last_viewed_date</td>
+      <td>Date when the record was last viewed</td>
+      <td>last_viewed_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>list_price</td>
+      <td>List price of the product or service</td>
+      <td>list_price</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>months_c</td>
+      <td>Custom field for duration in months</td>
+      <td>duration_months</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>name</td>
+      <td>Name of the product or service</td>
+      <td>product_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>opportunity_id</td>
+      <td>ID of the associated opportunity</td>
+      <td>opportunity_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>pricebook_entry_id</td>
+      <td>ID of the associated pricebook entry</td>
+      <td>pricebook_entry_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>product_2_id</td>
+      <td>ID of the associated product</td>
+      <td>product_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>product_code</td>
+      <td>Code identifying the product</td>
+      <td>product_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>product_code_stamped_c</td>
+      <td>Custom field for stamped product code</td>
+      <td>stamped_product_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>product_family_c</td>
+      <td>Custom field for product family</td>
+      <td>product_family</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>quantity</td>
+      <td>Quantity of the product or service</td>
+      <td>quantity</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>roadmap_connections_c</td>
+      <td>Custom field for roadmap connections</td>
+      <td>roadmap_connections</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>row_volume_c</td>
+      <td>Custom field for row volume</td>
+      <td>row_volume</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>sbqq_parent_id_c</td>
+      <td>Custom field for parent ID in SBQQ</td>
+      <td>sbqq_parent_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>sbqq_quote_line_c</td>
+      <td>Custom field for quote line in SBQQ</td>
+      <td>sbqq_quote_line</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>sbqq_subscription_type_c</td>
+      <td>Subscription type for the product or service</td>
+      <td>subscription_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>service_date</td>
+      <td>Date when the service is scheduled or delivered</td>
+      <td>service_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>sort_order</td>
+      <td>Numeric value for ordering line items</td>
+      <td>sort_order</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>system_modstamp</td>
+      <td>Last modification timestamp of the record</td>
+      <td>last_modified_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>total_price</td>
+      <td>Total price for the line item</td>
+      <td>total_price</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>unit_price</td>
+      <td>Price per unit of the product or service</td>
+      <td>unit_price</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>5</b> columns have erroneous values<br><ol><li><b>product_name</b>: 'sof  serve' and 'sof  ware' have typos. Naming convention is inconsistent across entries.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>sof  serve</td>
+      <td>plan i</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>sof  ware</td>
+      <td>plan j</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>self serve</td>
+      <td>plan k</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>opportunity_id</b>: '0061G00000I L0vQAF' and '0061G00000Is1  QAJ' contain unexpected spaces, which are likely typos or data entry errors.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0061G00000I L0vQAF</td>
+      <td>0061G00000IL0vQAF</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0061G00000Is1  QAJ</td>
+      <td>0061G00000Is1QAJ</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>pricebook_entry_id</b>: '01u1G000002Kc PQAS' and '01u1G000002Kc qQAC' contain spaces, which is unusual for ID fields.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>01u1G000002Kc PQAS</td>
+      <td>01u1G000002KcPQAS</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>01u1G000002Kc qQAC</td>
+      <td>01u1G000002KcqQAC</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>sbqq_quote_line</b>: 'a4R1G000000X xmUAC' and 'a4R1G000000Xr kUAK' are unusual because they contain spaces, unlike the other IDs.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>a4R1G000000X xmUAC</td>
+      <td>a4R1G000000XxmUAC</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>a4R1G000000Xr kUAK</td>
+      <td>a4R1G000000XrkUAK</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>subscription_type</b>: 'X' is unusual because it's not descriptive and its meaning is unclear in the context of subscription types.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>X</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>1</b> columns have disguised missing values<br>
+                ✔️ <b>1</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>subscription_type</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>17</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>creation_datetime</td>
+      <td>CAST("creation_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'creation_datetime' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The given date format '2019-11-11 17:23:34' is already in a standard timestamp format (YYYY-MM-DD HH:MM:SS), which DuckDB can automatically recognize. Therefore, we don't need to use the strptime function for explicit parsing. A straightforward CAST to TIMESTAMP will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>event_volume</td>
+      <td>CAST("event_volume" AS VARCHAR)</td>
+      <td>To transform the data type of the 'event_volume' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>has_quantity_schedule</td>
+      <td>CAST("has_quantity_schedule" AS BOOLEAN)</td>
+      <td>To transform the data type of the column 'has_quantity_schedule' from 'DECIMAL' to 'BOOLEAN', we need to use a simple CAST clause. In DuckDB, we can directly cast a DECIMAL to a BOOLEAN. The CAST will interpret non-zero values as TRUE and zero values as FALSE. Given that the distinct values are empty ([]), it suggests that the column might contain only NULL values or a mix of 0 and non-zero values. The CAST will preserve NULL values as NULL in the resulting BOOLEAN column.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>has_revenue_schedule</td>
+      <td>CAST("has_revenue_schedule" AS BOOLEAN)</td>
+      <td>To transform the 'has_revenue_schedule' column from DECIMAL to BOOLEAN in DuckDB, we need to use a simple CAST function. Since the column appears to have no distinct values (empty list provided), it's likely that all values are NULL or the column is empty. In this case, the CAST will convert any non-NULL value to TRUE and NULL values will remain NULL in the resulting BOOLEAN column.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>has_schedule</td>
+      <td>CAST("has_schedule" AS BOOLEAN)</td>
+      <td>To transform the 'has_schedule' column from DECIMAL to BOOLEAN, we need to use a simple CAST function. In DuckDB, we can directly cast a numeric value to BOOLEAN. When casting to BOOLEAN, 0 becomes FALSE, and any non-zero value becomes TRUE. Since the column 'has_schedule' only contains distinct values [], which likely means it's empty or contains only NULL values, the cast will convert NULL values to NULL in the BOOLEAN type.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>is_active</td>
+      <td>CAST("is_active" AS BOOLEAN)</td>
+      <td>To transform the 'is_active' column from 'DECIMAL' to 'BOOLEAN', we need to use a simple CAST function. In DuckDB, we can directly cast a numeric type to BOOLEAN. When casting to BOOLEAN, any non-zero value will be considered TRUE, while zero will be considered FALSE. This is a straightforward conversion that doesn't require any additional logic since the column only contains distinct values (likely 0 and 1, given it's named 'is_active').\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>item_description</td>
+      <td>CAST("item_description" AS VARCHAR)</td>
+      <td>To transform the data type of the 'item_description' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>last_modified_datetime</td>
+      <td>CAST("last_modified_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'last_modified_datetime' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The date format in the given example ('2019-11-11 17:23:34') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically recognize this format.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>last_modified_timestamp</td>
+      <td>CAST("last_modified_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'last_modified_timestamp' column from VARCHAR to TIMESTAMP, we can use a simple CAST function in DuckDB. The provided date format '2019-11-11 17:23:34' is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). The format is 'YYYY-MM-DD HH:MM:SS', which is a default format recognized by SQL databases for TIMESTAMP conversion.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>last_referenced_date</td>
+      <td>CAST("last_referenced_date" AS DATE)</td>
+      <td>Since 'last_referenced_date' is already a DECIMAL type and we want to convert it to DATE,  we can directly use a simple CAST function. The DECIMAL format likely represents the date  in a numerical format (e.g., 20230515 for May 15, 2023), which can be directly cast to DATE  in DuckDB without needing an intermediate conversion to string or using strptime.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>last_viewed_date</td>
+      <td>CAST("last_viewed_date" AS DATE)</td>
+      <td>Since 'last_viewed_date' has no distinct values, we don't need to handle any specific data formats.  A straightforward cast from DECIMAL to DATE should suffice. In DuckDB, we can directly cast  a DECIMAL to DATE without any intermediate steps.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>list_price</td>
+      <td>CAST("list_price" AS DECIMAL)</td>
+      <td>To transform the data type of the 'list_price' column from INT to DECIMAL in DuckDB, we need to use the CAST function. This will convert each integer value to its equivalent decimal representation. Since no specific precision or scale is mentioned, we can use the default DECIMAL type without specifying parameters. This will ensure that all the distinct values (0, 1000, 1500, 2000, 12000) are accurately represented in decimal form without loss of precision.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>roadmap_connections</td>
+      <td>CAST("roadmap_connections" AS VARCHAR)</td>
+      <td>To transform the data type of the 'roadmap_connections' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>row_volume</td>
+      <td>CAST("row_volume" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'row_volume' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This operation will convert the numeric values to their string representations. Since the column 'row_volume' has no distinct values (as indicated by the empty list []), this transformation will effectively convert any NULL values to VARCHAR NULL values, and any potential future decimal values would be converted to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>service_date</td>
+      <td>CAST("service_date" AS DATE)</td>
+      <td>To transform the data type of the 'service_date' column from 'DECIMAL' to 'DATE', we don't need to use the strptime function because the column is already in a numeric format that can be directly cast to DATE. DuckDB is capable of interpreting a numeric value as a date when casting to DATE type. The numeric value is assumed to be in the format YYYYMMDD.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>sort_order</td>
+      <td>CAST("sort_order" AS INT)</td>
+      <td>To transform the data type of the 'sort_order' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains no distinct values (it's empty), this transformation should not cause any data loss or errors.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>stamped_product_code</td>
+      <td>CAST("stamped_product_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'stamped_product_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>19</b> columns have missing values<br>
+                ✔️ <b>2</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>discount_amount</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>event_volume</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>has_quantity_schedule</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>has_revenue_schedule</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>has_schedule</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>hvr_use_case</td>
+      <td>90</td>
+      <td>True</td>
+      <td>Might not apply to certain product types or categories.</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>is_active</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>is_deleted</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>item_description</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>last_referenced_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>last_viewed_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>product_family</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>roadmap_connections</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>row_volume</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>sbqq_parent_id</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>service_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>sort_order</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>stamped_product_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>subscription_type</td>
+      <td>20</td>
+      <td>True</td>
+      <td>Not applicable for non-subscription products or services.</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>discount_amount</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>event_volume</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>has_quantity_schedule</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>has_revenue_schedule</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>has_schedule</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>is_active</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>is_deleted</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>item_description</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>last_referenced_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>last_viewed_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>product_family</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>roadmap_connections</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>row_volume</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>sbqq_parent_id</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>service_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>sort_order</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>stamped_product_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Renewable', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_type", data);
+data = [{'label': '00k1G000009b6cA...', 'value': 100.0}];
+    drawBarChart("bar_viz_sbqq_parent_id", data);
+data = [{'label': '01u1G000002KcPQ...', 'value': 30.0}, {'label': '01u1G000002KbuA...', 'value': 20.0}, {'label': '01u1G000002Kbu5...', 'value': 10.0}, {'label': '01u1G000002Kbuw...', 'value': 10.0}, {'label': '01u1G000002Ks75...', 'value': 10.0}, {'label': 'Other values', 'value': 20.0}];
+    drawBarChart("bar_viz_pricebook_entry_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'a', 'value': 10.0}, {'label': 'b', 'value': 10.0}, {'label': 'd', 'value': 10.0}, {'label': 'e', 'value': 10.0}, {'label': 'f', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_product_code", data);
+data = [{'x': 4050.0, 'y': 7}, {'x': 12150.0, 'y': 0}, {'x': 20250.0, 'y': 0}, {'x': 28350.0, 'y': 0}, {'x': 36450.0, 'y': 1}, {'x': 44550.0, 'y': 0}, {'x': 52650.0, 'y': 0}, {'x': 60750.0, 'y': 0}, {'x': 68850.0, 'y': 0}, {'x': 76950.0, 'y': 0}];
+    binWidth = 8100.0;
+    drawHistogram("hist_viz_total_price", data, binWidth);
+data = [{'x': 12, 'y': 10}];
+    binWidth = 12;
+    drawHistogram("hist_viz_duration_months", data, binWidth);
+data = [{'label': '0061G00000HhviA...', 'value': 60.0}, {'label': '0061G00000Ja7B6...', 'value': 10.0}, {'label': '0061G00000Is1QA...', 'value': 10.0}, {'label': '0061G00000Isgqw...', 'value': 10.0}, {'label': '0061G00000IL0vQ...', 'value': 10.0}];
+    drawBarChart("bar_viz_opportunity_id", data);
+data = [{'label': 'a4R1G000000S2a6...', 'value': 10.0}, {'label': 'a4R1G000000XsCJ...', 'value': 10.0}, {'label': 'a4R1G000000XxmU...', 'value': 10.0}, {'label': 'a4R1G000000Xqhr...', 'value': 10.0}, {'label': 'a4R1G000000Xqhs...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_sbqq_quote_line", data);
+data = [{'label': 'Usage', 'value': 100.0}];
+    drawBarChart("bar_viz_product_family", data);
+data = [{'label': 'plan i', 'value': 10.0}, {'label': 'plan k', 'value': 10.0}, {'label': 'plan e', 'value': 10.0}, {'label': 'plan f', 'value': 10.0}, {'label': 'plan a', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_product_name", data);
+data = [{'label': '00k1G000009aYhM...', 'value': 10.0}, {'label': '00k1G000009b6cC...', 'value': 10.0}, {'label': '00k1G00000A3iyq...', 'value': 10.0}, {'label': '00k1G000009al6C...', 'value': 10.0}, {'label': '00k1G000009ar5I...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_line_item_id", data);
+data = [{'x': 2.625, 'y': 6}, {'x': 5.875, 'y': 1}, {'x': 9.125, 'y': 0}, {'x': 12.375, 'y': 0}, {'x': 15.625, 'y': 0}, {'x': 18.875, 'y': 1}, {'x': 22.125, 'y': 0}, {'x': 25.375, 'y': 0}, {'x': 28.625, 'y': 0}, {'x': 31.875, 'y': 0}];
+    binWidth = 3.25;
+    drawHistogram("hist_viz_quantity", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_hvr_use_case", data);
+data = [{'label': '0051G000005Mumu...', 'value': 90.0}, {'label': '0051G000005Mump...', 'value': 10.0}];
+    drawBarChart("bar_viz_last_modifier_id", data);
+data = [{'label': '01 1G000000bH p...', 'value': 30.0}, {'label': '01 1G000000bH0b...', 'value': 20.0}, {'label': '01 1G000000bH0W...', 'value': 10.0}, {'label': '01 1G000000bH0y...', 'value': 10.0}, {'label': '01 1G000000bH05...', 'value': 10.0}, {'label': 'Other values', 'value': 20.0}];
+    drawBarChart("bar_viz_product_id", data);
+data = [{'x': 225.0, 'y': 4}, {'x': 675.0, 'y': 2}, {'x': 1125.0, 'y': 2}, {'x': 1575.0, 'y': 0}, {'x': 2025.0, 'y': 1}, {'x': 2475.0, 'y': 0}, {'x': 2925.0, 'y': 0}, {'x': 3375.0, 'y': 0}, {'x': 3825.0, 'y': 0}, {'x': 4275.0, 'y': 0}];
+    binWidth = 450.0;
+    drawHistogram("hist_viz_unit_price", data, binWidth);
+data = [{'label': '0051G000005Mumu...', 'value': 90.0}, {'label': '0051G0000060rqh...', 'value': 10.0}];
+    drawBarChart("bar_viz_creator_id", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_creation_datetime", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_modified_datetime", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_modified_timestamp", data);
+data = [{'x': 300.0, 'y': 4}, {'x': 900.0, 'y': 2}, {'x': 1500.0, 'y': 2}, {'x': 2100.0, 'y': 1}, {'x': 2700.0, 'y': 0}, {'x': 3300.0, 'y': 0}, {'x': 3900.0, 'y': 0}, {'x': 4500.0, 'y': 0}, {'x': 5100.0, 'y': 0}, {'x': 5700.0, 'y': 0}];
+    binWidth = 600.0;
+    drawHistogram("hist_viz_list_price", data, binWidth);
+
+
+</script>
+</body>
+</html>

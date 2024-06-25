@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>property_option_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>label</th>
+      <th>property_id</th>
+      <th>display_order</th>
+      <th>hidden</th>
+      <th>value_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>psScnliy99RZj01H2CO0Bg==</td>
+      <td>QbL3/uGeJqHy1PwdKiAryA==</td>
+      <td>0</td>
+      <td>False</td>
+      <td>Rk7Ftpi8GPQtaS7MlroMGQ==</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>pSz+WBU1TmUa4LuUa1rgkQ==</td>
+      <td>QbL3/uGeJqHy1PwdKiAryA==</td>
+      <td>1</td>
+      <td>False</td>
+      <td>LA3JfM9iZ4SdcrsahteEeA==</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>AvzvMEDzIxXmOQHpmJkR2Q==</td>
+      <td>QbL3/uGeJqHy1PwdKiAryA==</td>
+      <td>2</td>
+      <td>False</td>
+      <td>T9S3rtCg0J+FcavCHGDYtw==</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>82p3OmCpiuf6fXiV9CNUGg==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>54</td>
+      <td>False</td>
+      <td>MpeVBohL7jkWOlWD1n2MEQ==</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>iXyRZw2q18uicoYZGNbgag==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>69</td>
+      <td>False</td>
+      <td>ag2ORssJEO3Ix9VleEtdQg==</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>kNCldBZipThyNGTWrrfg2A==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>61</td>
+      <td>False</td>
+      <td>DCbZyLGAXmlPv5n4SfYx9Q==</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>nXBeZz/aTEAYfzniBd/75g==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>53</td>
+      <td>False</td>
+      <td>isnpiTWMqdJGp0MdQexQlA==</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Y6UJ4WGHacm+BqSY+9LIWw==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>68</td>
+      <td>False</td>
+      <td>NxElfDRGA3UVvLxOm2zBuA==</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9/yByDltisVJ/ItQKfpDug==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>58</td>
+      <td>False</td>
+      <td>vIGBU9BcEMJOtKde0VQiqw==</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>olS9+/n99uTy3AIPobhBFQ==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>73</td>
+      <td>False</td>
+      <td>0TcZBF4uKrmsLk3qXWb/Hg==</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>B1Y77Uvfwx7eFghmY0fMnA==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>64</td>
+      <td>False</td>
+      <td>/cjAina18SVT3IObiSTw3w==</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>K9C6Ej/GCH0SeJeYNHAilQ==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>55</td>
+      <td>False</td>
+      <td>1m8HK+BNhT7R+gsuVesdxw==</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>pywmmY+CL/LxU1GOsa6inw==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>63</td>
+      <td>False</td>
+      <td>kqfrguMbRr20bZ8iN/xUww==</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>0ZCS71MB2VSJEfh6gX+MRA==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>59</td>
+      <td>False</td>
+      <td>/6WH59+ebbdk/66q3ur5Cw==</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>o9hmABcYPHTCe5qrVu1lIQ==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>75</td>
+      <td>False</td>
+      <td>JUbNYa3Fg/uz4J33ml2QoQ==</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>du4+7EMJLifwRGQjGBJNbA==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>62</td>
+      <td>False</td>
+      <td>oGDrsJou/ln6KJivl+ruWQ==</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>pTcKx6PCI9FNH+BrqtoqDg==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>60</td>
+      <td>False</td>
+      <td>+rN2xb29RGurpWYBfnHC5g==</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>OHV/B1A6v1fd9MipdPIUKQ==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>70</td>
+      <td>False</td>
+      <td>jDwQNnk3/oWaB7pqsOXBLA==</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>rrQoVUoKzGzFA6Lk2mrmGg==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>76</td>
+      <td>False</td>
+      <td>IrC/vHIdyaGW7KTyFPL+LA==</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>6v8b3yT8/+DhTimhv/UaEg==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>65</td>
+      <td>False</td>
+      <td>Z/qUdomTCUc+d/5MgyA10g==</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>encrypted_option_label</th>
+      <th>encrypted_property_id</th>
+      <th>display_order</th>
+      <th>is_hidden</th>
+      <th>encrypted_option_value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>psScnliy99RZj01H2CO0Bg==</td>
+      <td>QbL3/uGeJqHy1PwdKiAryA==</td>
+      <td>0</td>
+      <td>False</td>
+      <td>Rk7Ftpi8GPQtaS7MlroMGQ==</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>pSz+WBU1TmUa4LuUa1rgkQ==</td>
+      <td>QbL3/uGeJqHy1PwdKiAryA==</td>
+      <td>1</td>
+      <td>False</td>
+      <td>LA3JfM9iZ4SdcrsahteEeA==</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>AvzvMEDzIxXmOQHpmJkR2Q==</td>
+      <td>QbL3/uGeJqHy1PwdKiAryA==</td>
+      <td>2</td>
+      <td>False</td>
+      <td>T9S3rtCg0J+FcavCHGDYtw==</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>82p3OmCpiuf6fXiV9CNUGg==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>54</td>
+      <td>False</td>
+      <td>MpeVBohL7jkWOlWD1n2MEQ==</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>iXyRZw2q18uicoYZGNbgag==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>69</td>
+      <td>False</td>
+      <td>ag2ORssJEO3Ix9VleEtdQg==</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>kNCldBZipThyNGTWrrfg2A==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>61</td>
+      <td>False</td>
+      <td>DCbZyLGAXmlPv5n4SfYx9Q==</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>nXBeZz/aTEAYfzniBd/75g==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>53</td>
+      <td>False</td>
+      <td>isnpiTWMqdJGp0MdQexQlA==</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Y6UJ4WGHacm+BqSY+9LIWw==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>68</td>
+      <td>False</td>
+      <td>NxElfDRGA3UVvLxOm2zBuA==</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9/yByDltisVJ/ItQKfpDug==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>58</td>
+      <td>False</td>
+      <td>vIGBU9BcEMJOtKde0VQiqw==</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>olS9+/n99uTy3AIPobhBFQ==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>73</td>
+      <td>False</td>
+      <td>0TcZBF4uKrmsLk3qXWb/Hg==</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>B1Y77Uvfwx7eFghmY0fMnA==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>64</td>
+      <td>False</td>
+      <td>/cjAina18SVT3IObiSTw3w==</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>K9C6Ej/GCH0SeJeYNHAilQ==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>55</td>
+      <td>False</td>
+      <td>1m8HK+BNhT7R+gsuVesdxw==</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>pywmmY+CL/LxU1GOsa6inw==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>63</td>
+      <td>False</td>
+      <td>kqfrguMbRr20bZ8iN/xUww==</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>0ZCS71MB2VSJEfh6gX+MRA==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>59</td>
+      <td>False</td>
+      <td>/6WH59+ebbdk/66q3ur5Cw==</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>o9hmABcYPHTCe5qrVu1lIQ==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>75</td>
+      <td>False</td>
+      <td>JUbNYa3Fg/uz4J33ml2QoQ==</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>du4+7EMJLifwRGQjGBJNbA==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>62</td>
+      <td>False</td>
+      <td>oGDrsJou/ln6KJivl+ruWQ==</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>pTcKx6PCI9FNH+BrqtoqDg==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>60</td>
+      <td>False</td>
+      <td>+rN2xb29RGurpWYBfnHC5g==</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>OHV/B1A6v1fd9MipdPIUKQ==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>70</td>
+      <td>False</td>
+      <td>jDwQNnk3/oWaB7pqsOXBLA==</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>rrQoVUoKzGzFA6Lk2mrmGg==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>76</td>
+      <td>False</td>
+      <td>IrC/vHIdyaGW7KTyFPL+LA==</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>6v8b3yT8/+DhTimhv/UaEg==</td>
+      <td>stMBaoy9Irlfo81ajZF/Ww==</td>
+      <td>65</td>
+      <td>False</td>
+      <td>Z/qUdomTCUc+d/5MgyA10g==</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_option_label</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_encrypted_option_label"></div><b>📃 Summary:</b> Encrypted label text for the property option<br><b>🦄 Unique:</b> This column represents the encrypted label text for each property option. For this table, each row is for a unique property option. The encrypted_option_label appears to be unique across rows, as it likely represents a distinct label for each option.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_property_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_property_id"></div><b>📃 Summary:</b> Encrypted identifier for the associated property<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">display_order</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_display_order"></div><b>📃 Summary:</b> Specifies the order for displaying property options<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_hidden</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_hidden"></div><b>📃 Summary:</b> Indicates whether the option should be visible<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_option_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_encrypted_option_value"></div><b>📃 Summary:</b> Encrypted value of the property option<br><b>🦄 Unique:</b> This column represents the encrypted value of each property option. For this table, each row is for a unique property option. The encrypted_option_value appears to be unique across rows, as it likely represents a distinct value for each option.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about property options. It contains encrypted data for option labels, associated property IDs, display order, visibility status, and option values. Each row represents a single property option with its attributes. The display_order column suggests these options may be presented in a specific sequence. The hidden column indicates whether an option should be visible or not.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>4</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>label</td>
+      <td>Encrypted label text for the property option</td>
+      <td>encrypted_option_label</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>property_id</td>
+      <td>Encrypted identifier for the associated property</td>
+      <td>encrypted_property_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>display_order</td>
+      <td>Specifies the order for displaying property options</td>
+      <td>display_order</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>hidden</td>
+      <td>Indicates whether the option should be visible</td>
+      <td>is_hidden</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>value_</td>
+      <td>Encrypted value of the property option</td>
+      <td>encrypted_option_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'pSz+WBU1TmUa4Lu...', 'value': 5.0}, {'label': 'AvzvMEDzIxXmOQH...', 'value': 5.0}, {'label': 'iXyRZw2q18uicoY...', 'value': 5.0}, {'label': 'olS9+/n99uTy3AI...', 'value': 5.0}, {'label': 'K9C6Ej/GCH0SeJe...', 'value': 5.0}, {'label': 'Other values', 'value': 75.0}];
+    drawBarChart("bar_viz_encrypted_option_label", data);
+data = [{'label': 'stMBaoy9Irlfo81...', 'value': 85.0}, {'label': 'QbL3/uGeJqHy1Pw...', 'value': 15.0}];
+    drawBarChart("bar_viz_encrypted_property_id", data);
+data = [{'x': 1.9, 'y': 3}, {'x': 5.699999999999999, 'y': 0}, {'x': 9.5, 'y': 0}, {'x': 13.299999999999999, 'y': 0}, {'x': 17.1, 'y': 0}, {'x': 20.9, 'y': 0}, {'x': 24.699999999999996, 'y': 0}, {'x': 28.5, 'y': 0}, {'x': 32.3, 'y': 0}, {'x': 36.099999999999994, 'y': 0}, {'x': 39.9, 'y': 0}, {'x': 43.699999999999996, 'y': 0}, {'x': 47.5, 'y': 0}, {'x': 51.3, 'y': 1}, {'x': 55.099999999999994, 'y': 2}, {'x': 58.9, 'y': 3}, {'x': 62.699999999999996, 'y': 4}, {'x': 66.5, 'y': 2}, {'x': 70.3, 'y': 2}, {'x': 74.1, 'y': 3}];
+    binWidth = 3.8;
+    drawHistogram("hist_viz_display_order", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_hidden", data);
+data = [{'label': 'ag2ORssJEO3Ix9V...', 'value': 5.0}, {'label': 'vIGBU9BcEMJOtKd...', 'value': 5.0}, {'label': '0TcZBF4uKrmsLk3...', 'value': 5.0}, {'label': '/6WH59+ebbdk/66...', 'value': 5.0}, {'label': 'Rk7Ftpi8GPQtaS7...', 'value': 5.0}, {'label': 'Other values', 'value': 75.0}];
+    drawBarChart("bar_viz_encrypted_option_value", data);
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>email_event_deferred_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>attempt</th>
+      <th>id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>659f47dd-770d-31ae-871a-e5dc72f0e9b4</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>3209c800-f5f5-3c3b-ab3f-9701a4f14684</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>7fa58018-da67-382e-9761-65618f83592c</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1</td>
+      <td>f3373397-54a4-3a45-8172-e5ccc13b13ae</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1</td>
+      <td>5d8f86f7-a6ed-357b-8370-2fe6b6ef6379</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1</td>
+      <td>bbff400d-afb1-3e26-b3bf-5cd30a890c67</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>1</td>
+      <td>c48f317f-00e4-31b3-a4f9-20a05374c6ae</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1</td>
+      <td>33b77184-19c6-3919-84d5-96745e74057c</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1</td>
+      <td>43c6dd76-84e2-3b2c-a243-062e89928bda</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>1</td>
+      <td>58c7f412-a329-32fd-a3ab-a25dd99ea7ce</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>1</td>
+      <td>5170b8fb-708d-3bae-9e5c-6101f2d53766</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>1</td>
+      <td>da12a6b8-53d0-313a-8aaf-86fd52706ad9</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>1</td>
+      <td>aea5210b-d36f-3025-ac2d-f2d95a02e258</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1</td>
+      <td>fcce7147-be54-342e-a5dc-293c39d903ac</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>1</td>
+      <td>345278e8-169b-321f-bca0-f834b601cbe3</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>1</td>
+      <td>8f2d42ab-d3f5-30f0-88e1-78bd93355f05</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1</td>
+      <td>05330eae-b288-35e3-870e-e1e445d38e2b</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>1</td>
+      <td>509df1f8-9ed8-325b-98ee-2409ac9aa620</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>1</td>
+      <td>6ddba9db-40c5-388d-8c84-9fc75304b343</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>1</td>
+      <td>0114d13e-ccb2-3a07-9b88-f0e88d23e4fd</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>1</td>
+      <td>160e28ca-cab1-3d09-932e-e77debe2b836</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>1</td>
+      <td>533eae18-ba9d-355f-a821-816c10a7b93c</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>1</td>
+      <td>ea2d5492-200d-3d8b-9a76-c7a9a4ea09de</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>1</td>
+      <td>520ec71f-573f-3463-a2f4-6ae8d6dcf771</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>1</td>
+      <td>858da4e8-8191-3e04-b861-79f8fb4335c1</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>1</td>
+      <td>3e100bf1-02d1-3672-9e67-015d04f81130</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>1</td>
+      <td>9a884f4b-59b6-3280-88d2-57f6bebce52a</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>1</td>
+      <td>842d4e02-5e5e-31a9-aced-7b6421b25bc9</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>1</td>
+      <td>bd72fc2e-b357-3940-a6de-2daa2dac294a</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>1</td>
+      <td>de2f48ff-6b00-379c-8f93-6ca340774a79</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>1</td>
+      <td>f5c691e8-3b7b-317b-b80d-7b4bb2a157a3</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>1</td>
+      <td>7af80dc4-3fb2-30f2-8a6c-8408d107a81b</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>1</td>
+      <td>ebbef812-4d19-3c20-9fae-e8b9b2f8779f</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>1</td>
+      <td>4593dcef-6b1a-3480-8d49-66eb8baa1275</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>1</td>
+      <td>0a9df313-cf26-3e68-a126-d9154cd1359d</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>1</td>
+      <td>c6807508-3ab3-33c5-94f3-2abb84d4d11e</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>1</td>
+      <td>59ba1424-3923-3b4d-88ae-fffc16db54be</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>1</td>
+      <td>764fdcbb-9810-3281-9687-c7fdaf677641</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>1</td>
+      <td>ef794cce-2dbb-3299-abd7-eb6fac0a33b2</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>1</td>
+      <td>64b6eb26-f50f-3ac1-a5ba-869008be864b</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>1</td>
+      <td>e3eb6277-c7c0-323c-8350-e8b9c2f39cc9</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>1</td>
+      <td>d9acaec9-6af8-3805-b6bf-02aa9fad2e9c</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>1</td>
+      <td>105a9703-af2d-39d2-ad3b-4ed256d98daa</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>1</td>
+      <td>516fade3-cf0b-3a24-9cba-05b18bc5b1e6</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>1</td>
+      <td>e8210213-a084-3465-8a9a-41df852b6d15</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>1</td>
+      <td>f657cbe0-60a4-38de-9d84-00b7dee9d083</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>1</td>
+      <td>0641188d-001a-3743-b8dd-4e06d0267cd8</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>1</td>
+      <td>c546cf5a-7a5e-3abe-9396-983bf343507c</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>1</td>
+      <td>17dc5d81-d572-385c-9298-1983c8d5b2da</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>1</td>
+      <td>003936ff-bafb-321e-aaf8-5e05a869b52f</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>1</td>
+      <td>3f02f5fc-bb50-3245-ad45-baf9a9d296f1</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>1</td>
+      <td>f79d1481-4cf2-3115-b803-00094c65489f</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>1</td>
+      <td>bd87fcb0-8913-33cb-bdc2-c5f6725182db</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>1</td>
+      <td>d5419f63-f28f-3521-bfc3-6f89c65a0c8d</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>1</td>
+      <td>f4a447b0-da46-324c-885a-167261125249</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>1</td>
+      <td>7a7b64ac-e589-3527-8a44-8011e55b4d6d</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>1</td>
+      <td>00a08fa5-2efe-30b2-88f1-80f1b38ccee5</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>1</td>
+      <td>b4eb31e8-3a7e-33f8-a704-1997bc9ca244</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>1</td>
+      <td>50d2a5f9-eb0b-3830-8004-bfa5dfd2e27d</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>1</td>
+      <td>739eda73-7d41-3f81-b3d0-ee68e89120fe</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>1</td>
+      <td>ca799a45-f6a3-39c9-aeeb-91e73debb32b</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>1</td>
+      <td>038facf4-276a-3ef3-be66-d46425b8162d</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>1</td>
+      <td>63795744-da9c-3c2a-b8b4-8f523426bdd8</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>1</td>
+      <td>88d5f293-b94d-323a-b353-89dcbdb47906</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>1</td>
+      <td>52ef2983-d361-3f81-a181-f532da60be23</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>1</td>
+      <td>014bba5d-a473-3661-af08-69482f0200f9</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>1</td>
+      <td>ac6fd423-28c1-3107-ab7e-cd10daf931ce</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>1</td>
+      <td>fbc4799b-96ea-37ba-af81-1d8e6be2a0a1</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>1</td>
+      <td>d075c8d5-1bb5-3d50-8152-52646899c62c</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>1</td>
+      <td>07f4cca9-419d-3648-98d6-40be78f91918</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>1</td>
+      <td>f630943e-50ea-3054-984d-a10e20a01ff5</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>1</td>
+      <td>044bda17-b193-3408-8e20-ecfba4017ccd</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>1</td>
+      <td>48697503-f29d-34d0-9bf5-029b50e94e5c</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>1</td>
+      <td>785a7801-4c5c-3fd3-93f3-f2023b53b159</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>1</td>
+      <td>76329ddd-07b0-301b-80d2-59cc764d3b05</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>1</td>
+      <td>1d5bf065-2547-3292-994c-e56c0004d8e1</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>1</td>
+      <td>6112bfaf-0a32-3b8e-be45-bdb103681db6</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>1</td>
+      <td>c6c30ce4-12d7-3a51-a924-859fe950c9e2</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>1</td>
+      <td>b1452760-b469-343c-9cbf-5cadd3517fc2</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>1</td>
+      <td>eace17d0-ad23-3723-85b2-7a430f4054ed</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>1</td>
+      <td>4613a174-5af6-3d5a-9a63-88589b4b3b85</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>1</td>
+      <td>c545f12b-7f72-3543-9996-3da32ff03379</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>1</td>
+      <td>78b024fa-9fc6-3f42-9f35-a5c28c58c8f4</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>1</td>
+      <td>f720fd54-05a2-35f2-93fb-7793ac18a878</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>1</td>
+      <td>e897485e-409a-3062-9950-ba0b32d5fcf1</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>1</td>
+      <td>372c8bfe-8217-3438-b619-88385a04de2e</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>1</td>
+      <td>9fb9f139-788b-3cba-82b0-9f9b99c2126a</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>1</td>
+      <td>7b944ccc-252b-35f7-b4eb-6a42f48790ec</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>1</td>
+      <td>f686bf50-3170-3ba7-a81c-b76a96b7f87b</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>1</td>
+      <td>cad3a8cb-d890-38d9-8345-f3fc0e2f5841</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>1</td>
+      <td>b70febdd-bea9-30e0-81c6-6088aea5c9e3</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>1</td>
+      <td>018fbdd2-3903-37da-9d6f-e3202bbab34a</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>1</td>
+      <td>93c19a47-812d-3b1b-a477-eb893bc7f521</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>1</td>
+      <td>66ad11d3-7009-3126-8608-3138f42994ab</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>1</td>
+      <td>247a09ef-de43-3431-8f66-c563dd4311e8</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>1</td>
+      <td>b1a89f5a-add3-3936-bcb4-50042853bbc3</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>1</td>
+      <td>e44ce329-a57c-3854-b8f0-ac9c6f86ea7e</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>1</td>
+      <td>1420b29d-d881-3a93-93f4-9e61568ae7c1</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>1</td>
+      <td>76cdbfe1-c5f5-3948-a9d7-152156959e74</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>1</td>
+      <td>2d1a4ead-eb21-30fd-9918-a725f8dab667</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>attempt_count</th>
+      <th>event_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>659f47dd-770d-31ae-871a-e5dc72f0e9b4</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>3209c800-f5f5-3c3b-ab3f-9701a4f14684</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>7fa58018-da67-382e-9761-65618f83592c</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1</td>
+      <td>f3373397-54a4-3a45-8172-e5ccc13b13ae</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1</td>
+      <td>5d8f86f7-a6ed-357b-8370-2fe6b6ef6379</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1</td>
+      <td>bbff400d-afb1-3e26-b3bf-5cd30a890c67</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>1</td>
+      <td>c48f317f-00e4-31b3-a4f9-20a05374c6ae</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1</td>
+      <td>33b77184-19c6-3919-84d5-96745e74057c</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1</td>
+      <td>43c6dd76-84e2-3b2c-a243-062e89928bda</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>1</td>
+      <td>58c7f412-a329-32fd-a3ab-a25dd99ea7ce</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>1</td>
+      <td>5170b8fb-708d-3bae-9e5c-6101f2d53766</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>1</td>
+      <td>da12a6b8-53d0-313a-8aaf-86fd52706ad9</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>1</td>
+      <td>aea5210b-d36f-3025-ac2d-f2d95a02e258</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1</td>
+      <td>fcce7147-be54-342e-a5dc-293c39d903ac</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>1</td>
+      <td>345278e8-169b-321f-bca0-f834b601cbe3</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>1</td>
+      <td>8f2d42ab-d3f5-30f0-88e1-78bd93355f05</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1</td>
+      <td>05330eae-b288-35e3-870e-e1e445d38e2b</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>1</td>
+      <td>509df1f8-9ed8-325b-98ee-2409ac9aa620</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>1</td>
+      <td>6ddba9db-40c5-388d-8c84-9fc75304b343</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>1</td>
+      <td>0114d13e-ccb2-3a07-9b88-f0e88d23e4fd</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>1</td>
+      <td>160e28ca-cab1-3d09-932e-e77debe2b836</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>1</td>
+      <td>533eae18-ba9d-355f-a821-816c10a7b93c</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>1</td>
+      <td>ea2d5492-200d-3d8b-9a76-c7a9a4ea09de</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>1</td>
+      <td>520ec71f-573f-3463-a2f4-6ae8d6dcf771</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>1</td>
+      <td>858da4e8-8191-3e04-b861-79f8fb4335c1</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>1</td>
+      <td>3e100bf1-02d1-3672-9e67-015d04f81130</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>1</td>
+      <td>9a884f4b-59b6-3280-88d2-57f6bebce52a</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>1</td>
+      <td>842d4e02-5e5e-31a9-aced-7b6421b25bc9</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>1</td>
+      <td>bd72fc2e-b357-3940-a6de-2daa2dac294a</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>1</td>
+      <td>de2f48ff-6b00-379c-8f93-6ca340774a79</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>1</td>
+      <td>f5c691e8-3b7b-317b-b80d-7b4bb2a157a3</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>1</td>
+      <td>7af80dc4-3fb2-30f2-8a6c-8408d107a81b</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>1</td>
+      <td>ebbef812-4d19-3c20-9fae-e8b9b2f8779f</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>1</td>
+      <td>4593dcef-6b1a-3480-8d49-66eb8baa1275</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>1</td>
+      <td>0a9df313-cf26-3e68-a126-d9154cd1359d</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>1</td>
+      <td>c6807508-3ab3-33c5-94f3-2abb84d4d11e</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>1</td>
+      <td>59ba1424-3923-3b4d-88ae-fffc16db54be</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>1</td>
+      <td>764fdcbb-9810-3281-9687-c7fdaf677641</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>1</td>
+      <td>ef794cce-2dbb-3299-abd7-eb6fac0a33b2</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>1</td>
+      <td>64b6eb26-f50f-3ac1-a5ba-869008be864b</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>1</td>
+      <td>e3eb6277-c7c0-323c-8350-e8b9c2f39cc9</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>1</td>
+      <td>d9acaec9-6af8-3805-b6bf-02aa9fad2e9c</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>1</td>
+      <td>105a9703-af2d-39d2-ad3b-4ed256d98daa</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>1</td>
+      <td>516fade3-cf0b-3a24-9cba-05b18bc5b1e6</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>1</td>
+      <td>e8210213-a084-3465-8a9a-41df852b6d15</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>1</td>
+      <td>f657cbe0-60a4-38de-9d84-00b7dee9d083</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>1</td>
+      <td>0641188d-001a-3743-b8dd-4e06d0267cd8</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>1</td>
+      <td>c546cf5a-7a5e-3abe-9396-983bf343507c</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>1</td>
+      <td>17dc5d81-d572-385c-9298-1983c8d5b2da</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>1</td>
+      <td>003936ff-bafb-321e-aaf8-5e05a869b52f</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>1</td>
+      <td>3f02f5fc-bb50-3245-ad45-baf9a9d296f1</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>1</td>
+      <td>f79d1481-4cf2-3115-b803-00094c65489f</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>1</td>
+      <td>bd87fcb0-8913-33cb-bdc2-c5f6725182db</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>1</td>
+      <td>d5419f63-f28f-3521-bfc3-6f89c65a0c8d</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>1</td>
+      <td>f4a447b0-da46-324c-885a-167261125249</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>1</td>
+      <td>7a7b64ac-e589-3527-8a44-8011e55b4d6d</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>1</td>
+      <td>00a08fa5-2efe-30b2-88f1-80f1b38ccee5</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>1</td>
+      <td>b4eb31e8-3a7e-33f8-a704-1997bc9ca244</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>1</td>
+      <td>50d2a5f9-eb0b-3830-8004-bfa5dfd2e27d</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>1</td>
+      <td>739eda73-7d41-3f81-b3d0-ee68e89120fe</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>1</td>
+      <td>ca799a45-f6a3-39c9-aeeb-91e73debb32b</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>1</td>
+      <td>038facf4-276a-3ef3-be66-d46425b8162d</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>1</td>
+      <td>63795744-da9c-3c2a-b8b4-8f523426bdd8</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>1</td>
+      <td>88d5f293-b94d-323a-b353-89dcbdb47906</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>1</td>
+      <td>52ef2983-d361-3f81-a181-f532da60be23</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>1</td>
+      <td>014bba5d-a473-3661-af08-69482f0200f9</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>1</td>
+      <td>ac6fd423-28c1-3107-ab7e-cd10daf931ce</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>1</td>
+      <td>fbc4799b-96ea-37ba-af81-1d8e6be2a0a1</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>1</td>
+      <td>d075c8d5-1bb5-3d50-8152-52646899c62c</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>1</td>
+      <td>07f4cca9-419d-3648-98d6-40be78f91918</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>1</td>
+      <td>f630943e-50ea-3054-984d-a10e20a01ff5</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>1</td>
+      <td>044bda17-b193-3408-8e20-ecfba4017ccd</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>1</td>
+      <td>48697503-f29d-34d0-9bf5-029b50e94e5c</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>1</td>
+      <td>785a7801-4c5c-3fd3-93f3-f2023b53b159</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>1</td>
+      <td>76329ddd-07b0-301b-80d2-59cc764d3b05</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>1</td>
+      <td>1d5bf065-2547-3292-994c-e56c0004d8e1</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>1</td>
+      <td>6112bfaf-0a32-3b8e-be45-bdb103681db6</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>1</td>
+      <td>c6c30ce4-12d7-3a51-a924-859fe950c9e2</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>1</td>
+      <td>b1452760-b469-343c-9cbf-5cadd3517fc2</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>1</td>
+      <td>eace17d0-ad23-3723-85b2-7a430f4054ed</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>1</td>
+      <td>4613a174-5af6-3d5a-9a63-88589b4b3b85</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>1</td>
+      <td>c545f12b-7f72-3543-9996-3da32ff03379</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>1</td>
+      <td>78b024fa-9fc6-3f42-9f35-a5c28c58c8f4</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>1</td>
+      <td>f720fd54-05a2-35f2-93fb-7793ac18a878</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>1</td>
+      <td>e897485e-409a-3062-9950-ba0b32d5fcf1</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>1</td>
+      <td>372c8bfe-8217-3438-b619-88385a04de2e</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>1</td>
+      <td>9fb9f139-788b-3cba-82b0-9f9b99c2126a</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>1</td>
+      <td>7b944ccc-252b-35f7-b4eb-6a42f48790ec</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>1</td>
+      <td>f686bf50-3170-3ba7-a81c-b76a96b7f87b</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>1</td>
+      <td>cad3a8cb-d890-38d9-8345-f3fc0e2f5841</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>1</td>
+      <td>b70febdd-bea9-30e0-81c6-6088aea5c9e3</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>1</td>
+      <td>018fbdd2-3903-37da-9d6f-e3202bbab34a</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>1</td>
+      <td>93c19a47-812d-3b1b-a477-eb893bc7f521</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>1</td>
+      <td>66ad11d3-7009-3126-8608-3138f42994ab</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>1</td>
+      <td>247a09ef-de43-3431-8f66-c563dd4311e8</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>1</td>
+      <td>b1a89f5a-add3-3936-bcb4-50042853bbc3</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>1</td>
+      <td>e44ce329-a57c-3854-b8f0-ac9c6f86ea7e</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>1</td>
+      <td>1420b29d-d881-3a93-93f4-9e61568ae7c1</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>1</td>
+      <td>76cdbfe1-c5f5-3948-a9d7-152156959e74</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>1</td>
+      <td>2d1a4ead-eb21-30fd-9918-a725f8dab667</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">attempt_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_attempt_count"></div><b>📃 Summary:</b> Number of delivery attempts for the deferred email<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_event_id"></div><b>📃 Summary:</b> Unique identifier for each deferred email event<br><b>🦄 Unique:</b> This column represents a unique identifier for each deferred email event. For this table, each row represents a distinct deferred email event. The event_id appears to be a UUID (Universally Unique Identifier), which is designed to be unique across all instances. Therefore, event_id is unique across rows.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about deferred email events. It contains unique identifiers for each event. The table tracks the attempt number for each deferred email. It also includes a response field, which appears to be empty in the given samples. This table likely records instances where email delivery was temporarily delayed or deferred.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>3</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for each deferred email event</td>
+      <td>event_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>attempt</td>
+      <td>Number of delivery attempts for the deferred email</td>
+      <td>attempt_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>response</td>
+      <td>Server response for the deferred email (currently empty)</td>
+      <td>server_response</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>2</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>event_id</td>
+      <td>CAST("event_id" AS UUID)</td>
+      <td>To transform the 'event_id' column from VARCHAR to UUID, we need to use a simple CAST function in DuckDB. The UUID data type is supported in DuckDB, and since the values in 'event_id' are already in a valid UUID format, a straightforward cast should work.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>server_response</td>
+      <td>CAST("server_response" AS VARCHAR)</td>
+      <td>To transform the data type of the 'server_response' column from DECIMAL to VARCHAR, we need to use a simple CAST operation. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'server_response' column to VARCHAR.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>1</b> columns have missing values<br>
+                ❌ No missing value is acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>server_response</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>server_response</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 1, 'y': 100}];
+    binWidth = 1;
+    drawHistogram("hist_viz_attempt_count", data, binWidth);
+data = [{'label': '5d8f86f7-a6ed-3...', 'value': 1.0}, {'label': 'aea5210b-d36f-3...', 'value': 1.0}, {'label': '05330eae-b288-3...', 'value': 1.0}, {'label': '533eae18-ba9d-3...', 'value': 1.0}, {'label': '764fdcbb-9810-3...', 'value': 1.0}, {'label': 'Other values', 'value': 95.0}];
+    drawBarChart("bar_viz_event_id", data);
+
+
+</script>
+</body>
+</html>

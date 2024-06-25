@@ -1,0 +1,2399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>email_event_click_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>browser</th>
+      <th>location</th>
+      <th>url</th>
+      <th>user_agent</th>
+      <th>id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>pcEYeSFroju4+7A6iWHfUg==</td>
+      <td>PmYz9ZMF96920EAe6Tasag==</td>
+      <td>iPHafipvnOaU27T2oMVtyg==</td>
+      <td>WTqufJtbh7v3roegE+uXPg==</td>
+      <td>01be3c8b-2b01-3c60-8f21-052674dd46aa</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>XcPAOsMOMwd06Murx7/nqA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Valv4Yi7Itf++FZSap+qcw==</td>
+      <td>U0sS3F8Ucj35fMQKR7/7kg==</td>
+      <td>d7e50170-6319-32b9-a7d5-dd16a8724f92</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>C9os1opzSfmTrS9vLnU7qA==</td>
+      <td>AsLhO2bPaT2pvr21NZGUcQ==</td>
+      <td>FzZzmUWqY++2EwmbJRnHbw==</td>
+      <td>TTtXVqVzduOW9ghO+c8cRQ==</td>
+      <td>c24dcb88-7e56-381d-a029-c89f2f4e3c8c</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>C9os1opzSfmTrS9vLnU7qA==</td>
+      <td>AsLhO2bPaT2pvr21NZGUcQ==</td>
+      <td>nEZvf1o9uLkmymQnGbbL6w==</td>
+      <td>TTtXVqVzduOW9ghO+c8cRQ==</td>
+      <td>c4c7d29b-eca0-3fce-a887-ec32994fe464</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>6OdeM6QFfon2FH15xg03KQ==</td>
+      <td>87/aXzPnEdYOR7EdhCStbw==</td>
+      <td>99O17q7wiqsxA5H4gtipkw==</td>
+      <td>nfV1P4DxPARgE5zylu3K4w==</td>
+      <td>1fd0f1cb-2603-3816-ad29-17f6a2df8f55</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>7RYAbkJGG0ovdOrJP6YeLw==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>74c4d459-dc96-370d-ae87-c8c99cb4c8f5</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>f36Hy+1pKKWzcqF4V/BWyQ==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>1b44ce51-bb37-386f-b5d6-166787a2c667</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>W/RHtRY1XlBVo9NbMdO/yA==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>f4259c5f-9f0c-3c87-ae64-03dfbbd4b913</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>2xVllcL5cN/fwezksPscbw==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>71def879-89b5-363d-b4ee-6457fca5f040</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>2xVllcL5cN/fwezksPscbw==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>fcecc27c-b48e-329b-9e49-8c73b479fe94</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>f36Hy+1pKKWzcqF4V/BWyQ==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>a5eacd5e-c91f-3a9c-aec4-16cfeb1139a2</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>Z2Awsm5Gs04mzguKQr49bA==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>50d7664f-410b-304b-94d7-e92b34120b29</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>pNPEEWRlR+lPnqcLPcZQTw==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>fc088212-3acb-3d44-8cd6-84d0cef06eeb</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>lk7JzmXjCIkALThksKvyKQ==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>414ec13b-4bc8-31ec-859b-9b69f76df4e7</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>pNPEEWRlR+lPnqcLPcZQTw==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>6fb66f50-d98e-3780-a152-bd63c8d0a19d</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>+YOLhr9g8k8xFwKzhI9y9Q==</td>
+      <td>2xVllcL5cN/fwezksPscbw==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>763c7df1-5fc9-3a68-94dc-3b611ee0603b</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>s6j48y+8uBEFBwqLX249Bg==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>5a024b6a-3269-3951-a5de-6a3b79f6f9cc</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>s6j48y+8uBEFBwqLX249Bg==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>5b0da455-e2e4-374b-b755-2d02e303b43b</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>W+jsHZgiY4bb7Rr3kWNzrg==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>cf6bafee-aa2e-3355-8201-dfae7a2dae06</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>Ttz7dlmABr4c2087aiaouQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>55bb3a0e-a9af-3353-aee2-b9389556e40d</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>1cjxn+utgIS+vD9TYqVsWQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>f01594de-ce7a-3681-808e-039449d82a41</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>DSQCzO87lLFngpaPonYBNQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>18bf6fa5-e6b1-34c8-8be3-61acdbde5ed6</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>W+jsHZgiY4bb7Rr3kWNzrg==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>9c48d5e5-c0f6-3ccc-9bbe-33dc42cf6154</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>p+EpkMM8m7sHycKAW2a3og==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>bcc6fcc6-cc74-32c1-9e96-61d1132cc1a2</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>5aykE/wKpGHXnlvk4PNJmQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>f9725eae-46e3-3ceb-9af6-589ed6b206e5</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>p+EpkMM8m7sHycKAW2a3og==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>7b147273-b5ae-3b96-b779-708d949ddc60</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>mXU+a7ggIWil23NCRhTtFA==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>a2b0128b-2cc7-3e67-a42a-90c5be90ea0c</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>DSQCzO87lLFngpaPonYBNQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>04bfea04-8144-39f7-864f-5b15b22f730c</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>1cjxn+utgIS+vD9TYqVsWQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>241b2c00-c86b-3323-b28c-ebe3090d6597</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>1cjxn+utgIS+vD9TYqVsWQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>a6c41181-0057-3d31-b199-f4bd759a04c9</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>Ttz7dlmABr4c2087aiaouQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>f7b092f8-5081-376c-a774-efe167f5ec0d</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>mXU+a7ggIWil23NCRhTtFA==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>1f0394fc-6d0e-3e91-a1f4-8949be145c26</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>5aykE/wKpGHXnlvk4PNJmQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>912d5bcd-25b5-35c5-b446-0b574088af11</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>hFZ+1T18mwWcvZVdVk9wUw==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>6504dd41-006b-32fa-bf14-a5aad6449a2b</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>KVa9cmJ80u9kas68sBQfYw==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>e6387ffd-2521-3afc-b9a5-c21e9772495c</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>nZ6AphSTZZJkDFQC6uUL8A==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>50931d16-a3d0-37a9-8bac-d7b0518ce918</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>Valv4Yi7Itf++FZSap+qcw==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>80b4efe6-aeac-384a-b33e-be24e4c95aef</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>ug8UaK6R/jaYiCBQ+UNgRg==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>b38901a4-6303-3085-982f-9ca8168df154</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>UJfIQ+gQ1xB7ScwVOaS9Lw==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>059c9326-039c-3e6f-aa17-14d697dbab5f</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>wYvU15Mk2E+TA15eF5dBgg==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>7db25fe3-cfdf-3b9b-8903-8ea3b7941acd</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>kWLD+KFxWOrSCyLmCsjBzw==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>NfYX4NWb6ciXSE6yaz27qA==</td>
+      <td>G8+WhnT6+AYSRsB2IIfRkQ==</td>
+      <td>8e56eb1b-af2c-353a-b028-bf81808ee5e2</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>kWLD+KFxWOrSCyLmCsjBzw==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>YGur4ToNCJR46M/EhYVhwQ==</td>
+      <td>G8+WhnT6+AYSRsB2IIfRkQ==</td>
+      <td>8f9dbcec-9a81-3917-bd7d-babb6415539c</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>kWLD+KFxWOrSCyLmCsjBzw==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>1cjxn+utgIS+vD9TYqVsWQ==</td>
+      <td>G8+WhnT6+AYSRsB2IIfRkQ==</td>
+      <td>89fb399c-8365-3fde-abd5-c44c4e384daf</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>9LSwelCjdUPFe0U/4KnJvA==</td>
+      <td>q4IocFvdGTyPVmZuM+kT2Q==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>4fff4036-c474-3302-bc31-6673a49bbbe6</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>SSMmcwytbLYagSsRb7p9ZQ==</td>
+      <td>q4IocFvdGTyPVmZuM+kT2Q==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>0798ca82-fe93-3d4b-bee5-a021ad88b39b</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>9LSwelCjdUPFe0U/4KnJvA==</td>
+      <td>q4IocFvdGTyPVmZuM+kT2Q==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>6197c104-cff0-310c-a7b1-74d7651dec8e</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>15DdzXrAUk9I58lLdTJQhw==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>40d42fab-54e0-32e6-ab36-ef7706f5f6c2</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LG3RqxyOV9rEnzNqyHEBpw==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>bb8c7fc2-ad73-3c32-88d6-a42ad1255883</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>OIRpeRDGynbwlzsVMEvlKw==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>c223d976-b57e-3eca-9199-a51370d46135</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>jtV9jCj6SjRd0QrxWJ2Tog==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>65f94a52-be18-324a-8589-39c9132c175f</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>A1xzVGyCJr1rre7cbSBeBg==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>a4677caa-ec47-3087-89db-bea8532ba68e</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>pbVsa7r/sLMlou22QASNKA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>7c376dcf-b83f-31fb-9caf-b47dd26e7e6c</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>DQ4IviMuMCMg6FKJnMmdFQ==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>8a5af973-4b14-32bf-a6a0-dac59be81a9d</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>nSDtj+7DLXHQeN8ROHTHyA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>c4d37966-175d-302c-971c-452107e252c8</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LOBE7WYU/33nZILoFQO1dQ==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>e65d9c06-4525-3357-a6aa-74eda44dda7d</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>/V/PpN3dHPPSLwv8QosyEA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>51f0a18f-b3c9-3e3f-ba88-c3ae0144602f</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>C+O3XZvyBUTsKlYjHcetFg==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>6344d7f5-9cdd-3d1a-8ecf-738d6e40c798</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>BN1OnuKTBvcDNWdtprlPXw==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>373b0ff2-b568-36bf-881d-39ccae56a2ce</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LDAt2/adFSKHoJ9Ibs+4uQ==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>7071a980-274a-3b4d-b3ff-18e67f49d2de</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LulEzXsAaPKGs/CpTRz5tg==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>660cef59-f332-353c-b3ab-c79a54f3c045</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>zP+nOscebyky1eQ+7KNk0Q==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>6825adde-41bb-38a2-8171-68ddbbd6ee5a</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LulEzXsAaPKGs/CpTRz5tg==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>f23ef40b-57c3-33a0-b8d9-c26c4a4d1fb8</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LOBE7WYU/33nZILoFQO1dQ==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>fe52ffd9-d396-38e9-8bfc-18b9ca5b7023</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>Z2Awsm5Gs04mzguKQr49bA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>d5851a28-12c5-39ce-adb8-61118339db7a</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>Cm1WBD+epGr9uYN0RTeuJA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>6c88c0f2-fe5e-3e68-abf9-bcb8f585c37c</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>WyqD5w0IQ0jJLuWsh+/eNg==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>bd475864-1dcb-3cfa-83f0-2460d12d6010</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>QFrI0TqS+y2pbJ/UkHGJsA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>diNmtE5s7ZwMDd/pTkF35A==</td>
+      <td>u5wixtmmlikW61/ZQ4Mcuw==</td>
+      <td>2f1731d8-9c9d-3fe2-bd40-1ec64a69746f</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>+tML7jFxwwU2qLetB+dM4w==</td>
+      <td>UYhGgl4rOPcbBDd3T46ZMg==</td>
+      <td>ZfFLpuYER8xYfW24G99wDg==</td>
+      <td>0afdb319-06cd-38cb-8610-6ecfad43f7d6</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>ZAHt6/jcR6cEygvbqcBJvQ==</td>
+      <td>DfnEnkmo9vCjCBxJZ/cTNA==</td>
+      <td>o/dNyVrdHUXADUVtP8Bh1A==</td>
+      <td>f2ecc45e-0546-3576-98ff-8b3e042bb23b</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>geeJXyah/XIs4wFKX4yLPw==</td>
+      <td>OhRyTWBqG1MzshtTqva++g==</td>
+      <td>o/dNyVrdHUXADUVtP8Bh1A==</td>
+      <td>3e88d570-501f-35f6-9c2f-ab10c8b03373</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>yDL3TT3wQqGNMyhJFZLqSw==</td>
+      <td>o/dNyVrdHUXADUVtP8Bh1A==</td>
+      <td>4beed4a2-3ecc-3160-b22b-b554b4d6b69c</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>wOnoiMX7+0Ak9tk8hqB9IQ==</td>
+      <td>o/dNyVrdHUXADUVtP8Bh1A==</td>
+      <td>a50f86ee-d623-3883-ab9f-eaad6053822b</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>sCNBeFWBvbli56EVd6fn6A==</td>
+      <td>KCktEehVrIbhWEeNdYodrw==</td>
+      <td>a1397996-a986-359d-8c1b-f8649460c323</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>HIC/7y+U5x7j5xJKHiiMyA==</td>
+      <td>FLdem5Xg6BuTAexJSR98ng==</td>
+      <td>b6T00R7pQqAsjgQg9wrsBA==</td>
+      <td>nsKFzHEch+RckkT0+J/JlA==</td>
+      <td>69788b5f-225c-3a22-a5dd-eb88cffd5599</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>HIC/7y+U5x7j5xJKHiiMyA==</td>
+      <td>FLdem5Xg6BuTAexJSR98ng==</td>
+      <td>nEZvf1o9uLkmymQnGbbL6w==</td>
+      <td>nsKFzHEch+RckkT0+J/JlA==</td>
+      <td>bedd1876-644b-32b5-ae7b-59c344dd33e1</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>HIC/7y+U5x7j5xJKHiiMyA==</td>
+      <td>TMdF2nURASndj5NwCRjxyg==</td>
+      <td>lKMxeYv/QRkLNzSRgB5vFQ==</td>
+      <td>R+3pYYmj3bkz/1n/Dhadlw==</td>
+      <td>4d57b0b9-6873-3c05-9acc-719548d36b60</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>47UNWJGjYX7LIJMHU5QERA==</td>
+      <td>KFghOWuBl/VdbOhPnRUPng==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>bef2017b-3f7b-3cc3-a298-d85c6abbcc40</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>lKvjEtV1+jrL3wHMryQY6Q==</td>
+      <td>ELp2roz/cOAG3nqrz13xCw==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>c0343ef5-1485-3e1b-bf8c-40f5176f6b20</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>b2qMGOWpCdWVnEV59zAbiw==</td>
+      <td>tw/NwVrCR7H7ALaWeyOrXg==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>21870724-3751-3ab5-aa1e-843e5fe3f0c2</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>b2qMGOWpCdWVnEV59zAbiw==</td>
+      <td>wlN7/8FFLQLu0zjk7kVgRw==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>d7ba0db0-9c97-30e2-bdf5-d8e4bbb9e1ea</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>b2qMGOWpCdWVnEV59zAbiw==</td>
+      <td>Cm1WBD+epGr9uYN0RTeuJA==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>988202b6-7d32-3a4a-87ee-ebfb198e93f0</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>b2qMGOWpCdWVnEV59zAbiw==</td>
+      <td>IlthoO5uUm79sFldA32xzw==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>05ef798a-bd70-3eef-a948-acc48d817b79</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>baVWrUnP9Ghlx41q5M9/4w==</td>
+      <td>OhRyTWBqG1MzshtTqva++g==</td>
+      <td>nHT1NDdnNMyg/WVPBvSbEA==</td>
+      <td>b5679448-0626-3ea5-ad04-4f9f97e9b4b2</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>zZNV5/rKTgV7b/Vfu5fw0Q==</td>
+      <td>zP+nOscebyky1eQ+7KNk0Q==</td>
+      <td>nHT1NDdnNMyg/WVPBvSbEA==</td>
+      <td>f949999f-3e94-39a6-ae6f-cefcb08e4875</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>YUs5mM77Psm3nIUqsMnS7w==</td>
+      <td>cxg4F5kWz7YbRK2PFPgsAA==</td>
+      <td>3EofVMaNH2CdiI9648I5WQ==</td>
+      <td>9cdbd129-4fc7-3a4b-9ffc-aee11437315c</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>+UJPKrCPxA4WZpxorVOaDQ==</td>
+      <td>qh5fiQlRZu0qrrdAibLmWA==</td>
+      <td>TZD7dmw7Ud5X+kLoYMAyFw==</td>
+      <td>6f8d4d76-d324-330d-93f2-adcfe09c3563</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>+UJPKrCPxA4WZpxorVOaDQ==</td>
+      <td>M9LF/6J2be3J8236Dt7hkw==</td>
+      <td>TZD7dmw7Ud5X+kLoYMAyFw==</td>
+      <td>97f3eb98-c9c8-38b6-b23d-d38bdd9b4c45</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Xw75k6KykGSlW0FQiTTV4Q==</td>
+      <td>oPKEzRDxkuxQI2wLGhiqmQ==</td>
+      <td>FzZzmUWqY++2EwmbJRnHbw==</td>
+      <td>AuWMZNBc8RBylZ5TQk1DRQ==</td>
+      <td>694cf66f-3bf6-3b73-93c0-eb5562032d0f</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>h1ppykCI98qBdh3wZBc/RA==</td>
+      <td>8rBdRItiFarGJW+kVzwPVQ==</td>
+      <td>yQPYB80Dp+KPfD+f9kyhbg==</td>
+      <td>ce675f57-130b-37e4-892b-5d11e64207ee</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>Pldj3KyAcG+PA9zXWHSSUQ==</td>
+      <td>annWbnGV6Wm0WZmgZTLo3A==</td>
+      <td>yDpT1s0dSo90oqbUKds9tg==</td>
+      <td>1f891805-2832-304b-b554-297fccb210f6</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>zMv2LSUoKFNj3FInNQ2WDg==</td>
+      <td>/KYFBKIpw4P1fQaFuInvVw==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>9f890b5d-15fa-339d-8a9b-6f2ac409bc8f</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>BQiGyDKRJQZIZap/feH8vQ==</td>
+      <td>jwh1Xu20S3exqKMDDeQ4Pw==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>e1aab236-d2f6-3ce0-858d-bda3b68cdedc</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>zMv2LSUoKFNj3FInNQ2WDg==</td>
+      <td>ynm61dpfsOFFU03agsoAdw==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>680e179d-028e-33df-baf2-44d286ca7ae7</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>BQiGyDKRJQZIZap/feH8vQ==</td>
+      <td>/KYFBKIpw4P1fQaFuInvVw==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>49258455-5a16-3497-b6bd-f30b241ad904</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>j+8StUsTGNVn0Y2crAe5+w==</td>
+      <td>iYfxrbSZArF3RawN3xANuA==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>3c0c8230-26d7-3469-b5e1-7ef7cffe10a7</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>Nygo/uHAezuNmVS6qGiPIg==</td>
+      <td>qCHUoxKAeXksGP+OOYpgvQ==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>c65227a1-9e97-327d-9034-d8473778b610</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>1+FNlH3yXzcUlwYUEBGrHA==</td>
+      <td>8rBdRItiFarGJW+kVzwPVQ==</td>
+      <td>djO2//OHUGmEOx76gkJspQ==</td>
+      <td>c37405e7-4734-37ea-bbfe-dd53028c37ce</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>+UJPKrCPxA4WZpxorVOaDQ==</td>
+      <td>FzZzmUWqY++2EwmbJRnHbw==</td>
+      <td>djO2//OHUGmEOx76gkJspQ==</td>
+      <td>4d92b509-65bd-3f8f-a5a7-cb1bf0fbf616</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>/y/vB6/TQ4a6sL6CX/OozQ==</td>
+      <td>qUJOowjxLFIuFVVbB9FZtA==</td>
+      <td>djO2//OHUGmEOx76gkJspQ==</td>
+      <td>9d623518-c409-3331-8cf8-9ce5c123e554</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>yVsVMiJY3IXZIY1qraLVPA==</td>
+      <td>Ty7y0cLif18OnhqvkyCN5Q==</td>
+      <td>djO2//OHUGmEOx76gkJspQ==</td>
+      <td>93b87f52-0516-3e37-8796-c348c4f264e9</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>encrypted_browser</th>
+      <th>encrypted_location</th>
+      <th>encrypted_clicked_url</th>
+      <th>encrypted_user_agent</th>
+      <th>event_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>pcEYeSFroju4+7A6iWHfUg==</td>
+      <td>PmYz9ZMF96920EAe6Tasag==</td>
+      <td>iPHafipvnOaU27T2oMVtyg==</td>
+      <td>WTqufJtbh7v3roegE+uXPg==</td>
+      <td>01be3c8b-2b01-3c60-8f21-052674dd46aa</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>XcPAOsMOMwd06Murx7/nqA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>Valv4Yi7Itf++FZSap+qcw==</td>
+      <td>U0sS3F8Ucj35fMQKR7/7kg==</td>
+      <td>d7e50170-6319-32b9-a7d5-dd16a8724f92</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>C9os1opzSfmTrS9vLnU7qA==</td>
+      <td>AsLhO2bPaT2pvr21NZGUcQ==</td>
+      <td>FzZzmUWqY++2EwmbJRnHbw==</td>
+      <td>TTtXVqVzduOW9ghO+c8cRQ==</td>
+      <td>c24dcb88-7e56-381d-a029-c89f2f4e3c8c</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>C9os1opzSfmTrS9vLnU7qA==</td>
+      <td>AsLhO2bPaT2pvr21NZGUcQ==</td>
+      <td>nEZvf1o9uLkmymQnGbbL6w==</td>
+      <td>TTtXVqVzduOW9ghO+c8cRQ==</td>
+      <td>c4c7d29b-eca0-3fce-a887-ec32994fe464</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>6OdeM6QFfon2FH15xg03KQ==</td>
+      <td>87/aXzPnEdYOR7EdhCStbw==</td>
+      <td>99O17q7wiqsxA5H4gtipkw==</td>
+      <td>nfV1P4DxPARgE5zylu3K4w==</td>
+      <td>1fd0f1cb-2603-3816-ad29-17f6a2df8f55</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>7RYAbkJGG0ovdOrJP6YeLw==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>74c4d459-dc96-370d-ae87-c8c99cb4c8f5</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>f36Hy+1pKKWzcqF4V/BWyQ==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>1b44ce51-bb37-386f-b5d6-166787a2c667</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>W/RHtRY1XlBVo9NbMdO/yA==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>f4259c5f-9f0c-3c87-ae64-03dfbbd4b913</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>2xVllcL5cN/fwezksPscbw==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>71def879-89b5-363d-b4ee-6457fca5f040</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>2xVllcL5cN/fwezksPscbw==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>fcecc27c-b48e-329b-9e49-8c73b479fe94</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ijK+9ZcGf13cWZA/qhXuBw==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>f36Hy+1pKKWzcqF4V/BWyQ==</td>
+      <td>HrdwHg9W39vRx6rIrRpy9Q==</td>
+      <td>a5eacd5e-c91f-3a9c-aec4-16cfeb1139a2</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>Z2Awsm5Gs04mzguKQr49bA==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>50d7664f-410b-304b-94d7-e92b34120b29</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>pNPEEWRlR+lPnqcLPcZQTw==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>fc088212-3acb-3d44-8cd6-84d0cef06eeb</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>lk7JzmXjCIkALThksKvyKQ==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>414ec13b-4bc8-31ec-859b-9b69f76df4e7</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>pNPEEWRlR+lPnqcLPcZQTw==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>6fb66f50-d98e-3780-a152-bd63c8d0a19d</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>8ZLule+DnZdb8AIA14kRBQ==</td>
+      <td>+YOLhr9g8k8xFwKzhI9y9Q==</td>
+      <td>2xVllcL5cN/fwezksPscbw==</td>
+      <td>2qCxWhNtSwP8w4qSW88hSg==</td>
+      <td>763c7df1-5fc9-3a68-94dc-3b611ee0603b</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>s6j48y+8uBEFBwqLX249Bg==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>5a024b6a-3269-3951-a5de-6a3b79f6f9cc</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>s6j48y+8uBEFBwqLX249Bg==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>5b0da455-e2e4-374b-b755-2d02e303b43b</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>W+jsHZgiY4bb7Rr3kWNzrg==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>cf6bafee-aa2e-3355-8201-dfae7a2dae06</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>Ttz7dlmABr4c2087aiaouQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>55bb3a0e-a9af-3353-aee2-b9389556e40d</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>1cjxn+utgIS+vD9TYqVsWQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>f01594de-ce7a-3681-808e-039449d82a41</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>DSQCzO87lLFngpaPonYBNQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>18bf6fa5-e6b1-34c8-8be3-61acdbde5ed6</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>W+jsHZgiY4bb7Rr3kWNzrg==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>9c48d5e5-c0f6-3ccc-9bbe-33dc42cf6154</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>p+EpkMM8m7sHycKAW2a3og==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>bcc6fcc6-cc74-32c1-9e96-61d1132cc1a2</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>5aykE/wKpGHXnlvk4PNJmQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>f9725eae-46e3-3ceb-9af6-589ed6b206e5</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>p+EpkMM8m7sHycKAW2a3og==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>7b147273-b5ae-3b96-b779-708d949ddc60</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>mXU+a7ggIWil23NCRhTtFA==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>a2b0128b-2cc7-3e67-a42a-90c5be90ea0c</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>DSQCzO87lLFngpaPonYBNQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>04bfea04-8144-39f7-864f-5b15b22f730c</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>1cjxn+utgIS+vD9TYqVsWQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>241b2c00-c86b-3323-b28c-ebe3090d6597</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>1cjxn+utgIS+vD9TYqVsWQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>a6c41181-0057-3d31-b199-f4bd759a04c9</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>Ttz7dlmABr4c2087aiaouQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>f7b092f8-5081-376c-a774-efe167f5ec0d</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>mXU+a7ggIWil23NCRhTtFA==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>1f0394fc-6d0e-3e91-a1f4-8949be145c26</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>o+E5YBL2iuwch/klBj29vg==</td>
+      <td>VBbpHEu+0bvwsLeVlosq1Q==</td>
+      <td>5aykE/wKpGHXnlvk4PNJmQ==</td>
+      <td>4eGJe8vrRPZePAkjdl4AXA==</td>
+      <td>912d5bcd-25b5-35c5-b446-0b574088af11</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>hFZ+1T18mwWcvZVdVk9wUw==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>6504dd41-006b-32fa-bf14-a5aad6449a2b</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>KVa9cmJ80u9kas68sBQfYw==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>e6387ffd-2521-3afc-b9a5-c21e9772495c</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>nZ6AphSTZZJkDFQC6uUL8A==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>50931d16-a3d0-37a9-8bac-d7b0518ce918</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>Valv4Yi7Itf++FZSap+qcw==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>80b4efe6-aeac-384a-b33e-be24e4c95aef</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>ug8UaK6R/jaYiCBQ+UNgRg==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>b38901a4-6303-3085-982f-9ca8168df154</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>UJfIQ+gQ1xB7ScwVOaS9Lw==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>059c9326-039c-3e6f-aa17-14d697dbab5f</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>H9D5C5TIKpFF9zCwjPAlQQ==</td>
+      <td>jpAXfT6YyWKvoC1prldXDQ==</td>
+      <td>wYvU15Mk2E+TA15eF5dBgg==</td>
+      <td>LlVrgVg7nBjwpLqLVMpvNQ==</td>
+      <td>7db25fe3-cfdf-3b9b-8903-8ea3b7941acd</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>kWLD+KFxWOrSCyLmCsjBzw==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>NfYX4NWb6ciXSE6yaz27qA==</td>
+      <td>G8+WhnT6+AYSRsB2IIfRkQ==</td>
+      <td>8e56eb1b-af2c-353a-b028-bf81808ee5e2</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>kWLD+KFxWOrSCyLmCsjBzw==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>YGur4ToNCJR46M/EhYVhwQ==</td>
+      <td>G8+WhnT6+AYSRsB2IIfRkQ==</td>
+      <td>8f9dbcec-9a81-3917-bd7d-babb6415539c</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>kWLD+KFxWOrSCyLmCsjBzw==</td>
+      <td>sO58clxI5zkEaxeCrA/JUg==</td>
+      <td>1cjxn+utgIS+vD9TYqVsWQ==</td>
+      <td>G8+WhnT6+AYSRsB2IIfRkQ==</td>
+      <td>89fb399c-8365-3fde-abd5-c44c4e384daf</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>9LSwelCjdUPFe0U/4KnJvA==</td>
+      <td>q4IocFvdGTyPVmZuM+kT2Q==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>4fff4036-c474-3302-bc31-6673a49bbbe6</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>SSMmcwytbLYagSsRb7p9ZQ==</td>
+      <td>q4IocFvdGTyPVmZuM+kT2Q==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>0798ca82-fe93-3d4b-bee5-a021ad88b39b</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>9LSwelCjdUPFe0U/4KnJvA==</td>
+      <td>q4IocFvdGTyPVmZuM+kT2Q==</td>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td>6197c104-cff0-310c-a7b1-74d7651dec8e</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>15DdzXrAUk9I58lLdTJQhw==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>40d42fab-54e0-32e6-ab36-ef7706f5f6c2</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LG3RqxyOV9rEnzNqyHEBpw==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>bb8c7fc2-ad73-3c32-88d6-a42ad1255883</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>OIRpeRDGynbwlzsVMEvlKw==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>c223d976-b57e-3eca-9199-a51370d46135</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>jtV9jCj6SjRd0QrxWJ2Tog==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>65f94a52-be18-324a-8589-39c9132c175f</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>koQi7SWQaDjrnyNIeNA6Kg==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>A1xzVGyCJr1rre7cbSBeBg==</td>
+      <td>ifg1aIy7oOkIVUHvOvQjNQ==</td>
+      <td>a4677caa-ec47-3087-89db-bea8532ba68e</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>pbVsa7r/sLMlou22QASNKA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>7c376dcf-b83f-31fb-9caf-b47dd26e7e6c</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>DQ4IviMuMCMg6FKJnMmdFQ==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>8a5af973-4b14-32bf-a6a0-dac59be81a9d</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>nSDtj+7DLXHQeN8ROHTHyA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>c4d37966-175d-302c-971c-452107e252c8</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LOBE7WYU/33nZILoFQO1dQ==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>e65d9c06-4525-3357-a6aa-74eda44dda7d</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>/V/PpN3dHPPSLwv8QosyEA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>51f0a18f-b3c9-3e3f-ba88-c3ae0144602f</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>C+O3XZvyBUTsKlYjHcetFg==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>6344d7f5-9cdd-3d1a-8ecf-738d6e40c798</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>BN1OnuKTBvcDNWdtprlPXw==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>373b0ff2-b568-36bf-881d-39ccae56a2ce</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LDAt2/adFSKHoJ9Ibs+4uQ==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>7071a980-274a-3b4d-b3ff-18e67f49d2de</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LulEzXsAaPKGs/CpTRz5tg==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>660cef59-f332-353c-b3ab-c79a54f3c045</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>zP+nOscebyky1eQ+7KNk0Q==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>6825adde-41bb-38a2-8171-68ddbbd6ee5a</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LulEzXsAaPKGs/CpTRz5tg==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>f23ef40b-57c3-33a0-b8d9-c26c4a4d1fb8</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>LOBE7WYU/33nZILoFQO1dQ==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>fe52ffd9-d396-38e9-8bfc-18b9ca5b7023</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>Z2Awsm5Gs04mzguKQr49bA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>d5851a28-12c5-39ce-adb8-61118339db7a</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>Cm1WBD+epGr9uYN0RTeuJA==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>6c88c0f2-fe5e-3e68-abf9-bcb8f585c37c</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>LrydYeX5Lq/wy3l9ioZA2g==</td>
+      <td>gdKmWwZEUSnCNP7qzMzCsg==</td>
+      <td>WyqD5w0IQ0jJLuWsh+/eNg==</td>
+      <td>7kdVw+m5Vnm+4XN0FrW8ag==</td>
+      <td>bd475864-1dcb-3cfa-83f0-2460d12d6010</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>QFrI0TqS+y2pbJ/UkHGJsA==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>diNmtE5s7ZwMDd/pTkF35A==</td>
+      <td>u5wixtmmlikW61/ZQ4Mcuw==</td>
+      <td>2f1731d8-9c9d-3fe2-bd40-1ec64a69746f</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>+tML7jFxwwU2qLetB+dM4w==</td>
+      <td>UYhGgl4rOPcbBDd3T46ZMg==</td>
+      <td>ZfFLpuYER8xYfW24G99wDg==</td>
+      <td>0afdb319-06cd-38cb-8610-6ecfad43f7d6</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>ZAHt6/jcR6cEygvbqcBJvQ==</td>
+      <td>DfnEnkmo9vCjCBxJZ/cTNA==</td>
+      <td>o/dNyVrdHUXADUVtP8Bh1A==</td>
+      <td>f2ecc45e-0546-3576-98ff-8b3e042bb23b</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>geeJXyah/XIs4wFKX4yLPw==</td>
+      <td>OhRyTWBqG1MzshtTqva++g==</td>
+      <td>o/dNyVrdHUXADUVtP8Bh1A==</td>
+      <td>3e88d570-501f-35f6-9c2f-ab10c8b03373</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>yDL3TT3wQqGNMyhJFZLqSw==</td>
+      <td>o/dNyVrdHUXADUVtP8Bh1A==</td>
+      <td>4beed4a2-3ecc-3160-b22b-b554b4d6b69c</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>wOnoiMX7+0Ak9tk8hqB9IQ==</td>
+      <td>o/dNyVrdHUXADUVtP8Bh1A==</td>
+      <td>a50f86ee-d623-3883-ab9f-eaad6053822b</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>IvNjXozgeOgYARYpYoVWpQ==</td>
+      <td>8A+t+1y7scUIKVy+NElZXQ==</td>
+      <td>sCNBeFWBvbli56EVd6fn6A==</td>
+      <td>KCktEehVrIbhWEeNdYodrw==</td>
+      <td>a1397996-a986-359d-8c1b-f8649460c323</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>HIC/7y+U5x7j5xJKHiiMyA==</td>
+      <td>FLdem5Xg6BuTAexJSR98ng==</td>
+      <td>b6T00R7pQqAsjgQg9wrsBA==</td>
+      <td>nsKFzHEch+RckkT0+J/JlA==</td>
+      <td>69788b5f-225c-3a22-a5dd-eb88cffd5599</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>HIC/7y+U5x7j5xJKHiiMyA==</td>
+      <td>FLdem5Xg6BuTAexJSR98ng==</td>
+      <td>nEZvf1o9uLkmymQnGbbL6w==</td>
+      <td>nsKFzHEch+RckkT0+J/JlA==</td>
+      <td>bedd1876-644b-32b5-ae7b-59c344dd33e1</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>HIC/7y+U5x7j5xJKHiiMyA==</td>
+      <td>TMdF2nURASndj5NwCRjxyg==</td>
+      <td>lKMxeYv/QRkLNzSRgB5vFQ==</td>
+      <td>R+3pYYmj3bkz/1n/Dhadlw==</td>
+      <td>4d57b0b9-6873-3c05-9acc-719548d36b60</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>47UNWJGjYX7LIJMHU5QERA==</td>
+      <td>KFghOWuBl/VdbOhPnRUPng==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>bef2017b-3f7b-3cc3-a298-d85c6abbcc40</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>lKvjEtV1+jrL3wHMryQY6Q==</td>
+      <td>ELp2roz/cOAG3nqrz13xCw==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>c0343ef5-1485-3e1b-bf8c-40f5176f6b20</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>b2qMGOWpCdWVnEV59zAbiw==</td>
+      <td>tw/NwVrCR7H7ALaWeyOrXg==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>21870724-3751-3ab5-aa1e-843e5fe3f0c2</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>b2qMGOWpCdWVnEV59zAbiw==</td>
+      <td>wlN7/8FFLQLu0zjk7kVgRw==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>d7ba0db0-9c97-30e2-bdf5-d8e4bbb9e1ea</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>b2qMGOWpCdWVnEV59zAbiw==</td>
+      <td>Cm1WBD+epGr9uYN0RTeuJA==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>988202b6-7d32-3a4a-87ee-ebfb198e93f0</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>b2qMGOWpCdWVnEV59zAbiw==</td>
+      <td>IlthoO5uUm79sFldA32xzw==</td>
+      <td>oN0pwsP75hxQZ/5GduhDCA==</td>
+      <td>05ef798a-bd70-3eef-a948-acc48d817b79</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>baVWrUnP9Ghlx41q5M9/4w==</td>
+      <td>OhRyTWBqG1MzshtTqva++g==</td>
+      <td>nHT1NDdnNMyg/WVPBvSbEA==</td>
+      <td>b5679448-0626-3ea5-ad04-4f9f97e9b4b2</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>zZNV5/rKTgV7b/Vfu5fw0Q==</td>
+      <td>zP+nOscebyky1eQ+7KNk0Q==</td>
+      <td>nHT1NDdnNMyg/WVPBvSbEA==</td>
+      <td>f949999f-3e94-39a6-ae6f-cefcb08e4875</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>YUs5mM77Psm3nIUqsMnS7w==</td>
+      <td>cxg4F5kWz7YbRK2PFPgsAA==</td>
+      <td>3EofVMaNH2CdiI9648I5WQ==</td>
+      <td>9cdbd129-4fc7-3a4b-9ffc-aee11437315c</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>+UJPKrCPxA4WZpxorVOaDQ==</td>
+      <td>qh5fiQlRZu0qrrdAibLmWA==</td>
+      <td>TZD7dmw7Ud5X+kLoYMAyFw==</td>
+      <td>6f8d4d76-d324-330d-93f2-adcfe09c3563</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>YuxWC1xyWlr5BLzcehg/ew==</td>
+      <td>+UJPKrCPxA4WZpxorVOaDQ==</td>
+      <td>M9LF/6J2be3J8236Dt7hkw==</td>
+      <td>TZD7dmw7Ud5X+kLoYMAyFw==</td>
+      <td>97f3eb98-c9c8-38b6-b23d-d38bdd9b4c45</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Xw75k6KykGSlW0FQiTTV4Q==</td>
+      <td>oPKEzRDxkuxQI2wLGhiqmQ==</td>
+      <td>FzZzmUWqY++2EwmbJRnHbw==</td>
+      <td>AuWMZNBc8RBylZ5TQk1DRQ==</td>
+      <td>694cf66f-3bf6-3b73-93c0-eb5562032d0f</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>h1ppykCI98qBdh3wZBc/RA==</td>
+      <td>8rBdRItiFarGJW+kVzwPVQ==</td>
+      <td>yQPYB80Dp+KPfD+f9kyhbg==</td>
+      <td>ce675f57-130b-37e4-892b-5d11e64207ee</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>Pldj3KyAcG+PA9zXWHSSUQ==</td>
+      <td>annWbnGV6Wm0WZmgZTLo3A==</td>
+      <td>yDpT1s0dSo90oqbUKds9tg==</td>
+      <td>1f891805-2832-304b-b554-297fccb210f6</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>zMv2LSUoKFNj3FInNQ2WDg==</td>
+      <td>/KYFBKIpw4P1fQaFuInvVw==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>9f890b5d-15fa-339d-8a9b-6f2ac409bc8f</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>BQiGyDKRJQZIZap/feH8vQ==</td>
+      <td>jwh1Xu20S3exqKMDDeQ4Pw==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>e1aab236-d2f6-3ce0-858d-bda3b68cdedc</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>zMv2LSUoKFNj3FInNQ2WDg==</td>
+      <td>ynm61dpfsOFFU03agsoAdw==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>680e179d-028e-33df-baf2-44d286ca7ae7</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>BQiGyDKRJQZIZap/feH8vQ==</td>
+      <td>/KYFBKIpw4P1fQaFuInvVw==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>49258455-5a16-3497-b6bd-f30b241ad904</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>j+8StUsTGNVn0Y2crAe5+w==</td>
+      <td>iYfxrbSZArF3RawN3xANuA==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>3c0c8230-26d7-3469-b5e1-7ef7cffe10a7</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>Nygo/uHAezuNmVS6qGiPIg==</td>
+      <td>qCHUoxKAeXksGP+OOYpgvQ==</td>
+      <td>oNtKDwinBJV5QuBJWXMC+Q==</td>
+      <td>c65227a1-9e97-327d-9034-d8473778b610</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>1+FNlH3yXzcUlwYUEBGrHA==</td>
+      <td>8rBdRItiFarGJW+kVzwPVQ==</td>
+      <td>djO2//OHUGmEOx76gkJspQ==</td>
+      <td>c37405e7-4734-37ea-bbfe-dd53028c37ce</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>+UJPKrCPxA4WZpxorVOaDQ==</td>
+      <td>FzZzmUWqY++2EwmbJRnHbw==</td>
+      <td>djO2//OHUGmEOx76gkJspQ==</td>
+      <td>4d92b509-65bd-3f8f-a5a7-cb1bf0fbf616</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>/y/vB6/TQ4a6sL6CX/OozQ==</td>
+      <td>qUJOowjxLFIuFVVbB9FZtA==</td>
+      <td>djO2//OHUGmEOx76gkJspQ==</td>
+      <td>9d623518-c409-3331-8cf8-9ce5c123e554</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>uxYKc4jvw5H9awoWiPOvRw==</td>
+      <td>yVsVMiJY3IXZIY1qraLVPA==</td>
+      <td>Ty7y0cLif18OnhqvkyCN5Q==</td>
+      <td>djO2//OHUGmEOx76gkJspQ==</td>
+      <td>93b87f52-0516-3e37-8796-c348c4f264e9</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_browser</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_browser"></div><b>📃 Summary:</b> Encrypted browser information of the user<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_location</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_location"></div><b>📃 Summary:</b> Encrypted geographical location of the user<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_clicked_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_clicked_url"></div><b>📃 Summary:</b> Encrypted URL of the clicked link<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_user_agent</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_user_agent"></div><b>📃 Summary:</b> Encrypted user agent string of the browser<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_event_id"></div><b>📃 Summary:</b> Unique identifier for each click event<br><b>🦄 Unique:</b> This column represents a unique identifier for each click event. For this table, each row represents a distinct email click event. The event_id appears to be unique across rows, as it is likely generated as a UUID (Universally Unique Identifier).<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about email click event data. It contains unique identifiers, encrypted information about the user's browser, location, IP address, clicked URL, and user agent. The referer field is empty in the samples provided. This data likely tracks user interactions with email links for analytics or marketing purposes.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>7</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for each click event</td>
+      <td>event_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>referer</td>
+      <td>Referring URL (empty in samples)</td>
+      <td>referrer_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>browser</td>
+      <td>Encrypted browser information of the user</td>
+      <td>encrypted_browser</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>location</td>
+      <td>Encrypted geographical location of the user</td>
+      <td>encrypted_location</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>ip_address</td>
+      <td>Encrypted IP address of the user (empty in samples)</td>
+      <td>encrypted_ip</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>url</td>
+      <td>Encrypted URL of the clicked link</td>
+      <td>encrypted_clicked_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>user_agent</td>
+      <td>Encrypted user agent string of the browser</td>
+      <td>encrypted_user_agent</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>3</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>encrypted_ip</td>
+      <td>CAST("encrypted_ip" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'encrypted_ip' from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>event_id</td>
+      <td>CAST("event_id" AS UUID)</td>
+      <td>To transform the 'event_id' column from VARCHAR to UUID, we need to use a simple CAST function. In DuckDB, the UUID data type is supported, and we can directly cast a properly formatted string to UUID. The values provided are already in the standard UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward cast should work.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>referrer_url</td>
+      <td>CAST("referrer_url" AS VARCHAR)</td>
+      <td>To transform the data type of the 'referrer_url' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>2</b> columns have missing values<br>
+                ❌ No missing value is acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>encrypted_ip</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>referrer_url</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>encrypted_ip</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>referrer_url</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'o+E5YBL2iuwch/k...', 'value': 17.0}, {'label': 'LrydYeX5Lq/wy3l...', 'value': 15.0}, {'label': 'uxYKc4jvw5H9awo...', 'value': 12.0}, {'label': 'YuxWC1xyWlr5BLz...', 'value': 11.0}, {'label': 'koQi7SWQaDjrnyN...', 'value': 8.0}, {'label': 'Other values', 'value': 37.0}];
+    drawBarChart("bar_viz_encrypted_browser", data);
+data = [{'label': 'gdKmWwZEUSnCNP7...', 'value': 20.0}, {'label': 'VBbpHEu+0bvwsLe...', 'value': 17.0}, {'label': 'jpAXfT6YyWKvoC1...', 'value': 13.0}, {'label': 'sO58clxI5zkEaxe...', 'value': 7.000000000000001}, {'label': '8A+t+1y7scUIKVy...', 'value': 5.0}, {'label': 'Other values', 'value': 38.0}];
+    drawBarChart("bar_viz_encrypted_location", data);
+data = [{'label': '1cjxn+utgIS+vD9...', 'value': 4.0}, {'label': '2xVllcL5cN/fwez...', 'value': 3.0}, {'label': 'q4IocFvdGTyPVmZ...', 'value': 3.0}, {'label': 'FzZzmUWqY++2Ewm...', 'value': 3.0}, {'label': 's6j48y+8uBEFBwq...', 'value': 2.0}, {'label': 'Other values', 'value': 85.0}];
+    drawBarChart("bar_viz_encrypted_clicked_url", data);
+data = [{'label': '4eGJe8vrRPZePAk...', 'value': 17.0}, {'label': '7kdVw+m5Vnm+4XN...', 'value': 15.0}, {'label': 'LlVrgVg7nBjwpLq...', 'value': 7.000000000000001}, {'label': 'oN0pwsP75hxQZ/5...', 'value': 6.0}, {'label': 'HrdwHg9W39vRx6r...', 'value': 6.0}, {'label': 'Other values', 'value': 49.0}];
+    drawBarChart("bar_viz_encrypted_user_agent", data);
+data = [{'label': '1fd0f1cb-2603-3...', 'value': 1.0}, {'label': 'fcecc27c-b48e-3...', 'value': 1.0}, {'label': 'a5eacd5e-c91f-3...', 'value': 1.0}, {'label': 'fc088212-3acb-3...', 'value': 1.0}, {'label': '55bb3a0e-a9af-3...', 'value': 1.0}, {'label': 'Other values', 'value': 95.0}];
+    drawBarChart("bar_viz_event_id", data);
+
+
+</script>
+</body>
+</html>

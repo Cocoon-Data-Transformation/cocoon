@@ -1,0 +1,3128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>email_campaign_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>content_id</th>
+      <th>type</th>
+      <th>app_name</th>
+      <th>name</th>
+      <th>subject</th>
+      <th>app_id</th>
+      <th>id</th>
+      <th>sub_type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1.180914e+10</td>
+      <td>FEEDBACK_NPS_EMAIL</td>
+      <td>nxH5ufCWqX33IUbU4fVKoQ==</td>
+      <td>xnAPme73HrsY/KHSwuemkQ==</td>
+      <td>UTTEZy3SW1OQ1v0Lv6HWHA==</td>
+      <td>22924</td>
+      <td>75310262</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>NaN</td>
+      <td>None</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2286</td>
+      <td>2</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>71162884</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>70590690</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>70545937</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>70591302</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>70572094</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1.436673e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>j77ryMp1M2EMKYpnwJypbw==</td>
+      <td>E1lLLz+Y0HV5tDF1MfwzZA==</td>
+      <td>2286</td>
+      <td>77181027</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1.516493e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>FvO+Jg67BXkOuS8OTceUDQ==</td>
+      <td>kHih5qrU0eTOVaDRmkBH2A==</td>
+      <td>2286</td>
+      <td>77465044</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2.541529e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>WR60+VMSAeLSrUEn4FOnVQ==</td>
+      <td>pwqgxkOt1nQ2fl6WREfekg==</td>
+      <td>2286</td>
+      <td>83072657</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>1.467101e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kH1VHqzvyQBY3+HEbHiuLw==</td>
+      <td>Kn8qQOU2soe7RG5Bh3OnIQ==</td>
+      <td>2286</td>
+      <td>77302921</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>1.467101e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kH1VHqzvyQBY3+HEbHiuLw==</td>
+      <td>Kn8qQOU2soe7RG5Bh3OnIQ==</td>
+      <td>2286</td>
+      <td>77303367</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>1.104851e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>4IUFGzh2BtzOUkdhjFIbJA==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>74402089</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1.120292e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>0YAGW3GiMikbDdd1ARzP8Q==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>74577505</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>1.697206e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>pdDiYFGm3Lwlrjg5m4gLUw==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>77635057</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>1.697333e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>I5b+wJA2btyDANNc+5IhAA==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>77635124</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1.697085e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>eZxZ1VNoaUjnp9Om/NELjA==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>77634479</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2.959592e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>/89tI+zJGQxQb4OyBgfyGQ==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>88261659</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>1.079283e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>G1+YKLItgUaY/dPSpY8LNA==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>74402756</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>2.939745e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>rj800TEamMdTEftdyeT4oA==</td>
+      <td>o9s7+5fjYluq8T95ngEF6g==</td>
+      <td>2286</td>
+      <td>87947232</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>1.097970e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>nLr7iqVYKrPqxTeQPR6TIQ==</td>
+      <td>pvWKelWf/suRdnS6LuB3Jg==</td>
+      <td>2286</td>
+      <td>74605126</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>1.122985e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7te58OKoNp8f53pKZAwvrA==</td>
+      <td>pvWKelWf/suRdnS6LuB3Jg==</td>
+      <td>2286</td>
+      <td>74605933</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>1.042273e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>82LDHID1fErA5tRROQV31w==</td>
+      <td>c0qU3hvDu85okFdJu7sI+Q==</td>
+      <td>2286</td>
+      <td>73602967</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>83808696</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>77648436</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>83069619</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>79411842</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>83064125</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>1.699243e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y68PEeAwcAFqcBw24/fmjw==</td>
+      <td>9knWUnH00zquiKRUxE7ycQ==</td>
+      <td>2286</td>
+      <td>77650381</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>2.631475e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>NzNanl/CwBURDLrfLs0w1w==</td>
+      <td>g502jKyXK84W7sv366bzXA==</td>
+      <td>2286</td>
+      <td>83842327</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2.997828e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>d4US+8nBqr746bLKu58ANA==</td>
+      <td>eG2LcFPHgI6qTUQn174aJw==</td>
+      <td>2286</td>
+      <td>88785630</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2.997828e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>d4US+8nBqr746bLKu58ANA==</td>
+      <td>eG2LcFPHgI6qTUQn174aJw==</td>
+      <td>2286</td>
+      <td>88786327</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>3.132506e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>ECg4dBC6SLUnE4y7pDH2PA==</td>
+      <td>3nA6qTuNJ1xkjvsKU4oNbQ==</td>
+      <td>2286</td>
+      <td>90302737</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>3.117858e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>rQj8+UQ2l38oGnOMxosqmg==</td>
+      <td>b09lXtWT9xqg+Rt5s81NFQ==</td>
+      <td>2286</td>
+      <td>90071577</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>3.053860e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>MxurWgMD07m6HCeIy0fVnQ==</td>
+      <td>yrUqa7qbzquP4h8KZan4lA==</td>
+      <td>2286</td>
+      <td>89357747</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>3.053860e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>MxurWgMD07m6HCeIy0fVnQ==</td>
+      <td>yrUqa7qbzquP4h8KZan4lA==</td>
+      <td>2286</td>
+      <td>89637271</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>3.053860e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>MxurWgMD07m6HCeIy0fVnQ==</td>
+      <td>yrUqa7qbzquP4h8KZan4lA==</td>
+      <td>2286</td>
+      <td>89550905</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2.372116e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>ejGfV12xoa+an34SWon/ng==</td>
+      <td>CCvEC5hVOMJxBSTaszO+Nw==</td>
+      <td>2286</td>
+      <td>81104530</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2.372116e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>ejGfV12xoa+an34SWon/ng==</td>
+      <td>CCvEC5hVOMJxBSTaszO+Nw==</td>
+      <td>2286</td>
+      <td>82080607</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>2.751975e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>LPdnmitJ6rHZGqlp619AcQ==</td>
+      <td>cTRihYZYlrw7IL1jqtpfJQ==</td>
+      <td>2286</td>
+      <td>85246698</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>2.933980e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>6zWU98HXK8Q5t7chi5khmA==</td>
+      <td>LfharTeev44SncFIj18QBQ==</td>
+      <td>2286</td>
+      <td>87864970</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>2.997506e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>DPdBCdJMuYMVEPgxduQjuQ==</td>
+      <td>P9zWRqiMgUqj03ltSN6voQ==</td>
+      <td>2286</td>
+      <td>88781891</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>2.896541e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Q5JYm9Dct+7tQPmCDHlxgw==</td>
+      <td>lv7riLy9b6EcBcLVYLuytw==</td>
+      <td>2286</td>
+      <td>87535215</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>2.896541e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Q5JYm9Dct+7tQPmCDHlxgw==</td>
+      <td>lv7riLy9b6EcBcLVYLuytw==</td>
+      <td>2286</td>
+      <td>89551007</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>2.896541e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Q5JYm9Dct+7tQPmCDHlxgw==</td>
+      <td>lv7riLy9b6EcBcLVYLuytw==</td>
+      <td>2286</td>
+      <td>87241532</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>76532944</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>70590834</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>77354863</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>70546500</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>83064847</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>70591059</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>71162826</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>70572110</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>77179639</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>2.782979e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>PXcYnUFFSH/9s69+R67VMg==</td>
+      <td>cfLrHS/w8srHsxEW4vC2/A==</td>
+      <td>2286</td>
+      <td>85544294</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86147615</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86105936</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86148229</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86105954</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86324551</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>1.697381e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>H73wM4VYQsctSrD9Yz4t9A==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>79411841</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>1.697381e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>H73wM4VYQsctSrD9Yz4t9A==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>83069223</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>1.697381e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>H73wM4VYQsctSrD9Yz4t9A==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>77649258</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>1.697381e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>H73wM4VYQsctSrD9Yz4t9A==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>83064022</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>1.303731e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>nXm6bvawEecvktfituEtLw==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>76814657</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>2.962713e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>OFnBeAhpkLobCRHT65tfww==</td>
+      <td>Rva6rYE5WDdJRD4hy5qF7Q==</td>
+      <td>2286</td>
+      <td>88295955</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>70349094</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>79555537</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>70590330</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>70569048</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>83063101</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>77650205</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>79411093</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>83064021</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>83069373</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>83808298</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>8.627020e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y26SgyTeauHO/uhPWf/A+A==</td>
+      <td>tVu9J14xto4fqeplJXD7Cg==</td>
+      <td>2286</td>
+      <td>72571696</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>8.627020e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y26SgyTeauHO/uhPWf/A+A==</td>
+      <td>tVu9J14xto4fqeplJXD7Cg==</td>
+      <td>2286</td>
+      <td>71683061</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>8.627020e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y26SgyTeauHO/uhPWf/A+A==</td>
+      <td>tVu9J14xto4fqeplJXD7Cg==</td>
+      <td>2286</td>
+      <td>71668573</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>8.627020e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y26SgyTeauHO/uhPWf/A+A==</td>
+      <td>tVu9J14xto4fqeplJXD7Cg==</td>
+      <td>2286</td>
+      <td>71681111</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>1.268191e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>cXFWpB00oVzX+iMRAuQFcg==</td>
+      <td>MjJDVnazdYLjWwAKVKaT0A==</td>
+      <td>2286</td>
+      <td>77353974</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>1.268191e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>cXFWpB00oVzX+iMRAuQFcg==</td>
+      <td>MjJDVnazdYLjWwAKVKaT0A==</td>
+      <td>2286</td>
+      <td>76449416</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>1.268191e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>cXFWpB00oVzX+iMRAuQFcg==</td>
+      <td>MjJDVnazdYLjWwAKVKaT0A==</td>
+      <td>2286</td>
+      <td>76451898</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>1.704247e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>sfUNOZqvDLsF1hLJ9I5a8Q==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>83063214</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>1.704247e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>sfUNOZqvDLsF1hLJ9I5a8Q==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>77674061</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>70568989</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>71163403</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>70590588</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>1.704247e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>sfUNOZqvDLsF1hLJ9I5a8Q==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>79555542</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>70545910</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>70590926</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>77180180</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>1.127452e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>eCmIRwe60NhBlR5zRMtCng==</td>
+      <td>WKtD0cG2XXtl5QmZuP2d5w==</td>
+      <td>2286</td>
+      <td>74644000</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>83063675</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>83069620</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>79413302</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>83808447</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>77650361</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>2.222535e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>hv4eNcZpA/xiXkwtdM77dA==</td>
+      <td>M5WNtOeDDv0IjCgZm2xlZA==</td>
+      <td>2286</td>
+      <td>80022370</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>2.121011e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>cB3gHTphrwEunmU+RlX4lA==</td>
+      <td>n1v0h/+eInWlP2P98bqpPA==</td>
+      <td>2286</td>
+      <td>79414357</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>content_id</th>
+      <th>campaign_type</th>
+      <th>encrypted_app_name</th>
+      <th>encrypted_campaign_name</th>
+      <th>encrypted_email_subject</th>
+      <th>app_id</th>
+      <th>campaign_id</th>
+      <th>campaign_subtype</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1.180914e+10</td>
+      <td>FEEDBACK_NPS_EMAIL</td>
+      <td>nxH5ufCWqX33IUbU4fVKoQ==</td>
+      <td>xnAPme73HrsY/KHSwuemkQ==</td>
+      <td>UTTEZy3SW1OQ1v0Lv6HWHA==</td>
+      <td>22924</td>
+      <td>75310262</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>NaN</td>
+      <td>None</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2286</td>
+      <td>2</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>71162884</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>70590690</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>70545937</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>70591302</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7.874381e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>o5QZ2dCjms3N4gIjLf7Ndw==</td>
+      <td>fnTqnZcA/26FcPUjLHgipA==</td>
+      <td>2286</td>
+      <td>70572094</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1.436673e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>j77ryMp1M2EMKYpnwJypbw==</td>
+      <td>E1lLLz+Y0HV5tDF1MfwzZA==</td>
+      <td>2286</td>
+      <td>77181027</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1.516493e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>FvO+Jg67BXkOuS8OTceUDQ==</td>
+      <td>kHih5qrU0eTOVaDRmkBH2A==</td>
+      <td>2286</td>
+      <td>77465044</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2.541529e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>WR60+VMSAeLSrUEn4FOnVQ==</td>
+      <td>pwqgxkOt1nQ2fl6WREfekg==</td>
+      <td>2286</td>
+      <td>83072657</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>1.467101e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kH1VHqzvyQBY3+HEbHiuLw==</td>
+      <td>Kn8qQOU2soe7RG5Bh3OnIQ==</td>
+      <td>2286</td>
+      <td>77302921</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>1.467101e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kH1VHqzvyQBY3+HEbHiuLw==</td>
+      <td>Kn8qQOU2soe7RG5Bh3OnIQ==</td>
+      <td>2286</td>
+      <td>77303367</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>1.104851e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>4IUFGzh2BtzOUkdhjFIbJA==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>74402089</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1.120292e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>0YAGW3GiMikbDdd1ARzP8Q==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>74577505</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>1.697206e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>pdDiYFGm3Lwlrjg5m4gLUw==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>77635057</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>1.697333e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>I5b+wJA2btyDANNc+5IhAA==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>77635124</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1.697085e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>eZxZ1VNoaUjnp9Om/NELjA==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>77634479</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2.959592e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>/89tI+zJGQxQb4OyBgfyGQ==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>88261659</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>1.079283e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>G1+YKLItgUaY/dPSpY8LNA==</td>
+      <td>y/4ASxWbPMrWCz9rTp/2/g==</td>
+      <td>2286</td>
+      <td>74402756</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>2.939745e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>rj800TEamMdTEftdyeT4oA==</td>
+      <td>o9s7+5fjYluq8T95ngEF6g==</td>
+      <td>2286</td>
+      <td>87947232</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>1.097970e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>nLr7iqVYKrPqxTeQPR6TIQ==</td>
+      <td>pvWKelWf/suRdnS6LuB3Jg==</td>
+      <td>2286</td>
+      <td>74605126</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>1.122985e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7te58OKoNp8f53pKZAwvrA==</td>
+      <td>pvWKelWf/suRdnS6LuB3Jg==</td>
+      <td>2286</td>
+      <td>74605933</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>1.042273e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>82LDHID1fErA5tRROQV31w==</td>
+      <td>c0qU3hvDu85okFdJu7sI+Q==</td>
+      <td>2286</td>
+      <td>73602967</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>83808696</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>77648436</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>83069619</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>79411842</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>1.698963e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>kR+fCIrRo8B282UT1dP4LQ==</td>
+      <td>DFZNpSYwtPT+FuhPbdQfKA==</td>
+      <td>2286</td>
+      <td>83064125</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>1.699243e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y68PEeAwcAFqcBw24/fmjw==</td>
+      <td>9knWUnH00zquiKRUxE7ycQ==</td>
+      <td>2286</td>
+      <td>77650381</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>2.631475e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>NzNanl/CwBURDLrfLs0w1w==</td>
+      <td>g502jKyXK84W7sv366bzXA==</td>
+      <td>2286</td>
+      <td>83842327</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2.997828e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>d4US+8nBqr746bLKu58ANA==</td>
+      <td>eG2LcFPHgI6qTUQn174aJw==</td>
+      <td>2286</td>
+      <td>88785630</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2.997828e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>d4US+8nBqr746bLKu58ANA==</td>
+      <td>eG2LcFPHgI6qTUQn174aJw==</td>
+      <td>2286</td>
+      <td>88786327</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>3.132506e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>ECg4dBC6SLUnE4y7pDH2PA==</td>
+      <td>3nA6qTuNJ1xkjvsKU4oNbQ==</td>
+      <td>2286</td>
+      <td>90302737</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>3.117858e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>rQj8+UQ2l38oGnOMxosqmg==</td>
+      <td>b09lXtWT9xqg+Rt5s81NFQ==</td>
+      <td>2286</td>
+      <td>90071577</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>3.053860e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>MxurWgMD07m6HCeIy0fVnQ==</td>
+      <td>yrUqa7qbzquP4h8KZan4lA==</td>
+      <td>2286</td>
+      <td>89357747</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>3.053860e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>MxurWgMD07m6HCeIy0fVnQ==</td>
+      <td>yrUqa7qbzquP4h8KZan4lA==</td>
+      <td>2286</td>
+      <td>89637271</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>3.053860e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>MxurWgMD07m6HCeIy0fVnQ==</td>
+      <td>yrUqa7qbzquP4h8KZan4lA==</td>
+      <td>2286</td>
+      <td>89550905</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2.372116e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>ejGfV12xoa+an34SWon/ng==</td>
+      <td>CCvEC5hVOMJxBSTaszO+Nw==</td>
+      <td>2286</td>
+      <td>81104530</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2.372116e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>ejGfV12xoa+an34SWon/ng==</td>
+      <td>CCvEC5hVOMJxBSTaszO+Nw==</td>
+      <td>2286</td>
+      <td>82080607</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>2.751975e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>LPdnmitJ6rHZGqlp619AcQ==</td>
+      <td>cTRihYZYlrw7IL1jqtpfJQ==</td>
+      <td>2286</td>
+      <td>85246698</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>2.933980e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>6zWU98HXK8Q5t7chi5khmA==</td>
+      <td>LfharTeev44SncFIj18QBQ==</td>
+      <td>2286</td>
+      <td>87864970</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>2.997506e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>DPdBCdJMuYMVEPgxduQjuQ==</td>
+      <td>P9zWRqiMgUqj03ltSN6voQ==</td>
+      <td>2286</td>
+      <td>88781891</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>2.896541e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Q5JYm9Dct+7tQPmCDHlxgw==</td>
+      <td>lv7riLy9b6EcBcLVYLuytw==</td>
+      <td>2286</td>
+      <td>87535215</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>2.896541e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Q5JYm9Dct+7tQPmCDHlxgw==</td>
+      <td>lv7riLy9b6EcBcLVYLuytw==</td>
+      <td>2286</td>
+      <td>89551007</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>2.896541e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Q5JYm9Dct+7tQPmCDHlxgw==</td>
+      <td>lv7riLy9b6EcBcLVYLuytw==</td>
+      <td>2286</td>
+      <td>87241532</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>76532944</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>70590834</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>77354863</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>70546500</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>83064847</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>70591059</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>71162826</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>70572110</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>7.874719e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>jiCPZCOtnM4WVlQxrmCwvA==</td>
+      <td>xQvu7m5de6hY0MTSXRcgsw==</td>
+      <td>2286</td>
+      <td>77179639</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>2.782979e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>PXcYnUFFSH/9s69+R67VMg==</td>
+      <td>cfLrHS/w8srHsxEW4vC2/A==</td>
+      <td>2286</td>
+      <td>85544294</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86147615</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86105936</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86148229</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86105954</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>2.818920e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Ik8jBLPLeXT9ocWfkdfmvA==</td>
+      <td>gkGS6M9TPFXLfn5wt/2JLg==</td>
+      <td>2286</td>
+      <td>86324551</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>1.697381e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>H73wM4VYQsctSrD9Yz4t9A==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>79411841</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>1.697381e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>H73wM4VYQsctSrD9Yz4t9A==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>83069223</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>1.697381e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>H73wM4VYQsctSrD9Yz4t9A==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>77649258</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>1.697381e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>H73wM4VYQsctSrD9Yz4t9A==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>83064022</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>1.303731e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>nXm6bvawEecvktfituEtLw==</td>
+      <td>sCeIBCXPKRQa1OBGM6UwGw==</td>
+      <td>2286</td>
+      <td>76814657</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>2.962713e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>OFnBeAhpkLobCRHT65tfww==</td>
+      <td>Rva6rYE5WDdJRD4hy5qF7Q==</td>
+      <td>2286</td>
+      <td>88295955</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>70349094</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>79555537</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>70590330</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>70569048</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>7.829648e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>Rd+les9NSTiBW+HY97vbnw==</td>
+      <td>F5EZqvV+fKj+lgmfCXhvQQ==</td>
+      <td>2286</td>
+      <td>83063101</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>77650205</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>79411093</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>83064021</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>83069373</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>1.699269e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>u7s10N6/o2o8R+zfAz5rXA==</td>
+      <td>8wvxxmhpwUjV6jN8XEz3Nw==</td>
+      <td>2286</td>
+      <td>83808298</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>8.627020e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y26SgyTeauHO/uhPWf/A+A==</td>
+      <td>tVu9J14xto4fqeplJXD7Cg==</td>
+      <td>2286</td>
+      <td>72571696</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>8.627020e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y26SgyTeauHO/uhPWf/A+A==</td>
+      <td>tVu9J14xto4fqeplJXD7Cg==</td>
+      <td>2286</td>
+      <td>71683061</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>8.627020e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y26SgyTeauHO/uhPWf/A+A==</td>
+      <td>tVu9J14xto4fqeplJXD7Cg==</td>
+      <td>2286</td>
+      <td>71668573</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>8.627020e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>y26SgyTeauHO/uhPWf/A+A==</td>
+      <td>tVu9J14xto4fqeplJXD7Cg==</td>
+      <td>2286</td>
+      <td>71681111</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>1.268191e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>cXFWpB00oVzX+iMRAuQFcg==</td>
+      <td>MjJDVnazdYLjWwAKVKaT0A==</td>
+      <td>2286</td>
+      <td>77353974</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>1.268191e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>cXFWpB00oVzX+iMRAuQFcg==</td>
+      <td>MjJDVnazdYLjWwAKVKaT0A==</td>
+      <td>2286</td>
+      <td>76449416</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>1.268191e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>cXFWpB00oVzX+iMRAuQFcg==</td>
+      <td>MjJDVnazdYLjWwAKVKaT0A==</td>
+      <td>2286</td>
+      <td>76451898</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>1.704247e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>sfUNOZqvDLsF1hLJ9I5a8Q==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>83063214</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>1.704247e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>sfUNOZqvDLsF1hLJ9I5a8Q==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>77674061</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>70568989</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>71163403</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>70590588</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>1.704247e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>sfUNOZqvDLsF1hLJ9I5a8Q==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>79555542</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>70545910</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>70590926</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>7.873450e+09</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>22gNwysTXRKJDe9J94CBwA==</td>
+      <td>GStnZ16g3NEHLqzIF6SDpg==</td>
+      <td>2286</td>
+      <td>77180180</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>1.127452e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>eCmIRwe60NhBlR5zRMtCng==</td>
+      <td>WKtD0cG2XXtl5QmZuP2d5w==</td>
+      <td>2286</td>
+      <td>74644000</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>83063675</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>83069620</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>79413302</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>83808447</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>1.699219e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>7O12SYdBoTUT7Vrzxb2nxw==</td>
+      <td>/DfubNuB/w36S9aV8izQfg==</td>
+      <td>2286</td>
+      <td>77650361</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>2.222535e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>hv4eNcZpA/xiXkwtdM77dA==</td>
+      <td>M5WNtOeDDv0IjCgZm2xlZA==</td>
+      <td>2286</td>
+      <td>80022370</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>2.121011e+10</td>
+      <td>AUTOMATED_EMAIL</td>
+      <td>JPR82+ndundKfMU+UdkDLg==</td>
+      <td>cB3gHTphrwEunmU+RlX4lA==</td>
+      <td>n1v0h/+eInWlP2P98bqpPA==</td>
+      <td>2286</td>
+      <td>79414357</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">content_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_content_id"></div><b>📃 Summary:</b> Identifier for the email content<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">campaign_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='AUTOMATED_EMAIL'>AUTOMATED_EMAIL</option><option value='FEEDBACK_NPS_EMAIL'>FEEDBACK_NPS_EMAIL</option><option value='NEWSLETTER'>NEWSLETTER</option><option value='PROMOTIONAL'>PROMOTIONAL</option><option value='TRANSACTIONAL'>TRANSACTIONAL</option><option value='WELCOME_SERIES'>WELCOME_SERIES</option><option value='ABANDONED_CART'>ABANDONED_CART</option><option value='RE_ENGAGEMENT'>RE_ENGAGEMENT</option><option value='EVENT_INVITATION'>EVENT_INVITATION</option><option value='PRODUCT_UPDATE'>PRODUCT_UPDATE</option><option value='CUSTOMER_LOYALTY'>CUSTOMER_LOYALTY</option><option value='SEASONAL_CAMPAIGN'>SEASONAL_CAMPAIGN</option><option value='BIRTHDAY_EMAIL'>BIRTHDAY_EMAIL</option><option value='SURVEY'>SURVEY</option><option value='WEBINAR_INVITATION'>WEBINAR_INVITATION</option></select></span><br><br><div id="bar_viz_campaign_type"></div><b>📃 Summary:</b> Type of email campaign<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_app_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_app_name"></div><b>📃 Summary:</b> Encrypted name of the application<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_campaign_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_campaign_name"></div><b>📃 Summary:</b> Encrypted name of the email campaign<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encrypted_email_subject</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encrypted_email_subject"></div><b>📃 Summary:</b> Encrypted subject line of the email<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">app_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_app_id"></div><b>📃 Summary:</b> Unique identifier for the application<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">campaign_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_campaign_id"></div><b>📃 Summary:</b> Unique identifier for the email campaign<br><b>🦄 Unique:</b> This column represents a unique identifier for each email campaign. For this table, each row represents a distinct email campaign. The campaign_id appears to be unique across rows, as it's described as a "Unique identifier for the email campaign" in the provided information.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">campaign_subtype</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_campaign_subtype"></div><b>📃 Summary:</b> Subtype of the email campaign<br><b>❓ Missing:</b> Not all campaigns may require or have subtypes.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about email campaign data. It includes unique campaign IDs, associated app IDs and names, content IDs, campaign types, and encrypted information like names and subjects. The data appears to cover different types of email campaigns, such as automated emails and feedback requests. Some fields are empty, suggesting optional or conditional data collection.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>8</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the email campaign</td>
+      <td>campaign_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>app_id</td>
+      <td>Unique identifier for the application</td>
+      <td>app_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>content_id</td>
+      <td>Identifier for the email content</td>
+      <td>content_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>num_included</td>
+      <td>Number of recipients included in the campaign</td>
+      <td>recipients_included</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>num_queued</td>
+      <td>Number of emails queued for sending</td>
+      <td>emails_queued</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>sub_type</td>
+      <td>Subtype of the email campaign</td>
+      <td>campaign_subtype</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>type</td>
+      <td>Type of email campaign</td>
+      <td>campaign_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>app_name</td>
+      <td>Encrypted name of the application</td>
+      <td>encrypted_app_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>name</td>
+      <td>Encrypted name of the email campaign</td>
+      <td>encrypted_campaign_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>subject</td>
+      <td>Encrypted subject line of the email</td>
+      <td>encrypted_email_subject</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>5</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>app_id</td>
+      <td>CAST("app_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'app_id' column from 'INT' to 'VARCHAR', we need to use a CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from INTEGER to VARCHAR (string). This transformation will preserve the numeric values as strings, which can be useful for certain operations or when you need to treat the app_id as text rather than a number.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>campaign_id</td>
+      <td>CAST("campaign_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'campaign_id' column from 'INT' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>campaign_subtype</td>
+      <td>CAST("campaign_subtype" AS VARCHAR)</td>
+      <td>To transform the data type of the 'campaign_subtype' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this is straightforward. We use the CAST keyword followed by the column name in parentheses, then AS, and finally the new data type we want to convert to, which is VARCHAR in this case.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>emails_queued</td>
+      <td>CAST("emails_queued" AS VARCHAR)</td>
+      <td>To transform the data type of the 'emails_queued' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>recipients_included</td>
+      <td>CAST("recipients_included" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'recipients_included' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>7</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>campaign_subtype</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not all campaigns may require or have subtypes.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>campaign_type</td>
+      <td>1</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>content_id</td>
+      <td>1</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>emails_queued</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>encrypted_campaign_name</td>
+      <td>1</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>encrypted_email_subject</td>
+      <td>1</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>recipients_included</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>campaign_type</td>
+      <td>1</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>content_id</td>
+      <td>1</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>emails_queued</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>encrypted_campaign_name</td>
+      <td>1</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>encrypted_email_subject</td>
+      <td>1</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>recipients_included</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 8417033472.95, 'y': 29}, {'x': 9591803892.849998, 'y': 0}, {'x': 10766574312.75, 'y': 7}, {'x': 11941344732.650002, 'y': 1}, {'x': 13116115152.55, 'y': 4}, {'x': 14290885572.45, 'y': 3}, {'x': 15465655992.350002, 'y': 1}, {'x': 16640426412.25, 'y': 26}, {'x': 17815196832.15, 'y': 0}, {'x': 18989967252.05, 'y': 0}, {'x': 20164737671.95, 'y': 0}, {'x': 21339508091.850002, 'y': 1}, {'x': 22514278511.75, 'y': 1}, {'x': 23689048931.65, 'y': 2}, {'x': 24863819351.550003, 'y': 1}, {'x': 26038589771.45, 'y': 1}, {'x': 27213360191.350002, 'y': 1}, {'x': 28388130611.25, 'y': 9}, {'x': 29562901031.15, 'y': 7}, {'x': 30737671451.050003, 'y': 5}];
+    binWidth = 1174770419.9;
+    drawHistogram("hist_viz_content_id", data, binWidth);
+data = [{'label': 'AUTOMATED_EMAIL', 'value': 98.98989898989899}, {'label': 'FEEDBACK_NPS_EM...', 'value': 1.0101010101010102}];
+    drawBarChart("bar_viz_campaign_type", data);
+data = [{'label': 'JPR82+ndundKfMU...', 'value': 99.0}, {'label': 'nxH5ufCWqX33IUb...', 'value': 1.0}];
+    drawBarChart("bar_viz_encrypted_app_name", data);
+data = [{'label': 'jiCPZCOtnM4WVlQ...', 'value': 9.090909090909092}, {'label': '22gNwysTXRKJDe9...', 'value': 6.0606060606060606}, {'label': 'kR+fCIrRo8B282U...', 'value': 5.05050505050505}, {'label': 'Ik8jBLPLeXT9ocW...', 'value': 5.05050505050505}, {'label': 'Rd+les9NSTiBW+H...', 'value': 5.05050505050505}, {'label': 'Other values', 'value': 69.6969696969697}];
+    drawBarChart("bar_viz_encrypted_campaign_name", data);
+data = [{'label': 'xQvu7m5de6hY0MT...', 'value': 9.090909090909092}, {'label': 'GStnZ16g3NEHLqz...', 'value': 9.090909090909092}, {'label': 'y/4ASxWbPMrWCz9...', 'value': 7.07070707070707}, {'label': 'fnTqnZcA/26FcPU...', 'value': 5.05050505050505}, {'label': 'DFZNpSYwtPT+Fuh...', 'value': 5.05050505050505}, {'label': 'Other values', 'value': 64.64646464646465}];
+    drawBarChart("bar_viz_encrypted_email_subject", data);
+data = [{'label': '2286', 'value': 99.0}, {'label': '22924', 'value': 1.0}];
+    drawBarChart("bar_viz_app_id", data);
+data = [{'label': '71162884', 'value': 1.0}, {'label': '70590690', 'value': 1.0}, {'label': '77181027', 'value': 1.0}, {'label': '74577505', 'value': 1.0}, {'label': '77635124', 'value': 1.0}, {'label': 'Other values', 'value': 95.0}];
+    drawBarChart("bar_viz_campaign_id", data);
+data = [];
+    drawBarChart("bar_viz_campaign_subtype", data);
+
+
+</script>
+</body>
+</html>

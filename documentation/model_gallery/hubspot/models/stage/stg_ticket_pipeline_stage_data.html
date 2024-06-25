@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>ticket_pipeline_stage_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>_fivetran_deleted</th>
+      <th>active</th>
+      <th>display_order</th>
+      <th>is_closed</th>
+      <th>label</th>
+      <th>pipeline_id</th>
+      <th>ticket_state</th>
+      <th>created_at</th>
+      <th>stage_id</th>
+      <th>updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>03c2e7e41ffc181a4e84080b4710e81e</td>
+      <td>0</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>1</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>True</td>
+      <td>2</td>
+      <td>False</td>
+      <td>76a756f37ed4f9039fbe152954566e7a</td>
+      <td>0</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>3</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>False</td>
+      <td>True</td>
+      <td>3</td>
+      <td>False</td>
+      <td>c5f73dc5584f3189388b4294865e9300</td>
+      <td>0</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>7806423</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>False</td>
+      <td>True</td>
+      <td>1</td>
+      <td>False</td>
+      <td>0f7532f707b3eff137f9df6f358fa86f</td>
+      <td>0</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>2074552</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>False</td>
+      <td>True</td>
+      <td>1</td>
+      <td>False</td>
+      <td>bad7c4a1299dbc47b4742e044d88070c</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>8165139</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>False</td>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>03c2e7e41ffc181a4e84080b4710e81e</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>900910</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>False</td>
+      <td>True</td>
+      <td>2</td>
+      <td>False</td>
+      <td>fb347e3972f2bd02631bfabbfb1dfc87</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>9450484</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>False</td>
+      <td>True</td>
+      <td>3</td>
+      <td>False</td>
+      <td>619e755f83b2b1e9940e321c8baa2299</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>900911</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>False</td>
+      <td>True</td>
+      <td>4</td>
+      <td>False</td>
+      <td>2bd583bf8d793a60703dea6a9cfc38ec</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>900912</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>False</td>
+      <td>True</td>
+      <td>5</td>
+      <td>False</td>
+      <td>84456c8c47378ffdfaef98cbc9a49a89</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>11543638</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>False</td>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>4f5372f07271c52cf8420846e945323c</td>
+      <td>1486381</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>1486382</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>is_deleted</th>
+      <th>is_active</th>
+      <th>display_order</th>
+      <th>is_closed</th>
+      <th>stage_label</th>
+      <th>pipeline_id</th>
+      <th>ticket_state</th>
+      <th>created_at</th>
+      <th>stage_id</th>
+      <th>updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>03c2e7e41ffc181a4e84080b4710e81e</td>
+      <td>0</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>1</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>True</td>
+      <td>2</td>
+      <td>False</td>
+      <td>76a756f37ed4f9039fbe152954566e7a</td>
+      <td>0</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>3</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>False</td>
+      <td>True</td>
+      <td>3</td>
+      <td>False</td>
+      <td>c5f73dc5584f3189388b4294865e9300</td>
+      <td>0</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>7806423</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>False</td>
+      <td>True</td>
+      <td>1</td>
+      <td>False</td>
+      <td>0f7532f707b3eff137f9df6f358fa86f</td>
+      <td>0</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>2074552</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>False</td>
+      <td>True</td>
+      <td>1</td>
+      <td>False</td>
+      <td>bad7c4a1299dbc47b4742e044d88070c</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>8165139</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>False</td>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>03c2e7e41ffc181a4e84080b4710e81e</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>900910</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>False</td>
+      <td>True</td>
+      <td>2</td>
+      <td>False</td>
+      <td>fb347e3972f2bd02631bfabbfb1dfc87</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>9450484</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>False</td>
+      <td>True</td>
+      <td>3</td>
+      <td>False</td>
+      <td>619e755f83b2b1e9940e321c8baa2299</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>900911</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>False</td>
+      <td>True</td>
+      <td>4</td>
+      <td>False</td>
+      <td>2bd583bf8d793a60703dea6a9cfc38ec</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>900912</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>False</td>
+      <td>True</td>
+      <td>5</td>
+      <td>False</td>
+      <td>84456c8c47378ffdfaef98cbc9a49a89</td>
+      <td>900909</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>11543638</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>False</td>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>4f5372f07271c52cf8420846e945323c</td>
+      <td>1486381</td>
+      <td>OPEN</td>
+      <td>2021-03-30 14:16:02</td>
+      <td>1486382</td>
+      <td>2021-03-30 14:16:02</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record was deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_active"></div><b>📃 Summary:</b> Shows if the stage is currently active<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">display_order</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_display_order"></div><b>📃 Summary:</b> Order in which the stage is displayed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_closed</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_closed"></div><b>📃 Summary:</b> Indicates if the stage is closed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stage_label</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_stage_label"></div><b>📃 Summary:</b> Unique identifier for the stage<br><b>🦄 Unique:</b> This column represents a unique identifier for the stage. For this table, each row represents a unique stage in the pipeline. The stage_label appears to be a hashed value, which is likely unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pipeline_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_pipeline_id"></div><b>📃 Summary:</b> ID of the pipeline the stage belongs to<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='OPEN'>OPEN</option><option value='CLOSED'>CLOSED</option><option value='IN_PROGRESS'>IN_PROGRESS</option><option value='ON_HOLD'>ON_HOLD</option><option value='PENDING'>PENDING</option><option value='RESOLVED'>RESOLVED</option><option value='CANCELED'>CANCELED</option></select></span><br><br><div id="bar_viz_ticket_state"></div><b>📃 Summary:</b> Current state of tickets in this stage<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_at"></div><b>📃 Summary:</b> Timestamp of when the stage was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stage_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_stage_id"></div><b>📃 Summary:</b> Unique identifier for the stage<br><b>🦄 Unique:</b> This column is explicitly stated as a unique identifier for the stage. For this table, each row represents a unique stage in the pipeline. The stage_id appears to be a unique numeric identifier across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">updated_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_updated_at"></div><b>📃 Summary:</b> Timestamp of when the stage was last updated<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about ticket pipeline stages. It contains details like stage ID, active status, display order, closed status, label, pipeline ID, and ticket state. Each row represents a unique stage in the pipeline. The table tracks creation and update timestamps for each stage. Some stages belong to different pipelines, as indicated by varying pipeline IDs.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>3</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>stage_id</td>
+      <td>Unique identifier for the stage</td>
+      <td>stage_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record was deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>active</td>
+      <td>Shows if the stage is currently active</td>
+      <td>is_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>display_order</td>
+      <td>Order in which the stage is displayed</td>
+      <td>display_order</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>is_closed</td>
+      <td>Indicates if the stage is closed</td>
+      <td>is_closed</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>label</td>
+      <td>Unique identifier for the stage</td>
+      <td>stage_label</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>pipeline_id</td>
+      <td>ID of the pipeline the stage belongs to</td>
+      <td>pipeline_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ticket_state</td>
+      <td>Current state of tickets in this stage</td>
+      <td>ticket_state</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>created_at</td>
+      <td>Timestamp of when the stage was created</td>
+      <td>created_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>updated_at</td>
+      <td>Timestamp of when the stage was last updated</td>
+      <td>updated_at</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>3</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>created_at</td>
+      <td>CAST("created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'created_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the date string ('2021-03-30 14:16:02') is already in a standard timestamp format (YYYY-MM-DD HH:MM:SS), which can be directly cast to TIMESTAMP without needing to use strptime() for parsing.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>stage_id</td>
+      <td>CAST("stage_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'stage_id' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function allows us to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'stage_id' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>updated_at</td>
+      <td>CAST("updated_at" AS TIMESTAMP)</td>
+      <td>To transform the 'updated_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The given date format '2021-03-30 14:16:02' is already in a standard timestamp format (YYYY-MM-DD HH:MM:SS), which DuckDB can automatically recognize. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_active", data);
+data = [{'x': 0.125, 'y': 3}, {'x': 0.375, 'y': 0}, {'x': 0.625, 'y': 0}, {'x': 0.875, 'y': 0}, {'x': 1.125, 'y': 2}, {'x': 1.375, 'y': 0}, {'x': 1.625, 'y': 0}, {'x': 1.875, 'y': 0}, {'x': 2.125, 'y': 2}, {'x': 2.375, 'y': 0}, {'x': 2.625, 'y': 0}];
+    binWidth = 0.25;
+    drawHistogram("hist_viz_display_order", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_closed", data);
+data = [{'label': '03c2e7e41ffc181...', 'value': 18.181818181818183}, {'label': '619e755f83b2b1e...', 'value': 9.090909090909092}, {'label': 'bad7c4a1299dbc4...', 'value': 9.090909090909092}, {'label': 'fb347e3972f2bd0...', 'value': 9.090909090909092}, {'label': '4f5372f07271c52...', 'value': 9.090909090909092}, {'label': 'Other values', 'value': 45.45454545454545}];
+    drawBarChart("bar_viz_stage_label", data);
+data = [{'x': 37159.525, 'y': 4}, {'x': 111478.57500000001, 'y': 0}, {'x': 185797.625, 'y': 0}, {'x': 260116.67500000002, 'y': 0}, {'x': 334435.725, 'y': 0}, {'x': 408754.775, 'y': 0}, {'x': 483073.82500000007, 'y': 0}, {'x': 557392.875, 'y': 0}, {'x': 631711.925, 'y': 0}, {'x': 706030.9750000001, 'y': 0}, {'x': 780350.025, 'y': 0}];
+    binWidth = 74319.05;
+    drawHistogram("hist_viz_pipeline_id", data, binWidth);
+data = [{'label': 'OPEN', 'value': 100.0}];
+    drawBarChart("bar_viz_ticket_state", data);
+data = [{'label': '2021-03-30 14:1...', 'value': 100.0}];
+    drawBarChart("bar_viz_created_at", data);
+data = [{'label': '2074552', 'value': 9.090909090909092}, {'label': '1', 'value': 9.090909090909092}, {'label': '7806423', 'value': 9.090909090909092}, {'label': '900912', 'value': 9.090909090909092}, {'label': '900910', 'value': 9.090909090909092}, {'label': 'Other values', 'value': 54.54545454545454}];
+    drawBarChart("bar_viz_stage_id", data);
+data = [{'label': '2021-03-30 14:1...', 'value': 100.0}];
+    drawBarChart("bar_viz_updated_at", data);
+
+
+</script>
+</body>
+</html>

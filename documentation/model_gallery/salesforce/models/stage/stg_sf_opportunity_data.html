@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sf_opportunity_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>is_closed</th>
+      <th>probability</th>
+      <th>has_overdue_task</th>
+      <th>amount</th>
+      <th>is_deleted</th>
+      <th>is_won</th>
+      <th>id</th>
+      <th>_fivetran_active</th>
+      <th>account_id</th>
+      <th>has_opportunity_line_item</th>
+      <th>stage_name</th>
+      <th>owner_id</th>
+      <th>pricebook_2_id</th>
+      <th>record_type_id</th>
+      <th>forecast_category</th>
+      <th>forecast_category_name</th>
+      <th>type</th>
+      <th>lead_source</th>
+      <th>name</th>
+      <th>has_open_activity</th>
+      <th>campaign_id</th>
+      <th>close_date</th>
+      <th>created_date</th>
+      <th>fiscal_quarter</th>
+      <th>fiscal_year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>True</td>
+      <td>1000</td>
+      <td>False</td>
+      <td>24120000.0</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000HddohAAB</td>
+      <td>True</td>
+      <td>9CcfAt8qtZvCTwFvwOFLcg==</td>
+      <td>True</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>rQhle3uwQbFgFmLTF1WByg==</td>
+      <td>lNUPfU1ue2nQimeN6QVNKQ==</td>
+      <td>3QOHd+Q7F28PJtnwztV09Q==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>TDK+SgtPSM3Vk67zX9aeRA==</td>
+      <td>$1m deal</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-12-19 00:00:00</td>
+      <td>2018-12-19 19:51:13</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>True</td>
+      <td>100</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000HdPzpAAF</td>
+      <td>True</td>
+      <td>wfQo3+JVfsNIdcz/mUkZkA==</td>
+      <td>False</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>nqxS50kwRjtOYb9ZB4/PoQ==</td>
+      <td>None</td>
+      <td>3QOHd+Q7F28PJtnwztV09Q==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>Fbu50LvyXo0peN4RaMdJ3A==</td>
+      <td>Testing Opp Close</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-12-18 00:00:00</td>
+      <td>2018-12-18 21:21:17</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>True</td>
+      <td>100</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000Hbmd1AAB</td>
+      <td>True</td>
+      <td>wIXkC/s93lDAT+HVkwv6+A==</td>
+      <td>False</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>dVDxbGz10nJ2mKU213GZRQ==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>TDK+SgtPSM3Vk67zX9aeRA==</td>
+      <td>Test</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-12-18 00:00:00</td>
+      <td>2018-12-10 17:03:22</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>True</td>
+      <td>100</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000HcZXrAAN</td>
+      <td>True</td>
+      <td>78HpxISq4/eSw+ycDPqSwA==</td>
+      <td>False</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>9B1r0vK1wAVGaERpMleKGg==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>pOz8cFdDlJkM8XvYPfSZ9w==</td>
+      <td>lu test 3</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-12-13 00:00:00</td>
+      <td>2018-12-13 18:02:55</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>True</td>
+      <td>100</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000HddueAAB</td>
+      <td>True</td>
+      <td>wfQo3+JVfsNIdcz/mUkZkA==</td>
+      <td>False</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>nqxS50kwRjtOYb9ZB4/PoQ==</td>
+      <td>None</td>
+      <td>3QOHd+Q7F28PJtnwztV09Q==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>dSJC2EuRkC62f+UuBPQeVg==</td>
+      <td>dSJC2EuRkC62f+UuBPQeVg==</td>
+      <td>Chewbaca</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-12-07 00:00:00</td>
+      <td>2018-12-19 20:22:58</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>200000.0</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000HK8jdAAD</td>
+      <td>True</td>
+      <td>TK5MTSsiOYoDQoJiSbkugA==</td>
+      <td>False</td>
+      <td>tXi3M8u3iPxq0ggxTSxMKw==</td>
+      <td>QEaGoY7B8nGfro2vhOCMvA==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>MfuqnemFQBY2RwqM7YBkKA==</td>
+      <td>Evergreen Test</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-11-21 00:00:00</td>
+      <td>2018-11-14 19:12:53</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000HcZXXAA3</td>
+      <td>False</td>
+      <td>78HpxISq4/eSw+ycDPqSwA==</td>
+      <td>False</td>
+      <td>tXi3M8u3iPxq0ggxTSxMKw==</td>
+      <td>9B1r0vK1wAVGaERpMleKGg==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>UN2fttk8geFc7Db/xJzQ+A==</td>
+      <td>lu test 1</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-12-13 00:00:00</td>
+      <td>2018-12-13 18:00:11</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>1.0</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000GoP76AAF</td>
+      <td>True</td>
+      <td>tZX+Z0iWzZHHjNvRnCJzwg==</td>
+      <td>False</td>
+      <td>tXi3M8u3iPxq0ggxTSxMKw==</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>None</td>
+      <td>Blue Test -</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-10-31 00:00:00</td>
+      <td>2018-10-31 17:43:42</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000HcZXcAAN</td>
+      <td>True</td>
+      <td>78HpxISq4/eSw+ycDPqSwA==</td>
+      <td>False</td>
+      <td>tXi3M8u3iPxq0ggxTSxMKw==</td>
+      <td>AwxR76rxgr77EfSnTHH57Q==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>9Q0PuStPWLYgxG/8kpvo5g==</td>
+      <td>pOz8cFdDlJkM8XvYPfSZ9w==</td>
+      <td>lu test 2</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-12-13 00:00:00</td>
+      <td>2018-12-13 18:01:22</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>False</td>
+      <td>65</td>
+      <td>False</td>
+      <td>210000.0</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000HdOhuAAF</td>
+      <td>False</td>
+      <td>wIXkC/s93lDAT+HVkwv6+A==</td>
+      <td>True</td>
+      <td>9RN9J3tlxr89gDctReax5w==</td>
+      <td>dVDxbGz10nJ2mKU213GZRQ==</td>
+      <td>5x2qfGToAOo3bmSNM8fPjg==</td>
+      <td>3QOHd+Q7F28PJtnwztV09Q==</td>
+      <td>rq6uxRtOa4gSLxCtlqjecg==</td>
+      <td>rq6uxRtOa4gSLxCtlqjecg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>Fbu50LvyXo0peN4RaMdJ3A==</td>
+      <td>Testing Order from Process</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>2018-12-19 00:00:00</td>
+      <td>2018-12-18 17:56:05</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>is_closed</th>
+      <th>success_probability</th>
+      <th>has_overdue_task</th>
+      <th>opportunity_amount</th>
+      <th>is_deleted</th>
+      <th>is_won</th>
+      <th>opportunity_id</th>
+      <th>is_active</th>
+      <th>account_id</th>
+      <th>has_line_items</th>
+      <th>opportunity_stage</th>
+      <th>owner_id</th>
+      <th>pricebook_id</th>
+      <th>record_type_id</th>
+      <th>forecast_category</th>
+      <th>forecast_category_name</th>
+      <th>opportunity_type</th>
+      <th>lead_source</th>
+      <th>opportunity_name</th>
+      <th>has_open_activity</th>
+      <th>campaign_id</th>
+      <th>close_date</th>
+      <th>created_date</th>
+      <th>fiscal_quarter</th>
+      <th>fiscal_year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>True</td>
+      <td>1000</td>
+      <td>False</td>
+      <td>24120000.0</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000HddohAAB</td>
+      <td>True</td>
+      <td>9CcfAt8qtZvCTwFvwOFLcg==</td>
+      <td>True</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>rQhle3uwQbFgFmLTF1WByg==</td>
+      <td>lNUPfU1ue2nQimeN6QVNKQ==</td>
+      <td>3QOHd+Q7F28PJtnwztV09Q==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>TDK+SgtPSM3Vk67zX9aeRA==</td>
+      <td>$1m deal</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-12-19</td>
+      <td>2018-12-19 19:51:13</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>True</td>
+      <td>100</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000HdPzpAAF</td>
+      <td>True</td>
+      <td>wfQo3+JVfsNIdcz/mUkZkA==</td>
+      <td>False</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>nqxS50kwRjtOYb9ZB4/PoQ==</td>
+      <td>None</td>
+      <td>3QOHd+Q7F28PJtnwztV09Q==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>Fbu50LvyXo0peN4RaMdJ3A==</td>
+      <td>Testing Opp Close</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-12-18</td>
+      <td>2018-12-18 21:21:17</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>True</td>
+      <td>100</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000Hbmd1AAB</td>
+      <td>True</td>
+      <td>wIXkC/s93lDAT+HVkwv6+A==</td>
+      <td>False</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>dVDxbGz10nJ2mKU213GZRQ==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>TDK+SgtPSM3Vk67zX9aeRA==</td>
+      <td>Test</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-12-18</td>
+      <td>2018-12-10 17:03:22</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>True</td>
+      <td>100</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000HcZXrAAN</td>
+      <td>True</td>
+      <td>78HpxISq4/eSw+ycDPqSwA==</td>
+      <td>False</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>9B1r0vK1wAVGaERpMleKGg==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>pOz8cFdDlJkM8XvYPfSZ9w==</td>
+      <td>lu test</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-12-13</td>
+      <td>2018-12-13 18:02:55</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>True</td>
+      <td>100</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>True</td>
+      <td>006q000000HddueAAB</td>
+      <td>True</td>
+      <td>wfQo3+JVfsNIdcz/mUkZkA==</td>
+      <td>False</td>
+      <td>GavUFuuf4DrnQAoiRGlWpQ==</td>
+      <td>nqxS50kwRjtOYb9ZB4/PoQ==</td>
+      <td>None</td>
+      <td>3QOHd+Q7F28PJtnwztV09Q==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>A/SkeDD5c3ejUyEFFoUHHg==</td>
+      <td>dSJC2EuRkC62f+UuBPQeVg==</td>
+      <td>dSJC2EuRkC62f+UuBPQeVg==</td>
+      <td>Chewbaca</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-12-07</td>
+      <td>2018-12-19 20:22:58</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>200000.0</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000HK8jdAAD</td>
+      <td>True</td>
+      <td>TK5MTSsiOYoDQoJiSbkugA==</td>
+      <td>False</td>
+      <td>tXi3M8u3iPxq0ggxTSxMKw==</td>
+      <td>QEaGoY7B8nGfro2vhOCMvA==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>MfuqnemFQBY2RwqM7YBkKA==</td>
+      <td>Evergreen Test</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-11-21</td>
+      <td>2018-11-14 19:12:53</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000HcZXXAA3</td>
+      <td>False</td>
+      <td>78HpxISq4/eSw+ycDPqSwA==</td>
+      <td>False</td>
+      <td>tXi3M8u3iPxq0ggxTSxMKw==</td>
+      <td>9B1r0vK1wAVGaERpMleKGg==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>UN2fttk8geFc7Db/xJzQ+A==</td>
+      <td>lu test</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-12-13</td>
+      <td>2018-12-13 18:00:11</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>1.0</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000GoP76AAF</td>
+      <td>True</td>
+      <td>tZX+Z0iWzZHHjNvRnCJzwg==</td>
+      <td>False</td>
+      <td>tXi3M8u3iPxq0ggxTSxMKw==</td>
+      <td>TLZtnkcZltX8lijWYSQqRg==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>None</td>
+      <td>Blue Test</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-10-31</td>
+      <td>2018-10-31 17:43:42</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>True</td>
+      <td>0</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000HcZXcAAN</td>
+      <td>True</td>
+      <td>78HpxISq4/eSw+ycDPqSwA==</td>
+      <td>False</td>
+      <td>tXi3M8u3iPxq0ggxTSxMKw==</td>
+      <td>AwxR76rxgr77EfSnTHH57Q==</td>
+      <td>None</td>
+      <td>14mxIBMk0YX2Gz0r1Ktsuw==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>AloDHjNI+wntE4Eetriz+w==</td>
+      <td>9Q0PuStPWLYgxG/8kpvo5g==</td>
+      <td>pOz8cFdDlJkM8XvYPfSZ9w==</td>
+      <td>lu test</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-12-13</td>
+      <td>2018-12-13 18:01:22</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>False</td>
+      <td>65</td>
+      <td>False</td>
+      <td>210000.0</td>
+      <td>True</td>
+      <td>False</td>
+      <td>006q000000HdOhuAAF</td>
+      <td>False</td>
+      <td>wIXkC/s93lDAT+HVkwv6+A==</td>
+      <td>True</td>
+      <td>9RN9J3tlxr89gDctReax5w==</td>
+      <td>dVDxbGz10nJ2mKU213GZRQ==</td>
+      <td>5x2qfGToAOo3bmSNM8fPjg==</td>
+      <td>3QOHd+Q7F28PJtnwztV09Q==</td>
+      <td>rq6uxRtOa4gSLxCtlqjecg==</td>
+      <td>rq6uxRtOa4gSLxCtlqjecg==</td>
+      <td>+Gkf6SQ2fhAONAiFelNKVw==</td>
+      <td>Fbu50LvyXo0peN4RaMdJ3A==</td>
+      <td>Testing Order from Process</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2018-12-19</td>
+      <td>2018-12-18 17:56:05</td>
+      <td>4</td>
+      <td>2018</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_closed</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_closed"></div><b>📃 Summary:</b> Indicates if the opportunity is closed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">success_probability</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_success_probability"></div><b>📃 Summary:</b> Likelihood of closing the opportunity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_overdue_task</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_overdue_task"></div><b>📃 Summary:</b> Indicates if there's an overdue task<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">opportunity_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_opportunity_amount"></div><b>📃 Summary:</b> The monetary value of the opportunity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the opportunity is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_won</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_won"></div><b>📃 Summary:</b> Indicates if the opportunity is won<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">opportunity_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_opportunity_id"></div><b>📃 Summary:</b> Unique identifier for the opportunity<br><b>🦄 Unique:</b> This column represents a unique identifier for each opportunity. For this table, each row is for a single opportunity, and opportunity_id is unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_active"></div><b>📃 Summary:</b> Indicates if the record is active in Fivetran<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_id"></div><b>📃 Summary:</b> Unique identifier for the associated account<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_line_items</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_line_items"></div><b>📃 Summary:</b> Indicates if opportunity has line items<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">opportunity_stage</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Lead'>Lead</option><option value='Qualified Lead'>Qualified Lead</option><option value='Needs Analysis'>Needs Analysis</option><option value='Proposal'>Proposal</option><option value='Negotiation'>Negotiation</option><option value='Closed Won'>Closed Won</option><option value='Closed Lost'>Closed Lost</option><option value='GavUFuuf4DrnQAoiRGlWpQ=='>GavUFuuf4DrnQAoiRGlWpQ==</option><option value='tXi3M8u3iPxq0ggxTSxMKw=='>tXi3M8u3iPxq0ggxTSxMKw==</option><option value='9RN9J3tlxr89gDctReax5w=='>9RN9J3tlxr89gDctReax5w==</option></select></span><br><br><div id="bar_viz_opportunity_stage"></div><b>📃 Summary:</b> Current stage of the sales opportunity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">owner_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_owner_id"></div><b>📃 Summary:</b> Identifier for the opportunity owner<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pricebook_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_pricebook_id"></div><b>📃 Summary:</b> Identifier for the associated pricebook<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">record_type_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_record_type_id"></div><b>📃 Summary:</b> Identifier for the type of record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">forecast_category</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_forecast_category"></div><b>📃 Summary:</b> Category for forecasting purposes<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">forecast_category_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_forecast_category_name"></div><b>📃 Summary:</b> Name of the forecast category<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">opportunity_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_opportunity_type"></div><b>📃 Summary:</b> Classification or category of the opportunity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">lead_source</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_lead_source"></div><b>📃 Summary:</b> Source of the lead for this opportunity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">opportunity_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_opportunity_name"></div><b>📃 Summary:</b> Name of the opportunity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_open_activity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_open_activity"></div><b>📃 Summary:</b> Indicates if there's an open activity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">campaign_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_campaign_id"></div><b>📃 Summary:</b> Identifier for the associated marketing campaign<br><b>❓ Missing:</b> Not all opportunities are associated with marketing campaigns.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">close_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_close_date"></div><b>📃 Summary:</b> Date when the opportunity was closed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_date"></div><b>📃 Summary:</b> Date when the opportunity was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fiscal_quarter</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='1'>1</option><option value='2'>2</option><option value='3'>3</option><option value='4'>4</option></select></span><br><br><div id="bar_viz_fiscal_quarter"></div><b>📃 Summary:</b> Fiscal quarter of the opportunity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fiscal_year</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='2015'>2015</option><option value='2016'>2016</option><option value='2017'>2017</option><option value='2018'>2018</option><option value='2019'>2019</option><option value='2020'>2020</option><option value='2021'>2021</option><option value='2022'>2022</option><option value='2023'>2023</option><option value='2024'>2024</option></select></span><br><br><div id="bar_viz_fiscal_year"></div><b>📃 Summary:</b> Fiscal year of the opportunity<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about sales opportunities. It includes details like account ID, opportunity amount, close date, created date, forecast category, probability, stage name, and owner ID. Each row represents a single opportunity with its associated information such as whether it's closed, won, or deleted. The table also includes fiscal period details and some boolean flags for opportunity characteristics.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>12</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_id</td>
+      <td>Unique identifier for the associated account</td>
+      <td>account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>amount</td>
+      <td>The monetary value of the opportunity</td>
+      <td>opportunity_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>campaign_id</td>
+      <td>Identifier for the associated marketing campaign</td>
+      <td>campaign_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>close_date</td>
+      <td>Date when the opportunity was closed</td>
+      <td>close_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>created_date</td>
+      <td>Date when the opportunity was created</td>
+      <td>created_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>description</td>
+      <td>Additional details about the opportunity</td>
+      <td>description</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>expected_revenue</td>
+      <td>Anticipated revenue from the opportunity</td>
+      <td>expected_revenue</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>fiscal</td>
+      <td>Fiscal period identifier</td>
+      <td>fiscal_period</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>fiscal_quarter</td>
+      <td>Fiscal quarter of the opportunity</td>
+      <td>fiscal_quarter</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>fiscal_year</td>
+      <td>Fiscal year of the opportunity</td>
+      <td>fiscal_year</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>forecast_category</td>
+      <td>Category for forecasting purposes</td>
+      <td>forecast_category</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>forecast_category_name</td>
+      <td>Name of the forecast category</td>
+      <td>forecast_category_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>has_open_activity</td>
+      <td>Indicates if there's an open activity</td>
+      <td>has_open_activity</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>has_opportunity_line_item</td>
+      <td>Indicates if opportunity has line items</td>
+      <td>has_line_items</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>has_overdue_task</td>
+      <td>Indicates if there's an overdue task</td>
+      <td>has_overdue_task</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>id</td>
+      <td>Unique identifier for the opportunity</td>
+      <td>opportunity_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>is_closed</td>
+      <td>Indicates if the opportunity is closed</td>
+      <td>is_closed</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>is_deleted</td>
+      <td>Indicates if the opportunity is deleted</td>
+      <td>is_deleted</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>is_excluded_from_territory_2_filter</td>
+      <td>Exclusion from territory 2 filter</td>
+      <td>excluded_from_territory_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>is_won</td>
+      <td>Indicates if the opportunity is won</td>
+      <td>is_won</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>last_activity_date</td>
+      <td>Date of the last activity</td>
+      <td>last_activity_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>last_referenced_date</td>
+      <td>Date the opportunity was last referenced</td>
+      <td>last_referenced_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>last_viewed_date</td>
+      <td>Date the opportunity was last viewed</td>
+      <td>last_viewed_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>lead_source</td>
+      <td>Source of the lead for this opportunity</td>
+      <td>lead_source</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>name</td>
+      <td>Name of the opportunity</td>
+      <td>opportunity_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>next_step</td>
+      <td>Next action in the sales process</td>
+      <td>next_step</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>owner_id</td>
+      <td>Identifier for the opportunity owner</td>
+      <td>owner_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>pricebook_2_id</td>
+      <td>Identifier for the associated pricebook</td>
+      <td>pricebook_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>probability</td>
+      <td>Likelihood of closing the opportunity</td>
+      <td>success_probability</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>record_type_id</td>
+      <td>Identifier for the type of record</td>
+      <td>record_type_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>stage_name</td>
+      <td>Current stage of the sales opportunity</td>
+      <td>opportunity_stage</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>synced_quote_id</td>
+      <td>ID of the associated synced quote</td>
+      <td>synced_quote_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>territory_2_id</td>
+      <td>ID of the associated sales territory</td>
+      <td>territory_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>type</td>
+      <td>Classification or category of the opportunity</td>
+      <td>opportunity_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>_fivetran_active</td>
+      <td>Indicates if the record is active in Fivetran</td>
+      <td>is_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>2</b> columns have erroneous values<br><ol><li><b>fiscal_period</b>: The value 'JxJ3Au0JjyhOOUE/UvIeOw==' is unusual because it's encoded, not a standard fiscal period format.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>JxJ3Au0JjyhOOUE/UvIeOw==</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>opportunity_name</b>: 'Blue Test -' has a trailing dash. 'lu test 1', 'lu test 2', 'lu test 3' are potentially redundant entries.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Blue Test -</td>
+      <td>Blue Test</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>lu test 1</td>
+      <td>lu test</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>lu test 2</td>
+      <td>lu test</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>lu test 3</td>
+      <td>lu test</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>1</b> columns have disguised missing values<br>
+                ✔️ <b>1</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>fiscal_period</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>14</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>campaign_id</td>
+      <td>CAST("campaign_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'campaign_id' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>close_date</td>
+      <td>CAST("close_date" AS DATE)</td>
+      <td>To transform the 'close_date' column from VARCHAR to DATE, we need to use a simple CAST function. The date format in the given values is already in a standard ISO format (YYYY-MM-DD HH:MM:SS), which can be directly cast to DATE without using strptime(). The CAST function will automatically truncate the time portion and keep only the date.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>created_date</td>
+      <td>CAST("created_date" AS TIMESTAMP)</td>
+      <td>To transform the 'created_date' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given examples is already in a standard SQL timestamp format (YYYY-MM-DD HH:MM:SS), which can be directly cast to TIMESTAMP without using strptime(). DuckDB's CAST function can automatically interpret this format.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>description</td>
+      <td>CAST("description" AS VARCHAR)</td>
+      <td>To transform the data type of the 'description' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this is straightforward. We simply use CAST() and specify the column name and the desired data type. Even though the 'description' column currently has no distinct values (as indicated by the empty list []), we can still perform this cast operation.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>excluded_from_territory_2</td>
+      <td>CAST("excluded_from_territory_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'excluded_from_territory_2' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future values added to this column will be treated as strings rather than decimal numbers.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>expected_revenue</td>
+      <td>CAST("expected_revenue" AS VARCHAR)</td>
+      <td>To transform the data type of the 'expected_revenue' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. In DuckDB, the CAST function can be used with the AS keyword to specify the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>fiscal_quarter</td>
+      <td>CAST("fiscal_quarter" AS VARCHAR)</td>
+      <td>To transform the data type of the 'fiscal_quarter' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only the value 4, casting it to VARCHAR will result in the string '4'.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>fiscal_year</td>
+      <td>CAST("fiscal_year" AS VARCHAR)</td>
+      <td>To transform the data type of the 'fiscal_year' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and follows the standard SQL CAST function format.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>last_activity_date</td>
+      <td>CAST("last_activity_date" AS VARCHAR)</td>
+      <td>To transform the data type of the 'last_activity_date' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>last_referenced_date</td>
+      <td>CAST("last_referenced_date" AS VARCHAR)</td>
+      <td>To transform the data type of the 'last_referenced_date' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword to explicitly convert the column to VARCHAR data type.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>last_viewed_date</td>
+      <td>CAST("last_viewed_date" AS VARCHAR)</td>
+      <td>To transform the data type of the 'last_viewed_date' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional processing since we're just changing the data type without any modifications to the data itself.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>next_step</td>
+      <td>CAST("next_step" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'next_step' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>synced_quote_id</td>
+      <td>CAST("synced_quote_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'synced_quote_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>territory_id</td>
+      <td>CAST("territory_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'territory_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Since the column is currently of type DECIMAL, casting it to VARCHAR will preserve all the information, including any decimal places. This transformation is straightforward and doesn't require any additional formatting or manipulation.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>14</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>campaign_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not all opportunities are associated with marketing campaigns.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>description</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>excluded_from_territory_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>expected_revenue</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>fiscal_period</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>last_activity_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>last_referenced_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>last_viewed_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>lead_source</td>
+      <td>10</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>next_step</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>opportunity_amount</td>
+      <td>60</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>pricebook_id</td>
+      <td>80</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>synced_quote_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>territory_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>description</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>excluded_from_territory_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>expected_revenue</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>fiscal_period</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>last_activity_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>last_referenced_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>last_viewed_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>lead_source</td>
+      <td>10</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>next_step</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>opportunity_amount</td>
+      <td>60</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>pricebook_id</td>
+      <td>80</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>synced_quote_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>territory_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'True', 'value': 90.0}, {'label': 'False', 'value': 10.0}];
+    drawBarChart("bar_viz_is_closed", data);
+data = [{'x': 25.0, 'y': 4}, {'x': 75.0, 'y': 1}, {'x': 125.0, 'y': 4}, {'x': 175.0, 'y': 0}, {'x': 225.0, 'y': 0}, {'x': 275.0, 'y': 0}, {'x': 325.0, 'y': 0}, {'x': 375.0, 'y': 0}, {'x': 425.0, 'y': 0}, {'x': 475.0, 'y': 0}];
+    binWidth = 50.0;
+    drawHistogram("hist_viz_success_probability", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_has_overdue_task", data);
+data = [{'x': 603000.975, 'y': 3}, {'x': 1809000.9249999998, 'y': 0}, {'x': 3015000.875, 'y': 0}, {'x': 4221000.824999999, 'y': 0}, {'x': 5427000.775, 'y': 0}, {'x': 6633000.725, 'y': 0}, {'x': 7839000.675, 'y': 0}, {'x': 9045000.625, 'y': 0}, {'x': 10251000.575, 'y': 0}, {'x': 11457000.524999999, 'y': 0}];
+    binWidth = 1205999.95;
+    drawHistogram("hist_viz_opportunity_amount", data, binWidth);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'True', 'value': 50.0}, {'label': 'False', 'value': 50.0}];
+    drawBarChart("bar_viz_is_won", data);
+data = [{'label': '006q000000Hddoh...', 'value': 10.0}, {'label': '006q000000HcZXX...', 'value': 10.0}, {'label': '006q000000HcZXr...', 'value': 10.0}, {'label': '006q000000HcZXc...', 'value': 10.0}, {'label': '006q000000Hbmd1...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_opportunity_id", data);
+data = [{'label': 'True', 'value': 80.0}, {'label': 'False', 'value': 20.0}];
+    drawBarChart("bar_viz_is_active", data);
+data = [{'label': '78HpxISq4/eSw+y...', 'value': 30.0}, {'label': 'wfQo3+JVfsNIdcz...', 'value': 20.0}, {'label': 'wIXkC/s93lDAT+H...', 'value': 20.0}, {'label': 'tZX+Z0iWzZHHjNv...', 'value': 10.0}, {'label': '9CcfAt8qtZvCTwF...', 'value': 10.0}, {'label': 'TK5MTSsiOYoDQoJ...', 'value': 10.0}];
+    drawBarChart("bar_viz_account_id", data);
+data = [{'label': 'False', 'value': 80.0}, {'label': 'True', 'value': 20.0}];
+    drawBarChart("bar_viz_has_line_items", data);
+data = [{'label': 'GavUFuuf4DrnQAo...', 'value': 50.0}, {'label': 'tXi3M8u3iPxq0gg...', 'value': 40.0}, {'label': '9RN9J3tlxr89gDc...', 'value': 10.0}];
+    drawBarChart("bar_viz_opportunity_stage", data);
+data = [{'label': 'dVDxbGz10nJ2mKU...', 'value': 20.0}, {'label': '9B1r0vK1wAVGaER...', 'value': 20.0}, {'label': 'nqxS50kwRjtOYb9...', 'value': 20.0}, {'label': 'rQhle3uwQbFgFmL...', 'value': 10.0}, {'label': 'QEaGoY7B8nGfro2...', 'value': 10.0}, {'label': 'Other values', 'value': 20.0}];
+    drawBarChart("bar_viz_owner_id", data);
+data = [{'label': '5x2qfGToAOo3bmS...', 'value': 50.0}, {'label': 'lNUPfU1ue2nQime...', 'value': 50.0}];
+    drawBarChart("bar_viz_pricebook_id", data);
+data = [{'label': '14mxIBMk0YX2Gz0...', 'value': 60.0}, {'label': '3QOHd+Q7F28PJtn...', 'value': 40.0}];
+    drawBarChart("bar_viz_record_type_id", data);
+data = [{'label': 'A/SkeDD5c3ejUyE...', 'value': 50.0}, {'label': 'AloDHjNI+wntE4E...', 'value': 40.0}, {'label': 'rq6uxRtOa4gSLxC...', 'value': 10.0}];
+    drawBarChart("bar_viz_forecast_category", data);
+data = [{'label': 'A/SkeDD5c3ejUyE...', 'value': 50.0}, {'label': 'AloDHjNI+wntE4E...', 'value': 40.0}, {'label': 'rq6uxRtOa4gSLxC...', 'value': 10.0}];
+    drawBarChart("bar_viz_forecast_category_name", data);
+data = [{'label': '+Gkf6SQ2fhAONAi...', 'value': 80.0}, {'label': 'dSJC2EuRkC62f+U...', 'value': 10.0}, {'label': '9Q0PuStPWLYgxG/...', 'value': 10.0}];
+    drawBarChart("bar_viz_opportunity_type", data);
+data = [{'label': 'TDK+SgtPSM3Vk67...', 'value': 22.22222222222222}, {'label': 'Fbu50LvyXo0peN4...', 'value': 22.22222222222222}, {'label': 'pOz8cFdDlJkM8Xv...', 'value': 22.22222222222222}, {'label': 'dSJC2EuRkC62f+U...', 'value': 11.11111111111111}, {'label': 'MfuqnemFQBY2Rwq...', 'value': 11.11111111111111}, {'label': 'UN2fttk8geFc7Db...', 'value': 11.11111111111111}];
+    drawBarChart("bar_viz_lead_source", data);
+data = [{'label': 'lu test', 'value': 30.0}, {'label': 'Chewbaca', 'value': 10.0}, {'label': 'Evergreen Test', 'value': 10.0}, {'label': 'Test', 'value': 10.0}, {'label': 'Blue Test', 'value': 10.0}, {'label': 'Other values', 'value': 30.0}];
+    drawBarChart("bar_viz_opportunity_name", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_has_open_activity", data);
+data = [];
+    drawBarChart("bar_viz_campaign_id", data);
+data = [{'label': '2018-12-13 00:0...', 'value': 30.0}, {'label': '2018-12-18 00:0...', 'value': 20.0}, {'label': '2018-12-19 00:0...', 'value': 20.0}, {'label': '2018-11-21 00:0...', 'value': 10.0}, {'label': '2018-12-07 00:0...', 'value': 10.0}, {'label': '2018-10-31 00:0...', 'value': 10.0}];
+    drawBarChart("bar_viz_close_date", data);
+data = [{'label': '2018-12-19 19:5...', 'value': 10.0}, {'label': '2018-12-18 21:2...', 'value': 10.0}, {'label': '2018-11-14 19:1...', 'value': 10.0}, {'label': '2018-10-31 17:4...', 'value': 10.0}, {'label': '2018-12-13 18:0...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_created_date", data);
+data = [{'label': '4', 'value': 100.0}];
+    drawBarChart("bar_viz_fiscal_quarter", data);
+data = [{'label': '2018', 'value': 100.0}];
+    drawBarChart("bar_viz_fiscal_year", data);
+
+
+</script>
+</body>
+</html>

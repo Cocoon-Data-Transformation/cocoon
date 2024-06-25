@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>property_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>label</th>
+      <th>hubspot_object</th>
+      <th>show_currency_symbol</th>
+      <th>field_type</th>
+      <th>type</th>
+      <th>_fivetran_id</th>
+      <th>name</th>
+      <th>calculated</th>
+      <th>group_name</th>
+      <th>created_at</th>
+      <th>hubspot_defined</th>
+      <th>updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>test_pro</td>
+      <td>contact</td>
+      <td>False</td>
+      <td>date</td>
+      <td>date</td>
+      <td>+mlGrLvmij8zluyeRByh7DPbXpM=</td>
+      <td>test_pro</td>
+      <td>False</td>
+      <td>fVQYOcf70/KsHU/KFoXQfQ==</td>
+      <td>2023-05-03 08:51:08.199000 UTC</td>
+      <td>NaN</td>
+      <td>2023-05-03 08:51:08.199000 UTC</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Close Date</td>
+      <td>deal</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>6fnvV+pkZR3di3USRclW2NZMNTA=</td>
+      <td>closedate</td>
+      <td>False</td>
+      <td>j8mgV9/MYzXvxQKD3c0AHw==</td>
+      <td>2019-08-06 02:41:52.364000 UTC</td>
+      <td>True</td>
+      <td>2023-06-20 22:32:28.368000 UTC</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Close Date</td>
+      <td>contact</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>5yTEFwFlLPTKlzXc3PviX5DMdJ4=</td>
+      <td>closedate</td>
+      <td>False</td>
+      <td>fVQYOcf70/KsHU/KFoXQfQ==</td>
+      <td>2019-08-06 02:41:09.071000 UTC</td>
+      <td>True</td>
+      <td>2022-05-27 20:35:26.640000 UTC</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Close Date</td>
+      <td>company</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>u0bk1tHdJJir2SmRkwo1r22t2PM=</td>
+      <td>closedate</td>
+      <td>False</td>
+      <td>XArNQdwSO+DY7119vj+JEw==</td>
+      <td>2019-08-06 02:41:44.665000 UTC</td>
+      <td>True</td>
+      <td>2022-05-27 22:49:16.893000 UTC</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>test_date</td>
+      <td>company</td>
+      <td>False</td>
+      <td>date</td>
+      <td>date</td>
+      <td>RTJ5KTwQe/zMYl8uKwNFlOeNWUY=</td>
+      <td>test_date</td>
+      <td>False</td>
+      <td>XArNQdwSO+DY7119vj+JEw==</td>
+      <td>2022-11-30 10:52:48.277000 UTC</td>
+      <td>NaN</td>
+      <td>2022-11-30 10:52:48.277000 UTC</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Create Date</td>
+      <td>contact</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>sv5Aa2A1+wJwoKRX4Zfe3CTEHEE=</td>
+      <td>createdate</td>
+      <td>False</td>
+      <td>fVQYOcf70/KsHU/KFoXQfQ==</td>
+      <td>2019-08-06 02:41:09.148000 UTC</td>
+      <td>True</td>
+      <td>2023-05-01 20:02:33.973000 UTC</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Create Date</td>
+      <td>product</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>GjTSotYsbt+HoRY5e6bHRgNJYFI=</td>
+      <td>createdate</td>
+      <td>False</td>
+      <td>0NoL94xOqMRlkFF+GAX6QQ==</td>
+      <td>2019-08-06 02:42:48.261000 UTC</td>
+      <td>True</td>
+      <td>2022-05-28 01:26:21.260000 UTC</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Create Date</td>
+      <td>line_item</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>6iFNLSeY0Fz5DgwskGjrMoW3JIg=</td>
+      <td>createdate</td>
+      <td>False</td>
+      <td>kdJdJeqzIqBPlKTSRZoyGQ==</td>
+      <td>2019-08-06 02:42:38.781000 UTC</td>
+      <td>True</td>
+      <td>2022-05-28 01:31:47.067000 UTC</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Create date</td>
+      <td>ticket</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>onbRYvHwxXS3NwSP2zaoD+Mv/us=</td>
+      <td>createdate</td>
+      <td>False</td>
+      <td>CfZkcOOMcc/dg5a9ofwkUg==</td>
+      <td>2019-08-06 02:43:00.503000 UTC</td>
+      <td>True</td>
+      <td>2022-08-18 12:55:35.731000 UTC</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Create Date</td>
+      <td>company</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>XhKQ/eq5pqJEB6smEKCPSSyfUH4=</td>
+      <td>createdate</td>
+      <td>False</td>
+      <td>XArNQdwSO+DY7119vj+JEw==</td>
+      <td>2019-08-06 02:41:44.631000 UTC</td>
+      <td>True</td>
+      <td>2023-05-01 19:33:57.873000 UTC</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>display_label</th>
+      <th>hubspot_object_type</th>
+      <th>show_currency_symbol</th>
+      <th>field_type</th>
+      <th>data_type</th>
+      <th>fivetran_sync_id</th>
+      <th>property_name</th>
+      <th>is_calculated</th>
+      <th>property_group</th>
+      <th>creation_timestamp</th>
+      <th>is_hubspot_defined</th>
+      <th>last_update_timestamp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>contact</td>
+      <td>False</td>
+      <td>date</td>
+      <td>date</td>
+      <td>+mlGrLvmij8zluyeRByh7DPbXpM=</td>
+      <td>test_date</td>
+      <td>False</td>
+      <td>fVQYOcf70/KsHU/KFoXQfQ==</td>
+      <td>2023-05-03 08:51:08.199</td>
+      <td>None</td>
+      <td>2023-05-03 08:51:08.199</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Close Date</td>
+      <td>deal</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>6fnvV+pkZR3di3USRclW2NZMNTA=</td>
+      <td>close_date</td>
+      <td>False</td>
+      <td>j8mgV9/MYzXvxQKD3c0AHw==</td>
+      <td>2019-08-06 02:41:52.364</td>
+      <td>true</td>
+      <td>2023-06-20 22:32:28.368</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Close Date</td>
+      <td>contact</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>5yTEFwFlLPTKlzXc3PviX5DMdJ4=</td>
+      <td>close_date</td>
+      <td>False</td>
+      <td>fVQYOcf70/KsHU/KFoXQfQ==</td>
+      <td>2019-08-06 02:41:09.071</td>
+      <td>true</td>
+      <td>2022-05-27 20:35:26.640</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Close Date</td>
+      <td>company</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>u0bk1tHdJJir2SmRkwo1r22t2PM=</td>
+      <td>close_date</td>
+      <td>False</td>
+      <td>XArNQdwSO+DY7119vj+JEw==</td>
+      <td>2019-08-06 02:41:44.665</td>
+      <td>true</td>
+      <td>2022-05-27 22:49:16.893</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>None</td>
+      <td>company</td>
+      <td>False</td>
+      <td>date</td>
+      <td>date</td>
+      <td>RTJ5KTwQe/zMYl8uKwNFlOeNWUY=</td>
+      <td>test_date</td>
+      <td>False</td>
+      <td>XArNQdwSO+DY7119vj+JEw==</td>
+      <td>2022-11-30 10:52:48.277</td>
+      <td>None</td>
+      <td>2022-11-30 10:52:48.277</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Create Date</td>
+      <td>contact</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>sv5Aa2A1+wJwoKRX4Zfe3CTEHEE=</td>
+      <td>create_date</td>
+      <td>False</td>
+      <td>fVQYOcf70/KsHU/KFoXQfQ==</td>
+      <td>2019-08-06 02:41:09.148</td>
+      <td>true</td>
+      <td>2023-05-01 20:02:33.973</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Create Date</td>
+      <td>product</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>GjTSotYsbt+HoRY5e6bHRgNJYFI=</td>
+      <td>create_date</td>
+      <td>False</td>
+      <td>0NoL94xOqMRlkFF+GAX6QQ==</td>
+      <td>2019-08-06 02:42:48.261</td>
+      <td>true</td>
+      <td>2022-05-28 01:26:21.260</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Create Date</td>
+      <td>line_item</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>6iFNLSeY0Fz5DgwskGjrMoW3JIg=</td>
+      <td>create_date</td>
+      <td>False</td>
+      <td>kdJdJeqzIqBPlKTSRZoyGQ==</td>
+      <td>2019-08-06 02:42:38.781</td>
+      <td>true</td>
+      <td>2022-05-28 01:31:47.067</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Create Date</td>
+      <td>ticket</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>onbRYvHwxXS3NwSP2zaoD+Mv/us=</td>
+      <td>create_date</td>
+      <td>False</td>
+      <td>CfZkcOOMcc/dg5a9ofwkUg==</td>
+      <td>2019-08-06 02:43:00.503</td>
+      <td>true</td>
+      <td>2022-08-18 12:55:35.731</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Create Date</td>
+      <td>company</td>
+      <td>NaN</td>
+      <td>date</td>
+      <td>datetime</td>
+      <td>XhKQ/eq5pqJEB6smEKCPSSyfUH4=</td>
+      <td>create_date</td>
+      <td>False</td>
+      <td>XArNQdwSO+DY7119vj+JEw==</td>
+      <td>2019-08-06 02:41:44.631</td>
+      <td>true</td>
+      <td>2023-05-01 19:33:57.873</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">display_label</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_display_label"></div><b>📃 Summary:</b> Display label for the property<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hubspot_object_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='company'>company</option><option value='contact'>contact</option><option value='deal'>deal</option><option value='line_item'>line_item</option><option value='product'>product</option><option value='ticket'>ticket</option></select></span><br><br><div id="bar_viz_hubspot_object_type"></div><b>📃 Summary:</b> HubSpot object type (contact, deal, company)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">show_currency_symbol</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_show_currency_symbol"></div><b>📃 Summary:</b> Indicates if currency symbol should be displayed<br><b>❓ Missing:</b> Not applicable for non-currency data types.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">field_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='date'>date</option><option value='datetime'>datetime</option><option value='time'>time</option><option value='year'>year</option><option value='month'>month</option><option value='day'>day</option><option value='timestamp'>timestamp</option><option value='week'>week</option><option value='quarter'>quarter</option><option value='fiscal_year'>fiscal_year</option><option value='fiscal_quarter'>fiscal_quarter</option><option value='unix_timestamp'>unix_timestamp</option><option value='iso_week'>iso_week</option></select></span><br><br><div id="bar_viz_field_type"></div><b>📃 Summary:</b> Type of field (e.g., date)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">data_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='datetime'>datetime</option><option value='date'>date</option><option value='integer'>integer</option><option value='float'>float</option><option value='string'>string</option><option value='boolean'>boolean</option><option value='array'>array</option><option value='object'>object</option><option value='None'>None</option><option value='time'>time</option><option value='timestamp'>timestamp</option><option value='binary'>binary</option><option value='uuid'>uuid</option></select></span><br><br><div id="bar_viz_data_type"></div><b>📃 Summary:</b> Data type of the property<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fivetran_sync_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_fivetran_sync_id"></div><b>📃 Summary:</b> Unique identifier for Fivetran data sync<br><b>🦄 Unique:</b> This column is a unique identifier for Fivetran data sync. For this table, each row represents a property in the HubSpot CRM system. The fivetran_sync_id appears to be unique across rows, as it's a generated ID for each property.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">property_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_property_name"></div><b>📃 Summary:</b> Internal name of the property<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_calculated</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_calculated"></div><b>📃 Summary:</b> Indicates if the property is calculated<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">property_group</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_property_group"></div><b>📃 Summary:</b> Name of the group the property belongs to<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_timestamp"></div><b>📃 Summary:</b> Timestamp of property creation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_hubspot_defined</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='True'>True</option><option value='False'>False</option><option value='true'>true</option></select></span><br><br><div id="bar_viz_is_hubspot_defined"></div><b>📃 Summary:</b> Indicates if the property is defined by HubSpot<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_update_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_update_timestamp"></div><b>📃 Summary:</b> Timestamp of last property update<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about property fields in a HubSpot CRM system. It contains details of different properties for contacts, deals, and companies. Each row represents a property with attributes like name, label, description, field type, and whether it's HubSpot-defined. The table includes information on when properties were created or updated, their grouping, and display settings.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>11</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>_fivetran_id</td>
+      <td>Unique identifier for Fivetran data sync</td>
+      <td>fivetran_sync_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>calculated</td>
+      <td>Indicates if the property is calculated</td>
+      <td>is_calculated</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>created_at</td>
+      <td>Timestamp of property creation</td>
+      <td>creation_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>description</td>
+      <td>Description of the property</td>
+      <td>property_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>field_type</td>
+      <td>Type of field (e.g., date)</td>
+      <td>field_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>group_name</td>
+      <td>Name of the group the property belongs to</td>
+      <td>property_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>hubspot_defined</td>
+      <td>Indicates if the property is defined by HubSpot</td>
+      <td>is_hubspot_defined</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>hubspot_object</td>
+      <td>HubSpot object type (contact, deal, company)</td>
+      <td>hubspot_object_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>label</td>
+      <td>Display label for the property</td>
+      <td>display_label</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>name</td>
+      <td>Internal name of the property</td>
+      <td>property_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>show_currency_symbol</td>
+      <td>Indicates if currency symbol should be displayed</td>
+      <td>show_currency_symbol</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>type</td>
+      <td>Data type of the property</td>
+      <td>data_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>updated_at</td>
+      <td>Timestamp of last property update</td>
+      <td>last_update_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>3</b> columns have erroneous values<br><ol><li><b>property_description</b>: All values are unusual because they are Base64 encoded strings instead of readable property descriptions.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1B2M2Y8AsgTpgAmY7PhCfg==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>HRIf2XFKVmDQxMzI2w3mcA==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>M0xKTEL9t51+vD5ztRfm+A==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>MD3INB3ab4k2LqaTom0eEA==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>jjSyQlM9DMhpVol12tp4fg==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>k+VMRhjE/W4QB470Jor1yA==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>lMRanmvFHjNC0pQdw79H5Q==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>nBljQWslMNrEDwXeYmRYyg==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>nRGOJjIZrs4d0WJLkC15fg==</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>wyvwVnWdqsdNRapzG8Y/RA==</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>display_label</b>: 'Create Date' and 'Create date' are unusual because they represent the same concept with inconsistent capitalization.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Create date</td>
+      <td>Create Date</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>test_date</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>test_pro</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>property_name</b>: 'test_pro' is unusual because it doesn't follow the '_date' pattern of the other values.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>createdate</td>
+      <td>create_date</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>closedate</td>
+      <td>close_date</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>test_pro</td>
+      <td>test_date</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>2</b> columns have disguised missing values<br>
+                ✔️ <b>2</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>property_description</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>display_label</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>3</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>creation_timestamp</td>
+      <td>CAST("creation_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'creation_timestamp' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the timestamps appears to be compatible with the standard SQL TIMESTAMP format, so a direct cast should work without needing to use strptime() for parsing.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>is_hubspot_defined</td>
+      <td>CAST("is_hubspot_defined" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_hubspot_defined' from BOOLEAN to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the boolean values (True) to their string representation ('true'). The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>last_update_timestamp</td>
+      <td>CAST("last_update_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'last_update_timestamp' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The existing format of the timestamp strings is already in a standard format that can be directly interpreted as a timestamp by most SQL databases, including DuckDB. Therefore, we don't need to use the more complex strptime function for parsing.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>4</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>display_label</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>is_hubspot_defined</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>property_description</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>show_currency_symbol</td>
+      <td>80</td>
+      <td>True</td>
+      <td>Not applicable for non-currency data types.</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>display_label</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>is_hubspot_defined</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>property_description</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Create Date', 'value': 62.5}, {'label': 'Close Date', 'value': 37.5}];
+    drawBarChart("bar_viz_display_label", data);
+data = [{'label': 'company', 'value': 30.0}, {'label': 'contact', 'value': 30.0}, {'label': 'deal', 'value': 10.0}, {'label': 'product', 'value': 10.0}, {'label': 'line_item', 'value': 10.0}, {'label': 'ticket', 'value': 10.0}];
+    drawBarChart("bar_viz_hubspot_object_type", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_show_currency_symbol", data);
+data = [{'label': 'date', 'value': 100.0}];
+    drawBarChart("bar_viz_field_type", data);
+data = [{'label': 'datetime', 'value': 80.0}, {'label': 'date', 'value': 20.0}];
+    drawBarChart("bar_viz_data_type", data);
+data = [{'label': '+mlGrLvmij8zluy...', 'value': 10.0}, {'label': '6fnvV+pkZR3di3U...', 'value': 10.0}, {'label': 'RTJ5KTwQe/zMYl8...', 'value': 10.0}, {'label': '6iFNLSeY0Fz5Dgw...', 'value': 10.0}, {'label': '5yTEFwFlLPTKlzX...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_fivetran_sync_id", data);
+data = [{'label': 'create_date', 'value': 50.0}, {'label': 'close_date', 'value': 30.0}, {'label': 'test_date', 'value': 20.0}];
+    drawBarChart("bar_viz_property_name", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_calculated", data);
+data = [{'label': 'fVQYOcf70/KsHU/...', 'value': 30.0}, {'label': 'XArNQdwSO+DY711...', 'value': 30.0}, {'label': 'j8mgV9/MYzXvxQK...', 'value': 10.0}, {'label': '0NoL94xOqMRlkFF...', 'value': 10.0}, {'label': 'kdJdJeqzIqBPlKT...', 'value': 10.0}, {'label': 'CfZkcOOMcc/dg5a...', 'value': 10.0}];
+    drawBarChart("bar_viz_property_group", data);
+data = [{'label': '2019-08-06 02:4...', 'value': 10.0}, {'label': '2019-08-06 02:4...', 'value': 10.0}, {'label': '2022-11-30 10:5...', 'value': 10.0}, {'label': '2019-08-06 02:4...', 'value': 10.0}, {'label': '2023-05-03 08:5...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_creation_timestamp", data);
+data = [{'label': 'true', 'value': 100.0}];
+    drawBarChart("bar_viz_is_hubspot_defined", data);
+data = [{'label': '2023-05-03 08:5...', 'value': 10.0}, {'label': '2023-06-20 22:3...', 'value': 10.0}, {'label': '2023-05-01 19:3...', 'value': 10.0}, {'label': '2022-11-30 10:5...', 'value': 10.0}, {'label': '2022-05-28 01:2...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_last_update_timestamp", data);
+
+
+</script>
+</body>
+</html>

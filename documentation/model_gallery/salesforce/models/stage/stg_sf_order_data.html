@@ -1,0 +1,4435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sf_order_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>billing_postal_code</th>
+      <th>billing_state</th>
+      <th>prepaid_order_c</th>
+      <th>account_id</th>
+      <th>celigo_sfnsio_net_suite_id_c</th>
+      <th>billing_country</th>
+      <th>pricebook_2_id</th>
+      <th>ava_sfcpq_order_calculate_tax_c</th>
+      <th>invoicing_type_c</th>
+      <th>update_subscriptions_only_c</th>
+      <th>blng_billing_account_c</th>
+      <th>shipping_state</th>
+      <th>last_modified_by_id</th>
+      <th>ava_sfcpq_ava_tax_message_c</th>
+      <th>status</th>
+      <th>id</th>
+      <th>shipping_country</th>
+      <th>owner_id</th>
+      <th>billing_city</th>
+      <th>prepaid_billing_frequency_c</th>
+      <th>celigo_sfnsio_test_mode_record_c</th>
+      <th>blng_invoice_batch_c</th>
+      <th>billing_longitude</th>
+      <th>sbqq_payment_term_c</th>
+      <th>status_code</th>
+      <th>total_amount</th>
+      <th>credit_summary_c</th>
+      <th>shipping_street</th>
+      <th>created_by_id</th>
+      <th>billing_latitude</th>
+      <th>legal_entity_c</th>
+      <th>synced_to_net_suite_c</th>
+      <th>shipping_city</th>
+      <th>celigo_sfnsio_net_suite_order_number_c</th>
+      <th>blng_bill_now_c</th>
+      <th>sbqq_contracted_c</th>
+      <th>sbqq_quote_c</th>
+      <th>is_deleted</th>
+      <th>amend_with_rollover_spend_type_c</th>
+      <th>sbqq_price_calc_status_c</th>
+      <th>celigo_sfnsio_skip_export_to_net_suite_c</th>
+      <th>celigo_sfnsio_net_suite_record_c</th>
+      <th>sbqq_contracting_method_c</th>
+      <th>activated_by_id</th>
+      <th>order_auto_activated_c</th>
+      <th>ava_sfcpq_is_seller_importer_of_record_c</th>
+      <th>blng_billing_day_of_month_c</th>
+      <th>is_reduction_order</th>
+      <th>evergreen_c</th>
+      <th>type</th>
+      <th>activated_date</th>
+      <th>amendment_type_c</th>
+      <th>billing_geocode_accuracy</th>
+      <th>billing_state_code</th>
+      <th>created_date</th>
+      <th>effective_date</th>
+      <th>end_date</th>
+      <th>ava_sfcpq_invoice_message_c</th>
+      <th>_fivetran_active</th>
+      <th>is_hvr_legacy_order_c</th>
+      <th>last_modified_date</th>
+      <th>system_modstamp</th>
+      <th>celigo_sfnsio_discount_total_net_suite_c</th>
+      <th>celigo_sfnsio_net_suite_order_status_c</th>
+      <th>celigo_sfnsio_sub_total_net_suite_c</th>
+      <th>celigo_sfnsio_tax_total_net_suite_c</th>
+      <th>celigo_sfnsio_total_net_suite_c</th>
+      <th>order_number</th>
+      <th>shipping_postal_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>USA</td>
+      <td>55555-1502</td>
+      <td>False</td>
+      <td>0011G00000gY0y4QAC</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000gY0y4QAC</td>
+      <td>New York</td>
+      <td>0051G000005MunnQAC</td>
+      <td>Tax Amount Is Up To Date</td>
+      <td>Activated</td>
+      <td>8011G000000XFeOQAW</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>New York, NY</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpflUAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>5392</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>USA</td>
+      <td>55555-1502</td>
+      <td>False</td>
+      <td>0011G00000gY0y4QAC</td>
+      <td>1058073.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000gY0y4QAC</td>
+      <td>New York</td>
+      <td>0051G000005MunnQAC</td>
+      <td>Tax Amount Is Up To Date</td>
+      <td>Activated</td>
+      <td>8011G000000XFePQAW</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>New York, NY</td>
+      <td>Annual</td>
+      <td>False</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>27998.6</td>
+      <td>a9e1G000000KztBQAS</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpflUAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>30</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>5393</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>55555</td>
+      <td>New York</td>
+      <td>False</td>
+      <td>0011G00000f8IrIQAU</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000f8IrIQAU</td>
+      <td>New York</td>
+      <td>0051G000005MunnQAC</td>
+      <td>Tax Amount Is Up To Date</td>
+      <td>Activated</td>
+      <td>8011G000000XDsxQAG</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpGCUA0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2597</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>55555</td>
+      <td>New York</td>
+      <td>False</td>
+      <td>0011G00000f8IrIQAU</td>
+      <td>1057821.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000f8IrIQAU</td>
+      <td>New York</td>
+      <td>0051G000005MunnQAC</td>
+      <td>Tax Amount Is Up To Date</td>
+      <td>Activated</td>
+      <td>8011G000000XDsyQAG</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>New York</td>
+      <td>Annual</td>
+      <td>False</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>1200.0</td>
+      <td>a9e1G000000TNSGQA4</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpGCUA0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>30</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2598</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>55555</td>
+      <td>MD</td>
+      <td>False</td>
+      <td>0011G00000fIPsfQAG</td>
+      <td>1057817.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000fIPsfQAG</td>
+      <td>Maryland</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XDseQAG</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Baltimore</td>
+      <td>Annual</td>
+      <td>False</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>20400.0</td>
+      <td>a9e1G000000KzojQAC</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Baltimore</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpCtUAK</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>30</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2591</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>55555</td>
+      <td>MD</td>
+      <td>False</td>
+      <td>0011G00000fIPsfQAG</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000fIPsfQAG</td>
+      <td>Maryland</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XDsdQAG</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Baltimore</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Baltimore</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpCtUAK</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2590</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>55555</td>
+      <td>Florida</td>
+      <td>False</td>
+      <td>0011G00000nKDIvQAO</td>
+      <td>1058653.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000nKDIvQAO</td>
+      <td>Florida</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XIK8QAO</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Fort Lauderdale</td>
+      <td>None</td>
+      <td>True</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>4500.0</td>
+      <td>a9e1G000000L1n3QAC</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Fort Lauderdale</td>
+      <td>SO6556</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000Tv9vUAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>google.com</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>25</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>8359</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>55555</td>
+      <td>Florida</td>
+      <td>False</td>
+      <td>0011G00000nKDIvQAO</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000nKDIvQAO</td>
+      <td>Florida</td>
+      <td>0051G000005MumuQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XIK7QAO</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Fort Lauderdale</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Fort Lauderdale</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000Tv9vUAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>8358</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>55555</td>
+      <td>Florida</td>
+      <td>False</td>
+      <td>0011G00000gZNEkQAO</td>
+      <td>1057423.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000gZNEkQAO</td>
+      <td>Florida</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XChLQAW</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Tampa</td>
+      <td>Annual</td>
+      <td>False</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>702.0</td>
+      <td>a9e1G000000TNOiQAO</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Tampa</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TnQAUA0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>28</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1354</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>55555</td>
+      <td>Florida</td>
+      <td>False</td>
+      <td>0011G00000gZNEkQAO</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000gZNEkQAO</td>
+      <td>Florida</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XChKQAW</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Tampa</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Tampa</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TnQAUA0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1353</td>
+      <td>55555</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>billing_postal_code</th>
+      <th>billing_state</th>
+      <th>is_prepaid_order</th>
+      <th>account_id</th>
+      <th>netsuite_id</th>
+      <th>billing_country</th>
+      <th>pricebook_id</th>
+      <th>calculate_tax</th>
+      <th>invoicing_type</th>
+      <th>update_subscriptions_only</th>
+      <th>billing_account_id</th>
+      <th>shipping_state</th>
+      <th>last_modifier_id</th>
+      <th>tax_calculation_status</th>
+      <th>order_status</th>
+      <th>order_id</th>
+      <th>shipping_country</th>
+      <th>owner_id</th>
+      <th>billing_city</th>
+      <th>prepaid_billing_frequency</th>
+      <th>is_test_mode</th>
+      <th>invoice_batch_type</th>
+      <th>billing_longitude</th>
+      <th>payment_terms</th>
+      <th>order_status_code</th>
+      <th>order_total</th>
+      <th>credit_summary</th>
+      <th>shipping_street</th>
+      <th>creator_id</th>
+      <th>billing_latitude</th>
+      <th>legal_entity_id</th>
+      <th>netsuite_sync_status</th>
+      <th>shipping_city</th>
+      <th>netsuite_order_number</th>
+      <th>bill_immediately</th>
+      <th>is_contracted</th>
+      <th>quote_id</th>
+      <th>is_deleted</th>
+      <th>has_rollover_spend_amendment</th>
+      <th>price_calculation_status</th>
+      <th>skip_netsuite_export</th>
+      <th>netsuite_record_id</th>
+      <th>contracting_method</th>
+      <th>activator_id</th>
+      <th>auto_activated_flag</th>
+      <th>is_seller_importer_of_record</th>
+      <th>billing_day_of_month</th>
+      <th>is_reduction_order</th>
+      <th>is_evergreen</th>
+      <th>order_type</th>
+      <th>activation_datetime</th>
+      <th>amendment_type</th>
+      <th>billing_geocode_accuracy</th>
+      <th>billing_state_code</th>
+      <th>created_date</th>
+      <th>effective_date</th>
+      <th>end_date</th>
+      <th>invoice_message</th>
+      <th>is_active</th>
+      <th>is_hvr_legacy_order</th>
+      <th>last_modified_date</th>
+      <th>last_modified_timestamp</th>
+      <th>netsuite_discount_total</th>
+      <th>netsuite_order_status</th>
+      <th>netsuite_subtotal</th>
+      <th>netsuite_tax_total</th>
+      <th>netsuite_total</th>
+      <th>order_number</th>
+      <th>shipping_postal_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0011G00000gY0y4QAC</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000gY0y4QAC</td>
+      <td>New York</td>
+      <td>0051G000005MunnQAC</td>
+      <td>Tax Amount Is Up To Date</td>
+      <td>Activated</td>
+      <td>8011G000000XFeOQAW</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpflUAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>5392</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0011G00000gY0y4QAC</td>
+      <td>1058073.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000gY0y4QAC</td>
+      <td>New York</td>
+      <td>0051G000005MunnQAC</td>
+      <td>Tax Amount Is Up To Date</td>
+      <td>Activated</td>
+      <td>8011G000000XFePQAW</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>New York</td>
+      <td>Annual</td>
+      <td>False</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>27998.6</td>
+      <td>a9e1G000000KztBQAS</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpflUAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>30</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>5393</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>55555</td>
+      <td>New York</td>
+      <td>False</td>
+      <td>0011G00000f8IrIQAU</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000f8IrIQAU</td>
+      <td>New York</td>
+      <td>0051G000005MunnQAC</td>
+      <td>Tax Amount Is Up To Date</td>
+      <td>Activated</td>
+      <td>8011G000000XDsxQAG</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpGCUA0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2597</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>55555</td>
+      <td>New York</td>
+      <td>False</td>
+      <td>0011G00000f8IrIQAU</td>
+      <td>1057821.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000f8IrIQAU</td>
+      <td>New York</td>
+      <td>0051G000005MunnQAC</td>
+      <td>Tax Amount Is Up To Date</td>
+      <td>Activated</td>
+      <td>8011G000000XDsyQAG</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>New York</td>
+      <td>Annual</td>
+      <td>False</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>1200.0</td>
+      <td>a9e1G000000TNSGQA4</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpGCUA0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>30</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2598</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>55555</td>
+      <td>Maryland</td>
+      <td>False</td>
+      <td>0011G00000fIPsfQAG</td>
+      <td>1057817.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000fIPsfQAG</td>
+      <td>Maryland</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XDseQAG</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Baltimore</td>
+      <td>Annual</td>
+      <td>False</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>20400.0</td>
+      <td>a9e1G000000KzojQAC</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Baltimore</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpCtUAK</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>30</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2591</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>55555</td>
+      <td>Maryland</td>
+      <td>False</td>
+      <td>0011G00000fIPsfQAG</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000fIPsfQAG</td>
+      <td>Maryland</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XDsdQAG</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Baltimore</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Baltimore</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TpCtUAK</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2590</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>55555</td>
+      <td>Florida</td>
+      <td>False</td>
+      <td>0011G00000nKDIvQAO</td>
+      <td>1058653.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000nKDIvQAO</td>
+      <td>Florida</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XIK8QAO</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Fort Lauderdale</td>
+      <td>None</td>
+      <td>True</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>4500.0</td>
+      <td>a9e1G000000L1n3QAC</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Fort Lauderdale</td>
+      <td>SO6556</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000Tv9vUAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>google.com</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>25</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>8359</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>55555</td>
+      <td>Florida</td>
+      <td>False</td>
+      <td>0011G00000nKDIvQAO</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000nKDIvQAO</td>
+      <td>Florida</td>
+      <td>0051G000005MumuQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XIK7QAO</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Fort Lauderdale</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Fort Lauderdale</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000Tv9vUAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>8358</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>55555</td>
+      <td>Florida</td>
+      <td>False</td>
+      <td>0011G00000gZNEkQAO</td>
+      <td>1057423.0</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Prepaid Credits</td>
+      <td>False</td>
+      <td>0011G00000gZNEkQAO</td>
+      <td>Florida</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XChLQAW</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Tampa</td>
+      <td>Annual</td>
+      <td>False</td>
+      <td>Daily</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>702.0</td>
+      <td>a9e1G000000TNOiQAO</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Tampa</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TnQAUA0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>28</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>1354</td>
+      <td>55555</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>55555</td>
+      <td>Florida</td>
+      <td>False</td>
+      <td>0011G00000gZNEkQAO</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>01s1G000001N7EKQA0</td>
+      <td>False</td>
+      <td>Other</td>
+      <td>False</td>
+      <td>0011G00000gZNEkQAO</td>
+      <td>Florida</td>
+      <td>0051G000005MunnQAC</td>
+      <td>No Tax Required</td>
+      <td>Activated</td>
+      <td>8011G000000XChKQAW</td>
+      <td>United States</td>
+      <td>0051G000005MumuQAC</td>
+      <td>Tampa</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Domestic (US)</td>
+      <td>NaN</td>
+      <td>Net 30</td>
+      <td>Activated</td>
+      <td>0.0</td>
+      <td>None</td>
+      <td>123 Ave</td>
+      <td>0051G000005MumuQAC</td>
+      <td>NaN</td>
+      <td>a8k1G000000k9d4QAA</td>
+      <td>False</td>
+      <td>Tampa</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>a4V1G000000TnQAUA0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Not Needed</td>
+      <td>False</td>
+      <td>None</td>
+      <td>By Subscription End Date</td>
+      <td>0051G000005MumuQAC</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>New</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>1353</td>
+      <td>55555</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_postal_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_billing_postal_code"></div><b>📃 Summary:</b> Postal code for billing address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_billing_state"></div><b>📃 Summary:</b> State for billing address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_prepaid_order</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_prepaid_order"></div><b>📃 Summary:</b> Indicates if the order is prepaid<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_id"></div><b>📃 Summary:</b> Unique identifier for the customer account<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_netsuite_id"></div><b>📃 Summary:</b> NetSuite ID for the order<br><b>❓ Missing:</b> Not applicable for orders not yet synced with NetSuite.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_country</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_billing_country"></div><b>📃 Summary:</b> Country for billing address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pricebook_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_pricebook_id"></div><b>📃 Summary:</b> ID of the pricebook used for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">calculate_tax</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_calculate_tax"></div><b>📃 Summary:</b> Flag to calculate tax for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">invoicing_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Other'>Other</option><option value='Prepaid Credits'>Prepaid Credits</option><option value='Standard Invoice'>Standard Invoice</option><option value='Credit Card'>Credit Card</option><option value='PayPal'>PayPal</option><option value='Bank Transfer'>Bank Transfer</option><option value='Cash on Delivery'>Cash on Delivery</option><option value='Net 30'>Net 30</option><option value='Net 60'>Net 60</option><option value='Net 90'>Net 90</option><option value='Milestone Billing'>Milestone Billing</option><option value='Recurring Billing'>Recurring Billing</option><option value='Proforma Invoice'>Proforma Invoice</option></select></span><br><br><div id="bar_viz_invoicing_type"></div><b>📃 Summary:</b> Type of invoicing for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">update_subscriptions_only</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_update_subscriptions_only"></div><b>📃 Summary:</b> Flag for updating only subscriptions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_billing_account_id"></div><b>📃 Summary:</b> Account associated with billing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Alabama'>Alabama</option><option value='Alaska'>Alaska</option><option value='Arizona'>Arizona</option><option value='Arkansas'>Arkansas</option><option value='California'>California</option><option value='Colorado'>Colorado</option><option value='Connecticut'>Connecticut</option><option value='Delaware'>Delaware</option><option value='Florida'>Florida</option><option value='Georgia'>Georgia</option><option value='Hawaii'>Hawaii</option><option value='Idaho'>Idaho</option><option value='Illinois'>Illinois</option><option value='Indiana'>Indiana</option><option value='Iowa'>Iowa</option><option value='Kansas'>Kansas</option><option value='Kentucky'>Kentucky</option><option value='Louisiana'>Louisiana</option><option value='Maine'>Maine</option><option value='Maryland'>Maryland</option><option value='Massachusetts'>Massachusetts</option><option value='Michigan'>Michigan</option><option value='Minnesota'>Minnesota</option><option value='Mississippi'>Mississippi</option><option value='Missouri'>Missouri</option><option value='Montana'>Montana</option><option value='Nebraska'>Nebraska</option><option value='Nevada'>Nevada</option><option value='New Hampshire'>New Hampshire</option><option value='New Jersey'>New Jersey</option><option value='New Mexico'>New Mexico</option><option value='New York'>New York</option><option value='North Carolina'>North Carolina</option><option value='North Dakota'>North Dakota</option><option value='Ohio'>Ohio</option><option value='Oklahoma'>Oklahoma</option><option value='Oregon'>Oregon</option><option value='Pennsylvania'>Pennsylvania</option><option value='Rhode Island'>Rhode Island</option><option value='South Carolina'>South Carolina</option><option value='South Dakota'>South Dakota</option><option value='Tennessee'>Tennessee</option><option value='Texas'>Texas</option><option value='Utah'>Utah</option><option value='Vermont'>Vermont</option><option value='Virginia'>Virginia</option><option value='Washington'>Washington</option><option value='West Virginia'>West Virginia</option><option value='Wisconsin'>Wisconsin</option><option value='Wyoming'>Wyoming</option></select></span><br><br><div id="bar_viz_shipping_state"></div><b>📃 Summary:</b> State for shipping address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modifier_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modifier_id"></div><b>📃 Summary:</b> ID of user who last modified the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tax_calculation_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='No Tax Required'>No Tax Required</option><option value='Tax Amount Is Up To Date'>Tax Amount Is Up To Date</option><option value='Tax Calculation In Progress'>Tax Calculation In Progress</option><option value='Tax Calculation Error'>Tax Calculation Error</option><option value='Tax Amount Outdated'>Tax Amount Outdated</option><option value='Awaiting Tax Information'>Awaiting Tax Information</option><option value='Tax Exempt'>Tax Exempt</option><option value='Tax Calculation Pending Review'>Tax Calculation Pending Review</option><option value='Tax Calculation Completed'>Tax Calculation Completed</option><option value='Tax Recalculation Needed'>Tax Recalculation Needed</option></select></span><br><br><div id="bar_viz_tax_calculation_status"></div><b>📃 Summary:</b> Message regarding tax calculation status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Activated'>Activated</option><option value='Pending'>Pending</option><option value='Processing'>Processing</option><option value='Shipped'>Shipped</option><option value='Delivered'>Delivered</option><option value='Cancelled'>Cancelled</option><option value='Returned'>Returned</option><option value='On Hold'>On Hold</option><option value='Refunded'>Refunded</option><option value='Completed'>Completed</option></select></span><br><br><div id="bar_viz_order_status"></div><b>📃 Summary:</b> Current status of the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_order_id"></div><b>📃 Summary:</b> Unique identifier for the order<br><b>🦄 Unique:</b> This column represents a unique identifier for the order. For this table, each row is a unique order. The order_id appears to be unique across all rows and is consistently populated.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_country</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_country"></div><b>📃 Summary:</b> Country for shipping address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">owner_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_owner_id"></div><b>📃 Summary:</b> Unique identifier of the order owner<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_billing_city"></div><b>📃 Summary:</b> City for billing address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">prepaid_billing_frequency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Annual'>Annual</option><option value='Monthly'>Monthly</option><option value='Quarterly'>Quarterly</option><option value='Semi-Annual'>Semi-Annual</option><option value='Weekly'>Weekly</option><option value='Bi-Weekly'>Bi-Weekly</option><option value='Daily'>Daily</option></select></span><br><br><div id="bar_viz_prepaid_billing_frequency"></div><b>📃 Summary:</b> Frequency of prepaid billing<br><b>❓ Missing:</b> Not applicable for non-prepaid or one-time orders.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_test_mode</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_test_mode"></div><b>📃 Summary:</b> Flag for test mode record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">invoice_batch_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Daily'>Daily</option><option value='Weekly'>Weekly</option><option value='Monthly'>Monthly</option><option value='Quarterly'>Quarterly</option><option value='Annually'>Annually</option><option value='Domestic (US)'>Domestic (US)</option><option value='International'>International</option><option value='Combined (Domestic + International)'>Combined (Domestic + International)</option><option value='Custom'>Custom</option></select></span><br><br><div id="bar_viz_invoice_batch_type"></div><b>📃 Summary:</b> Batch type for invoice processing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_longitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_billing_longitude"></div><b>📃 Summary:</b> Longitude of billing address<br><b>❓ Missing:</b> Geographic coordinates not required or collected for billing.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payment_terms</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Net 30'>Net 30</option><option value='Net 60'>Net 60</option><option value='Net 90'>Net 90</option><option value='Due on Receipt'>Due on Receipt</option><option value='2/10 Net 30'>2/10 Net 30</option><option value='1/10 Net 30'>1/10 Net 30</option><option value='COD (Cash on Delivery)'>COD (Cash on Delivery)</option><option value='CIA (Cash in Advance)'>CIA (Cash in Advance)</option><option value='EOM (End of Month)'>EOM (End of Month)</option><option value='15 MFI (15th Month Following Invoice)'>15 MFI (15th Month Following Invoice)</option><option value='50% Advance, 50% on Delivery'>50% Advance, 50% on Delivery</option><option value='Letter of Credit'>Letter of Credit</option><option value='Consignment'>Consignment</option></select></span><br><br><div id="bar_viz_payment_terms"></div><b>📃 Summary:</b> Payment terms for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_status_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Pending'>Pending</option><option value='Activated'>Activated</option><option value='Processing'>Processing</option><option value='Shipped'>Shipped</option><option value='Delivered'>Delivered</option><option value='Cancelled'>Cancelled</option><option value='Returned'>Returned</option><option value='On Hold'>On Hold</option><option value='Backordered'>Backordered</option><option value='Completed'>Completed</option><option value='Failed'>Failed</option><option value='Refunded'>Refunded</option></select></span><br><br><div id="bar_viz_order_status_code"></div><b>📃 Summary:</b> Code representing the order status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_total</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_order_total"></div><b>📃 Summary:</b> Total monetary value of the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">credit_summary</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_credit_summary"></div><b>📃 Summary:</b> Summary of credits for the order<br><b>❓ Missing:</b> No credit summary exists for some accounts.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_street</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_street"></div><b>📃 Summary:</b> Street address for shipping<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creator_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creator_id"></div><b>📃 Summary:</b> ID of user who created the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_latitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_billing_latitude"></div><b>📃 Summary:</b> Latitude of billing address<br><b>❓ Missing:</b> Geographic coordinates not required or collected for billing.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">legal_entity_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_legal_entity_id"></div><b>📃 Summary:</b> Legal entity associated with the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_sync_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_netsuite_sync_status"></div><b>📃 Summary:</b> Indicates if order is synced to NetSuite<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_city"></div><b>📃 Summary:</b> City for shipping address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_order_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_netsuite_order_number"></div><b>📃 Summary:</b> NetSuite order number<br><b>❓ Missing:</b> Not applicable for orders not yet processed in NetSuite.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">bill_immediately</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_bill_immediately"></div><b>📃 Summary:</b> Flag to indicate immediate billing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_contracted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_contracted"></div><b>📃 Summary:</b> Indicates if the order is contracted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">quote_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_quote_id"></div><b>📃 Summary:</b> Quote ID associated with the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Flag indicating if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_rollover_spend_amendment</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_rollover_spend_amendment"></div><b>📃 Summary:</b> Flag for spend type amendment with rollover<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">price_calculation_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Not Needed'>Not Needed</option><option value='Pending'>Pending</option><option value='In Progress'>In Progress</option><option value='Completed'>Completed</option><option value='Failed'>Failed</option><option value='Cancelled'>Cancelled</option><option value='On Hold'>On Hold</option></select></span><br><br><div id="bar_viz_price_calculation_status"></div><b>📃 Summary:</b> Status of price calculation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">skip_netsuite_export</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_skip_netsuite_export"></div><b>📃 Summary:</b> Flag to skip exporting to NetSuite<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_record_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_netsuite_record_id"></div><b>📃 Summary:</b> NetSuite record identifier<br><b>❓ Missing:</b> Not applicable for orders not yet synced with NetSuite.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">contracting_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='By Subscription End Date'>By Subscription End Date</option><option value='Fixed Price'>Fixed Price</option><option value='Time and Materials'>Time and Materials</option><option value='Cost-Plus'>Cost-Plus</option><option value='Performance-Based'>Performance-Based</option><option value='Indefinite Delivery/Indefinite Quantity (IDIQ)'>Indefinite Delivery/Indefinite Quantity (IDIQ)</option><option value='Blanket Purchase Agreement (BPA)'>Blanket Purchase Agreement (BPA)</option><option value='Purchase Order'>Purchase Order</option><option value='Letter Contract'>Letter Contract</option><option value='Cooperative Agreement'>Cooperative Agreement</option><option value='Grant'>Grant</option><option value='Firm Fixed Price (FFP)'>Firm Fixed Price (FFP)</option><option value='Cost-Plus-Fixed-Fee (CPFF)'>Cost-Plus-Fixed-Fee (CPFF)</option><option value='Cost-Plus-Incentive-Fee (CPIF)'>Cost-Plus-Incentive-Fee (CPIF)</option><option value='Cost-Plus-Award-Fee (CPAF)'>Cost-Plus-Award-Fee (CPAF)</option><option value='Labor Hour'>Labor Hour</option><option value='Retainer'>Retainer</option></select></span><br><br><div id="bar_viz_contracting_method"></div><b>📃 Summary:</b> Method used for contracting<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">activator_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_activator_id"></div><b>📃 Summary:</b> ID of the user who activated the account<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">auto_activated_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_auto_activated_flag"></div><b>📃 Summary:</b> Indicates if order was automatically activated<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_seller_importer_of_record</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_seller_importer_of_record"></div><b>📃 Summary:</b> Indicates if seller is importer of record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_day_of_month</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_billing_day_of_month"></div><b>📃 Summary:</b> Day of month for billing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_reduction_order</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_reduction_order"></div><b>📃 Summary:</b> Flag indicating if it's a reduction order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_evergreen</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_evergreen"></div><b>📃 Summary:</b> Flag for evergreen contract<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='New'>New</option><option value='Pending'>Pending</option><option value='Processing'>Processing</option><option value='Shipped'>Shipped</option><option value='Delivered'>Delivered</option><option value='Cancelled'>Cancelled</option><option value='Returned'>Returned</option><option value='On Hold'>On Hold</option><option value='Backordered'>Backordered</option><option value='Completed'>Completed</option></select></span><br><br><div id="bar_viz_order_type"></div><b>📃 Summary:</b> Type or category of the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">activation_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_activation_datetime"></div><b>📃 Summary:</b> Date and time when the account was activated<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amendment_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_amendment_type"></div><b>📃 Summary:</b> Type of amendment made to the order<br><b>❓ Missing:</b> No amendments made to the account.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_geocode_accuracy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_geocode_accuracy"></div><b>📃 Summary:</b> Accuracy of billing address geocoding<br><b>❓ Missing:</b> Geocoding not performed or necessary for this account.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_state_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_state_code"></div><b>📃 Summary:</b> State code for billing address<br><b>❓ Missing:</b> Not used when full state name is provided.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_date"></div><b>📃 Summary:</b> Date and time the record was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">effective_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_effective_date"></div><b>📃 Summary:</b> Date the order becomes effective<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">end_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_end_date"></div><b>📃 Summary:</b> End date of the order<br><b>❓ Missing:</b> Account or contract has no specified end date.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">invoice_message</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_invoice_message"></div><b>📃 Summary:</b> Message related to invoice<br><b>❓ Missing:</b> No custom invoice message set for this account.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_is_active"></div><b>📃 Summary:</b> Indicates if the record is active in Fivetran<br><b>❓ Missing:</b> Account status might be pending or in another state.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_hvr_legacy_order</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_is_hvr_legacy_order"></div><b>📃 Summary:</b> Flag for HVR legacy order<br><b>❓ Missing:</b> Account is not related to HVR legacy orders.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_date"></div><b>📃 Summary:</b> Date and time of last modification<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_timestamp"></div><b>📃 Summary:</b> Timestamp of last system modification to the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_discount_total</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_netsuite_discount_total"></div><b>📃 Summary:</b> Total discount in NetSuite<br><b>❓ Missing:</b> Not applicable when there's no discount on the order.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_order_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_netsuite_order_status"></div><b>📃 Summary:</b> Order status in NetSuite<br><b>❓ Missing:</b> Not applicable for orders not yet processed in NetSuite.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_subtotal</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_netsuite_subtotal"></div><b>📃 Summary:</b> Subtotal amount in NetSuite<br><b>❓ Missing:</b> Not applicable for orders not yet processed in NetSuite.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_tax_total</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_netsuite_tax_total"></div><b>📃 Summary:</b> Total tax amount in NetSuite<br><b>❓ Missing:</b> Not applicable for orders not yet processed in NetSuite.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_total</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_netsuite_total"></div><b>📃 Summary:</b> Total amount in NetSuite<br><b>❓ Missing:</b> Not applicable for orders not yet processed in NetSuite.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_order_number"></div><b>📃 Summary:</b> Unique identifier for the order<br><b>🦄 Unique:</b> This column represents a unique identifier for the order. For this table, each row is a unique order. The order_number appears to be unique across all rows and is consistently populated.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_postal_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shipping_postal_code"></div><b>📃 Summary:</b> Postal code for shipping address<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about customer orders. It contains details like order ID, account ID, billing information, shipping information, order status, and financial details. Each row represents a unique order with fields for dates, amounts, billing frequency, and various flags related to the order process and status.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>58</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>_fivetran_active</td>
+      <td>Indicates if the record is active in Fivetran</td>
+      <td>is_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>account_id</td>
+      <td>Unique identifier for the customer account</td>
+      <td>account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>activated_by_id</td>
+      <td>ID of the user who activated the account</td>
+      <td>activator_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>activated_date</td>
+      <td>Date and time when the account was activated</td>
+      <td>activation_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>amend_with_rollover_spend_type_c</td>
+      <td>Flag for spend type amendment with rollover</td>
+      <td>has_rollover_spend_amendment</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>amendment_type_c</td>
+      <td>Type of amendment made to the order</td>
+      <td>amendment_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>ava_sfcpq_ava_tax_message_c</td>
+      <td>Message regarding tax calculation status</td>
+      <td>tax_calculation_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ava_sfcpq_entity_use_code_c</td>
+      <td>Entity use code for tax purposes</td>
+      <td>entity_use_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>ava_sfcpq_invoice_message_c</td>
+      <td>Message related to invoice</td>
+      <td>invoice_message</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>ava_sfcpq_is_seller_importer_of_record_c</td>
+      <td>Indicates if seller is importer of record</td>
+      <td>is_seller_importer_of_record</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ava_sfcpq_order_calculate_tax_c</td>
+      <td>Flag to calculate tax for the order</td>
+      <td>calculate_tax</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>ava_sfcpq_sales_tax_amount_c</td>
+      <td>Amount of sales tax for the order</td>
+      <td>sales_tax_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>billing_city</td>
+      <td>City for billing address</td>
+      <td>billing_city</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>billing_country</td>
+      <td>Country for billing address</td>
+      <td>billing_country</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>billing_country_code</td>
+      <td>Country code for billing address</td>
+      <td>billing_country_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>billing_geocode_accuracy</td>
+      <td>Accuracy of billing address geocoding</td>
+      <td>billing_geocode_accuracy</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>billing_latitude</td>
+      <td>Latitude of billing address</td>
+      <td>billing_latitude</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>billing_longitude</td>
+      <td>Longitude of billing address</td>
+      <td>billing_longitude</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>billing_postal_code</td>
+      <td>Postal code for billing address</td>
+      <td>billing_postal_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>billing_state</td>
+      <td>State for billing address</td>
+      <td>billing_state</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>billing_state_code</td>
+      <td>State code for billing address</td>
+      <td>billing_state_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>billing_street</td>
+      <td>Street address for billing</td>
+      <td>billing_street</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>blng_bill_now_c</td>
+      <td>Flag to indicate immediate billing</td>
+      <td>bill_immediately</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>blng_billing_account_c</td>
+      <td>Account associated with billing</td>
+      <td>billing_account_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>blng_billing_day_of_month_c</td>
+      <td>Day of month for billing</td>
+      <td>billing_day_of_month</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>blng_invoice_batch_c</td>
+      <td>Batch type for invoice processing</td>
+      <td>invoice_batch_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>celigo_sfnsio_discount_total_net_suite_c</td>
+      <td>Total discount in NetSuite</td>
+      <td>netsuite_discount_total</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>celigo_sfnsio_net_suite_id_c</td>
+      <td>NetSuite ID for the order</td>
+      <td>netsuite_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>celigo_sfnsio_net_suite_order_number_c</td>
+      <td>NetSuite order number</td>
+      <td>netsuite_order_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>celigo_sfnsio_net_suite_order_status_c</td>
+      <td>Order status in NetSuite</td>
+      <td>netsuite_order_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>celigo_sfnsio_net_suite_record_c</td>
+      <td>NetSuite record identifier</td>
+      <td>netsuite_record_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>celigo_sfnsio_ship_date_c</td>
+      <td>Shipping date for the order</td>
+      <td>ship_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>celigo_sfnsio_skip_export_to_net_suite_c</td>
+      <td>Flag to skip exporting to NetSuite</td>
+      <td>skip_netsuite_export</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>celigo_sfnsio_sub_total_net_suite_c</td>
+      <td>Subtotal amount in NetSuite</td>
+      <td>netsuite_subtotal</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>celigo_sfnsio_tax_total_net_suite_c</td>
+      <td>Total tax amount in NetSuite</td>
+      <td>netsuite_tax_total</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>celigo_sfnsio_test_mode_record_c</td>
+      <td>Flag for test mode record</td>
+      <td>is_test_mode</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>celigo_sfnsio_total_net_suite_c</td>
+      <td>Total amount in NetSuite</td>
+      <td>netsuite_total</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>company_authorized_by_id</td>
+      <td>ID of company authorizing person</td>
+      <td>company_authorizer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>contract_id</td>
+      <td>Unique identifier for the contract</td>
+      <td>contract_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>created_by_id</td>
+      <td>ID of user who created the record</td>
+      <td>creator_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>created_date</td>
+      <td>Date and time the record was created</td>
+      <td>created_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>credit_summary_c</td>
+      <td>Summary of credits for the order</td>
+      <td>credit_summary</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>customer_authorized_by_id</td>
+      <td>ID of customer authorizing person</td>
+      <td>customer_authorizer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>customer_spend_type_c</td>
+      <td>Type of customer spending</td>
+      <td>customer_spend_type_c</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>description</td>
+      <td>Description of the order</td>
+      <td>description</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>effective_date</td>
+      <td>Date the order becomes effective</td>
+      <td>effective_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>end_date</td>
+      <td>End date of the order</td>
+      <td>end_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>evergreen_c</td>
+      <td>Flag for evergreen contract</td>
+      <td>is_evergreen</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>id</td>
+      <td>Unique identifier for the order</td>
+      <td>order_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>invoicing_type_c</td>
+      <td>Type of invoicing for the order</td>
+      <td>invoicing_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>ironclad_workflow_c</td>
+      <td>Ironclad workflow status</td>
+      <td>ironclad_workflow</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>is_deleted</td>
+      <td>Flag indicating if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>is_hvr_legacy_order_c</td>
+      <td>Flag for HVR legacy order</td>
+      <td>is_hvr_legacy_order</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>is_reduction_order</td>
+      <td>Flag indicating if it's a reduction order</td>
+      <td>is_reduction_order</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>last_modified_by_id</td>
+      <td>ID of user who last modified the record</td>
+      <td>last_modifier_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>last_modified_date</td>
+      <td>Date and time of last modification</td>
+      <td>last_modified_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>last_referenced_date</td>
+      <td>Date the record was last referenced</td>
+      <td>last_referenced_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>last_viewed_date</td>
+      <td>Date the record was last viewed</td>
+      <td>last_viewed_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>legal_entity_c</td>
+      <td>Legal entity associated with the order</td>
+      <td>legal_entity_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>opportunity_id</td>
+      <td>ID of the associated opportunity</td>
+      <td>opportunity_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>order_auto_activated_c</td>
+      <td>Indicates if order was automatically activated</td>
+      <td>auto_activated_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>order_number</td>
+      <td>Unique identifier for the order</td>
+      <td>order_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>order_spend_type_c</td>
+      <td>Type of spending for the order</td>
+      <td>order_spend_type_c</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>original_order_id</td>
+      <td>ID of the original order if this is a renewal</td>
+      <td>original_order_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>owner_id</td>
+      <td>Unique identifier of the order owner</td>
+      <td>owner_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>prepaid_billing_frequency_c</td>
+      <td>Frequency of prepaid billing</td>
+      <td>prepaid_billing_frequency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>prepaid_order_c</td>
+      <td>Indicates if the order is prepaid</td>
+      <td>is_prepaid_order</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>pricebook_2_id</td>
+      <td>ID of the pricebook used for the order</td>
+      <td>pricebook_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>purchase_order_number_c</td>
+      <td>Purchase order number associated with the order</td>
+      <td>purchase_order_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>purchase_summary_c</td>
+      <td>Summary of the purchase</td>
+      <td>purchase_summary</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>sbqq_contracted_c</td>
+      <td>Indicates if the order is contracted</td>
+      <td>is_contracted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>sbqq_contracting_method_c</td>
+      <td>Method used for contracting</td>
+      <td>contracting_method</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>sbqq_payment_term_c</td>
+      <td>Payment terms for the order</td>
+      <td>payment_terms</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>sbqq_price_calc_status_c</td>
+      <td>Status of price calculation</td>
+      <td>price_calculation_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>sbqq_price_calc_status_message_c</td>
+      <td>Message related to price calculation status</td>
+      <td>price_calculation_message</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>sbqq_quote_c</td>
+      <td>Quote ID associated with the order</td>
+      <td>quote_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>sbqq_renewal_term_c</td>
+      <td>Term for order renewal</td>
+      <td>renewal_term</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>sbqq_renewal_uplift_rate_c</td>
+      <td>Uplift rate for order renewal</td>
+      <td>renewal_uplift_rate</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>shipping_city</td>
+      <td>City for shipping address</td>
+      <td>shipping_city</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>shipping_country</td>
+      <td>Country for shipping address</td>
+      <td>shipping_country</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>shipping_country_code</td>
+      <td>Country code for shipping address</td>
+      <td>shipping_country_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>shipping_geocode_accuracy</td>
+      <td>Accuracy of shipping address geocode</td>
+      <td>shipping_geocode_accuracy</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>shipping_latitude</td>
+      <td>Latitude of shipping address</td>
+      <td>shipping_latitude</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>shipping_longitude</td>
+      <td>Longitude of shipping address</td>
+      <td>shipping_longitude</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>shipping_postal_code</td>
+      <td>Postal code for shipping address</td>
+      <td>shipping_postal_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>shipping_state</td>
+      <td>State for shipping address</td>
+      <td>shipping_state</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>shipping_state_code</td>
+      <td>State code for shipping address</td>
+      <td>shipping_state_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>shipping_street</td>
+      <td>Street address for shipping</td>
+      <td>shipping_street</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>status</td>
+      <td>Current status of the order</td>
+      <td>order_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>status_code</td>
+      <td>Code representing the order status</td>
+      <td>order_status_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>synced_to_net_suite_c</td>
+      <td>Indicates if order is synced to NetSuite</td>
+      <td>netsuite_sync_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>system_modstamp</td>
+      <td>Timestamp of last system modification to the order</td>
+      <td>last_modified_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>total_amount</td>
+      <td>Total monetary value of the order</td>
+      <td>order_total</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>type</td>
+      <td>Type or category of the order</td>
+      <td>order_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>update_subscriptions_only_c</td>
+      <td>Flag for updating only subscriptions</td>
+      <td>update_subscriptions_only</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>4</b> columns have erroneous values<br><ol><li><b>billing_city</b>: 'New York' and 'New York, NY' are redundant representations of the same city.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>New York, NY</td>
+      <td>New York</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_postal_code</b>: 'USA' is unusual because it's a country name, not a postal code.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>USA</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_state</b>: '55555-1502' is unusual as it's a ZIP code. 'Florida' and 'MD' represent states inconsistently.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>55555-1502</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>MD</td>
+      <td>Maryland</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_street</b>: '123 Ave' is unusual because it's likely a placeholder rather than a real street address.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>123 Ave</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>3</b> columns have disguised missing values<br>
+                ✔️ <b>3</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>billing_postal_code</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>billing_state</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_street</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>42</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>activation_datetime</td>
+      <td>CAST("activation_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'activation_datetime' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The given date format '2019-11-11 17:23:34' is already in a standard timestamp format (YYYY-MM-DD HH:MM:SS), which DuckDB can automatically recognize. Therefore, we don't need to use the strptime function for explicit parsing. A straightforward CAST to TIMESTAMP will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>amendment_type</td>
+      <td>CAST("amendment_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'amendment_type' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function will convert the numeric values to their string representations. Since the column is currently DECIMAL, casting it to VARCHAR will preserve all the information while changing the data type to a string format.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_country_code</td>
+      <td>CAST("billing_country_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'billing_country_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representation. Since DuckDB syntax is specified, we'll use the standard SQL CAST function, which is supported in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>billing_geocode_accuracy</td>
+      <td>CAST("billing_geocode_accuracy" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'billing_geocode_accuracy' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We just need to wrap the column name in a CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>billing_state_code</td>
+      <td>CAST("billing_state_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'billing_state_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert each value in the column to a string representation. Since the column currently contains DECIMAL values, casting to VARCHAR will preserve the numeric information as a string.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>company_authorizer_id</td>
+      <td>CAST("company_authorizer_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'company_authorizer_id' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>contract_id</td>
+      <td>CAST("contract_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'contract_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each value in the column to its string representation. Even though the current distinct values are empty, this cast will work for any future decimal values that might be added to the column.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>created_date</td>
+      <td>CAST("created_date" AS TIMESTAMP)</td>
+      <td>To transform the 'created_date' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given example ('2019-11-11 17:23:34') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically recognize this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>customer_authorizer_id</td>
+      <td>CAST("customer_authorizer_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'customer_authorizer_id' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>customer_spend_type_c</td>
+      <td>CAST("customer_spend_type_c" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'customer_spend_type_c' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since DuckDB follows SQL standards, the CAST syntax is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>description</td>
+      <td>CAST("description" AS VARCHAR)</td>
+      <td>To transform the data type of the 'description' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this is straightforward. We simply use CAST() and specify the column name and the desired data type. Even though the 'description' column currently has no distinct values (as indicated by the empty list []), we can still perform this cast operation.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>effective_date</td>
+      <td>CAST("effective_date" AS TIMESTAMP)</td>
+      <td>To transform the 'effective_date' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given example ('2019-11-11 17:23:34') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically recognize this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>end_date</td>
+      <td>CAST("end_date" AS DATE)</td>
+      <td>To transform the 'end_date' column from DECIMAL to DATE, we can use a simple CAST function.  Since the column is currently empty, we don't need to worry about formatting specific date strings.  A straightforward CAST to DATE should suffice. This will ensure that any future data added to this  column will be treated as a DATE type.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>entity_use_code</td>
+      <td>CAST("entity_use_code" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'entity_use_code' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>invoice_message</td>
+      <td>CAST("invoice_message" AS VARCHAR)</td>
+      <td>To transform the data type of the 'invoice_message' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ironclad_workflow</td>
+      <td>CAST("ironclad_workflow" AS VARCHAR)</td>
+      <td>To transform the column 'ironclad_workflow' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case). This will convert all values in the column to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>is_active</td>
+      <td>CAST("is_active" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_active' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We wrap the column name in the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>is_hvr_legacy_order</td>
+      <td>CAST("is_hvr_legacy_order" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_hvr_legacy_order' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>last_modified_date</td>
+      <td>CAST("last_modified_date" AS TIMESTAMP)</td>
+      <td>To transform the 'last_modified_date' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The date format in the given example ('2019-11-11 17:23:34') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically recognize this format.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>last_modified_timestamp</td>
+      <td>CAST("last_modified_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'last_modified_timestamp' column from VARCHAR to TIMESTAMP, we can use a simple CAST function in DuckDB. The provided date format '2019-11-11 17:23:34' is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). The format is 'YYYY-MM-DD HH:MM:SS', which is a default format recognized by SQL databases for TIMESTAMP conversion.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>last_referenced_date</td>
+      <td>CAST("last_referenced_date" AS VARCHAR)</td>
+      <td>To transform the data type of the 'last_referenced_date' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword to explicitly convert the column to VARCHAR data type.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>last_viewed_date</td>
+      <td>CAST("last_viewed_date" AS VARCHAR)</td>
+      <td>To transform the data type of the 'last_viewed_date' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional processing since we're just changing the data type without any modifications to the data itself.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>netsuite_discount_total</td>
+      <td>CAST("netsuite_discount_total" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'netsuite_discount_total' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert all numeric values in the column to their string representations. Since the column has no distinct values (empty list), this transformation will effectively maintain an empty column but change its data type.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>netsuite_order_status</td>
+      <td>CAST("netsuite_order_status" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'netsuite_order_status' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>netsuite_subtotal</td>
+      <td>CAST("netsuite_subtotal" AS VARCHAR)</td>
+      <td>To transform the data type of the 'netsuite_subtotal' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>netsuite_tax_total</td>
+      <td>CAST("netsuite_tax_total" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'netsuite_tax_total' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert all numeric values in the column to their string representation. Since the column has no distinct values (empty list), this transformation will not affect any existing data but will change the column's data type for future insertions or operations.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>netsuite_total</td>
+      <td>CAST("netsuite_total" AS VARCHAR)</td>
+      <td>To transform the data type of the 'netsuite_total' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the current distinct values are empty, this cast will work for any potential decimal values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>opportunity_id</td>
+      <td>CAST("opportunity_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'opportunity_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'opportunity_id' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>order_number</td>
+      <td>CAST("order_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'order_number' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>order_spend_type_c</td>
+      <td>CAST("order_spend_type_c" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'order_spend_type_c' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>original_order_id</td>
+      <td>CAST("original_order_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'original_order_id' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>price_calculation_message</td>
+      <td>CAST("price_calculation_message" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'price_calculation_message' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>purchase_order_number</td>
+      <td>CAST("purchase_order_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'purchase_order_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This operation will convert the numeric values to their string representation. Since DuckDB syntax is specified, we'll use the standard SQL CAST function, which is supported in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>purchase_summary</td>
+      <td>CAST("purchase_summary" AS VARCHAR)</td>
+      <td>To transform the data type of the 'purchase_summary' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>renewal_term</td>
+      <td>CAST("renewal_term" AS VARCHAR)</td>
+      <td>To transform the data type of the 'renewal_term' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>renewal_uplift_rate</td>
+      <td>CAST("renewal_uplift_rate" AS VARCHAR)</td>
+      <td>To transform the data type of the 'renewal_uplift_rate' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each value in the column to its string representation. Even though the column currently has no distinct values (as indicated by the empty list []), this cast will still work for any future values that might be added to the column.\n</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>sales_tax_amount</td>
+      <td>CAST("sales_tax_amount" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sales_tax_amount' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>ship_date</td>
+      <td>CAST("ship_date" AS DATE)</td>
+      <td>To transform the data type of the 'ship_date' column from DECIMAL to DATE, we can use a simple CAST function. Since the column is already in a numerical format (DECIMAL), we don't need to use the strptime function or any string formatting. A direct cast to DATE should work, assuming the DECIMAL values represent dates in a standard format (like YYYYMMDD).\n</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>shipping_country_code</td>
+      <td>CAST("shipping_country_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_country_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>shipping_geocode_accuracy</td>
+      <td>CAST("shipping_geocode_accuracy" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'shipping_geocode_accuracy' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>shipping_postal_code</td>
+      <td>CAST("shipping_postal_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_postal_code' column from INT to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since we're converting from INT to VARCHAR, no additional formatting or padding is necessary.\n</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>shipping_state_code</td>
+      <td>CAST("shipping_state_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_state_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>47</b> columns have missing values<br>
+                ✔️ <b>19</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>amendment_type</td>
+      <td>100</td>
+      <td>True</td>
+      <td>No amendments made to the account.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>billing_country_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_geocode_accuracy</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Geocoding not performed or necessary for this account.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>billing_latitude</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Geographic coordinates not required or collected for billing.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>billing_longitude</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Geographic coordinates not required or collected for billing.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>billing_postal_code</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>billing_state</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>billing_state_code</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not used when full state name is provided.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>billing_street</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>company_authorizer_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>contract_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>credit_summary</td>
+      <td>50</td>
+      <td>True</td>
+      <td>No credit summary exists for some accounts.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>customer_authorizer_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>customer_spend_type_c</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>description</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>end_date</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Account or contract has no specified end date.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>entity_use_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>invoice_message</td>
+      <td>100</td>
+      <td>True</td>
+      <td>No custom invoice message set for this account.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>ironclad_workflow</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>is_active</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Account status might be pending or in another state.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>is_hvr_legacy_order</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Account is not related to HVR legacy orders.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>last_referenced_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>last_viewed_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>netsuite_discount_total</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable when there's no discount on the order.</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>netsuite_id</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for orders not yet synced with NetSuite.</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>netsuite_order_number</td>
+      <td>90</td>
+      <td>True</td>
+      <td>Not applicable for orders not yet processed in NetSuite.</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>netsuite_order_status</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for orders not yet processed in NetSuite.</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>netsuite_record_id</td>
+      <td>90</td>
+      <td>True</td>
+      <td>Not applicable for orders not yet synced with NetSuite.</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>netsuite_subtotal</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for orders not yet processed in NetSuite.</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>netsuite_tax_total</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for orders not yet processed in NetSuite.</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>netsuite_total</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for orders not yet processed in NetSuite.</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>opportunity_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>order_spend_type_c</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>original_order_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>prepaid_billing_frequency</td>
+      <td>60</td>
+      <td>True</td>
+      <td>Not applicable for non-prepaid or one-time orders.</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>price_calculation_message</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>purchase_order_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>purchase_summary</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>renewal_term</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>renewal_uplift_rate</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>sales_tax_amount</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>ship_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>shipping_country_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>shipping_geocode_accuracy</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>shipping_latitude</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>shipping_longitude</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>shipping_state_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>billing_country_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>billing_postal_code</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_state</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>billing_street</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>company_authorizer_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>contract_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>customer_authorizer_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>customer_spend_type_c</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>description</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>entity_use_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ironclad_workflow</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>last_referenced_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>last_viewed_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>opportunity_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>order_spend_type_c</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>original_order_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>price_calculation_message</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>purchase_order_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>purchase_summary</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>renewal_term</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>renewal_uplift_rate</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>sales_tax_amount</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>ship_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>shipping_country_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>shipping_geocode_accuracy</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>shipping_latitude</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>shipping_longitude</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>shipping_state_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': '55555', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_postal_code", data);
+data = [{'label': 'Florida', 'value': 50.0}, {'label': 'New York', 'value': 25.0}, {'label': 'Maryland', 'value': 25.0}];
+    drawBarChart("bar_viz_billing_state", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_prepaid_order", data);
+data = [{'label': '0011G00000fIPsf...', 'value': 20.0}, {'label': '0011G00000nKDIv...', 'value': 20.0}, {'label': '0011G00000gZNEk...', 'value': 20.0}, {'label': '0011G00000gY0y4...', 'value': 20.0}, {'label': '0011G00000f8IrI...', 'value': 20.0}];
+    drawBarChart("bar_viz_account_id", data);
+data = [{'x': 1057453.75, 'y': 1}, {'x': 1057515.25, 'y': 0}, {'x': 1057576.75, 'y': 0}, {'x': 1057638.25, 'y': 0}, {'x': 1057699.75, 'y': 0}, {'x': 1057761.25, 'y': 0}, {'x': 1057822.75, 'y': 2}, {'x': 1057884.25, 'y': 0}, {'x': 1057945.75, 'y': 0}, {'x': 1058007.25, 'y': 0}];
+    binWidth = 61.5;
+    drawHistogram("hist_viz_netsuite_id", data, binWidth);
+data = [{'label': 'United States', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_country", data);
+data = [{'label': '01s1G000001N7EK...', 'value': 100.0}];
+    drawBarChart("bar_viz_pricebook_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_calculate_tax", data);
+data = [{'label': 'Other', 'value': 50.0}, {'label': 'Prepaid Credits', 'value': 50.0}];
+    drawBarChart("bar_viz_invoicing_type", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_update_subscriptions_only", data);
+data = [{'label': '0011G00000gY0y4...', 'value': 20.0}, {'label': '0011G00000nKDIv...', 'value': 20.0}, {'label': '0011G00000f8IrI...', 'value': 20.0}, {'label': '0011G00000fIPsf...', 'value': 20.0}, {'label': '0011G00000gZNEk...', 'value': 20.0}];
+    drawBarChart("bar_viz_billing_account_id", data);
+data = [{'label': 'New York', 'value': 40.0}, {'label': 'Florida', 'value': 40.0}, {'label': 'Maryland', 'value': 20.0}];
+    drawBarChart("bar_viz_shipping_state", data);
+data = [{'label': '0051G000005Munn...', 'value': 90.0}, {'label': '0051G000005Mumu...', 'value': 10.0}];
+    drawBarChart("bar_viz_last_modifier_id", data);
+data = [{'label': 'No Tax Required', 'value': 60.0}, {'label': 'Tax Amount Is U...', 'value': 40.0}];
+    drawBarChart("bar_viz_tax_calculation_status", data);
+data = [{'label': 'Activated', 'value': 100.0}];
+    drawBarChart("bar_viz_order_status", data);
+data = [{'label': '8011G000000XFeO...', 'value': 10.0}, {'label': '8011G000000XFeP...', 'value': 10.0}, {'label': '8011G000000XIK8...', 'value': 10.0}, {'label': '8011G000000XIK7...', 'value': 10.0}, {'label': '8011G000000XChL...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_order_id", data);
+data = [{'label': 'United States', 'value': 100.0}];
+    drawBarChart("bar_viz_shipping_country", data);
+data = [{'label': '0051G000005Mumu...', 'value': 100.0}];
+    drawBarChart("bar_viz_owner_id", data);
+data = [{'label': 'New York', 'value': 40.0}, {'label': 'Tampa', 'value': 20.0}, {'label': 'Baltimore', 'value': 20.0}, {'label': 'Fort Lauderdale', 'value': 20.0}];
+    drawBarChart("bar_viz_billing_city", data);
+data = [{'label': 'Annual', 'value': 100.0}];
+    drawBarChart("bar_viz_prepaid_billing_frequency", data);
+data = [{'label': 'False', 'value': 90.0}, {'label': 'True', 'value': 10.0}];
+    drawBarChart("bar_viz_is_test_mode", data);
+data = [{'label': 'Domestic (US)', 'value': 50.0}, {'label': 'Daily', 'value': 50.0}];
+    drawBarChart("bar_viz_invoice_batch_type", data);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_billing_longitude", data, binWidth);
+data = [{'label': 'Net 30', 'value': 100.0}];
+    drawBarChart("bar_viz_payment_terms", data);
+data = [{'label': 'Activated', 'value': 100.0}];
+    drawBarChart("bar_viz_order_status_code", data);
+data = [{'x': 699.9649999999999, 'y': 7}, {'x': 2099.8949999999995, 'y': 0}, {'x': 3499.8249999999994, 'y': 0}, {'x': 4899.754999999999, 'y': 1}, {'x': 6299.6849999999995, 'y': 0}, {'x': 7699.614999999999, 'y': 0}, {'x': 9099.544999999998, 'y': 0}, {'x': 10499.474999999999, 'y': 0}, {'x': 11899.404999999999, 'y': 0}, {'x': 13299.335, 'y': 0}];
+    binWidth = 1399.9299999999998;
+    drawHistogram("hist_viz_order_total", data, binWidth);
+data = [{'label': 'a9e1G000000L1n3...', 'value': 20.0}, {'label': 'a9e1G000000TNOi...', 'value': 20.0}, {'label': 'a9e1G000000KztB...', 'value': 20.0}, {'label': 'a9e1G000000Kzoj...', 'value': 20.0}, {'label': 'a9e1G000000TNSG...', 'value': 20.0}];
+    drawBarChart("bar_viz_credit_summary", data);
+data = [{'label': '123 Ave', 'value': 100.0}];
+    drawBarChart("bar_viz_shipping_street", data);
+data = [{'label': '0051G000005Mumu...', 'value': 100.0}];
+    drawBarChart("bar_viz_creator_id", data);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_billing_latitude", data, binWidth);
+data = [{'label': 'a8k1G000000k9d4...', 'value': 100.0}];
+    drawBarChart("bar_viz_legal_entity_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_netsuite_sync_status", data);
+data = [{'label': 'New York', 'value': 40.0}, {'label': 'Tampa', 'value': 20.0}, {'label': 'Fort Lauderdale', 'value': 20.0}, {'label': 'Baltimore', 'value': 20.0}];
+    drawBarChart("bar_viz_shipping_city", data);
+data = [{'label': 'SO6556', 'value': 100.0}];
+    drawBarChart("bar_viz_netsuite_order_number", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_bill_immediately", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_contracted", data);
+data = [{'label': 'a4V1G000000TpCt...', 'value': 20.0}, {'label': 'a4V1G000000TnQA...', 'value': 20.0}, {'label': 'a4V1G000000TpGC...', 'value': 20.0}, {'label': 'a4V1G000000Tpfl...', 'value': 20.0}, {'label': 'a4V1G000000Tv9v...', 'value': 20.0}];
+    drawBarChart("bar_viz_quote_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_has_rollover_spend_amendment", data);
+data = [{'label': 'Not Needed', 'value': 100.0}];
+    drawBarChart("bar_viz_price_calculation_status", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_skip_netsuite_export", data);
+data = [{'label': 'google.com', 'value': 100.0}];
+    drawBarChart("bar_viz_netsuite_record_id", data);
+data = [{'label': 'By Subscription...', 'value': 100.0}];
+    drawBarChart("bar_viz_contracting_method", data);
+data = [{'label': '0051G000005Mumu...', 'value': 100.0}];
+    drawBarChart("bar_viz_activator_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_auto_activated_flag", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_seller_importer_of_record", data);
+data = [{'x': 1.725, 'y': 5}, {'x': 3.175, 'y': 0}, {'x': 4.625, 'y': 0}, {'x': 6.074999999999999, 'y': 0}, {'x': 7.525, 'y': 0}, {'x': 8.975, 'y': 0}, {'x': 10.425, 'y': 0}, {'x': 11.875, 'y': 0}, {'x': 13.325, 'y': 0}, {'x': 14.774999999999999, 'y': 0}];
+    binWidth = 1.45;
+    drawHistogram("hist_viz_billing_day_of_month", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_reduction_order", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_evergreen", data);
+data = [{'label': 'New', 'value': 100.0}];
+    drawBarChart("bar_viz_order_type", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_activation_datetime", data);
+data = [];
+    drawBarChart("bar_viz_amendment_type", data);
+data = [];
+    drawBarChart("bar_viz_billing_geocode_accuracy", data);
+data = [];
+    drawBarChart("bar_viz_billing_state_code", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_created_date", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_effective_date", data);
+data = [];
+    drawBarChart("bar_viz_end_date", data);
+data = [];
+    drawBarChart("bar_viz_invoice_message", data);
+data = [];
+    drawBarChart("bar_viz_is_active", data);
+data = [];
+    drawBarChart("bar_viz_is_hvr_legacy_order", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_modified_date", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_modified_timestamp", data);
+data = [];
+    drawBarChart("bar_viz_netsuite_discount_total", data);
+data = [];
+    drawBarChart("bar_viz_netsuite_order_status", data);
+data = [];
+    drawBarChart("bar_viz_netsuite_subtotal", data);
+data = [];
+    drawBarChart("bar_viz_netsuite_tax_total", data);
+data = [];
+    drawBarChart("bar_viz_netsuite_total", data);
+data = [{'label': '2597', 'value': 10.0}, {'label': '2598', 'value': 10.0}, {'label': '2590', 'value': 10.0}, {'label': '8358', 'value': 10.0}, {'label': '1354', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_order_number", data);
+data = [{'label': '55555', 'value': 100.0}];
+    drawBarChart("bar_viz_shipping_postal_code", data);
+
+
+</script>
+</body>
+</html>

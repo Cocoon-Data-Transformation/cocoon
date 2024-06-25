@@ -1,0 +1,4619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sf_product_2_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>is_active</th>
+      <th>record_type_id</th>
+      <th>is_deleted</th>
+      <th>last_modified_by_id</th>
+      <th>name</th>
+      <th>id</th>
+      <th>created_by_id</th>
+      <th>family</th>
+      <th>netsuite_conn_sync_in_progress_c</th>
+      <th>netsuite_conn_celigo_update_c</th>
+      <th>netsuite_conn_net_suite_sync_err_c</th>
+      <th>netsuite_conn_push_to_net_suite_c</th>
+      <th>netsuite_conn_net_suite_item_type_c</th>
+      <th>netsuite_conn_sub_type_c</th>
+      <th>is_new_c</th>
+      <th>sbqq_asset_amendment_behavior_c</th>
+      <th>sbqq_asset_conversion_c</th>
+      <th>sbqq_billing_frequency_c</th>
+      <th>sbqq_billing_type_c</th>
+      <th>sbqq_block_pricing_field_c</th>
+      <th>sbqq_charge_type_c</th>
+      <th>sbqq_component_c</th>
+      <th>sbqq_cost_editable_c</th>
+      <th>sbqq_custom_configuration_required_c</th>
+      <th>sbqq_description_locked_c</th>
+      <th>sbqq_exclude_from_maintenance_c</th>
+      <th>sbqq_exclude_from_opportunity_c</th>
+      <th>sbqq_externally_configurable_c</th>
+      <th>sbqq_has_configuration_attributes_c</th>
+      <th>sbqq_has_consumption_schedule_c</th>
+      <th>sbqq_hidden_c</th>
+      <th>sbqq_hide_price_in_search_results_c</th>
+      <th>sbqq_include_in_maintenance_c</th>
+      <th>sbqq_new_quote_group_c</th>
+      <th>sbqq_non_discountable_c</th>
+      <th>sbqq_non_partner_discountable_c</th>
+      <th>sbqq_option_selection_method_c</th>
+      <th>sbqq_optional_c</th>
+      <th>sbqq_price_editable_c</th>
+      <th>sbqq_pricing_method_c</th>
+      <th>sbqq_pricing_method_editable_c</th>
+      <th>sbqq_quantity_editable_c</th>
+      <th>sbqq_reconfiguration_disabled_c</th>
+      <th>sbqq_subscription_base_c</th>
+      <th>sbqq_subscription_pricing_c</th>
+      <th>sbqq_subscription_term_c</th>
+      <th>sbqq_subscription_type_c</th>
+      <th>sbqq_taxable_c</th>
+      <th>connector_type_c</th>
+      <th>pbf_pro_type_discount_c</th>
+      <th>dimension_c</th>
+      <th>connector_status_c</th>
+      <th>is_complimentary_c</th>
+      <th>product_external_id_c</th>
+      <th>blng_billing_rule_c</th>
+      <th>blng_revenue_recognition_rule_c</th>
+      <th>blng_tax_rule_c</th>
+      <th>do_not_prorate_c</th>
+      <th>sbqq_enable_large_configuration_c</th>
+      <th>celigo_sfnsio_test_mode_record_c</th>
+      <th>celigo_sfnsio_skip_export_to_net_suite_c</th>
+      <th>non_recurring_c</th>
+      <th>is_archived</th>
+      <th>celigo_sfnsio_celigo_last_modified_date_c</th>
+      <th>created_date</th>
+      <th>system_modstamp</th>
+      <th>last_modified_date</th>
+      <th>product_code</th>
+      <th>sbqq_default_quantity_c</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>True</td>
+      <td>012370000005lzhAAA</td>
+      <td>False</td>
+      <td>0051G0000060rE7QAI</td>
+      <td>X</td>
+      <td>01t1G000002Uf3MQAS</td>
+      <td>0051G0000060rE7QAI</td>
+      <td>X</td>
+      <td>False</td>
+      <td>False</td>
+      <td>X</td>
+      <td>False</td>
+      <td>Non Inventory Sale</td>
+      <td>noninventory-Sale</td>
+      <td>False</td>
+      <td>Default</td>
+      <td>One per quote line</td>
+      <td>Annual</td>
+      <td>Advance</td>
+      <td>Quantity</td>
+      <td>Recurring</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Click</td>
+      <td>False</td>
+      <td>False</td>
+      <td>List</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>List</td>
+      <td>Fixed Price</td>
+      <td>1.0</td>
+      <td>Renewable</td>
+      <td>False</td>
+      <td>chat</td>
+      <td>False</td>
+      <td>Function</td>
+      <td>Alpha</td>
+      <td>False</td>
+      <td>12345.0</td>
+      <td>a1L1G000002t4LAUAY</td>
+      <td>a951G000000TQsMQAW</td>
+      <td>a9D1G000000TefyUAC</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>012370000005lzhAAA</td>
+      <td>False</td>
+      <td>00537000004EpGKAA0</td>
+      <td>X</td>
+      <td>01t1G000000bOtkQAE</td>
+      <td>0051G000005MzwaQAC</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Non Inventory Sale</td>
+      <td>noninventory-Sale</td>
+      <td>False</td>
+      <td>Default</td>
+      <td>One per quote line</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Quantity</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Click</td>
+      <td>False</td>
+      <td>True</td>
+      <td>List</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>List</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>Renewable</td>
+      <td>False</td>
+      <td>finance</td>
+      <td>False</td>
+      <td>Connector</td>
+      <td>General Availability</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>is_active</th>
+      <th>record_type_id</th>
+      <th>is_deleted</th>
+      <th>last_modified_by_id</th>
+      <th>product_name</th>
+      <th>product_id</th>
+      <th>created_by_id</th>
+      <th>product_family</th>
+      <th>netsuite_sync_in_progress</th>
+      <th>netsuite_celigo_update</th>
+      <th>netsuite_sync_error</th>
+      <th>push_to_netsuite</th>
+      <th>netsuite_item_type</th>
+      <th>netsuite_subtype</th>
+      <th>is_new</th>
+      <th>asset_amendment_behavior</th>
+      <th>asset_conversion</th>
+      <th>billing_frequency</th>
+      <th>billing_type</th>
+      <th>block_pricing_field</th>
+      <th>charge_type</th>
+      <th>is_component</th>
+      <th>is_cost_editable</th>
+      <th>is_custom_configuration_required</th>
+      <th>is_description_locked</th>
+      <th>exclude_from_maintenance</th>
+      <th>exclude_from_opportunity</th>
+      <th>is_externally_configurable</th>
+      <th>has_configuration_attributes</th>
+      <th>has_consumption_schedule</th>
+      <th>is_hidden</th>
+      <th>hide_price_in_search_results</th>
+      <th>include_in_maintenance</th>
+      <th>create_new_quote_group</th>
+      <th>is_non_discountable</th>
+      <th>is_non_partner_discountable</th>
+      <th>option_selection_method</th>
+      <th>is_optional</th>
+      <th>is_price_editable</th>
+      <th>pricing_method</th>
+      <th>is_pricing_method_editable</th>
+      <th>is_quantity_editable</th>
+      <th>is_reconfiguration_disabled</th>
+      <th>subscription_base</th>
+      <th>subscription_pricing_model</th>
+      <th>subscription_term</th>
+      <th>subscription_type</th>
+      <th>is_taxable</th>
+      <th>connector_type</th>
+      <th>pro_type_discount</th>
+      <th>dimension</th>
+      <th>connector_status</th>
+      <th>is_complimentary</th>
+      <th>external_product_id</th>
+      <th>billing_rule_id</th>
+      <th>revenue_recognition_rule_id</th>
+      <th>tax_rule_id</th>
+      <th>is_proration_disabled</th>
+      <th>enable_large_configuration</th>
+      <th>is_test_mode_record</th>
+      <th>skip_netsuite_export</th>
+      <th>is_non_recurring</th>
+      <th>is_archived</th>
+      <th>celigo_last_modified_date</th>
+      <th>created_date</th>
+      <th>last_modified_at</th>
+      <th>last_modified_date</th>
+      <th>product_code</th>
+      <th>sbqq_default_quantity_c</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>True</td>
+      <td>012370000005lzhAAA</td>
+      <td>False</td>
+      <td>0051G0000060rE7QAI</td>
+      <td>X</td>
+      <td>01t1G000002Uf3MQAS</td>
+      <td>0051G0000060rE7QAI</td>
+      <td>X</td>
+      <td>False</td>
+      <td>False</td>
+      <td>X</td>
+      <td>False</td>
+      <td>Non Inventory Sale</td>
+      <td>noninventory-Sale</td>
+      <td>False</td>
+      <td>Default</td>
+      <td>One per quote line</td>
+      <td>Annual</td>
+      <td>Advance</td>
+      <td>Quantity</td>
+      <td>Recurring</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Click</td>
+      <td>False</td>
+      <td>False</td>
+      <td>List</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>List</td>
+      <td>Fixed Price</td>
+      <td>1.0</td>
+      <td>Renewable</td>
+      <td>False</td>
+      <td>chat</td>
+      <td>False</td>
+      <td>Function</td>
+      <td>Alpha</td>
+      <td>False</td>
+      <td>12345.0</td>
+      <td>a1L1G000002t4LAUAY</td>
+      <td>a951G000000TQsMQAW</td>
+      <td>a9D1G000000TefyUAC</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>1</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>012370000005lzhAAA</td>
+      <td>False</td>
+      <td>00537000004EpGKAA0</td>
+      <td>X</td>
+      <td>01t1G000000bOtkQAE</td>
+      <td>0051G000005MzwaQAC</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Non Inventory Sale</td>
+      <td>noninventory-Sale</td>
+      <td>False</td>
+      <td>Default</td>
+      <td>One per quote line</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Quantity</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Click</td>
+      <td>False</td>
+      <td>True</td>
+      <td>List</td>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>List</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>Renewable</td>
+      <td>False</td>
+      <td>finance</td>
+      <td>False</td>
+      <td>Connector</td>
+      <td>General Availability</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2019-11-11 17:23:34</td>
+      <td>2</td>
+      <td>1.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_active"></div><b>📃 Summary:</b> Indicates if the product is currently active<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">record_type_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_record_type_id"></div><b>📃 Summary:</b> ID of the record type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the product is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_by_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_by_id"></div><b>📃 Summary:</b> ID of user who last modified the product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_product_name"></div><b>📃 Summary:</b> Name of the product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_product_id"></div><b>📃 Summary:</b> Unique identifier for the product<br><b>🦄 Unique:</b> This column is a unique identifier for the product. For this table, where each row represents a product, product_id should be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_by_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_by_id"></div><b>📃 Summary:</b> ID of the user who created the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_family</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_product_family"></div><b>📃 Summary:</b> Product family or category<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_sync_in_progress</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_netsuite_sync_in_progress"></div><b>📃 Summary:</b> NetSuite sync in progress status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_celigo_update</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_netsuite_celigo_update"></div><b>📃 Summary:</b> NetSuite Celigo update status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_sync_error</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='SUCCESS'>SUCCESS</option><option value='FAILED'>FAILED</option><option value='PENDING'>PENDING</option><option value='CANCELED'>CANCELED</option><option value='PARTIALLY_PROCESSED'>PARTIALLY_PROCESSED</option><option value='PROCESSING'>PROCESSING</option><option value='NO_DATA'>NO_DATA</option><option value='TIMED_OUT'>TIMED_OUT</option><option value='AUTHENTICATION_ERROR'>AUTHENTICATION_ERROR</option><option value='AUTHORIZATION_ERROR'>AUTHORIZATION_ERROR</option><option value='INVALID_DATA'>INVALID_DATA</option><option value='RATE_LIMIT_EXCEEDED'>RATE_LIMIT_EXCEEDED</option><option value='SERVER_ERROR'>SERVER_ERROR</option><option value='UNKNOWN_ERROR'>UNKNOWN_ERROR</option><option value='X'>X</option></select></span><br><br><div id="bar_viz_netsuite_sync_error"></div><b>📃 Summary:</b> NetSuite sync error status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">push_to_netsuite</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_push_to_netsuite"></div><b>📃 Summary:</b> Flag to push to NetSuite<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_item_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Inventory Item'>Inventory Item</option><option value='Non-inventory Item'>Non-inventory Item</option><option value='Service Item'>Service Item</option><option value='Other Charge Item'>Other Charge Item</option><option value='Group Item'>Group Item</option><option value='Kit/Package Item'>Kit/Package Item</option><option value='Assembly Item'>Assembly Item</option><option value='Serialized Inventory Item'>Serialized Inventory Item</option><option value='Lot Numbered Inventory Item'>Lot Numbered Inventory Item</option><option value='Gift Certificate Item'>Gift Certificate Item</option><option value='Download Item'>Download Item</option><option value='Subtotal Item'>Subtotal Item</option><option value='Discount Item'>Discount Item</option><option value='Payment Item'>Payment Item</option><option value='Non Inventory Sale Item'>Non Inventory Sale Item</option><option value='Non Inventory Purchase Item'>Non Inventory Purchase Item</option><option value='Non Inventory Resale Item'>Non Inventory Resale Item</option><option value='Description Item'>Description Item</option><option value='Non Inventory Sale'>Non Inventory Sale</option></select></span><br><br><div id="bar_viz_netsuite_item_type"></div><b>📃 Summary:</b> NetSuite item type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">netsuite_subtype</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='noninventory-Sale'>noninventory-Sale</option><option value='noninventory-Resale'>noninventory-Resale</option><option value='noninventory-Purchase'>noninventory-Purchase</option><option value='inventory'>inventory</option><option value='assembly'>assembly</option><option value='kit'>kit</option><option value='service'>service</option><option value='description'>description</option><option value='discount'>discount</option><option value='markup'>markup</option><option value='payment'>payment</option><option value='othercharge'>othercharge</option><option value='subtotal'>subtotal</option><option value='group'>group</option></select></span><br><br><div id="bar_viz_netsuite_subtype"></div><b>📃 Summary:</b> NetSuite subtype<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_new</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_new"></div><b>📃 Summary:</b> Custom field for new product status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">asset_amendment_behavior</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Default'>Default</option><option value='Overwrite'>Overwrite</option><option value='Append'>Append</option><option value='Merge'>Merge</option><option value='Reject'>Reject</option><option value='Require Approval'>Require Approval</option><option value='Audit Trail'>Audit Trail</option><option value='Version Control'>Version Control</option><option value='Notification'>Notification</option><option value='Rollback'>Rollback</option></select></span><br><br><div id="bar_viz_asset_amendment_behavior"></div><b>📃 Summary:</b> Behavior for asset amendments<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">asset_conversion</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_asset_conversion"></div><b>📃 Summary:</b> Asset conversion settings<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_frequency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Annual'>Annual</option><option value='Monthly'>Monthly</option><option value='Quarterly'>Quarterly</option><option value='Semi-Annual'>Semi-Annual</option><option value='Weekly'>Weekly</option><option value='Bi-Weekly'>Bi-Weekly</option><option value='Daily'>Daily</option></select></span><br><br><div id="bar_viz_billing_frequency"></div><b>📃 Summary:</b> Frequency of billing<br><b>❓ Missing:</b> Not applicable for non-recurring charges<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Advance'>Advance</option><option value='Arrears'>Arrears</option><option value='Monthly'>Monthly</option><option value='Quarterly'>Quarterly</option><option value='Annually'>Annually</option><option value='Pay-as-you-go'>Pay-as-you-go</option><option value='Prepaid'>Prepaid</option><option value='Postpaid'>Postpaid</option><option value='Recurring'>Recurring</option><option value='One-time'>One-time</option><option value='Usage-based'>Usage-based</option><option value='Tiered'>Tiered</option><option value='Flat-rate'>Flat-rate</option></select></span><br><br><div id="bar_viz_billing_type"></div><b>📃 Summary:</b> Type of billing<br><b>❓ Missing:</b> Not applicable for non-recurring charges<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">block_pricing_field</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_block_pricing_field"></div><b>📃 Summary:</b> Field for block pricing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">charge_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Recurring'>Recurring</option><option value='One-time'>One-time</option><option value='Usage-based'>Usage-based</option><option value='Tiered'>Tiered</option><option value='Per-unit'>Per-unit</option><option value='Flat rate'>Flat rate</option><option value='Subscription'>Subscription</option><option value='Pay-as-you-go'>Pay-as-you-go</option><option value='Freemium'>Freemium</option><option value='Lifetime'>Lifetime</option></select></span><br><br><div id="bar_viz_charge_type"></div><b>📃 Summary:</b> Type of charge for the product<br><b>❓ Missing:</b> Not applicable for non-charge items<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_component</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_component"></div><b>📃 Summary:</b> Indicates if product is a component<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_cost_editable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_cost_editable"></div><b>📃 Summary:</b> Indicates if cost is editable<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_custom_configuration_required</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_custom_configuration_required"></div><b>📃 Summary:</b> Indicates if custom configuration is required<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_description_locked</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_description_locked"></div><b>📃 Summary:</b> Indicates if description is locked<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">exclude_from_maintenance</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_exclude_from_maintenance"></div><b>📃 Summary:</b> Excludes product from maintenance<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">exclude_from_opportunity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_exclude_from_opportunity"></div><b>📃 Summary:</b> Excludes product from opportunities<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_externally_configurable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_externally_configurable"></div><b>📃 Summary:</b> Indicates if externally configurable<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_configuration_attributes</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_configuration_attributes"></div><b>📃 Summary:</b> Indicates if product has configuration attributes<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_consumption_schedule</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_consumption_schedule"></div><b>📃 Summary:</b> Indicates if product has consumption schedule<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_hidden</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_hidden"></div><b>📃 Summary:</b> Indicates if product is hidden<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hide_price_in_search_results</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_hide_price_in_search_results"></div><b>📃 Summary:</b> Hides price in search results<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">include_in_maintenance</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_include_in_maintenance"></div><b>📃 Summary:</b> Includes product in maintenance<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">create_new_quote_group</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_create_new_quote_group"></div><b>📃 Summary:</b> Creates new quote group for product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_non_discountable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_non_discountable"></div><b>📃 Summary:</b> Indicates if product is non-discountable<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_non_partner_discountable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_non_partner_discountable"></div><b>📃 Summary:</b> Indicates if non-partner discountable<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">option_selection_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Click'>Click</option><option value='Dropdown'>Dropdown</option><option value='Radio buttons'>Radio buttons</option><option value='Checkboxes'>Checkboxes</option><option value='Swatches'>Swatches</option><option value='Text input'>Text input</option><option value='Slider'>Slider</option><option value='Hover'>Hover</option><option value='Drag and drop'>Drag and drop</option><option value='Voice command'>Voice command</option><option value='Gesture'>Gesture</option><option value='Augmented reality'>Augmented reality</option></select></span><br><br><div id="bar_viz_option_selection_method"></div><b>📃 Summary:</b> Method for selecting product options<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_optional</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_optional"></div><b>📃 Summary:</b> Indicates if the product is optional<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_price_editable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_price_editable"></div><b>📃 Summary:</b> Indicates if the price can be edited<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pricing_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='List'>List</option><option value='Cost-plus'>Cost-plus</option><option value='Value-based'>Value-based</option><option value='Dynamic'>Dynamic</option><option value='Competitive'>Competitive</option><option value='Bundle'>Bundle</option><option value='Penetration'>Penetration</option><option value='Skimming'>Skimming</option><option value='Psychological'>Psychological</option><option value='Premium'>Premium</option><option value='Economy'>Economy</option><option value='Freemium'>Freemium</option><option value='Subscription'>Subscription</option><option value='Pay-what-you-want'>Pay-what-you-want</option><option value='Auction'>Auction</option></select></span><br><br><div id="bar_viz_pricing_method"></div><b>📃 Summary:</b> Method used for product pricing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_pricing_method_editable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_pricing_method_editable"></div><b>📃 Summary:</b> Indicates if pricing method can be edited<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_quantity_editable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_quantity_editable"></div><b>📃 Summary:</b> Indicates if quantity can be edited<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_reconfiguration_disabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_reconfiguration_disabled"></div><b>📃 Summary:</b> Indicates if reconfiguration is disabled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_base</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Base'>Base</option><option value='Standard'>Standard</option><option value='Premium'>Premium</option><option value='Pro'>Pro</option><option value='Enterprise'>Enterprise</option><option value='Free'>Free</option><option value='Basic'>Basic</option><option value='Starter'>Starter</option><option value='Advanced'>Advanced</option><option value='Ultimate'>Ultimate</option><option value='List'>List</option></select></span><br><br><div id="bar_viz_subscription_base"></div><b>📃 Summary:</b> Base for subscription pricing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_pricing_model</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Fixed Price'>Fixed Price</option><option value='Usage-Based'>Usage-Based</option><option value='Tiered'>Tiered</option><option value='Per User'>Per User</option><option value='Freemium'>Freemium</option><option value='Pay As You Go'>Pay As You Go</option><option value='Hybrid'>Hybrid</option><option value='Value-Based'>Value-Based</option><option value='Flat Rate'>Flat Rate</option><option value='Per Feature'>Per Feature</option><option value='Per Device'>Per Device</option><option value='Per Transaction'>Per Transaction</option><option value='Subscription Box'>Subscription Box</option></select></span><br><br><div id="bar_viz_subscription_pricing_model"></div><b>📃 Summary:</b> Pricing model for subscriptions<br><b>❓ Missing:</b> Not applicable for non-subscription products<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_term</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_subscription_term"></div><b>📃 Summary:</b> Term length for subscriptions<br><b>❓ Missing:</b> Not applicable for non-subscription products<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subscription_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Renewable'>Renewable</option><option value='Non-renewable'>Non-renewable</option><option value='Solar'>Solar</option><option value='Wind'>Wind</option><option value='Hydroelectric'>Hydroelectric</option><option value='Geothermal'>Geothermal</option><option value='Biomass'>Biomass</option><option value='Fixed-term'>Fixed-term</option><option value='Monthly'>Monthly</option><option value='Annual'>Annual</option><option value='Pay-as-you-go'>Pay-as-you-go</option><option value='Premium'>Premium</option><option value='Standard'>Standard</option><option value='Basic'>Basic</option></select></span><br><br><div id="bar_viz_subscription_type"></div><b>📃 Summary:</b> Type of subscription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_taxable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_taxable"></div><b>📃 Summary:</b> Indicates if the product is taxable<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">connector_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_connector_type"></div><b>📃 Summary:</b> Type of the connector<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pro_type_discount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_pro_type_discount"></div><b>📃 Summary:</b> Custom field for pro type discount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dimension</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_dimension"></div><b>📃 Summary:</b> Dimension of the product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">connector_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Alpha'>Alpha</option><option value='Beta'>Beta</option><option value='Release Candidate'>Release Candidate</option><option value='General Availability'>General Availability</option><option value='Deprecated'>Deprecated</option><option value='End of Life'>End of Life</option><option value='Development'>Development</option><option value='Preview'>Preview</option><option value='Limited Availability'>Limited Availability</option><option value='Early Access'>Early Access</option></select></span><br><br><div id="bar_viz_connector_status"></div><b>📃 Summary:</b> Status of the connector<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_complimentary</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_complimentary"></div><b>📃 Summary:</b> Custom field for complimentary product status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">external_product_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_external_product_id"></div><b>📃 Summary:</b> External identifier for the product<br><b>❓ Missing:</b> Not applicable for products without external identification.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_rule_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_rule_id"></div><b>📃 Summary:</b> Billing rule for the product<br><b>❓ Missing:</b> Not applicable for non-recurring charges<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">revenue_recognition_rule_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_revenue_recognition_rule_id"></div><b>📃 Summary:</b> Revenue recognition rule for the product<br><b>❓ Missing:</b> Not applicable for products without specific revenue recognition rules<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tax_rule_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_tax_rule_id"></div><b>📃 Summary:</b> Tax rule for the product<br><b>❓ Missing:</b> Not applicable for products not subject to taxation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_proration_disabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_proration_disabled"></div><b>📃 Summary:</b> Flag to indicate if proration is disabled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">enable_large_configuration</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_enable_large_configuration"></div><b>📃 Summary:</b> Enables large configuration for the product<br><b>❓ Missing:</b> Not applicable for items without configuration options<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_test_mode_record</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_test_mode_record"></div><b>📃 Summary:</b> Flag for test mode record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">skip_netsuite_export</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_skip_netsuite_export"></div><b>📃 Summary:</b> Flag to skip export to NetSuite<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_non_recurring</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_non_recurring"></div><b>📃 Summary:</b> Custom field for non-recurring status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_archived</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_is_archived"></div><b>📃 Summary:</b> Indicates if the product is archived<br><b>❓ Missing:</b> Not applicable for active, non-archived products.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">celigo_last_modified_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_celigo_last_modified_date"></div><b>📃 Summary:</b> Last modified date in Celigo integration<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_date"></div><b>📃 Summary:</b> Date when the record was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_at"></div><b>📃 Summary:</b> Last modification timestamp of the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_date"></div><b>📃 Summary:</b> Date and time of last modification<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_product_code"></div><b>📃 Summary:</b> Unique identifier for the product<br><b>🦄 Unique:</b> This column is described as a unique identifier for the product. For this table, where each row represents a product, product_code should be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sbqq_default_quantity_c</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sbqq_default_quantity_c"></div><b>📃 Summary:</b> <br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about product data. It contains fields for product identification, pricing, configuration, subscription details, and integration with external systems. Key attributes include product code, name, family, pricing tiers, billing frequency, and various flags for product behavior and characteristics. The table also includes metadata about record creation, modification, and system integration statuses.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>133</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>last_referenced_date</td>
+      <td>Date and time product was last referenced</td>
+      <td>last_referenced_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>is_active</td>
+      <td>Indicates if the product is currently active</td>
+      <td>is_active</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>description</td>
+      <td>Description of the product</td>
+      <td>description</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>last_modified_date</td>
+      <td>Date and time of last modification</td>
+      <td>last_modified_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>record_type_id</td>
+      <td>ID of the record type</td>
+      <td>record_type_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>product_code</td>
+      <td>Unique identifier for the product</td>
+      <td>product_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>last_viewed_date</td>
+      <td>Date and time product was last viewed</td>
+      <td>last_viewed_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>is_deleted</td>
+      <td>Indicates if the product is deleted</td>
+      <td>is_deleted</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>last_modified_by_id</td>
+      <td>ID of user who last modified the product</td>
+      <td>last_modified_by_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>system_modstamp</td>
+      <td>Last modification timestamp of the record</td>
+      <td>last_modified_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>name</td>
+      <td>Name of the product</td>
+      <td>product_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>id</td>
+      <td>Unique identifier for the product</td>
+      <td>product_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>created_by_id</td>
+      <td>ID of the user who created the record</td>
+      <td>created_by_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>created_date</td>
+      <td>Date when the record was created</td>
+      <td>created_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>family</td>
+      <td>Product family or category</td>
+      <td>product_family</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>max_volume_c</td>
+      <td>Custom field for maximum volume</td>
+      <td>max_volume</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>min_volume_c</td>
+      <td>Custom field for minimum volume</td>
+      <td>min_volume</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>request_name_c</td>
+      <td>Name of the associated request</td>
+      <td>request_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>default_quantity_c</td>
+      <td>Default quantity for the product</td>
+      <td>default_quantity_c</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>account_c</td>
+      <td>Associated account for the product</td>
+      <td>account_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>related_product_c</td>
+      <td>Related product identifier</td>
+      <td>related_product_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>picklist_value_c</td>
+      <td>Custom picklist value for the product</td>
+      <td>custom_picklist_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>as_input_c</td>
+      <td>Input flag for accounting system</td>
+      <td>accounting_system_input</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>as_output_c</td>
+      <td>Output flag for accounting system</td>
+      <td>accounting_system_output</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>status_c</td>
+      <td>Current status of the product</td>
+      <td>product_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>number_of_quantity_installments</td>
+      <td>Number of quantity installments</td>
+      <td>quantity_installments</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>number_of_revenue_installments</td>
+      <td>Number of revenue installments</td>
+      <td>revenue_installments</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>quantity_installment_period</td>
+      <td>Period for quantity installments</td>
+      <td>quantity_installment_period</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>quantity_schedule_type</td>
+      <td>Type of quantity schedule</td>
+      <td>quantity_schedule_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>revenue_installment_period</td>
+      <td>Period for revenue installments</td>
+      <td>revenue_installment_period</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>revenue_schedule_type</td>
+      <td>Type of revenue schedule</td>
+      <td>revenue_schedule_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>connections_c</td>
+      <td>Number of connections for the product</td>
+      <td>connection_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>event_volume_c</td>
+      <td>Volume of events for the product</td>
+      <td>event_volume</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>roadmap_connections_c</td>
+      <td>Connections to product roadmap</td>
+      <td>roadmap_connections</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>row_volume_c</td>
+      <td>Volume associated with the row</td>
+      <td>row_volume</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>display_url</td>
+      <td>URL for displaying the product</td>
+      <td>display_url</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>external_data_source_id</td>
+      <td>ID of external data source</td>
+      <td>external_data_source_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>external_id</td>
+      <td>External identifier for the product</td>
+      <td>external_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>quantity_unit_of_measure</td>
+      <td>Unit of measure for quantity</td>
+      <td>quantity_unit</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>stock_keeping_unit</td>
+      <td>Unique identifier for inventory tracking</td>
+      <td>stock_keeping_unit</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>features_c</td>
+      <td>Custom field for product features</td>
+      <td>product_features</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>tier_3_price_c</td>
+      <td>Price for the third pricing tier</td>
+      <td>tier_3_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>tier_2_price_c</td>
+      <td>Price for the second pricing tier</td>
+      <td>tier_2_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>tier_4_price_c</td>
+      <td>Price for the fourth pricing tier</td>
+      <td>tier_4_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>tier_1_price_c</td>
+      <td>Price for the first pricing tier</td>
+      <td>tier_1_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>netsuite_conn_sync_in_progress_c</td>
+      <td>NetSuite sync in progress status</td>
+      <td>netsuite_sync_in_progress</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>netsuite_conn_celigo_update_c</td>
+      <td>NetSuite Celigo update status</td>
+      <td>netsuite_celigo_update</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>netsuite_conn_term_contract_pricing_type_c</td>
+      <td>NetSuite term contract pricing type</td>
+      <td>netsuite_contract_pricing_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>netsuite_conn_net_suite_id_c</td>
+      <td>NetSuite ID for the product</td>
+      <td>netsuite_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>netsuite_conn_net_suite_sync_err_c</td>
+      <td>NetSuite sync error status</td>
+      <td>netsuite_sync_error</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>netsuite_conn_push_to_net_suite_c</td>
+      <td>Flag to push to NetSuite</td>
+      <td>push_to_netsuite</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>netsuite_conn_item_category_c</td>
+      <td>NetSuite item category</td>
+      <td>netsuite_item_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>netsuite_conn_net_suite_item_type_c</td>
+      <td>NetSuite item type</td>
+      <td>netsuite_item_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>netsuite_conn_sub_type_c</td>
+      <td>NetSuite subtype</td>
+      <td>netsuite_subtype</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>is_new_c</td>
+      <td>Custom field for new product status</td>
+      <td>is_new</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>product_metadata_c</td>
+      <td>Metadata associated with the product</td>
+      <td>product_metadata</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>product_metadata_del_c</td>
+      <td>Deleted metadata for the product</td>
+      <td>deleted_product_metadata</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>sbqq_asset_amendment_behavior_c</td>
+      <td>Behavior for asset amendments</td>
+      <td>asset_amendment_behavior</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>sbqq_asset_conversion_c</td>
+      <td>Asset conversion settings</td>
+      <td>asset_conversion</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>sbqq_batch_quantity_c</td>
+      <td>Quantity for batch processing</td>
+      <td>batch_quantity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>sbqq_billing_frequency_c</td>
+      <td>Frequency of billing</td>
+      <td>billing_frequency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>sbqq_billing_type_c</td>
+      <td>Type of billing</td>
+      <td>billing_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>sbqq_block_pricing_field_c</td>
+      <td>Field for block pricing</td>
+      <td>block_pricing_field</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>sbqq_charge_type_c</td>
+      <td>Type of charge for the product</td>
+      <td>charge_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>sbqq_component_c</td>
+      <td>Indicates if product is a component</td>
+      <td>is_component</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>sbqq_compound_discount_rate_c</td>
+      <td>Compound discount rate</td>
+      <td>compound_discount_rate</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>sbqq_configuration_event_c</td>
+      <td>Configuration event details</td>
+      <td>configuration_event</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>sbqq_configuration_field_set_c</td>
+      <td>Set of configuration fields</td>
+      <td>configuration_field_set</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>sbqq_configuration_fields_c</td>
+      <td>Fields for product configuration</td>
+      <td>configuration_fields</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>sbqq_configuration_form_title_c</td>
+      <td>Title of the configuration form</td>
+      <td>configuration_form_title</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>sbqq_configuration_type_c</td>
+      <td>Type of product configuration</td>
+      <td>configuration_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>sbqq_configuration_validator_c</td>
+      <td>Validator for product configuration</td>
+      <td>configuration_validator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>sbqq_configured_code_pattern_c</td>
+      <td>Pattern for configured product code</td>
+      <td>configured_code_pattern</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>sbqq_configured_description_pattern_c</td>
+      <td>Pattern for configured product description</td>
+      <td>configured_description_pattern</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>sbqq_cost_editable_c</td>
+      <td>Indicates if cost is editable</td>
+      <td>is_cost_editable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>sbqq_cost_schedule_c</td>
+      <td>Cost schedule for the product</td>
+      <td>cost_schedule</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>sbqq_custom_configuration_page_c</td>
+      <td>Custom configuration page for the product</td>
+      <td>custom_configuration_page</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>sbqq_custom_configuration_required_c</td>
+      <td>Indicates if custom configuration is required</td>
+      <td>is_custom_configuration_required</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>sbqq_customer_community_availability_c</td>
+      <td>Availability in customer community</td>
+      <td>customer_community_availability</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>sbqq_default_pricing_table_c</td>
+      <td>Default pricing table for the product</td>
+      <td>default_pricing_table</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>sbqq_default_quantity_c</td>
+      <td>Default quantity for the product</td>
+      <td>sbqq_default_quantity_c</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>sbqq_description_locked_c</td>
+      <td>Indicates if description is locked</td>
+      <td>is_description_locked</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>sbqq_discount_category_c</td>
+      <td>Discount category for the product</td>
+      <td>discount_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>sbqq_discount_schedule_c</td>
+      <td>Discount schedule for the product</td>
+      <td>discount_schedule</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>sbqq_dynamic_pricing_constraint_c</td>
+      <td>Constraint for dynamic pricing</td>
+      <td>dynamic_pricing_constraint</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>sbqq_exclude_from_maintenance_c</td>
+      <td>Excludes product from maintenance</td>
+      <td>exclude_from_maintenance</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>sbqq_exclude_from_opportunity_c</td>
+      <td>Excludes product from opportunities</td>
+      <td>exclude_from_opportunity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>sbqq_externally_configurable_c</td>
+      <td>Indicates if externally configurable</td>
+      <td>is_externally_configurable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>sbqq_generate_contracted_price_c</td>
+      <td>Generates contracted price for the product</td>
+      <td>generate_contracted_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>sbqq_has_configuration_attributes_c</td>
+      <td>Indicates if product has configuration attributes</td>
+      <td>has_configuration_attributes</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>sbqq_has_consumption_schedule_c</td>
+      <td>Indicates if product has consumption schedule</td>
+      <td>has_consumption_schedule</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>sbqq_hidden_c</td>
+      <td>Indicates if product is hidden</td>
+      <td>is_hidden</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>sbqq_hide_price_in_search_results_c</td>
+      <td>Hides price in search results</td>
+      <td>hide_price_in_search_results</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>sbqq_include_in_maintenance_c</td>
+      <td>Includes product in maintenance</td>
+      <td>include_in_maintenance</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>sbqq_new_quote_group_c</td>
+      <td>Creates new quote group for product</td>
+      <td>create_new_quote_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>sbqq_non_discountable_c</td>
+      <td>Indicates if product is non-discountable</td>
+      <td>is_non_discountable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>sbqq_non_partner_discountable_c</td>
+      <td>Indicates if non-partner discountable</td>
+      <td>is_non_partner_discountable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>sbqq_option_layout_c</td>
+      <td>Layout for product options</td>
+      <td>option_layout</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>sbqq_option_selection_method_c</td>
+      <td>Method for selecting product options</td>
+      <td>option_selection_method</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>sbqq_optional_c</td>
+      <td>Indicates if the product is optional</td>
+      <td>is_optional</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>sbqq_price_editable_c</td>
+      <td>Indicates if the price can be edited</td>
+      <td>is_price_editable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>sbqq_pricing_method_c</td>
+      <td>Method used for product pricing</td>
+      <td>pricing_method</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>102</th>
+      <td>sbqq_pricing_method_editable_c</td>
+      <td>Indicates if pricing method can be edited</td>
+      <td>is_pricing_method_editable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>sbqq_product_picture_id_c</td>
+      <td>ID of the product picture</td>
+      <td>product_picture_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>104</th>
+      <td>sbqq_quantity_editable_c</td>
+      <td>Indicates if quantity can be edited</td>
+      <td>is_quantity_editable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>sbqq_quantity_scale_c</td>
+      <td>Scale for quantity measurements</td>
+      <td>quantity_scale</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>106</th>
+      <td>sbqq_reconfiguration_disabled_c</td>
+      <td>Indicates if reconfiguration is disabled</td>
+      <td>is_reconfiguration_disabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>107</th>
+      <td>sbqq_renewal_product_c</td>
+      <td>Product used for renewals</td>
+      <td>renewal_product</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>108</th>
+      <td>sbqq_sort_order_c</td>
+      <td>Order for sorting the product</td>
+      <td>sort_order</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>109</th>
+      <td>sbqq_specifications_c</td>
+      <td>Product specifications</td>
+      <td>specifications</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>110</th>
+      <td>sbqq_subscription_base_c</td>
+      <td>Base for subscription pricing</td>
+      <td>subscription_base</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>111</th>
+      <td>sbqq_subscription_category_c</td>
+      <td>Category of the subscription</td>
+      <td>subscription_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>112</th>
+      <td>sbqq_subscription_percent_c</td>
+      <td>Percentage for subscription pricing</td>
+      <td>subscription_percent</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>sbqq_subscription_pricing_c</td>
+      <td>Pricing model for subscriptions</td>
+      <td>subscription_pricing_model</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>114</th>
+      <td>sbqq_subscription_target_c</td>
+      <td>Target for subscription</td>
+      <td>subscription_target</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>115</th>
+      <td>sbqq_subscription_term_c</td>
+      <td>Term length for subscriptions</td>
+      <td>subscription_term</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>116</th>
+      <td>sbqq_subscription_type_c</td>
+      <td>Type of subscription</td>
+      <td>subscription_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>117</th>
+      <td>sbqq_tax_code_c</td>
+      <td>Tax code for the product</td>
+      <td>tax_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>118</th>
+      <td>sbqq_taxable_c</td>
+      <td>Indicates if the product is taxable</td>
+      <td>is_taxable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>119</th>
+      <td>sbqq_term_discount_level_c</td>
+      <td>Discount level for term-based pricing</td>
+      <td>term_discount_level</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>120</th>
+      <td>sbqq_term_discount_schedule_c</td>
+      <td>Discount schedule for term-based pricing</td>
+      <td>term_discount_schedule</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>121</th>
+      <td>sbqq_upgrade_credit_c</td>
+      <td>Credit applied for upgrades</td>
+      <td>upgrade_credit</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>122</th>
+      <td>sbqq_upgrade_ratio_c</td>
+      <td>Ratio used for upgrade calculations</td>
+      <td>upgrade_ratio</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>123</th>
+      <td>sbqq_upgrade_source_c</td>
+      <td>Source product for upgrades</td>
+      <td>upgrade_source</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>124</th>
+      <td>sbqq_upgrade_target_c</td>
+      <td>Target product for upgrades</td>
+      <td>upgrade_target</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>125</th>
+      <td>connector_type_c</td>
+      <td>Type of the connector</td>
+      <td>connector_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>126</th>
+      <td>pbf_pro_type_discount_c</td>
+      <td>Custom field for pro type discount</td>
+      <td>pro_type_discount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>127</th>
+      <td>dimension_c</td>
+      <td>Dimension of the product</td>
+      <td>dimension</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>128</th>
+      <td>connector_status_c</td>
+      <td>Status of the connector</td>
+      <td>connector_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>129</th>
+      <td>dimension_definition_c</td>
+      <td>Definition of the product dimension</td>
+      <td>dimension_definition</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>130</th>
+      <td>ava_sfcpq_tax_code_c</td>
+      <td>Tax code for Avalara integration</td>
+      <td>avalara_tax_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>131</th>
+      <td>paid_consumption_c</td>
+      <td>Custom field for paid consumption</td>
+      <td>paid_consumption</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>132</th>
+      <td>is_complimentary_c</td>
+      <td>Custom field for complimentary product status</td>
+      <td>is_complimentary</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>133</th>
+      <td>product_external_id_c</td>
+      <td>External identifier for the product</td>
+      <td>external_product_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>134</th>
+      <td>blng_billing_rule_c</td>
+      <td>Billing rule for the product</td>
+      <td>billing_rule_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>135</th>
+      <td>blng_revenue_recognition_rule_c</td>
+      <td>Revenue recognition rule for the product</td>
+      <td>revenue_recognition_rule_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>136</th>
+      <td>blng_tax_rule_c</td>
+      <td>Tax rule for the product</td>
+      <td>tax_rule_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>137</th>
+      <td>deployment_date_c</td>
+      <td>Date of product deployment</td>
+      <td>deployment_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>138</th>
+      <td>do_not_prorate_c</td>
+      <td>Flag to indicate if proration is disabled</td>
+      <td>is_proration_disabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>139</th>
+      <td>celigo_sfnsio_netsuite_id_c</td>
+      <td>NetSuite ID in Celigo integration</td>
+      <td>celigo_netsuite_id_alt</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>140</th>
+      <td>sbqq_enable_large_configuration_c</td>
+      <td>Enables large configuration for the product</td>
+      <td>enable_large_configuration</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>141</th>
+      <td>sbqq_pricing_guidance_c</td>
+      <td>Guidance for pricing the product</td>
+      <td>pricing_guidance</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>142</th>
+      <td>celigo_sfnsio_item_pricing_type_c</td>
+      <td>Pricing type in Celigo integration</td>
+      <td>celigo_pricing_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>143</th>
+      <td>celigo_sfnsio_test_mode_record_c</td>
+      <td>Flag for test mode record</td>
+      <td>is_test_mode_record</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>144</th>
+      <td>celigo_sfnsio_celigo_last_modified_date_c</td>
+      <td>Last modified date in Celigo integration</td>
+      <td>celigo_last_modified_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>145</th>
+      <td>celigo_sfnsio_net_suite_record_c</td>
+      <td>NetSuite record in Celigo integration</td>
+      <td>celigo_netsuite_record</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>146</th>
+      <td>celigo_sfnsio_skip_export_to_net_suite_c</td>
+      <td>Flag to skip export to NetSuite</td>
+      <td>skip_netsuite_export</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>147</th>
+      <td>celigo_sfnsio_net_suite_item_type_c</td>
+      <td>NetSuite item type in Celigo integration</td>
+      <td>celigo_netsuite_item_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>148</th>
+      <td>celigo_sfnsio_net_suite_id_c</td>
+      <td>NetSuite ID in Celigo integration</td>
+      <td>celigo_netsuite_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>149</th>
+      <td>promo_code_c</td>
+      <td>Promotional code associated with the product</td>
+      <td>promo_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>150</th>
+      <td>product_category_c</td>
+      <td>Category of the product</td>
+      <td>product_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>151</th>
+      <td>product_source_c</td>
+      <td>Source of the product information</td>
+      <td>product_source</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>152</th>
+      <td>non_recurring_c</td>
+      <td>Custom field for non-recurring status</td>
+      <td>is_non_recurring</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>153</th>
+      <td>is_archived</td>
+      <td>Indicates if the product is archived</td>
+      <td>is_archived</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>154</th>
+      <td>_fivetran_active</td>
+      <td>Indicates if the record is active in Fivetran</td>
+      <td>is_fivetran_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>product_name</b>: 'X' is unusual because it's an extremely short and vague product name.<br>❌ The column has not been cleaned<br><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                ✔️ <b>89</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_id</td>
+      <td>CAST("account_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'account_id' column from DECIMAL to VARCHAR in DuckDB,  we can use a simple CAST function in the SELECT clause. The CAST function allows converting a value from one data type to another compatible data type. Since 'account_id' has no  distinct values, the CAST will not encounter any issues.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>accounting_system_input</td>
+      <td>CAST("accounting_system_input" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'accounting_system_input' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function is used to convert a value from one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>accounting_system_output</td>
+      <td>CAST("accounting_system_output" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'accounting_system_output' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_data_type). In this case, we're casting the column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>avalara_tax_code</td>
+      <td>CAST("avalara_tax_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'avalara_tax_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>batch_quantity</td>
+      <td>CAST("batch_quantity" AS VARCHAR)</td>
+      <td>To transform the data type of the 'batch_quantity' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Since the distinct values list is empty, we don't need to consider any specific values or edge cases.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>celigo_last_modified_date</td>
+      <td>CAST("celigo_last_modified_date" AS TIMESTAMP)</td>
+      <td>To transform the 'celigo_last_modified_date' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given distinct value is already in a standard format (YYYY-MM-DD HH:MM:SS) that can be directly cast to TIMESTAMP without needing to use strptime() for custom parsing.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>celigo_netsuite_id</td>
+      <td>CAST("celigo_netsuite_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'celigo_netsuite_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representations. Even though the current distinct values are empty, this cast will work for any future decimal values that might be inserted into the column.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>celigo_netsuite_id_alt</td>
+      <td>CAST("celigo_netsuite_id_alt" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'celigo_netsuite_id_alt' from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the distinct values list is empty, we'll proceed with the cast assuming there might be non-distinct values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>celigo_netsuite_item_type</td>
+      <td>CAST("celigo_netsuite_item_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'celigo_netsuite_item_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST function to explicitly convert the data type. Even though the column currently has no distinct values, this cast will ensure that any future data in this column will be treated as VARCHAR instead of DECIMAL.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>celigo_netsuite_record</td>
+      <td>CAST("celigo_netsuite_record" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'celigo_netsuite_record' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB syntax. This will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>celigo_pricing_type</td>
+      <td>CAST("celigo_pricing_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'celigo_pricing_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the distinct values list is empty, we can still perform this cast operation as it's a general transformation that will work for any decimal values present in the column.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>compound_discount_rate</td>
+      <td>CAST("compound_discount_rate" AS VARCHAR)</td>
+      <td>To transform the data type of the 'compound_discount_rate' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each value in the column to its string representation. Even though the column currently has no distinct values (it's empty or all NULL), this cast will still work and prepare the column for potential string data in the future.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>configuration_event</td>
+      <td>CAST("configuration_event" AS VARCHAR)</td>
+      <td>To transform the data type of the 'configuration_event' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>configuration_field_set</td>
+      <td>CAST("configuration_field_set" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'configuration_field_set' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST function and specify the target data type as VARCHAR. This will convert the decimal values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>configuration_fields</td>
+      <td>CAST("configuration_fields" AS VARCHAR)</td>
+      <td>To transform the data type of the 'configuration_fields' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Since the column appears to have no distinct values (empty list provided), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>configuration_form_title</td>
+      <td>CAST("configuration_form_title" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'configuration_form_title' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently doesn't have any distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>configuration_type</td>
+      <td>CAST("configuration_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'configuration_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>configuration_validator</td>
+      <td>CAST("configuration_validator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'configuration_validator' from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows the standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>configured_code_pattern</td>
+      <td>CAST("configured_code_pattern" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'configured_code_pattern' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>configured_description_pattern</td>
+      <td>CAST("configured_description_pattern" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'configured_description_pattern' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function is used to convert data from one type to another. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR conversion.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>connection_count</td>
+      <td>CAST("connection_count" AS VARCHAR)</td>
+      <td>To transform the data type of the 'connection_count' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Even though the distinct values list is empty, we can still perform the cast operation, which will work for any potential decimal values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>cost_schedule</td>
+      <td>CAST("cost_schedule" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cost_schedule' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>created_date</td>
+      <td>CAST("created_date" AS TIMESTAMP)</td>
+      <td>To transform the 'created_date' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given example ('2019-11-11 17:23:34') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically recognize this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>custom_configuration_page</td>
+      <td>CAST("custom_configuration_page" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_configuration_page' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains no distinct values (it's empty), casting it to VARCHAR will not affect any existing data but will change the column's data type for future insertions.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>custom_picklist_value</td>
+      <td>CAST("custom_picklist_value" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_picklist_value' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. Since the column doesn't have any distinct values (it's an empty list), we don't need to worry about data conversion issues. The CAST function will convert any numeric values to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>customer_community_availability</td>
+      <td>CAST("customer_community_availability" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'customer_community_availability' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>default_pricing_table</td>
+      <td>CAST("default_pricing_table" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'default_pricing_table' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>default_quantity_c</td>
+      <td>CAST("default_quantity_c" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'default_quantity_c' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column has no distinct values (empty list provided), this transformation should not affect any existing data but will change the column's data type for future insertions or operations.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>deleted_product_metadata</td>
+      <td>CAST("deleted_product_metadata" AS VARCHAR)</td>
+      <td>To transform the data type of the 'deleted_product_metadata' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>deployment_date</td>
+      <td>CAST("deployment_date" AS DATE)</td>
+      <td>To transform the 'deployment_date' column from DECIMAL to DATE, we don't need to use the strptime function because: 1. The column is already in a DECIMAL format, which likely represents a date. 2. DuckDB can directly cast DECIMAL to DATE when the decimal represents a date in the format YYYYMMDD. 3. Since we don't have any sample values, we'll assume the DECIMAL is in the correct format for direct casting.\n</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>description</td>
+      <td>CAST("description" AS VARCHAR)</td>
+      <td>To transform the data type of the 'description' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this is straightforward. We simply use CAST() and specify the column name and the desired data type. Even though the 'description' column currently has no distinct values (as indicated by the empty list []), we can still perform this cast operation.\n</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>dimension_definition</td>
+      <td>CAST("dimension_definition" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'dimension_definition' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column currently has no distinct values (it's empty), this transformation won't affect any existing data but will change the column's data type for future insertions.\n</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>discount_category</td>
+      <td>CAST("discount_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'discount_category' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently DECIMAL, casting it to VARCHAR will preserve the numeric information as a string.\n</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>discount_schedule</td>
+      <td>CAST("discount_schedule" AS VARCHAR)</td>
+      <td>To transform the data type of the 'discount_schedule' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>display_url</td>
+      <td>CAST("display_url" AS VARCHAR)</td>
+      <td>To transform the data type of the 'display_url' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This operation will convert any numeric values in the column to their string representation. Since the column currently has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future.\n</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>dynamic_pricing_constraint</td>
+      <td>CAST("dynamic_pricing_constraint" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'dynamic_pricing_constraint' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function will convert each value in the column to its string representation. This is straightforward in DuckDB as it supports direct casting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>event_volume</td>
+      <td>CAST("event_volume" AS VARCHAR)</td>
+      <td>To transform the data type of the 'event_volume' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>external_data_source_id</td>
+      <td>CAST("external_data_source_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'external_data_source_id' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>external_id</td>
+      <td>CAST("external_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'external_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the current distinct values are empty, this cast will ensure that any future decimal values in this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>generate_contracted_price</td>
+      <td>CAST("generate_contracted_price" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'generate_contracted_price' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional formatting or precision specification when converting to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>is_fivetran_active</td>
+      <td>CAST("is_fivetran_active" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_fivetran_active' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>last_modified_at</td>
+      <td>CAST("last_modified_at" AS TIMESTAMP)</td>
+      <td>To transform the 'last_modified_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The date format in the given example ('2019-11-11 17:23:34') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically recognize this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>last_modified_date</td>
+      <td>CAST("last_modified_date" AS TIMESTAMP)</td>
+      <td>To transform the 'last_modified_date' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The date format in the given example ('2019-11-11 17:23:34') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically recognize this format.\n</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>last_referenced_date</td>
+      <td>CAST("last_referenced_date" AS TIMESTAMP)</td>
+      <td>To transform the data type of the 'last_referenced_date' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column has no distinct values (it's empty), we don't need to worry about formatting or parsing specific date strings. A straightforward CAST should suffice.\n</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>last_viewed_date</td>
+      <td>CAST("last_viewed_date" AS TIMESTAMP)</td>
+      <td>Since the 'last_viewed_date' column has no distinct values (it's an empty list), we don't need to perform any complex transformation or parsing. We can simply cast the column from DECIMAL to TIMESTAMP directly. In DuckDB, this can be done with a straightforward CAST function.\n</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>max_volume</td>
+      <td>CAST("max_volume" AS VARCHAR)</td>
+      <td>To transform the data type of the 'max_volume' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Since the question states that 'max_volume' has no distinct values (empty list), this transformation will effectively create an empty string for any null values.\n</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>min_volume</td>
+      <td>CAST("min_volume" AS VARCHAR)</td>
+      <td>To transform the data type of the 'min_volume' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Since the distinct values list is empty, this operation should work for all possible decimal values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>netsuite_contract_pricing_type</td>
+      <td>CAST("netsuite_contract_pricing_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'netsuite_contract_pricing_type' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB syntax. This will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>netsuite_id</td>
+      <td>CAST("netsuite_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'netsuite_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>netsuite_item_category</td>
+      <td>CAST("netsuite_item_category" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'netsuite_item_category' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the distinct values list is empty, we'll proceed with the cast as requested.\n</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>option_layout</td>
+      <td>CAST("option_layout" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'option_layout' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains no distinct values (it's empty), casting it to VARCHAR should not cause any data loss or conversion issues.\n</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>paid_consumption</td>
+      <td>CAST("paid_consumption" AS VARCHAR)</td>
+      <td>To transform the data type of the 'paid_consumption' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently DECIMAL and we want to change it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>pricing_guidance</td>
+      <td>CAST("pricing_guidance" AS VARCHAR)</td>
+      <td>To transform the data type of the 'pricing_guidance' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(column_name AS new_data_type). In this case, we're casting the 'pricing_guidance' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>product_category</td>
+      <td>CAST("product_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'product_category' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>product_code</td>
+      <td>CAST("product_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'product_code' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column contains only integer values (1 and 2), a simple CAST to VARCHAR will suffice. This will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>product_features</td>
+      <td>CAST("product_features" AS VARCHAR)</td>
+      <td>To transform the data type of the 'product_features' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type to allow for string input in the future.\n</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>product_metadata</td>
+      <td>CAST("product_metadata" AS VARCHAR)</td>
+      <td>To transform the data type of the 'product_metadata' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>product_picture_id</td>
+      <td>CAST("product_picture_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'product_picture_id' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function will convert each value in the column to a string representation. Since the distinct values list is empty, it suggests that either the column is empty or contains NULL values. However, the CAST operation will still work correctly for both cases, converting any numeric values to their string representation and leaving NULL values as NULL.\n</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>product_source</td>
+      <td>CAST("product_source" AS VARCHAR)</td>
+      <td>To transform the data type of the 'product_source' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>product_status</td>
+      <td>CAST("product_status" AS VARCHAR)</td>
+      <td>To transform the data type of the 'product_status' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>promo_code</td>
+      <td>CAST("promo_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'promo_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>quantity_installment_period</td>
+      <td>CAST("quantity_installment_period" AS VARCHAR)</td>
+      <td>To transform the data type of the 'quantity_installment_period' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional processing since we're just changing the data type without any specific formatting requirements.\n</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>quantity_installments</td>
+      <td>CAST("quantity_installments" AS VARCHAR)</td>
+      <td>To transform the data type of the 'quantity_installments' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the desired data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>quantity_scale</td>
+      <td>CAST("quantity_scale" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'quantity_scale' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. Since the column already exists and we just want to change its data type, we can directly cast it to VARCHAR. In DuckDB, VARCHAR is equivalent to STRING, so we can use either.\n</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>quantity_schedule_type</td>
+      <td>CAST("quantity_schedule_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'quantity_schedule_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the question states that the column has no distinct values (empty list), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future if needed.\n</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>quantity_unit</td>
+      <td>CAST("quantity_unit" AS VARCHAR)</td>
+      <td>To transform the data type of the 'quantity_unit' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this is straightforward. We use the CAST keyword followed by the column name in parentheses, then AS, and finally the new data type we want to convert to, which is VARCHAR in this case.\n</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>related_product_id</td>
+      <td>CAST("related_product_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'related_product_id' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>renewal_product</td>
+      <td>CAST("renewal_product" AS VARCHAR)</td>
+      <td>To transform the data type of the 'renewal_product' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>request_name</td>
+      <td>CAST("request_name" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'request_name' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we'll proceed with the cast operation as requested.\n</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>revenue_installment_period</td>
+      <td>CAST("revenue_installment_period" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'revenue_installment_period' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the distinct values list is empty, we'll proceed with the cast operation as requested.\n</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>revenue_installments</td>
+      <td>CAST("revenue_installments" AS VARCHAR)</td>
+      <td>To transform the data type of the 'revenue_installments' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>revenue_schedule_type</td>
+      <td>CAST("revenue_schedule_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'revenue_schedule_type' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we'll proceed with the cast as requested.\n</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>roadmap_connections</td>
+      <td>CAST("roadmap_connections" AS VARCHAR)</td>
+      <td>To transform the data type of the 'roadmap_connections' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>row_volume</td>
+      <td>CAST("row_volume" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'row_volume' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This operation will convert the numeric values to their string representations. Since the column 'row_volume' has no distinct values (as indicated by the empty list []), this transformation will effectively convert any NULL values to VARCHAR NULL values, and any potential future decimal values would be converted to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>sbqq_default_quantity_c</td>
+      <td>CAST("sbqq_default_quantity_c" AS DECIMAL)</td>
+      <td>To transform the data type of the column 'sbqq_default_quantity_c' from 'INT' to 'DECIMAL', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column only contains the value 1, casting it to DECIMAL will not lose any information. The DECIMAL type in DuckDB is equivalent to DECIMAL(18,3) by default, which should be more than sufficient for this data.\n</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>sort_order</td>
+      <td>CAST("sort_order" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sort_order' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Since the column 'sort_order' has no distinct values (it's an empty list), this transformation will work for any potential DECIMAL values that might be added to the column in the future.\n</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>specifications</td>
+      <td>CAST("specifications" AS VARCHAR)</td>
+      <td>To transform the data type of the 'specifications' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this operation is straightforward. We simply use the CAST function and specify the target data type as VARCHAR. This will convert the numeric values in the DECIMAL column to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>stock_keeping_unit</td>
+      <td>CAST("stock_keeping_unit" AS VARCHAR)</td>
+      <td>To transform the data type of the 'stock_keeping_unit' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. Since we're converting from DECIMAL to VARCHAR, we don't need to specify any length for the VARCHAR as it will accommodate the full string representation of the decimal value.\n</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>subscription_category</td>
+      <td>CAST("subscription_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subscription_category' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional considerations since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>subscription_percent</td>
+      <td>CAST("subscription_percent" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subscription_percent' column from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>subscription_target</td>
+      <td>CAST("subscription_target" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subscription_target' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>tax_code</td>
+      <td>CAST("tax_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'tax_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case). This will convert each value in the 'tax_code' column to its string representation.\n</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>term_discount_level</td>
+      <td>CAST("term_discount_level" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'term_discount_level' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type for future insertions or operations.\n</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>term_discount_schedule</td>
+      <td>CAST("term_discount_schedule" AS VARCHAR)</td>
+      <td>To transform the data type of the 'term_discount_schedule' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>tier_1_price</td>
+      <td>CAST("tier_1_price" AS VARCHAR)</td>
+      <td>To transform the data type of the 'tier_1_price' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Since the column currently contains no distinct values (it's empty or all NULL), this transformation will effectively create a column of empty strings or NULL values, depending on how DuckDB handles NULL in this cast operation.\n</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>tier_2_price</td>
+      <td>CAST("tier_2_price" AS VARCHAR)</td>
+      <td>To transform the data type of the 'tier_2_price' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>tier_3_price</td>
+      <td>CAST("tier_3_price" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'tier_3_price' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>upgrade_source</td>
+      <td>CAST("upgrade_source" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'upgrade_source' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Since the column has no distinct values (empty list provided), this transformation will work for any potential DECIMAL values that might be added in the future.\n</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>upgrade_target</td>
+      <td>CAST("upgrade_target" AS VARCHAR)</td>
+      <td>To transform the column 'upgrade_target' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case). This will convert each value in the 'upgrade_target' column to its string representation.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                🔍 <b>100</b> columns have missing values<br>
+                ✔️ <b>11</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>accounting_system_input</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>accounting_system_output</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>avalara_tax_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>batch_quantity</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>billing_frequency</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for non-recurring charges</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>billing_rule_id</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for non-recurring charges</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>billing_type</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for non-recurring charges</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>celigo_netsuite_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>celigo_netsuite_id_alt</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>celigo_netsuite_item_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>celigo_netsuite_record</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>celigo_pricing_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>charge_type</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for non-charge items</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>compound_discount_rate</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>configuration_event</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>configuration_field_set</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>configuration_fields</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>configuration_form_title</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>configuration_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>configuration_validator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>configured_code_pattern</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>configured_description_pattern</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>connection_count</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>cost_schedule</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>custom_configuration_page</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>custom_picklist_value</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>customer_community_availability</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>default_pricing_table</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>default_quantity_c</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>deleted_product_metadata</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>deployment_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>description</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>dimension_definition</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>discount_category</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>discount_schedule</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>display_url</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>dynamic_pricing_constraint</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>enable_large_configuration</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for items without configuration options</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>event_volume</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>external_data_source_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>external_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>external_product_id</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for products without external identification.</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>generate_contracted_price</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>is_archived</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for active, non-archived products.</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>is_fivetran_active</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>is_non_recurring</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>last_referenced_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>last_viewed_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>max_volume</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>min_volume</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>netsuite_contract_pricing_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>netsuite_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>netsuite_item_category</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>netsuite_sync_error</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>option_layout</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>paid_consumption</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>pricing_guidance</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>product_category</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>product_family</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>product_features</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>product_metadata</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>product_picture_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>product_source</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>product_status</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>promo_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>quantity_installment_period</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>quantity_installments</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>quantity_scale</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>quantity_schedule_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>quantity_unit</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>related_product_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>renewal_product</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>request_name</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>revenue_installment_period</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>revenue_installments</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>revenue_recognition_rule_id</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for products without specific revenue recognition rules</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>revenue_schedule_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>roadmap_connections</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>row_volume</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>sort_order</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>specifications</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>stock_keeping_unit</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>subscription_category</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>subscription_percent</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>subscription_pricing_model</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for non-subscription products</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>subscription_target</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>subscription_term</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for non-subscription products</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>tax_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>tax_rule_id</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for products not subject to taxation</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>term_discount_level</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>term_discount_schedule</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>tier_1_price</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>tier_2_price</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>tier_3_price</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>tier_4_price</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>upgrade_credit</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>upgrade_ratio</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>upgrade_source</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>upgrade_target</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>accounting_system_input</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>accounting_system_output</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>avalara_tax_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>batch_quantity</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>celigo_netsuite_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>celigo_netsuite_id_alt</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>celigo_netsuite_item_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>celigo_netsuite_record</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>celigo_pricing_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>compound_discount_rate</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>configuration_event</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>configuration_field_set</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>configuration_fields</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>configuration_form_title</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>configuration_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>configuration_validator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>configured_code_pattern</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>configured_description_pattern</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>connection_count</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>cost_schedule</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>custom_configuration_page</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>custom_picklist_value</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>customer_community_availability</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>default_pricing_table</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>default_quantity_c</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>deleted_product_metadata</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>deployment_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>description</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>dimension_definition</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>discount_category</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>discount_schedule</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>display_url</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>dynamic_pricing_constraint</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>event_volume</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>external_data_source_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>external_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>generate_contracted_price</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>is_fivetran_active</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>is_non_recurring</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>last_referenced_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>last_viewed_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>max_volume</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>min_volume</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>netsuite_contract_pricing_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>netsuite_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>netsuite_item_category</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>netsuite_sync_error</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>option_layout</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>paid_consumption</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>pricing_guidance</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>product_category</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>product_family</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>product_features</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>product_metadata</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>product_picture_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>product_source</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>product_status</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>promo_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>quantity_installment_period</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>quantity_installments</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>quantity_scale</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>quantity_schedule_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>quantity_unit</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>related_product_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>renewal_product</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>request_name</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>revenue_installment_period</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>revenue_installments</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>revenue_schedule_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>roadmap_connections</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>row_volume</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>sort_order</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>specifications</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>stock_keeping_unit</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>subscription_category</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>subscription_percent</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>subscription_target</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>tax_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>term_discount_level</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>term_discount_schedule</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>tier_1_price</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>tier_2_price</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>tier_3_price</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>tier_4_price</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>upgrade_credit</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>upgrade_ratio</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>upgrade_source</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>upgrade_target</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'True', 'value': 50.0}, {'label': 'False', 'value': 50.0}];
+    drawBarChart("bar_viz_is_active", data);
+data = [{'label': '012370000005lzh...', 'value': 100.0}];
+    drawBarChart("bar_viz_record_type_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': '0051G0000060rE7...', 'value': 50.0}, {'label': '00537000004EpGK...', 'value': 50.0}];
+    drawBarChart("bar_viz_last_modified_by_id", data);
+data = [{'label': 'X', 'value': 100.0}];
+    drawBarChart("bar_viz_product_name", data);
+data = [{'label': '01t1G000002Uf3M...', 'value': 50.0}, {'label': '01t1G000000bOtk...', 'value': 50.0}];
+    drawBarChart("bar_viz_product_id", data);
+data = [{'label': '0051G0000060rE7...', 'value': 50.0}, {'label': '0051G000005Mzwa...', 'value': 50.0}];
+    drawBarChart("bar_viz_created_by_id", data);
+data = [{'label': 'X', 'value': 100.0}];
+    drawBarChart("bar_viz_product_family", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_netsuite_sync_in_progress", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_netsuite_celigo_update", data);
+data = [{'label': 'X', 'value': 100.0}];
+    drawBarChart("bar_viz_netsuite_sync_error", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_push_to_netsuite", data);
+data = [{'label': 'Non Inventory S...', 'value': 100.0}];
+    drawBarChart("bar_viz_netsuite_item_type", data);
+data = [{'label': 'noninventory-Sa...', 'value': 100.0}];
+    drawBarChart("bar_viz_netsuite_subtype", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_new", data);
+data = [{'label': 'Default', 'value': 100.0}];
+    drawBarChart("bar_viz_asset_amendment_behavior", data);
+data = [{'label': 'One per quote l...', 'value': 100.0}];
+    drawBarChart("bar_viz_asset_conversion", data);
+data = [{'label': 'Annual', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_frequency", data);
+data = [{'label': 'Advance', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_type", data);
+data = [{'label': 'Quantity', 'value': 100.0}];
+    drawBarChart("bar_viz_block_pricing_field", data);
+data = [{'label': 'Recurring', 'value': 100.0}];
+    drawBarChart("bar_viz_charge_type", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_component", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_cost_editable", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_custom_configuration_required", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_description_locked", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_exclude_from_maintenance", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_exclude_from_opportunity", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_externally_configurable", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_has_configuration_attributes", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_has_consumption_schedule", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_hidden", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_hide_price_in_search_results", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_include_in_maintenance", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_create_new_quote_group", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_non_discountable", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_non_partner_discountable", data);
+data = [{'label': 'Click', 'value': 100.0}];
+    drawBarChart("bar_viz_option_selection_method", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_optional", data);
+data = [{'label': 'False', 'value': 50.0}, {'label': 'True', 'value': 50.0}];
+    drawBarChart("bar_viz_is_price_editable", data);
+data = [{'label': 'List', 'value': 100.0}];
+    drawBarChart("bar_viz_pricing_method", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_pricing_method_editable", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_quantity_editable", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_reconfiguration_disabled", data);
+data = [{'label': 'List', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_base", data);
+data = [{'label': 'Fixed Price', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_pricing_model", data);
+data = [{'x': 1.0, 'y': 1}];
+    binWidth = 1.0;
+    drawHistogram("hist_viz_subscription_term", data, binWidth);
+data = [{'label': 'Renewable', 'value': 100.0}];
+    drawBarChart("bar_viz_subscription_type", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_taxable", data);
+data = [{'label': 'chat', 'value': 50.0}, {'label': 'finance', 'value': 50.0}];
+    drawBarChart("bar_viz_connector_type", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_pro_type_discount", data);
+data = [{'label': 'Function', 'value': 50.0}, {'label': 'Connector', 'value': 50.0}];
+    drawBarChart("bar_viz_dimension", data);
+data = [{'label': 'Alpha', 'value': 50.0}, {'label': 'General Availab...', 'value': 50.0}];
+    drawBarChart("bar_viz_connector_status", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_complimentary", data);
+data = [{'x': 12345.0, 'y': 1}];
+    binWidth = 12345.0;
+    drawHistogram("hist_viz_external_product_id", data, binWidth);
+data = [{'label': 'a1L1G000002t4LA...', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_rule_id", data);
+data = [{'label': 'a951G000000TQsM...', 'value': 100.0}];
+    drawBarChart("bar_viz_revenue_recognition_rule_id", data);
+data = [{'label': 'a9D1G000000Tefy...', 'value': 100.0}];
+    drawBarChart("bar_viz_tax_rule_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_proration_disabled", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_enable_large_configuration", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_test_mode_record", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_skip_netsuite_export", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_non_recurring", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_archived", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_celigo_last_modified_date", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_created_date", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_modified_at", data);
+data = [{'label': '2019-11-11 17:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_modified_date", data);
+data = [{'label': '2', 'value': 50.0}, {'label': '1', 'value': 50.0}];
+    drawBarChart("bar_viz_product_code", data);
+data = [{'x': 1.0, 'y': 2}];
+    binWidth = 1.0;
+    drawHistogram("hist_viz_sbqq_default_quantity_c", data, binWidth);
+
+
+</script>
+</body>
+</html>

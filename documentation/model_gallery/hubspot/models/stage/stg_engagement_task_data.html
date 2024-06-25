@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>engagement_task_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>_fivetran_deleted</th>
+      <th>property_hs_task_type</th>
+      <th>property_hubspot_team_id</th>
+      <th>type</th>
+      <th>task_type</th>
+      <th>property_hs_engagement_source</th>
+      <th>property_hs_object_id</th>
+      <th>property_hs_createdate</th>
+      <th>property_hs_timestamp</th>
+      <th>property_hubspot_owner_id</th>
+      <th>engagement_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>TODO</td>
+      <td>9747038.0</td>
+      <td>TASK</td>
+      <td>None</td>
+      <td>Hello</td>
+      <td>32034933897</td>
+      <td>2023-03-03 10:40:09.556000</td>
+      <td>2023-03-08 02:30:00.000000</td>
+      <td>32779820</td>
+      <td>32034933897</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>TODO</td>
+      <td>None</td>
+      <td>32034933897</td>
+      <td>2023-03-03 10:40:09.556000</td>
+      <td>2023-03-08 02:30:00.000000</td>
+      <td>32779820</td>
+      <td>32034933899</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>is_deleted</th>
+      <th>task_type</th>
+      <th>team_id</th>
+      <th>engagement_type</th>
+      <th>alternative_task_type</th>
+      <th>task_source</th>
+      <th>associated_object_id</th>
+      <th>creation_datetime</th>
+      <th>due_datetime</th>
+      <th>owner_id</th>
+      <th>task_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>TODO</td>
+      <td>9747038.0</td>
+      <td>TASK</td>
+      <td>None</td>
+      <td>Hello</td>
+      <td>32034933897</td>
+      <td>2023-03-03 10:40:09.556</td>
+      <td>2023-03-08 02:30:00</td>
+      <td>32779820</td>
+      <td>32034933897</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>TODO</td>
+      <td>None</td>
+      <td>32034933897</td>
+      <td>2023-03-03 10:40:09.556</td>
+      <td>2023-03-08 02:30:00</td>
+      <td>32779820</td>
+      <td>32034933899</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Flag indicating if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">task_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='TODO'>TODO</option><option value='In Progress'>In Progress</option><option value='Done'>Done</option><option value='Backlog'>Backlog</option><option value='Blocked'>Blocked</option><option value='Cancelled'>Cancelled</option><option value='Deferred'>Deferred</option><option value='Waiting'>Waiting</option><option value='Review'>Review</option><option value='Planning'>Planning</option><option value='High Priority'>High Priority</option><option value='Low Priority'>Low Priority</option><option value='Medium Priority'>Medium Priority</option><option value='Urgent'>Urgent</option><option value='Important'>Important</option><option value='Follow-up'>Follow-up</option></select></span><br><br><div id="bar_viz_task_type"></div><b>📃 Summary:</b> Type of task (e.g., TODO)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">team_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_team_id"></div><b>📃 Summary:</b> ID of the team associated with the task<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">engagement_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='TASK'>TASK</option><option value='PROJECT'>PROJECT</option><option value='EVENT'>EVENT</option><option value='MEETING'>MEETING</option><option value='TRAINING'>TRAINING</option><option value='CONSULTATION'>CONSULTATION</option><option value='WORKSHOP'>WORKSHOP</option><option value='PRESENTATION'>PRESENTATION</option><option value='INTERVIEW'>INTERVIEW</option><option value='ASSESSMENT'>ASSESSMENT</option></select></span><br><br><div id="bar_viz_engagement_type"></div><b>📃 Summary:</b> General type of the engagement (e.g., TASK)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">alternative_task_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Personal'>Personal</option><option value='Work'>Work</option><option value='Study'>Study</option><option value='Household'>Household</option><option value='Health'>Health</option><option value='Financial'>Financial</option><option value='Social'>Social</option><option value='Hobby'>Hobby</option><option value='Errand'>Errand</option><option value='Project'>Project</option><option value='Meeting'>Meeting</option><option value='Call'>Call</option><option value='Email'>Email</option><option value='Research'>Research</option><option value='Planning'>Planning</option><option value='Travel'>Travel</option><option value='Shopping'>Shopping</option><option value='Maintenance'>Maintenance</option><option value='Exercise'>Exercise</option><option value='Reading'>Reading</option><option value='Writing'>Writing</option><option value='Coding'>Coding</option><option value='Design'>Design</option><option value='Analysis'>Analysis</option><option value='Review'>Review</option><option value='TODO'>TODO</option></select></span><br><br><div id="bar_viz_alternative_task_type"></div><b>📃 Summary:</b> Another field for task type<br><b>❓ Missing:</b> Not applicable when primary task_type is provided.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">task_source</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_task_source"></div><b>📃 Summary:</b> Source of the engagement task<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">associated_object_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_associated_object_id"></div><b>📃 Summary:</b> Object ID associated with the task<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_datetime"></div><b>📃 Summary:</b> Date and time when the task was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">due_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_due_datetime"></div><b>📃 Summary:</b> Due date and time for the task<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">owner_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_owner_id"></div><b>📃 Summary:</b> ID of the task owner<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">task_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_task_id"></div><b>📃 Summary:</b> Unique identifier for the engagement task<br><b>🦄 Unique:</b> This column is described as a unique identifier for the engagement task. For this table, each row represents a unique task. The task_id is designed to be unique across all rows, ensuring each task has a distinct identifier.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about engagement tasks in a CRM system. It contains details like task ID, creation date, due date, task type, owner ID, and team ID. Some tasks are marked as "TODO" type. The table includes flags for deleted tasks and the source of engagement. Each row represents a unique task with its associated properties and metadata.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>11</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>engagement_id</td>
+      <td>Unique identifier for the engagement task</td>
+      <td>task_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>_fivetran_deleted</td>
+      <td>Flag indicating if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>property_hs_createdate</td>
+      <td>Date and time when the task was created</td>
+      <td>creation_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>property_hs_object_id</td>
+      <td>Object ID associated with the task</td>
+      <td>associated_object_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>property_hs_task_type</td>
+      <td>Type of task (e.g., TODO)</td>
+      <td>task_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>property_hs_timestamp</td>
+      <td>Due date and time for the task</td>
+      <td>due_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>property_hubspot_owner_id</td>
+      <td>ID of the task owner</td>
+      <td>owner_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>property_hubspot_team_id</td>
+      <td>ID of the team associated with the task</td>
+      <td>team_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>type</td>
+      <td>General type of the engagement (e.g., TASK)</td>
+      <td>engagement_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>task_type</td>
+      <td>Another field for task type</td>
+      <td>alternative_task_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>property_hs_engagement_source</td>
+      <td>Source of the engagement task</td>
+      <td>task_source</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>5</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>associated_object_id</td>
+      <td>CAST("associated_object_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'associated_object_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>creation_datetime</td>
+      <td>CAST("creation_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'creation_datetime' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The given datetime format '2023-03-03 10:40:09.556000' is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically parse this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>due_datetime</td>
+      <td>CAST("due_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'due_datetime' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The given datetime format '2023-03-08 02:30:00.000000' is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB's CAST function can automatically interpret this format.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>owner_id</td>
+      <td>CAST("owner_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'owner_id' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional considerations since we're converting from a numeric type to a string type.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>task_id</td>
+      <td>CAST("task_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'task_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer (INT) to a variable-length character string (VARCHAR). The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>5</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>alternative_task_type</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable when primary task_type is provided.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>engagement_type</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>task_source</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>task_type</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>team_id</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>engagement_type</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>task_source</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>task_type</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>team_id</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'TODO', 'value': 100.0}];
+    drawBarChart("bar_viz_task_type", data);
+data = [{'x': 9747038.0, 'y': 1}];
+    binWidth = 9747038.0;
+    drawHistogram("hist_viz_team_id", data, binWidth);
+data = [{'label': 'TASK', 'value': 100.0}];
+    drawBarChart("bar_viz_engagement_type", data);
+data = [{'label': 'TODO', 'value': 100.0}];
+    drawBarChart("bar_viz_alternative_task_type", data);
+data = [{'label': 'Hello', 'value': 100.0}];
+    drawBarChart("bar_viz_task_source", data);
+data = [{'label': '32034933897', 'value': 100.0}];
+    drawBarChart("bar_viz_associated_object_id", data);
+data = [{'label': '2023-03-03 10:4...', 'value': 100.0}];
+    drawBarChart("bar_viz_creation_datetime", data);
+data = [{'label': '2023-03-08 02:3...', 'value': 100.0}];
+    drawBarChart("bar_viz_due_datetime", data);
+data = [{'label': '32779820', 'value': 100.0}];
+    drawBarChart("bar_viz_owner_id", data);
+data = [{'label': '32034933899', 'value': 50.0}, {'label': '32034933897', 'value': 50.0}];
+    drawBarChart("bar_viz_task_id", data);
+
+
+</script>
+</body>
+</html>

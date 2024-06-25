@@ -1,0 +1,2669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>deal_pipeline_stage_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>_fivetran_deleted</th>
+      <th>active</th>
+      <th>closed_won</th>
+      <th>display_order</th>
+      <th>probability</th>
+      <th>stage_id</th>
+      <th>label</th>
+      <th>pipeline_id</th>
+      <th>created_at</th>
+      <th>updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>6</td>
+      <td>1.0</td>
+      <td>/n0+plNHbWErNq8Ek+NM3g==</td>
+      <td>HloNyGJEOLMWtXLjmapLQw==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>7</td>
+      <td>0.0</td>
+      <td>hVXu1Iul7Cc7DcPuxQpOfg==</td>
+      <td>pqNpReDOp9fpUPal7wWFXg==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0.8</td>
+      <td>fQXVZHvq6nRBO5G2jluSrw==</td>
+      <td>lBHMEsbmFw2dboKkjcFP+Q==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>3</td>
+      <td>0.6</td>
+      <td>+iDZUa8gi3xYh+02iLbs7g==</td>
+      <td>9hM54Lf/5lGJr082RN3R0g==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>5</td>
+      <td>0.9</td>
+      <td>t97DfE5C38R3NtMNvHo75Q==</td>
+      <td>xtJd8DfkQb0L5Owm3i672A==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>0.1</td>
+      <td>xtFrZtyHm63bx8vIM0YwtA==</td>
+      <td>TY5vWLDESu3m6DzPS4MDEA==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.4</td>
+      <td>Sz/OdDohp9T+LT2967pMog==</td>
+      <td>dP2FfHF4+97+jtAnhP+WSA==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0.1</td>
+      <td>XlmFW0Sel+q4N/n10JJ5bg==</td>
+      <td>P0WrVl2tQ/YP8Dte+luubw==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>True</td>
+      <td>True</td>
+      <td>False</td>
+      <td>6</td>
+      <td>0.6</td>
+      <td>B/OFEVwLVVUw4q7QB1Jffw==</td>
+      <td>NTbcpXmUZaCGUbkWcqiq+g==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-03-30 17:50:29.554</td>
+      <td>2020-03-30 17:50:29.554</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>6</td>
+      <td>0.6</td>
+      <td>lXJhTILAnh65/fYdtVRf7Q==</td>
+      <td>zNTrGwrH13Pk9ModIhQHHw==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>9</td>
+      <td>0.9</td>
+      <td>T4peGpcAmXL5qRskbB5hig==</td>
+      <td>d2cbGVT866oXb5NMGfWFzQ==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>7</td>
+      <td>0.7</td>
+      <td>hn5+QgfX4w8BktDjxz0wXQ==</td>
+      <td>nNpzgQiprurZo/yEYqkOTA==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>8</td>
+      <td>0.9</td>
+      <td>UGRmHpla4AXbbpwHQU2w1A==</td>
+      <td>rktUYcmVNcM6T4fp2dxWMQ==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>5</td>
+      <td>0.5</td>
+      <td>tRXAhwjVXtDm6IhZ/glUkw==</td>
+      <td>FRccHc9BvgZ8cGpu42O3Dg==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0.4</td>
+      <td>lUl6Ee0rO0f5zQiEXiJ6Bg==</td>
+      <td>O4hyOtlmFKPASNfTOaEtBw==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>3</td>
+      <td>0.3</td>
+      <td>pTsT0eQ/B/c9+j2UTLNfkg==</td>
+      <td>eMOMsyemcP3mCG4oF0X7LQ==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.2</td>
+      <td>143VrEU51XfieTdGDtcWHg==</td>
+      <td>/KtOH5Pkk4zM++b5LAh6YA==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>0.1</td>
+      <td>oWOKgDyzUqDpUo3d9dlk/A==</td>
+      <td>gDXpvQuwuxBDiWo8vBwQfA==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0.1</td>
+      <td>boHbIlo3V6P8IMybGz2eGw==</td>
+      <td>lnL0W4I6tiRkXp2XjDlXhA==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.049</td>
+      <td>2020-07-09 15:25:37.049</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>1</td>
+      <td>1.0</td>
+      <td>G/ttVj7y2Me0xcu0rJdzrw==</td>
+      <td>4NBhQy+75yhP5jxLlC4ACA==</td>
+      <td>PBUgrXANfP+Uw7TXWDnSkA==</td>
+      <td>2020-07-09 15:25:37.049</td>
+      <td>2020-07-09 15:25:37.049</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.1</td>
+      <td>G1DV2psAWd3igDh+B17cIw==</td>
+      <td>+mpaMiTX2mbZ4L3sJfYs8A==</td>
+      <td>PBUgrXANfP+Uw7TXWDnSkA==</td>
+      <td>2020-07-09 15:25:37.049</td>
+      <td>2020-07-09 15:25:37.049</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>0</td>
+      <td>1.0</td>
+      <td>2WFf1X0VyKRvcu8BUMyr2w==</td>
+      <td>Cs0SQ/1pyU5gOv1EW5gfMA==</td>
+      <td>PBUgrXANfP+Uw7TXWDnSkA==</td>
+      <td>2020-07-09 15:25:37.048</td>
+      <td>2020-07-09 15:25:37.048</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>10</td>
+      <td>0.0</td>
+      <td>IRkOpszfO0OrbMGuW8+I3Q==</td>
+      <td>2VO4gQ6k4cG96k0y+InoTA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.056</td>
+      <td>2020-07-09 15:25:37.056</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>8</td>
+      <td>0.0</td>
+      <td>U47AYUDAzH38xMfYuND1bQ==</td>
+      <td>DO6OXuuRBgj3zuvNzPflkw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.056</td>
+      <td>2020-07-09 15:25:37.056</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>9</td>
+      <td>0.0</td>
+      <td>YiDO4IsgKsKQztNoMOi6cg==</td>
+      <td>jV8DIdRg+w5R2PIDSWTlxQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.056</td>
+      <td>2020-07-09 15:25:37.056</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>7</td>
+      <td>0.0</td>
+      <td>jeJr8+CNkAvBzglxs9lqRA==</td>
+      <td>CpCxvEB490tvDRF+x99lrw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.056</td>
+      <td>2020-07-09 15:25:37.056</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0.0</td>
+      <td>eN4FutMPF2b5UZnQ3q2Uyw==</td>
+      <td>Bm4ezHF8hQshFcdDWGMNkQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.0</td>
+      <td>tPkD/r/Mt+2ekQsWIDXYTg==</td>
+      <td>kpgQzCtnpdf1n/nURbQefg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>Calp2h1hs4vTdG8PScFHWg==</td>
+      <td>PJtd1WHQbz9tGuUC9+4jLg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>3</td>
+      <td>0.0</td>
+      <td>iSUvN83or8+9zekRzyqIPw==</td>
+      <td>8uTC66rLkCWcTLXY5JZpBg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>6</td>
+      <td>0.0</td>
+      <td>6E/YG4CZObxozSkKIeroyg==</td>
+      <td>toprOU5HPvhrcMCjf6t59w==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>0.0</td>
+      <td>9mypvFoCwvFRPOg/Cg4RfQ==</td>
+      <td>DohUDMfCnCYJNoawjOR0ng==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>5</td>
+      <td>0.0</td>
+      <td>G63Hyg2HtswTPbVFjRf3Ew==</td>
+      <td>/vKIPhjHzOMDnlBGUKRrqw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>True</td>
+      <td>True</td>
+      <td>False</td>
+      <td>18</td>
+      <td>0.0</td>
+      <td>ZXZ9EEMOS4elbp9y+Drm5w==</td>
+      <td>NM3AcI1DeD1RwKCfKms1kA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-05-01 15:55:30.940</td>
+      <td>2020-05-01 15:55:30.940</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>36</td>
+      <td>0.0</td>
+      <td>iQ6OAFd1nl+9N0T6nRhqPw==</td>
+      <td>mW6GImOawZ4sQ6LVzhay+g==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>37</td>
+      <td>0.0</td>
+      <td>RNRSVKHLdQZP5kQYrIEKBw==</td>
+      <td>5X6mwVtyB5GCEqIPwKTg8Q==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>35</td>
+      <td>0.0</td>
+      <td>w9Z/ZOiqf04lzN+jEgXTuQ==</td>
+      <td>y71YjXZJ1Ecf60coQyz4ag==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>38</td>
+      <td>0.0</td>
+      <td>aM+9xSSBbDtr1i8mVhhEiw==</td>
+      <td>T3QHTBlzIAGnyEP4PBvZUw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>39</td>
+      <td>0.0</td>
+      <td>ADtbmt+3aEMT7Ol5ZOtAvg==</td>
+      <td>HNDsXBtQruG5MVrjBEwKUg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>34</td>
+      <td>0.0</td>
+      <td>Rfis+iGH1/bkyw2hcgEt5g==</td>
+      <td>lbVk9QPy+zLzcMV0i7Hs/Q==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>32</td>
+      <td>0.0</td>
+      <td>OstqspUkji1AME+p6PxDQg==</td>
+      <td>QHJxhA9XV6K34Zmrcjhhhw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>30</td>
+      <td>0.0</td>
+      <td>w4ChxNK5fdT1uUFjaO75qA==</td>
+      <td>7yLyqgHw2anGSAD62c9+jQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>29</td>
+      <td>0.0</td>
+      <td>SPVLmiw/uTbanEOdcUgKxA==</td>
+      <td>ABffTNo9l4IhuKY83O9xBg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>33</td>
+      <td>0.0</td>
+      <td>M0mYkJ9+dlkfvULSWX+Yzw==</td>
+      <td>2OdlL6v6529D3s/hQbNQwA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>31</td>
+      <td>0.0</td>
+      <td>hKKDak9+t/kw9AmYeJBWIg==</td>
+      <td>CDb1Yr1FGmNnb/skCuVA0A==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>26</td>
+      <td>0.0</td>
+      <td>qSWSG9tCzg4ighAXDd3kLA==</td>
+      <td>8hO0o2igtlKIf+DcifJOKA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>27</td>
+      <td>0.0</td>
+      <td>A5pnWJJkHP2QezibprAs2Q==</td>
+      <td>sjyIvp5U/FEJY+R20qB20A==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>28</td>
+      <td>0.0</td>
+      <td>12pivKwU/hPu0P42dqp8ig==</td>
+      <td>dSMA62EkUqGC10H6cKuG7w==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>23</td>
+      <td>0.0</td>
+      <td>PDQpkIP94QRvjDsAR5RbPQ==</td>
+      <td>3orApCxi9imfNdP0U6SHKw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>24</td>
+      <td>0.0</td>
+      <td>lUKwbqqbhgBdT9ehBm/NzQ==</td>
+      <td>YxGuF8HuUrNuaKr0rQZjhw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>25</td>
+      <td>0.0</td>
+      <td>5r4sir/GOWv09awUhxmxQQ==</td>
+      <td>/iibg1/O7o4WJvfhQKHbXQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>19</td>
+      <td>0.0</td>
+      <td>at71Thj/T/5oGvE4/SN6vQ==</td>
+      <td>7XVxKw6xkTwoo4cnMf/UjQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>21</td>
+      <td>0.0</td>
+      <td>DpU5GWfYKyKUPe/kDpXYMg==</td>
+      <td>u2Ew3VrwjOkxxB8ZyaWEwg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>18</td>
+      <td>0.0</td>
+      <td>1Q58vVJkg1WdhVcSw6S3JQ==</td>
+      <td>g8M2YPQzcfT9rj7DDcGVYw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>22</td>
+      <td>0.0</td>
+      <td>BfXD6HLGtOzMYjZ1naebPQ==</td>
+      <td>RVTLeytygwnkqDc9sNHGPg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>16</td>
+      <td>0.0</td>
+      <td>xFvRu/63SVjBjKusAM4G/Q==</td>
+      <td>F4+5o5w4BB6zu6uWY2c9tg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>17</td>
+      <td>0.0</td>
+      <td>V0VslW/K1a6MS07bz7T6IA==</td>
+      <td>fCWqDZtfXNvENEVDVjchMA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>20</td>
+      <td>0.0</td>
+      <td>YmSfqIiBI+VmfiMay7ZWLg==</td>
+      <td>4vVG07wQuXFbo4/5Y2LHlg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>14</td>
+      <td>0.0</td>
+      <td>8eI5izJzgHYN7B2Cd1OIKg==</td>
+      <td>uJBGhlCFeYCJ00anlrN5yg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>13</td>
+      <td>0.0</td>
+      <td>ZyAGtF+VBN1fjpSbKkTgPA==</td>
+      <td>zOLSvVbKyy8DDk0JnYSR3Q==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>11</td>
+      <td>0.0</td>
+      <td>c32jTRhErkLF7z0vhFoCpw==</td>
+      <td>7ID7wWaHahr04NJjfj8z3A==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>12</td>
+      <td>0.0</td>
+      <td>GFmCo2Nj80YRefdj3l/EcQ==</td>
+      <td>wUoDGQJRC8kSGYyLBtYJVQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>15</td>
+      <td>0.0</td>
+      <td>k2dg63kb1K8QoI/3Xy/xwA==</td>
+      <td>5y7bayjfImBgYsW+5v53mw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>1</td>
+      <td>1.0</td>
+      <td>sIu3GWyUKT+TsRu2OvskSQ==</td>
+      <td>VPZkxwwiBU6g2NJvw5l85w==</td>
+      <td>AZzqPCai12V9o2zSLAQQuw==</td>
+      <td>2020-07-09 15:25:37.052</td>
+      <td>2020-07-09 15:25:37.052</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>0</td>
+      <td>1.0</td>
+      <td>tmYhFf/xeMYcJrgPTs2qVQ==</td>
+      <td>njTNzdNb2LEfvNM4vLDN1Q==</td>
+      <td>AZzqPCai12V9o2zSLAQQuw==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>5</td>
+      <td>0.9</td>
+      <td>TQmucMCwJzLceFOseUjq0Q==</td>
+      <td>/0aa9HI5H/kOkIlBsSqojw==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>3</td>
+      <td>0.7</td>
+      <td>A7i5QE2wxS59Tk3CanJe+g==</td>
+      <td>X3I9RnulD0cHFVbeZibDHg==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0.8</td>
+      <td>VPrsj1sSV2cRlOBMP8p1lQ==</td>
+      <td>q+Isf9tCP1vt7l4qcVFBjg==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0.1</td>
+      <td>DdJaGfQ01gu4POpX+lWRMQ==</td>
+      <td>TWPnxoQZWzsOgBvQbVHV4w==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.052</td>
+      <td>2020-07-09 15:25:37.052</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.5</td>
+      <td>cux6krozjO6vb6LRaWmzMQ==</td>
+      <td>k4Ppgl8cmdN9BIgWvJDesg==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.052</td>
+      <td>2020-07-09 15:25:37.052</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>0.3</td>
+      <td>EYz/jZhnRru5uUlbwdew3A==</td>
+      <td>sK/cjFHFE0YH+7qlMddhKQ==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.052</td>
+      <td>2020-07-09 15:25:37.052</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>is_deleted</th>
+      <th>is_active</th>
+      <th>is_closed_won</th>
+      <th>display_order</th>
+      <th>win_probability</th>
+      <th>stage_id</th>
+      <th>stage_label</th>
+      <th>pipeline_id</th>
+      <th>created_at</th>
+      <th>updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>6</td>
+      <td>1.0</td>
+      <td>/n0+plNHbWErNq8Ek+NM3g==</td>
+      <td>HloNyGJEOLMWtXLjmapLQw==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>7</td>
+      <td>0.0</td>
+      <td>hVXu1Iul7Cc7DcPuxQpOfg==</td>
+      <td>pqNpReDOp9fpUPal7wWFXg==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0.8</td>
+      <td>fQXVZHvq6nRBO5G2jluSrw==</td>
+      <td>lBHMEsbmFw2dboKkjcFP+Q==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>3</td>
+      <td>0.6</td>
+      <td>+iDZUa8gi3xYh+02iLbs7g==</td>
+      <td>9hM54Lf/5lGJr082RN3R0g==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>5</td>
+      <td>0.9</td>
+      <td>t97DfE5C38R3NtMNvHo75Q==</td>
+      <td>xtJd8DfkQb0L5Owm3i672A==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.054</td>
+      <td>2020-07-09 15:25:37.054</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>0.1</td>
+      <td>xtFrZtyHm63bx8vIM0YwtA==</td>
+      <td>TY5vWLDESu3m6DzPS4MDEA==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.4</td>
+      <td>Sz/OdDohp9T+LT2967pMog==</td>
+      <td>dP2FfHF4+97+jtAnhP+WSA==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0.1</td>
+      <td>XlmFW0Sel+q4N/n10JJ5bg==</td>
+      <td>P0WrVl2tQ/YP8Dte+luubw==</td>
+      <td>wh+Wm18D0z1D4E+PE252gg==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>True</td>
+      <td>True</td>
+      <td>False</td>
+      <td>6</td>
+      <td>0.6</td>
+      <td>B/OFEVwLVVUw4q7QB1Jffw==</td>
+      <td>NTbcpXmUZaCGUbkWcqiq+g==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-03-30 17:50:29.554</td>
+      <td>2020-03-30 17:50:29.554</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>6</td>
+      <td>0.6</td>
+      <td>lXJhTILAnh65/fYdtVRf7Q==</td>
+      <td>zNTrGwrH13Pk9ModIhQHHw==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>9</td>
+      <td>0.9</td>
+      <td>T4peGpcAmXL5qRskbB5hig==</td>
+      <td>d2cbGVT866oXb5NMGfWFzQ==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>7</td>
+      <td>0.7</td>
+      <td>hn5+QgfX4w8BktDjxz0wXQ==</td>
+      <td>nNpzgQiprurZo/yEYqkOTA==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>8</td>
+      <td>0.9</td>
+      <td>UGRmHpla4AXbbpwHQU2w1A==</td>
+      <td>rktUYcmVNcM6T4fp2dxWMQ==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>5</td>
+      <td>0.5</td>
+      <td>tRXAhwjVXtDm6IhZ/glUkw==</td>
+      <td>FRccHc9BvgZ8cGpu42O3Dg==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0.4</td>
+      <td>lUl6Ee0rO0f5zQiEXiJ6Bg==</td>
+      <td>O4hyOtlmFKPASNfTOaEtBw==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>3</td>
+      <td>0.3</td>
+      <td>pTsT0eQ/B/c9+j2UTLNfkg==</td>
+      <td>eMOMsyemcP3mCG4oF0X7LQ==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.2</td>
+      <td>143VrEU51XfieTdGDtcWHg==</td>
+      <td>/KtOH5Pkk4zM++b5LAh6YA==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>0.1</td>
+      <td>oWOKgDyzUqDpUo3d9dlk/A==</td>
+      <td>gDXpvQuwuxBDiWo8vBwQfA==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.050</td>
+      <td>2020-07-09 15:25:37.050</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0.1</td>
+      <td>boHbIlo3V6P8IMybGz2eGw==</td>
+      <td>lnL0W4I6tiRkXp2XjDlXhA==</td>
+      <td>Y8OGidQXXDZY0C7FaNUGUA==</td>
+      <td>2020-07-09 15:25:37.049</td>
+      <td>2020-07-09 15:25:37.049</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>1</td>
+      <td>1.0</td>
+      <td>G/ttVj7y2Me0xcu0rJdzrw==</td>
+      <td>4NBhQy+75yhP5jxLlC4ACA==</td>
+      <td>PBUgrXANfP+Uw7TXWDnSkA==</td>
+      <td>2020-07-09 15:25:37.049</td>
+      <td>2020-07-09 15:25:37.049</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.1</td>
+      <td>G1DV2psAWd3igDh+B17cIw==</td>
+      <td>+mpaMiTX2mbZ4L3sJfYs8A==</td>
+      <td>PBUgrXANfP+Uw7TXWDnSkA==</td>
+      <td>2020-07-09 15:25:37.049</td>
+      <td>2020-07-09 15:25:37.049</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>0</td>
+      <td>1.0</td>
+      <td>2WFf1X0VyKRvcu8BUMyr2w==</td>
+      <td>Cs0SQ/1pyU5gOv1EW5gfMA==</td>
+      <td>PBUgrXANfP+Uw7TXWDnSkA==</td>
+      <td>2020-07-09 15:25:37.048</td>
+      <td>2020-07-09 15:25:37.048</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>10</td>
+      <td>0.0</td>
+      <td>IRkOpszfO0OrbMGuW8+I3Q==</td>
+      <td>2VO4gQ6k4cG96k0y+InoTA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.056</td>
+      <td>2020-07-09 15:25:37.056</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>8</td>
+      <td>0.0</td>
+      <td>U47AYUDAzH38xMfYuND1bQ==</td>
+      <td>DO6OXuuRBgj3zuvNzPflkw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.056</td>
+      <td>2020-07-09 15:25:37.056</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>9</td>
+      <td>0.0</td>
+      <td>YiDO4IsgKsKQztNoMOi6cg==</td>
+      <td>jV8DIdRg+w5R2PIDSWTlxQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.056</td>
+      <td>2020-07-09 15:25:37.056</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>7</td>
+      <td>0.0</td>
+      <td>jeJr8+CNkAvBzglxs9lqRA==</td>
+      <td>CpCxvEB490tvDRF+x99lrw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.056</td>
+      <td>2020-07-09 15:25:37.056</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0.0</td>
+      <td>eN4FutMPF2b5UZnQ3q2Uyw==</td>
+      <td>Bm4ezHF8hQshFcdDWGMNkQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.0</td>
+      <td>tPkD/r/Mt+2ekQsWIDXYTg==</td>
+      <td>kpgQzCtnpdf1n/nURbQefg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>Calp2h1hs4vTdG8PScFHWg==</td>
+      <td>PJtd1WHQbz9tGuUC9+4jLg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>3</td>
+      <td>0.0</td>
+      <td>iSUvN83or8+9zekRzyqIPw==</td>
+      <td>8uTC66rLkCWcTLXY5JZpBg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>6</td>
+      <td>0.0</td>
+      <td>6E/YG4CZObxozSkKIeroyg==</td>
+      <td>toprOU5HPvhrcMCjf6t59w==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>0.0</td>
+      <td>9mypvFoCwvFRPOg/Cg4RfQ==</td>
+      <td>DohUDMfCnCYJNoawjOR0ng==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>5</td>
+      <td>0.0</td>
+      <td>G63Hyg2HtswTPbVFjRf3Ew==</td>
+      <td>/vKIPhjHzOMDnlBGUKRrqw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.055</td>
+      <td>2020-07-09 15:25:37.055</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>True</td>
+      <td>True</td>
+      <td>False</td>
+      <td>18</td>
+      <td>0.0</td>
+      <td>ZXZ9EEMOS4elbp9y+Drm5w==</td>
+      <td>NM3AcI1DeD1RwKCfKms1kA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-05-01 15:55:30.940</td>
+      <td>2020-05-01 15:55:30.940</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>36</td>
+      <td>0.0</td>
+      <td>iQ6OAFd1nl+9N0T6nRhqPw==</td>
+      <td>mW6GImOawZ4sQ6LVzhay+g==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>37</td>
+      <td>0.0</td>
+      <td>RNRSVKHLdQZP5kQYrIEKBw==</td>
+      <td>5X6mwVtyB5GCEqIPwKTg8Q==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>35</td>
+      <td>0.0</td>
+      <td>w9Z/ZOiqf04lzN+jEgXTuQ==</td>
+      <td>y71YjXZJ1Ecf60coQyz4ag==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>38</td>
+      <td>0.0</td>
+      <td>aM+9xSSBbDtr1i8mVhhEiw==</td>
+      <td>T3QHTBlzIAGnyEP4PBvZUw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>39</td>
+      <td>0.0</td>
+      <td>ADtbmt+3aEMT7Ol5ZOtAvg==</td>
+      <td>HNDsXBtQruG5MVrjBEwKUg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.061</td>
+      <td>2020-07-09 15:25:37.061</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>34</td>
+      <td>0.0</td>
+      <td>Rfis+iGH1/bkyw2hcgEt5g==</td>
+      <td>lbVk9QPy+zLzcMV0i7Hs/Q==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>32</td>
+      <td>0.0</td>
+      <td>OstqspUkji1AME+p6PxDQg==</td>
+      <td>QHJxhA9XV6K34Zmrcjhhhw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>30</td>
+      <td>0.0</td>
+      <td>w4ChxNK5fdT1uUFjaO75qA==</td>
+      <td>7yLyqgHw2anGSAD62c9+jQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>29</td>
+      <td>0.0</td>
+      <td>SPVLmiw/uTbanEOdcUgKxA==</td>
+      <td>ABffTNo9l4IhuKY83O9xBg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>33</td>
+      <td>0.0</td>
+      <td>M0mYkJ9+dlkfvULSWX+Yzw==</td>
+      <td>2OdlL6v6529D3s/hQbNQwA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>31</td>
+      <td>0.0</td>
+      <td>hKKDak9+t/kw9AmYeJBWIg==</td>
+      <td>CDb1Yr1FGmNnb/skCuVA0A==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.060</td>
+      <td>2020-07-09 15:25:37.060</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>26</td>
+      <td>0.0</td>
+      <td>qSWSG9tCzg4ighAXDd3kLA==</td>
+      <td>8hO0o2igtlKIf+DcifJOKA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>27</td>
+      <td>0.0</td>
+      <td>A5pnWJJkHP2QezibprAs2Q==</td>
+      <td>sjyIvp5U/FEJY+R20qB20A==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>28</td>
+      <td>0.0</td>
+      <td>12pivKwU/hPu0P42dqp8ig==</td>
+      <td>dSMA62EkUqGC10H6cKuG7w==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>23</td>
+      <td>0.0</td>
+      <td>PDQpkIP94QRvjDsAR5RbPQ==</td>
+      <td>3orApCxi9imfNdP0U6SHKw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>24</td>
+      <td>0.0</td>
+      <td>lUKwbqqbhgBdT9ehBm/NzQ==</td>
+      <td>YxGuF8HuUrNuaKr0rQZjhw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>25</td>
+      <td>0.0</td>
+      <td>5r4sir/GOWv09awUhxmxQQ==</td>
+      <td>/iibg1/O7o4WJvfhQKHbXQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.059</td>
+      <td>2020-07-09 15:25:37.059</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>19</td>
+      <td>0.0</td>
+      <td>at71Thj/T/5oGvE4/SN6vQ==</td>
+      <td>7XVxKw6xkTwoo4cnMf/UjQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>21</td>
+      <td>0.0</td>
+      <td>DpU5GWfYKyKUPe/kDpXYMg==</td>
+      <td>u2Ew3VrwjOkxxB8ZyaWEwg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>18</td>
+      <td>0.0</td>
+      <td>1Q58vVJkg1WdhVcSw6S3JQ==</td>
+      <td>g8M2YPQzcfT9rj7DDcGVYw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>22</td>
+      <td>0.0</td>
+      <td>BfXD6HLGtOzMYjZ1naebPQ==</td>
+      <td>RVTLeytygwnkqDc9sNHGPg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>16</td>
+      <td>0.0</td>
+      <td>xFvRu/63SVjBjKusAM4G/Q==</td>
+      <td>F4+5o5w4BB6zu6uWY2c9tg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>17</td>
+      <td>0.0</td>
+      <td>V0VslW/K1a6MS07bz7T6IA==</td>
+      <td>fCWqDZtfXNvENEVDVjchMA==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>20</td>
+      <td>0.0</td>
+      <td>YmSfqIiBI+VmfiMay7ZWLg==</td>
+      <td>4vVG07wQuXFbo4/5Y2LHlg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.058</td>
+      <td>2020-07-09 15:25:37.058</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>14</td>
+      <td>0.0</td>
+      <td>8eI5izJzgHYN7B2Cd1OIKg==</td>
+      <td>uJBGhlCFeYCJ00anlrN5yg==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>13</td>
+      <td>0.0</td>
+      <td>ZyAGtF+VBN1fjpSbKkTgPA==</td>
+      <td>zOLSvVbKyy8DDk0JnYSR3Q==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>11</td>
+      <td>0.0</td>
+      <td>c32jTRhErkLF7z0vhFoCpw==</td>
+      <td>7ID7wWaHahr04NJjfj8z3A==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>12</td>
+      <td>0.0</td>
+      <td>GFmCo2Nj80YRefdj3l/EcQ==</td>
+      <td>wUoDGQJRC8kSGYyLBtYJVQ==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>15</td>
+      <td>0.0</td>
+      <td>k2dg63kb1K8QoI/3Xy/xwA==</td>
+      <td>5y7bayjfImBgYsW+5v53mw==</td>
+      <td>/QJj4Q8q6MEf7Vs+2juQMg==</td>
+      <td>2020-07-09 15:25:37.057</td>
+      <td>2020-07-09 15:25:37.057</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>1</td>
+      <td>1.0</td>
+      <td>sIu3GWyUKT+TsRu2OvskSQ==</td>
+      <td>VPZkxwwiBU6g2NJvw5l85w==</td>
+      <td>AZzqPCai12V9o2zSLAQQuw==</td>
+      <td>2020-07-09 15:25:37.052</td>
+      <td>2020-07-09 15:25:37.052</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>False</td>
+      <td>True</td>
+      <td>True</td>
+      <td>0</td>
+      <td>1.0</td>
+      <td>tmYhFf/xeMYcJrgPTs2qVQ==</td>
+      <td>njTNzdNb2LEfvNM4vLDN1Q==</td>
+      <td>AZzqPCai12V9o2zSLAQQuw==</td>
+      <td>2020-07-09 15:25:37.051</td>
+      <td>2020-07-09 15:25:37.051</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>5</td>
+      <td>0.9</td>
+      <td>TQmucMCwJzLceFOseUjq0Q==</td>
+      <td>/0aa9HI5H/kOkIlBsSqojw==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>3</td>
+      <td>0.7</td>
+      <td>A7i5QE2wxS59Tk3CanJe+g==</td>
+      <td>X3I9RnulD0cHFVbeZibDHg==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>4</td>
+      <td>0.8</td>
+      <td>VPrsj1sSV2cRlOBMP8p1lQ==</td>
+      <td>q+Isf9tCP1vt7l4qcVFBjg==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.053</td>
+      <td>2020-07-09 15:25:37.053</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0.1</td>
+      <td>DdJaGfQ01gu4POpX+lWRMQ==</td>
+      <td>TWPnxoQZWzsOgBvQbVHV4w==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.052</td>
+      <td>2020-07-09 15:25:37.052</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>2</td>
+      <td>0.5</td>
+      <td>cux6krozjO6vb6LRaWmzMQ==</td>
+      <td>k4Ppgl8cmdN9BIgWvJDesg==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.052</td>
+      <td>2020-07-09 15:25:37.052</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>False</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>0.3</td>
+      <td>EYz/jZhnRru5uUlbwdew3A==</td>
+      <td>sK/cjFHFE0YH+7qlMddhKQ==</td>
+      <td>2suHVO8IF4SEKSDGff7PBw==</td>
+      <td>2020-07-09 15:25:37.052</td>
+      <td>2020-07-09 15:25:37.052</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_active"></div><b>📃 Summary:</b> Indicates if the stage is currently active<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_closed_won</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_closed_won"></div><b>📃 Summary:</b> Indicates if the stage represents a won deal<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">display_order</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_display_order"></div><b>📃 Summary:</b> Numeric order for displaying stages in the pipeline<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">win_probability</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_win_probability"></div><b>📃 Summary:</b> Likelihood of closing a deal at this stage<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stage_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_stage_id"></div><b>📃 Summary:</b> Unique identifier for the stage<br><b>🦄 Unique:</b> This column represents a unique identifier for each stage in the pipeline. For this table, each row represents a distinct stage in the sales pipeline. The stage_id is likely to be unique across rows as it's designed to uniquely identify each stage.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stage_label</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_stage_label"></div><b>📃 Summary:</b> Encrypted label or name of the stage<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pipeline_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_pipeline_id"></div><b>📃 Summary:</b> Unique identifier for the associated pipeline<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_at"></div><b>📃 Summary:</b> Timestamp of when the stage was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">updated_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_updated_at"></div><b>📃 Summary:</b> Timestamp of when the stage was last updated<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about deal pipeline stages. It contains details like stage ID, label, display order, probability, and whether the stage is active or closed won. Each stage is associated with a pipeline ID. The table also tracks creation and update timestamps for each stage. This data structure allows for organizing and tracking deals as they progress through different stages of a sales pipeline.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>5</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>active</td>
+      <td>Indicates if the stage is currently active</td>
+      <td>is_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>closed_won</td>
+      <td>Indicates if the stage represents a won deal</td>
+      <td>is_closed_won</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>display_order</td>
+      <td>Numeric order for displaying stages in the pipeline</td>
+      <td>display_order</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>probability</td>
+      <td>Likelihood of closing a deal at this stage</td>
+      <td>win_probability</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>stage_id</td>
+      <td>Unique identifier for the stage</td>
+      <td>stage_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>label</td>
+      <td>Encrypted label or name of the stage</td>
+      <td>stage_label</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>pipeline_id</td>
+      <td>Unique identifier for the associated pipeline</td>
+      <td>pipeline_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>created_at</td>
+      <td>Timestamp of when the stage was created</td>
+      <td>created_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>updated_at</td>
+      <td>Timestamp of when the stage was last updated</td>
+      <td>updated_at</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>2</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>created_at</td>
+      <td>CAST("created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'created_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The data is already in a format that can be directly interpreted as a timestamp (YYYY-MM-DD HH:MM:SS.mmm), so we don't need to use strptime() for parsing. DuckDB can automatically interpret this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>updated_at</td>
+      <td>CAST("updated_at" AS TIMESTAMP)</td>
+      <td>To transform the 'updated_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the dates in the 'updated_at' column is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.sss), which is directly compatible with SQL TIMESTAMP type. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'False', 'value': 97.1830985915493}, {'label': 'True', 'value': 2.8169014084507045}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_active", data);
+data = [{'label': 'False', 'value': 92.95774647887323}, {'label': 'True', 'value': 7.042253521126761}];
+    drawBarChart("bar_viz_is_closed_won", data);
+data = [{'x': 0.975, 'y': 12}, {'x': 2.925, 'y': 9}, {'x': 4.875, 'y': 8}, {'x': 6.824999999999999, 'y': 7}, {'x': 8.775, 'y': 4}, {'x': 10.725, 'y': 2}, {'x': 12.675, 'y': 2}, {'x': 14.625, 'y': 2}, {'x': 16.575, 'y': 2}, {'x': 18.525, 'y': 3}, {'x': 20.475, 'y': 2}, {'x': 22.424999999999997, 'y': 2}, {'x': 24.375, 'y': 2}, {'x': 26.325, 'y': 2}, {'x': 28.275, 'y': 2}, {'x': 30.225, 'y': 2}, {'x': 32.175, 'y': 2}, {'x': 34.125, 'y': 2}, {'x': 36.075, 'y': 2}, {'x': 38.025, 'y': 2}];
+    binWidth = 1.95;
+    drawHistogram("hist_viz_display_order", data, binWidth);
+data = [{'x': 0.025, 'y': 42}, {'x': 0.07500000000000001, 'y': 0}, {'x': 0.125, 'y': 6}, {'x': 0.17500000000000002, 'y': 0}, {'x': 0.225, 'y': 1}, {'x': 0.275, 'y': 2}, {'x': 0.32500000000000007, 'y': 0}, {'x': 0.375, 'y': 0}, {'x': 0.42500000000000004, 'y': 2}, {'x': 0.475, 'y': 0}, {'x': 0.525, 'y': 2}, {'x': 0.5750000000000001, 'y': 3}, {'x': 0.625, 'y': 0}, {'x': 0.675, 'y': 2}, {'x': 0.7250000000000001, 'y': 0}, {'x': 0.775, 'y': 0}, {'x': 0.8250000000000001, 'y': 2}, {'x': 0.875, 'y': 0}, {'x': 0.925, 'y': 4}, {'x': 0.9750000000000001, 'y': 5}];
+    binWidth = 0.05;
+    drawHistogram("hist_viz_win_probability", data, binWidth);
+data = [{'label': 'Sz/OdDohp9T+LT2...', 'value': 1.4084507042253522}, {'label': '/n0+plNHbWErNq8...', 'value': 1.4084507042253522}, {'label': 'tRXAhwjVXtDm6Ih...', 'value': 1.4084507042253522}, {'label': 'boHbIlo3V6P8IMy...', 'value': 1.4084507042253522}, {'label': 'G/ttVj7y2Me0xcu...', 'value': 1.4084507042253522}, {'label': 'Other values', 'value': 92.95774647887323}];
+    drawBarChart("bar_viz_stage_id", data);
+data = [{'label': 'nNpzgQiprurZo/y...', 'value': 1.4084507042253522}, {'label': 'rktUYcmVNcM6T4f...', 'value': 1.4084507042253522}, {'label': '/KtOH5Pkk4zM++b...', 'value': 1.4084507042253522}, {'label': 'gDXpvQuwuxBDiWo...', 'value': 1.4084507042253522}, {'label': '4NBhQy+75yhP5jx...', 'value': 1.4084507042253522}, {'label': 'Other values', 'value': 92.95774647887323}];
+    drawBarChart("bar_viz_stage_label", data);
+data = [{'label': '/QJj4Q8q6MEf7Vs...', 'value': 57.74647887323944}, {'label': 'Y8OGidQXXDZY0C7...', 'value': 15.492957746478872}, {'label': 'wh+Wm18D0z1D4E+...', 'value': 11.267605633802818}, {'label': '2suHVO8IF4SEKSD...', 'value': 8.450704225352112}, {'label': 'PBUgrXANfP+Uw7T...', 'value': 4.225352112676056}, {'label': 'AZzqPCai12V9o2z...', 'value': 2.8169014084507045}];
+    drawBarChart("bar_viz_pipeline_id", data);
+data = [{'label': '2020-07-09 15:2...', 'value': 9.859154929577464}, {'label': '2020-07-09 15:2...', 'value': 9.859154929577464}, {'label': '2020-07-09 15:2...', 'value': 8.450704225352112}, {'label': '2020-07-09 15:2...', 'value': 8.450704225352112}, {'label': '2020-07-09 15:2...', 'value': 8.450704225352112}, {'label': 'Other values', 'value': 54.929577464788736}];
+    drawBarChart("bar_viz_created_at", data);
+data = [{'label': '2020-07-09 15:2...', 'value': 9.859154929577464}, {'label': '2020-07-09 15:2...', 'value': 9.859154929577464}, {'label': '2020-07-09 15:2...', 'value': 8.450704225352112}, {'label': '2020-07-09 15:2...', 'value': 8.450704225352112}, {'label': '2020-07-09 15:2...', 'value': 8.450704225352112}, {'label': 'Other values', 'value': 54.929577464788736}];
+    drawBarChart("bar_viz_updated_at", data);
+
+
+</script>
+</body>
+</html>

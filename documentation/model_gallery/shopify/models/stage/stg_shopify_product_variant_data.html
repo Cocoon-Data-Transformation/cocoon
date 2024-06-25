@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>shopify_product_variant_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>title</th>
+      <th>position_</th>
+      <th>inventory_policy</th>
+      <th>fulfillment_service</th>
+      <th>inventory_management</th>
+      <th>taxable</th>
+      <th>grams</th>
+      <th>inventory_quantity</th>
+      <th>weight_unit</th>
+      <th>old_inventory_quantity</th>
+      <th>requires_shipping</th>
+      <th>tax_code</th>
+      <th>option_1</th>
+      <th>created_at</th>
+      <th>image_id</th>
+      <th>inventory_item_id</th>
+      <th>price</th>
+      <th>product_id</th>
+      <th>updated_at</th>
+      <th>id</th>
+      <th>weight</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>my title here</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0</td>
+      <td>lb</td>
+      <td>0</td>
+      <td>False</td>
+      <td>None</td>
+      <td>my title here</td>
+      <td>2021-03-08 16:30:15.000</td>
+      <td>NaN</td>
+      <td>41356021661767</td>
+      <td>111</td>
+      <td>6540108431431</td>
+      <td>2021-04-12 19:49:43.000</td>
+      <td>39262114414663</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>my title here</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0</td>
+      <td>lb</td>
+      <td>0</td>
+      <td>False</td>
+      <td>None</td>
+      <td>my title here</td>
+      <td>2021-03-17 16:39:45.000</td>
+      <td>NaN</td>
+      <td>41367035936839</td>
+      <td>222</td>
+      <td>6544066379847</td>
+      <td>2021-04-12 19:46:59.000</td>
+      <td>39273118957639</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>my title here</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>inventory manager</td>
+      <td>True</td>
+      <td>0</td>
+      <td>0</td>
+      <td>lb</td>
+      <td>0</td>
+      <td>True</td>
+      <td>None</td>
+      <td>my title here</td>
+      <td>2021-03-30 19:48:15.000</td>
+      <td>NaN</td>
+      <td>41384094924871</td>
+      <td>5</td>
+      <td>6548438188103</td>
+      <td>2021-03-30 19:48:15.000</td>
+      <td>39290169262151</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>my title here</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0</td>
+      <td>-5</td>
+      <td>lb</td>
+      <td>-5</td>
+      <td>False</td>
+      <td>None</td>
+      <td>my title here</td>
+      <td>2021-03-08 16:31:31.000</td>
+      <td>NaN</td>
+      <td>41356022644807</td>
+      <td>333</td>
+      <td>6540109250631</td>
+      <td>2021-04-12 19:47:26.000</td>
+      <td>39262115397703</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>my other title</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>inventory manager</td>
+      <td>True</td>
+      <td>222</td>
+      <td>0</td>
+      <td>lb</td>
+      <td>0</td>
+      <td>True</td>
+      <td>TR9999</td>
+      <td>my other title</td>
+      <td>2019-06-25 18:32:03.000</td>
+      <td>NaN</td>
+      <td>30309980143686</td>
+      <td>444</td>
+      <td>3879735590982</td>
+      <td>2019-10-01 23:40:09.000</td>
+      <td>29217058947142</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>title</th>
+      <th>display_position</th>
+      <th>inventory_policy</th>
+      <th>fulfillment_service</th>
+      <th>inventory_management</th>
+      <th>is_taxable</th>
+      <th>weight_grams</th>
+      <th>stock_quantity</th>
+      <th>weight_unit</th>
+      <th>previous_stock_quantity</th>
+      <th>requires_shipping</th>
+      <th>tax_code</th>
+      <th>option_1</th>
+      <th>created_at</th>
+      <th>image_id</th>
+      <th>inventory_item_id</th>
+      <th>price</th>
+      <th>product_id</th>
+      <th>updated_at</th>
+      <th>variant_id</th>
+      <th>weight</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>my title here</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0</td>
+      <td>lb</td>
+      <td>0</td>
+      <td>False</td>
+      <td>None</td>
+      <td>my title here</td>
+      <td>2021-03-08 16:30:15</td>
+      <td>None</td>
+      <td>41356021661767</td>
+      <td>111</td>
+      <td>6540108431431</td>
+      <td>2021-04-12 19:49:43</td>
+      <td>39262114414663</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>my title here</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0</td>
+      <td>0</td>
+      <td>lb</td>
+      <td>0</td>
+      <td>False</td>
+      <td>None</td>
+      <td>my title here</td>
+      <td>2021-03-17 16:39:45</td>
+      <td>None</td>
+      <td>41367035936839</td>
+      <td>222</td>
+      <td>6544066379847</td>
+      <td>2021-04-12 19:46:59</td>
+      <td>39273118957639</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>my title here</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>inventory manager</td>
+      <td>True</td>
+      <td>0</td>
+      <td>0</td>
+      <td>lb</td>
+      <td>0</td>
+      <td>True</td>
+      <td>None</td>
+      <td>my title here</td>
+      <td>2021-03-30 19:48:15</td>
+      <td>None</td>
+      <td>41384094924871</td>
+      <td>5</td>
+      <td>6548438188103</td>
+      <td>2021-03-30 19:48:15</td>
+      <td>39290169262151</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>my title here</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>None</td>
+      <td>False</td>
+      <td>0</td>
+      <td>-5</td>
+      <td>lb</td>
+      <td>-5</td>
+      <td>False</td>
+      <td>None</td>
+      <td>my title here</td>
+      <td>2021-03-08 16:31:31</td>
+      <td>None</td>
+      <td>41356022644807</td>
+      <td>333</td>
+      <td>6540109250631</td>
+      <td>2021-04-12 19:47:26</td>
+      <td>39262115397703</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>my other title</td>
+      <td>1</td>
+      <td>deny</td>
+      <td>manual</td>
+      <td>inventory manager</td>
+      <td>True</td>
+      <td>222</td>
+      <td>0</td>
+      <td>lb</td>
+      <td>0</td>
+      <td>True</td>
+      <td>TR9999</td>
+      <td>my other title</td>
+      <td>2019-06-25 18:32:03</td>
+      <td>None</td>
+      <td>30309980143686</td>
+      <td>444</td>
+      <td>3879735590982</td>
+      <td>2019-10-01 23:40:09</td>
+      <td>29217058947142</td>
+      <td>1.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">title</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_title"></div><b>📃 Summary:</b> Title or name of the variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">display_position</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_display_position"></div><b>📃 Summary:</b> Position of the variant in listings<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">inventory_policy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='deny'>deny</option><option value='backorder'>backorder</option><option value='substitute'>substitute</option><option value='notify'>notify</option><option value='waitlist'>waitlist</option></select></span><br><br><div id="bar_viz_inventory_policy"></div><b>📃 Summary:</b> Policy for handling out-of-stock items<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fulfillment_service</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='manual'>manual</option><option value='amazon'>amazon</option><option value='shipwire'>shipwire</option><option value='webgistix'>webgistix</option><option value='shipstation'>shipstation</option><option value='shopify_fulfillment'>shopify_fulfillment</option><option value='third_party'>third_party</option><option value='self_fulfilled'>self_fulfilled</option><option value='drop_ship'>drop_ship</option><option value='fba (Fulfillment by Amazon)'>fba (Fulfillment by Amazon)</option><option value='external'>external</option></select></span><br><br><div id="bar_viz_fulfillment_service"></div><b>📃 Summary:</b> Service used for order fulfillment<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">inventory_management</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='inventory manager'>inventory manager</option><option value='just-in-time (JIT)'>just-in-time (JIT)</option><option value='economic order quantity (EOQ)'>economic order quantity (EOQ)</option><option value='abc analysis'>abc analysis</option><option value='first-in, first-out (FIFO)'>first-in, first-out (FIFO)</option><option value='last-in, first-out (LIFO)'>last-in, first-out (LIFO)</option><option value='safety stock'>safety stock</option><option value='vendor-managed inventory (VMI)'>vendor-managed inventory (VMI)</option><option value='consignment inventory'>consignment inventory</option><option value='dropshipping'>dropshipping</option><option value='perpetual inventory system'>perpetual inventory system</option><option value='periodic inventory system'>periodic inventory system</option><option value='barcode system'>barcode system</option><option value='radio-frequency identification (RFID)'>radio-frequency identification (RFID)</option><option value='cycle counting'>cycle counting</option><option value='min-max inventory method'>min-max inventory method</option><option value='reorder point planning'>reorder point planning</option><option value='materials requirement planning (MRP)'>materials requirement planning (MRP)</option><option value='batch tracking'>batch tracking</option><option value='demand forecasting'>demand forecasting</option></select></span><br><br><div id="bar_viz_inventory_management"></div><b>📃 Summary:</b> Method used for inventory management<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_taxable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_taxable"></div><b>📃 Summary:</b> Indicates if the variant is taxable<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">weight_grams</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_weight_grams"></div><b>📃 Summary:</b> Weight of the product in grams<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stock_quantity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stock_quantity"></div><b>📃 Summary:</b> Current quantity in stock<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">weight_unit</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='lb'>lb</option><option value='kg'>kg</option><option value='g'>g</option><option value='oz'>oz</option><option value='stone'>stone</option><option value='ton'>ton</option><option value='metric ton'>metric ton</option><option value='mg'>mg</option></select></span><br><br><div id="bar_viz_weight_unit"></div><b>📃 Summary:</b> Unit of measurement for weight<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">previous_stock_quantity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_previous_stock_quantity"></div><b>📃 Summary:</b> Previous quantity in stock<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">requires_shipping</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_requires_shipping"></div><b>📃 Summary:</b> Indicates if shipping is required<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tax_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_tax_code"></div><b>📃 Summary:</b> Tax code for the variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">option_1</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_option_1"></div><b>📃 Summary:</b> Primary product option<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_at"></div><b>📃 Summary:</b> Timestamp when the variant was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">image_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_image_id"></div><b>📃 Summary:</b> Identifier for the variant's image<br><b>❓ Missing:</b> Not all products require an image.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">inventory_item_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_inventory_item_id"></div><b>📃 Summary:</b> Identifier for inventory tracking<br><b>🦄 Unique:</b> This column is an identifier for inventory tracking. For this table, each row is for a specific product variant. As it's an identifier specifically for inventory items, it's likely to be unique for each variant.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_price"></div><b>📃 Summary:</b> Current price of the variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_product_id"></div><b>📃 Summary:</b> Identifier of the parent product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">updated_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_updated_at"></div><b>📃 Summary:</b> Timestamp of last update<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">variant_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_variant_id"></div><b>📃 Summary:</b> Unique identifier for the variant<br><b>🦄 Unique:</b> This column is the unique identifier for the variant. For this table, each row is for a specific product variant. As it's explicitly described as a unique identifier, it should be unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">weight</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_weight"></div><b>📃 Summary:</b> Weight of the product<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about Shopify product variants. It contains details like variant ID, product ID, price, SKU, inventory information, creation and update timestamps, shipping requirements, and tax status. Each row represents a specific variant of a product, with attributes such as title, price, weight, and inventory quantity. The table likely serves as a central record for managing product variants in a Shopify e-commerce system.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>7</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the variant</td>
+      <td>variant_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>product_id</td>
+      <td>Identifier of the parent product</td>
+      <td>product_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>inventory_item_id</td>
+      <td>Identifier for inventory tracking</td>
+      <td>inventory_item_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>title</td>
+      <td>Title or name of the variant</td>
+      <td>title</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>price</td>
+      <td>Current price of the variant</td>
+      <td>price</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>sku</td>
+      <td>Stock Keeping Unit identifier</td>
+      <td>sku</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>position_</td>
+      <td>Position of the variant in listings</td>
+      <td>display_position</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>inventory_policy</td>
+      <td>Policy for handling out-of-stock items</td>
+      <td>inventory_policy</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>compare_at_price</td>
+      <td>Original price for comparison with current price</td>
+      <td>original_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>fulfillment_service</td>
+      <td>Service used for order fulfillment</td>
+      <td>fulfillment_service</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>inventory_management</td>
+      <td>Method used for inventory management</td>
+      <td>inventory_management</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>created_at</td>
+      <td>Timestamp when the variant was created</td>
+      <td>created_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>updated_at</td>
+      <td>Timestamp of last update</td>
+      <td>updated_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>taxable</td>
+      <td>Indicates if the variant is taxable</td>
+      <td>is_taxable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>barcode</td>
+      <td>Product barcode identifier</td>
+      <td>barcode</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>grams</td>
+      <td>Weight of the product in grams</td>
+      <td>weight_grams</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>image_id</td>
+      <td>Identifier for the variant's image</td>
+      <td>image_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>inventory_quantity</td>
+      <td>Current quantity in stock</td>
+      <td>stock_quantity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>weight</td>
+      <td>Weight of the product</td>
+      <td>weight</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>weight_unit</td>
+      <td>Unit of measurement for weight</td>
+      <td>weight_unit</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>old_inventory_quantity</td>
+      <td>Previous quantity in stock</td>
+      <td>previous_stock_quantity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>requires_shipping</td>
+      <td>Indicates if shipping is required</td>
+      <td>requires_shipping</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>option_2</td>
+      <td>Secondary product option</td>
+      <td>option_2</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>tax_code</td>
+      <td>Tax code for the variant</td>
+      <td>tax_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>option_3</td>
+      <td>Tertiary product option</td>
+      <td>option_3</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>option_1</td>
+      <td>Primary product option</td>
+      <td>option_1</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>13</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>barcode</td>
+      <td>CAST("barcode" AS VARCHAR)</td>
+      <td>To transform the data type of the 'barcode' column from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>created_at</td>
+      <td>CAST("created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'created_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The date-time format in the given examples is already in a standard format that can be directly interpreted as a timestamp by most SQL databases, including DuckDB. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>image_id</td>
+      <td>CAST("image_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'image_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the 'image_id' column to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>inventory_item_id</td>
+      <td>CAST("inventory_item_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'inventory_item_id' column from INT to VARCHAR in DuckDB, we need to use a CAST function. This will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to implement.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>option_2</td>
+      <td>CAST("option_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'option_2' from 'DECIMAL' to 'VARCHAR' in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>option_3</td>
+      <td>CAST("option_3" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'option_3' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR conversion.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>original_price</td>
+      <td>CAST("original_price" AS VARCHAR)</td>
+      <td>To transform the data type of the 'original_price' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(column_name AS new_data_type). In this case, we're casting 'original_price' to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>price</td>
+      <td>CAST("price" AS VARCHAR)</td>
+      <td>To transform the data type of the 'price' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function allows us to convert one data type to another. We'll wrap the 'price' column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>product_id</td>
+      <td>CAST("product_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'product_id' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type. The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>sku</td>
+      <td>CAST("sku" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sku' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'sku' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>updated_at</td>
+      <td>CAST("updated_at" AS TIMESTAMP)</td>
+      <td>To transform the 'updated_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The provided date-time strings are already in a format that can be directly interpreted as a timestamp (YYYY-MM-DD HH:MM:SS.mmm). Therefore, we don't need to use the strptime function for parsing. A straightforward CAST to TIMESTAMP will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>variant_id</td>
+      <td>CAST("variant_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'variant_id' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>weight</td>
+      <td>CAST("weight" AS DECIMAL)</td>
+      <td>To transform the 'weight' column from INT to DECIMAL, we need to use a CAST function. In DuckDB, the DECIMAL type is used for fixed-point numbers. Since the original column only has values 0 and 1, a simple CAST to DECIMAL without specifying precision and scale is sufficient. This will maintain the integrity of the data while changing its type to a decimal representation.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>8</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>barcode</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>image_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not all products require an image.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>inventory_management</td>
+      <td>60</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>option_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>option_3</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>original_price</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>sku</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>tax_code</td>
+      <td>80</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>barcode</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>inventory_management</td>
+      <td>60</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>option_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>option_3</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>original_price</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>sku</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>tax_code</td>
+      <td>80</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'my title here', 'value': 80.0}, {'label': 'my other title', 'value': 20.0}];
+    drawBarChart("bar_viz_title", data);
+data = [{'x': 1, 'y': 5}];
+    binWidth = 1;
+    drawHistogram("hist_viz_display_position", data, binWidth);
+data = [{'label': 'deny', 'value': 100.0}];
+    drawBarChart("bar_viz_inventory_policy", data);
+data = [{'label': 'manual', 'value': 100.0}];
+    drawBarChart("bar_viz_fulfillment_service", data);
+data = [{'label': 'inventory manag...', 'value': 100.0}];
+    drawBarChart("bar_viz_inventory_management", data);
+data = [{'label': 'False', 'value': 60.0}, {'label': 'True', 'value': 40.0}];
+    drawBarChart("bar_viz_is_taxable", data);
+data = [{'x': 5.55, 'y': 4}, {'x': 16.65, 'y': 0}, {'x': 27.75, 'y': 0}, {'x': 38.849999999999994, 'y': 0}, {'x': 49.95, 'y': 0}];
+    binWidth = 11.1;
+    drawHistogram("hist_viz_weight_grams", data, binWidth);
+data = [{'x': -4.875, 'y': 1}, {'x': -4.625, 'y': 0}, {'x': -4.375, 'y': 0}, {'x': -4.125, 'y': 0}, {'x': -3.875, 'y': 0}];
+    binWidth = 0.25;
+    drawHistogram("hist_viz_stock_quantity", data, binWidth);
+data = [{'label': 'lb', 'value': 100.0}];
+    drawBarChart("bar_viz_weight_unit", data);
+data = [{'x': -4.875, 'y': 1}, {'x': -4.625, 'y': 0}, {'x': -4.375, 'y': 0}, {'x': -4.125, 'y': 0}, {'x': -3.875, 'y': 0}];
+    binWidth = 0.25;
+    drawHistogram("hist_viz_previous_stock_quantity", data, binWidth);
+data = [{'label': 'False', 'value': 60.0}, {'label': 'True', 'value': 40.0}];
+    drawBarChart("bar_viz_requires_shipping", data);
+data = [{'label': 'TR9999', 'value': 100.0}];
+    drawBarChart("bar_viz_tax_code", data);
+data = [{'label': 'my title here', 'value': 80.0}, {'label': 'my other title', 'value': 20.0}];
+    drawBarChart("bar_viz_option_1", data);
+data = [{'label': '2021-03-08 16:3...', 'value': 20.0}, {'label': '2021-03-30 19:4...', 'value': 20.0}, {'label': '2021-03-17 16:3...', 'value': 20.0}, {'label': '2021-03-08 16:3...', 'value': 20.0}, {'label': '2019-06-25 18:3...', 'value': 20.0}];
+    drawBarChart("bar_viz_created_at", data);
+data = [];
+    drawBarChart("bar_viz_image_id", data);
+data = [{'label': '41356021661767', 'value': 20.0}, {'label': '30309980143686', 'value': 20.0}, {'label': '41367035936839', 'value': 20.0}, {'label': '41356022644807', 'value': 20.0}, {'label': '41384094924871', 'value': 20.0}];
+    drawBarChart("bar_viz_inventory_item_id", data);
+data = [{'label': '222', 'value': 20.0}, {'label': '333', 'value': 20.0}, {'label': '444', 'value': 20.0}, {'label': '111', 'value': 20.0}, {'label': '5', 'value': 20.0}];
+    drawBarChart("bar_viz_price", data);
+data = [{'label': '6540108431431', 'value': 20.0}, {'label': '6544066379847', 'value': 20.0}, {'label': '3879735590982', 'value': 20.0}, {'label': '6540109250631', 'value': 20.0}, {'label': '6548438188103', 'value': 20.0}];
+    drawBarChart("bar_viz_product_id", data);
+data = [{'label': '2021-04-12 19:4...', 'value': 20.0}, {'label': '2021-03-30 19:4...', 'value': 20.0}, {'label': '2021-04-12 19:4...', 'value': 20.0}, {'label': '2021-04-12 19:4...', 'value': 20.0}, {'label': '2019-10-01 23:4...', 'value': 20.0}];
+    drawBarChart("bar_viz_updated_at", data);
+data = [{'label': '29217058947142', 'value': 20.0}, {'label': '39262114414663', 'value': 20.0}, {'label': '39290169262151', 'value': 20.0}, {'label': '39262115397703', 'value': 20.0}, {'label': '39273118957639', 'value': 20.0}];
+    drawBarChart("bar_viz_variant_id", data);
+data = [{'x': 0.025, 'y': 4}, {'x': 0.07500000000000001, 'y': 0}, {'x': 0.125, 'y': 0}, {'x': 0.17500000000000002, 'y': 0}, {'x': 0.225, 'y': 0}];
+    binWidth = 0.05;
+    drawHistogram("hist_viz_weight", data, binWidth);
+
+
+</script>
+</body>
+</html>

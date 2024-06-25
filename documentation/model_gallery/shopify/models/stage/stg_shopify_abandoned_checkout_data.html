@@ -1,0 +1,2711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>shopify_abandoned_checkout_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>billing_address_address_1</th>
+      <th>billing_address_first_name</th>
+      <th>billing_address_name</th>
+      <th>currency</th>
+      <th>presentment_currency</th>
+      <th>billing_address_latitude</th>
+      <th>gateway</th>
+      <th>buyer_accepts_marketing</th>
+      <th>billing_address_address_0</th>
+      <th>billing_address_country</th>
+      <th>customer_locale</th>
+      <th>email</th>
+      <th>token</th>
+      <th>applied_discount_amount</th>
+      <th>taxes_included</th>
+      <th>customer_id</th>
+      <th>name</th>
+      <th>landing_site_base_url</th>
+      <th>billing_address_province_code</th>
+      <th>referring_site</th>
+      <th>billing_address_country_code</th>
+      <th>abandoned_checkout_url</th>
+      <th>source_name</th>
+      <th>billing_address_longitude</th>
+      <th>applied_discount_value</th>
+      <th>cart_token</th>
+      <th>billing_address_city</th>
+      <th>subtotal_price</th>
+      <th>billing_address_province</th>
+      <th>billing_address_last_name</th>
+      <th>created_at</th>
+      <th>billing_address_id</th>
+      <th>billing_address_company</th>
+      <th>billing_address_phone</th>
+      <th>billing_address_zip</th>
+      <th>credit_card_verification_value</th>
+      <th>credit_card_month</th>
+      <th>credit_card_year</th>
+      <th>credit_card_first_name</th>
+      <th>credit_card_last_name</th>
+      <th>credit_card_number</th>
+      <th>id</th>
+      <th>note_attributes</th>
+      <th>applied_discount_description</th>
+      <th>applied_discount_non_applicable_reason</th>
+      <th>applied_discount_title</th>
+      <th>applied_discount_value_type</th>
+      <th>updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>USD</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>paypal</td>
+      <td>False</td>
+      <td>None</td>
+      <td>None</td>
+      <td>en</td>
+      <td>tnyrnbs@hh.com</td>
+      <td>f050eda12f111b261</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>121</td>
+      <td>#10160311</td>
+      <td>/collections/the-archive-sale</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>https://kitties.com/1111311610/checkouts/f050eda125a10cca513162f01101b261/recover?key=bd0fdf1dc1a1af01aecbdaa3101ec063</td>
+      <td>web</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>aaaa211622dfb133</td>
+      <td>None</td>
+      <td>56.00</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-11-12 10:06:50.111111</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>12111</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-11-12 10:51:10.111111</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>village</td>
+      <td>ohio</td>
+      <td>hi</td>
+      <td>USD</td>
+      <td>None</td>
+      <td>1.126113</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Apt 0</td>
+      <td>Florida</td>
+      <td>en</td>
+      <td>hyrehher@gmail.com</td>
+      <td>a165dfd11226</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>366525</td>
+      <td>#13311</td>
+      <td>/collections/sale</td>
+      <td>PA-11</td>
+      <td>https://www.google.com/</td>
+      <td>US</td>
+      <td>https://kitties.com/1111311610/checkouts/6661ff02165dfd11b12db112f0111226/recover?key=51611efdff11e0caccc0fd30b0e1e202</td>
+      <td>web</td>
+      <td>-21.502661</td>
+      <td>NaN</td>
+      <td>611faa630ce5e6bcc0bacc2a105c0126</td>
+      <td>daytona Beach</td>
+      <td>10.35</td>
+      <td>Healdsburg</td>
+      <td>Calles</td>
+      <td>2020-05-11 01:01:30.111111</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>5.026611e+10</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>11111</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-05-11 01:06:35.111111</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>USD</td>
+      <td>USD</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>False</td>
+      <td>None</td>
+      <td>None</td>
+      <td>en</td>
+      <td>hernebbe@hr.com</td>
+      <td>l1abddd111c0211f2021c</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>160363</td>
+      <td>#166531</td>
+      <td>/collections/new</td>
+      <td>None</td>
+      <td>https://l.facebook.com/</td>
+      <td>None</td>
+      <td>https://kitties.com/1111311610/checkouts/0abddd111c0211f1e616ec0d0c32021c/recover?key=abed6505d26f1a60a50aa0c02e01be31</td>
+      <td>web</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>aaaaa61e1d11af3adfac1f0</td>
+      <td>None</td>
+      <td>191.00</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2021-11-11 02:05:13.111111</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>66531</td>
+      <td>[{"name":"segment-clientID","value":"610a111c-30fc-0bb6-a25e-06f201c6035c"},{"name":"_updatedAt","value":"1613121625150"}]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-11-11 02:05:55.111111</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>billing_address_line2</th>
+      <th>billing_first_name</th>
+      <th>billing_full_name</th>
+      <th>currency</th>
+      <th>display_currency</th>
+      <th>billing_latitude</th>
+      <th>payment_gateway</th>
+      <th>accepts_marketing</th>
+      <th>billing_address_line1</th>
+      <th>billing_country</th>
+      <th>customer_locale</th>
+      <th>email</th>
+      <th>checkout_token</th>
+      <th>discount_amount</th>
+      <th>taxes_included</th>
+      <th>customer_id</th>
+      <th>order_number</th>
+      <th>landing_page_url</th>
+      <th>billing_province_code</th>
+      <th>referral_source</th>
+      <th>billing_country_code</th>
+      <th>recovery_url</th>
+      <th>source_name</th>
+      <th>billing_longitude</th>
+      <th>discount_value</th>
+      <th>cart_token</th>
+      <th>billing_city</th>
+      <th>subtotal</th>
+      <th>billing_province</th>
+      <th>billing_last_name</th>
+      <th>abandoned_at</th>
+      <th>billing_address_id</th>
+      <th>billing_company</th>
+      <th>billing_phone</th>
+      <th>billing_zip</th>
+      <th>cc_cvv</th>
+      <th>cc_exp_month</th>
+      <th>cc_exp_year</th>
+      <th>cc_first_name</th>
+      <th>cc_last_name</th>
+      <th>cc_number</th>
+      <th>checkout_id</th>
+      <th>custom_attributes</th>
+      <th>discount_description</th>
+      <th>discount_non_applicable_reason</th>
+      <th>discount_title</th>
+      <th>discount_value_type</th>
+      <th>last_updated_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>USD</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>paypal</td>
+      <td>False</td>
+      <td>None</td>
+      <td>None</td>
+      <td>en</td>
+      <td>tnyrnbs@hh.com</td>
+      <td>f050eda12f111b261</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>121</td>
+      <td>#10160311</td>
+      <td>/collections/the-archive-sale</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>https://kitties.com/1111311610/checkouts/f050eda125a10cca513162f01101b261/recover?key=bd0fdf1dc1a1af01aecbdaa3101ec063</td>
+      <td>web</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>aaaa211622dfb133</td>
+      <td>None</td>
+      <td>56.00</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-11-12 10:06:50.111111</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>12111</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-11-12 10:51:10.111111</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>USD</td>
+      <td>None</td>
+      <td>1.126113</td>
+      <td>None</td>
+      <td>False</td>
+      <td>Apt 0</td>
+      <td>USA</td>
+      <td>en</td>
+      <td>hyrehher@gmail.com</td>
+      <td>a165dfd11226</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>366525</td>
+      <td>#13311</td>
+      <td>/collections/sale</td>
+      <td>PA-11</td>
+      <td>https://www.google.com/</td>
+      <td>US</td>
+      <td>https://kitties.com/1111311610/checkouts/6661ff02165dfd11b12db112f0111226/recover?key=51611efdff11e0caccc0fd30b0e1e202</td>
+      <td>web</td>
+      <td>-21.502661</td>
+      <td>NaN</td>
+      <td>611faa630ce5e6bcc0bacc2a105c0126</td>
+      <td>Daytona Beach</td>
+      <td>10.35</td>
+      <td>CA</td>
+      <td>Calles</td>
+      <td>2020-05-11 01:01:30.111111</td>
+      <td>None</td>
+      <td>None</td>
+      <td>50266111110.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>11111</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-05-11 01:06:35.111111</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>USD</td>
+      <td>USD</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>False</td>
+      <td>None</td>
+      <td>None</td>
+      <td>en</td>
+      <td>hernebbe@hr.com</td>
+      <td>l1abddd111c0211f2021c</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>160363</td>
+      <td>#166531</td>
+      <td>/collections/new</td>
+      <td>None</td>
+      <td>https://l.facebook.com/</td>
+      <td>None</td>
+      <td>https://kitties.com/1111311610/checkouts/0abddd111c0211f1e616ec0d0c32021c/recover?key=abed6505d26f1a60a50aa0c02e01be31</td>
+      <td>web</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>aaaaa61e1d11af3adfac1f0</td>
+      <td>None</td>
+      <td>191.00</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2021-11-11 02:05:13.111111</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>66531</td>
+      <td>[{"name":"segment-clientID","value":"610a111c-30fc-0bb6-a25e-06f201c6035c"},{"name":"_updatedAt","value":"1613121625150"}]</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2021-11-11 02:05:55.111111</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_address_line2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_address_line2"></div><b>📃 Summary:</b> Second line of billing address<br><b>❓ Missing:</b> No secondary address line needed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_first_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_first_name"></div><b>📃 Summary:</b> First name in billing address<br><b>❓ Missing:</b> No billing name provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_full_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_full_name"></div><b>📃 Summary:</b> Full name in billing address<br><b>❓ Missing:</b> No billing name provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency"></div><b>📃 Summary:</b> Currency used for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">display_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_display_currency"></div><b>📃 Summary:</b> Currency presented to the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_latitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_billing_latitude"></div><b>📃 Summary:</b> Latitude of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payment_gateway</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='PayPal'>PayPal</option><option value='Stripe'>Stripe</option><option value='Square'>Square</option><option value='Authorize.Net'>Authorize.Net</option><option value='Braintree'>Braintree</option><option value='2Checkout'>2Checkout</option><option value='Amazon Pay'>Amazon Pay</option><option value='Google Pay'>Google Pay</option><option value='Apple Pay'>Apple Pay</option><option value='Skrill'>Skrill</option><option value='Klarna'>Klarna</option><option value='Adyen'>Adyen</option><option value='WorldPay'>WorldPay</option><option value='Sage Pay'>Sage Pay</option><option value='Dwolla'>Dwolla</option><option value='WePay'>WePay</option><option value='Payoneer'>Payoneer</option><option value='BlueSnap'>BlueSnap</option><option value='Checkout.com'>Checkout.com</option><option value='Alipay'>Alipay</option><option value='paypal'>paypal</option></select></span><br><br><div id="bar_viz_payment_gateway"></div><b>📃 Summary:</b> Payment gateway used<br><b>❓ Missing:</b> Not applicable when payment hasn't been processed yet.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">accepts_marketing</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_accepts_marketing"></div><b>📃 Summary:</b> Indicates if buyer accepts marketing emails<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_address_line1</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_address_line1"></div><b>📃 Summary:</b> First line of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_country</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_country"></div><b>📃 Summary:</b> Country of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_locale</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_customer_locale"></div><b>📃 Summary:</b> Language/region setting of the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_email"></div><b>📃 Summary:</b> Customer's email address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">checkout_token</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_checkout_token"></div><b>📃 Summary:</b> Unique token for the abandoned checkout<br><b>🦄 Unique:</b> This column contains a unique token for each abandoned checkout. For this table, each row is an abandoned checkout. Checkout token is designed to be a unique identifier for each checkout session.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">discount_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_discount_amount"></div><b>📃 Summary:</b> Amount of discount applied to the order<br><b>❓ Missing:</b> No discount applied to the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">taxes_included</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_taxes_included"></div><b>📃 Summary:</b> Whether taxes are included in the price<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_customer_id"></div><b>📃 Summary:</b> Unique identifier for the customer who abandoned the cart<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_order_number"></div><b>📃 Summary:</b> Order number or identifier<br><b>🦄 Unique:</b> This column contains an order number or identifier. For this table, each row is an abandoned checkout. Order numbers are typically unique for each order or checkout attempt.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">landing_page_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_landing_page_url"></div><b>📃 Summary:</b> URL of the page where customer entered site<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_province_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_province_code"></div><b>📃 Summary:</b> Province or state code of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">referral_source</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_referral_source"></div><b>📃 Summary:</b> Website that referred the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_country_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_country_code"></div><b>📃 Summary:</b> Country code of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">recovery_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_recovery_url"></div><b>📃 Summary:</b> URL for recovering the abandoned checkout<br><b>🦄 Unique:</b> This column contains the URL for recovering the abandoned checkout. For this table, each row is an abandoned checkout. The recovery URL appears to be unique for each abandoned checkout, as it contains a unique token.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">source_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='web'>web</option><option value='mobile'>mobile</option><option value='desktop'>desktop</option><option value='tablet'>tablet</option><option value='kiosk'>kiosk</option><option value='api'>api</option><option value='in-store'>in-store</option><option value='phone'>phone</option><option value='mail'>mail</option><option value='fax'>fax</option><option value='social_media'>social_media</option><option value='voice_assistant'>voice_assistant</option><option value='smartwatch'>smartwatch</option><option value='smart_tv'>smart_tv</option><option value='game_console'>game_console</option><option value='iot_device'>iot_device</option></select></span><br><br><div id="bar_viz_source_name"></div><b>📃 Summary:</b> Name of the checkout source<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_longitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_billing_longitude"></div><b>📃 Summary:</b> Longitude of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">discount_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_discount_value"></div><b>📃 Summary:</b> Value of the applied discount<br><b>❓ Missing:</b> No discount applied to the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cart_token</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_cart_token"></div><b>📃 Summary:</b> Unique identifier for the shopping cart<br><b>🦄 Unique:</b> This column contains a unique identifier for the shopping cart. For this table, each row is an abandoned checkout. The cart token is likely to be unique for each abandoned cart.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_city"></div><b>📃 Summary:</b> City of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">subtotal</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_subtotal"></div><b>📃 Summary:</b> Subtotal of the order before taxes/shipping<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_province</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_province"></div><b>📃 Summary:</b> Province or state of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_last_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_last_name"></div><b>📃 Summary:</b> Last name in billing address<br><b>❓ Missing:</b> No billing name provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">abandoned_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_abandoned_at"></div><b>📃 Summary:</b> Timestamp of when the checkout was abandoned<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_address_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_address_id"></div><b>📃 Summary:</b> Unique identifier for billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_company</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_company"></div><b>📃 Summary:</b> Company name in billing address<br><b>❓ Missing:</b> No company associated with the billing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_phone</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_phone"></div><b>📃 Summary:</b> Phone number in billing address<br><b>❓ Missing:</b> No phone number provided for billing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_zip</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_billing_zip"></div><b>📃 Summary:</b> ZIP or postal code of billing address<br><b>❓ Missing:</b> No billing address provided for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cc_cvv</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cc_cvv"></div><b>📃 Summary:</b> CVV of the credit card<br><b>❓ Missing:</b> Credit card not used for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cc_exp_month</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cc_exp_month"></div><b>📃 Summary:</b> Expiration month of the credit card<br><b>❓ Missing:</b> Credit card not used for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cc_exp_year</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cc_exp_year"></div><b>📃 Summary:</b> Expiration year of the credit card<br><b>❓ Missing:</b> Credit card not used for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cc_first_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cc_first_name"></div><b>📃 Summary:</b> First name on the credit card<br><b>❓ Missing:</b> Credit card not used for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cc_last_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cc_last_name"></div><b>📃 Summary:</b> Last name on the credit card<br><b>❓ Missing:</b> Credit card not used for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cc_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cc_number"></div><b>📃 Summary:</b> Credit card number (likely masked)<br><b>❓ Missing:</b> Credit card not used for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">checkout_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_checkout_id"></div><b>📃 Summary:</b> Unique identifier for the abandoned checkout<br><b>🦄 Unique:</b> This column is a unique identifier for the abandoned checkout. For this table, each row represents a unique abandoned cart. As it's designed to be a unique identifier, it should be unique across all rows and can identify each abandoned cart uniquely.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">custom_attributes</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_custom_attributes"></div><b>📃 Summary:</b> Custom attributes for the order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">discount_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_discount_description"></div><b>📃 Summary:</b> Description of the applied discount<br><b>❓ Missing:</b> No discount applied to the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">discount_non_applicable_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_discount_non_applicable_reason"></div><b>📃 Summary:</b> Reason why discount is not applicable<br><b>❓ Missing:</b> No discount applied to the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">discount_title</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_discount_title"></div><b>📃 Summary:</b> Title of the applied discount<br><b>❓ Missing:</b> No discount applied to the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">discount_value_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_discount_value_type"></div><b>📃 Summary:</b> Type of discount value (percentage or fixed)<br><b>❓ Missing:</b> No discount applied to the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_updated_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_updated_at"></div><b>📃 Summary:</b> Timestamp of when the abandoned cart was last updated<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about abandoned checkouts on a Shopify store. It contains details of incomplete orders including customer information, billing address, product details, pricing, and checkout URLs. Each row represents a single abandoned cart with data like email, currency, subtotal, and timestamps. The table tracks customer behavior and potential sales that were not completed.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>47</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record was deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>abandoned_checkout_url</td>
+      <td>URL for recovering the abandoned checkout</td>
+      <td>recovery_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>applied_discount_amount</td>
+      <td>Amount of discount applied to the order</td>
+      <td>discount_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>applied_discount_applicable</td>
+      <td>Indicates if the discount is applicable</td>
+      <td>is_discount_applicable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>applied_discount_description</td>
+      <td>Description of the applied discount</td>
+      <td>discount_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>applied_discount_non_applicable_reason</td>
+      <td>Reason why discount is not applicable</td>
+      <td>discount_non_applicable_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>applied_discount_title</td>
+      <td>Title of the applied discount</td>
+      <td>discount_title</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>applied_discount_value</td>
+      <td>Value of the applied discount</td>
+      <td>discount_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>applied_discount_value_type</td>
+      <td>Type of discount value (percentage or fixed)</td>
+      <td>discount_value_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>billing_address_address_0</td>
+      <td>First line of billing address</td>
+      <td>billing_address_line1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>billing_address_address_1</td>
+      <td>Second line of billing address</td>
+      <td>billing_address_line2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>billing_address_city</td>
+      <td>City of billing address</td>
+      <td>billing_city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>billing_address_company</td>
+      <td>Company name in billing address</td>
+      <td>billing_company</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>billing_address_country</td>
+      <td>Country of billing address</td>
+      <td>billing_country</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>billing_address_country_code</td>
+      <td>Country code of billing address</td>
+      <td>billing_country_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>billing_address_first_name</td>
+      <td>First name in billing address</td>
+      <td>billing_first_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>billing_address_id</td>
+      <td>Unique identifier for billing address</td>
+      <td>billing_address_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>billing_address_is_default</td>
+      <td>Indicates if it's the default billing address</td>
+      <td>is_default_billing_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>billing_address_last_name</td>
+      <td>Last name in billing address</td>
+      <td>billing_last_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>billing_address_latitude</td>
+      <td>Latitude of billing address</td>
+      <td>billing_latitude</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>billing_address_longitude</td>
+      <td>Longitude of billing address</td>
+      <td>billing_longitude</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>billing_address_name</td>
+      <td>Full name in billing address</td>
+      <td>billing_full_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>billing_address_phone</td>
+      <td>Phone number in billing address</td>
+      <td>billing_phone</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>billing_address_province</td>
+      <td>Province or state of billing address</td>
+      <td>billing_province</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>billing_address_province_code</td>
+      <td>Province or state code of billing address</td>
+      <td>billing_province_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>billing_address_zip</td>
+      <td>ZIP or postal code of billing address</td>
+      <td>billing_zip</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>buyer_accepts_marketing</td>
+      <td>Indicates if buyer accepts marketing emails</td>
+      <td>accepts_marketing</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>cart_token</td>
+      <td>Unique identifier for the shopping cart</td>
+      <td>cart_token</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>closed_at</td>
+      <td>Timestamp when the checkout was closed</td>
+      <td>closed_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>completed_at</td>
+      <td>Timestamp when the checkout was completed</td>
+      <td>completed_at</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>created_at</td>
+      <td>Timestamp of when the checkout was abandoned</td>
+      <td>abandoned_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>credit_card_first_name</td>
+      <td>First name on the credit card</td>
+      <td>cc_first_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>credit_card_last_name</td>
+      <td>Last name on the credit card</td>
+      <td>cc_last_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>credit_card_month</td>
+      <td>Expiration month of the credit card</td>
+      <td>cc_exp_month</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>credit_card_number</td>
+      <td>Credit card number (likely masked)</td>
+      <td>cc_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>credit_card_verification_value</td>
+      <td>CVV of the credit card</td>
+      <td>cc_cvv</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>credit_card_year</td>
+      <td>Expiration year of the credit card</td>
+      <td>cc_exp_year</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>currency</td>
+      <td>Currency used for the transaction</td>
+      <td>currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>customer_id</td>
+      <td>Unique identifier for the customer</td>
+      <td>customer_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>customer_locale</td>
+      <td>Language/region setting of the customer</td>
+      <td>customer_locale</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>device_id</td>
+      <td>Identifier for the customer's device</td>
+      <td>device_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>email</td>
+      <td>Customer's email address</td>
+      <td>email</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>gateway</td>
+      <td>Payment gateway used</td>
+      <td>payment_gateway</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>id</td>
+      <td>Unique identifier for the abandoned checkout</td>
+      <td>checkout_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>landing_site_base_url</td>
+      <td>URL of the page where customer entered site</td>
+      <td>landing_page_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>location_id</td>
+      <td>Identifier for the store location</td>
+      <td>location_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>name</td>
+      <td>Order number or identifier</td>
+      <td>order_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>note</td>
+      <td>Additional notes for the order</td>
+      <td>order_notes</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>note_attributes</td>
+      <td>Custom attributes for the order</td>
+      <td>custom_attributes</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>phone</td>
+      <td>Customer's phone number</td>
+      <td>phone</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>presentment_currency</td>
+      <td>Currency presented to the customer</td>
+      <td>display_currency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>referring_site</td>
+      <td>Website that referred the customer</td>
+      <td>referral_source</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>shipping_line</td>
+      <td>Shipping method and cost</td>
+      <td>shipping_details</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>source</td>
+      <td>Source of the abandoned checkout</td>
+      <td>checkout_source</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>source_identifier</td>
+      <td>Identifier for the checkout source</td>
+      <td>source_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>source_name</td>
+      <td>Name of the checkout source</td>
+      <td>source_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>source_url</td>
+      <td>URL of the checkout source</td>
+      <td>source_url</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>subtotal_price</td>
+      <td>Subtotal of the order before taxes/shipping</td>
+      <td>subtotal</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>taxes_included</td>
+      <td>Whether taxes are included in the price</td>
+      <td>taxes_included</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>token</td>
+      <td>Unique token for the abandoned checkout</td>
+      <td>checkout_token</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>updated_at</td>
+      <td>Timestamp of when the abandoned cart was last updated</td>
+      <td>last_updated_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>user_id</td>
+      <td>Unique identifier for the customer who abandoned the cart</td>
+      <td>user_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>6</b> columns have erroneous values<br><ol><li><b>billing_address_line2</b>: 'village' is unusual because it's too generic for an address line 2 and lacks specific information.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>village</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_city</b>: 'daytona Beach' is unusual because it should be capitalized as 'Daytona Beach'.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>daytona Beach</td>
+      <td>Daytona Beach</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_country</b>: 'Florida' is unusual because it's a state, not a country, in a field named billing_country.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Florida</td>
+      <td>USA</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_first_name</b>: 'ohio' is unusual because it's a state name, not a typical first name for billing information.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>ohio</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_full_name</b>: 'hi' is unusual because it's not a valid full name for billing purposes.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>hi</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>billing_province</b>: 'Healdsburg' is unusual because it's a city name, not a province or state.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Healdsburg</td>
+      <td>CA</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>3</b> columns have disguised missing values<br>
+                ✔️ <b>3</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>billing_address_line2</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>billing_first_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_full_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>32</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>abandoned_at</td>
+      <td>CAST("abandoned_at" AS TIMESTAMP)</td>
+      <td>To transform the 'abandoned_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The provided data is already in a format that can be directly cast to TIMESTAMP without needing to use strptime(). This is because the data is in the ISO 8601 format (YYYY-MM-DD HH:MM:SS.SSSSSS), which is directly compatible with TIMESTAMP casting in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>billing_address_id</td>
+      <td>CAST("billing_address_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'billing_address_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword to explicitly convert the column to VARCHAR data type.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_company</td>
+      <td>CAST("billing_company" AS VARCHAR)</td>
+      <td>To transform the data type of the 'billing_company' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case). This will convert all values in the 'billing_company' column to strings.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>billing_phone</td>
+      <td>CAST("billing_phone" AS VARCHAR)</td>
+      <td>To transform the 'billing_phone' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric value to its string representation. In DuckDB, the CAST function can be used with the AS keyword to specify the target data type. We'll use VARCHAR as the target type to convert the decimal values to strings.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>billing_zip</td>
+      <td>CAST("billing_zip" AS VARCHAR)</td>
+      <td>To transform the data type of the 'billing_zip' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. This will convert the numeric values to their string representation. Since DuckDB syntax is similar to standard SQL for this operation, we can use the CAST function directly.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>cc_cvv</td>
+      <td>CAST("cc_cvv" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cc_cvv' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. This will convert each value in the column to a string representation. In DuckDB, the syntax for this is straightforward and doesn't require any additional formatting or length specification for VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>cc_exp_month</td>
+      <td>CAST("cc_exp_month" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'cc_exp_month' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we can still perform the cast operation, which will work for any decimal values present in the column.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>cc_exp_year</td>
+      <td>CAST("cc_exp_year" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cc_exp_year' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>cc_first_name</td>
+      <td>CAST("cc_first_name" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'cc_first_name' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>cc_last_name</td>
+      <td>CAST("cc_last_name" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'cc_last_name' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. This will convert the numeric values to their string representation. Although the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>cc_number</td>
+      <td>CAST("cc_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cc_number' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to implement.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>checkout_id</td>
+      <td>CAST("checkout_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'checkout_id' column from INT to VARCHAR, we need to use a CAST function in DuckDB. This will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to implement.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>checkout_source</td>
+      <td>CAST("checkout_source" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'checkout_source' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional formatting or length specification for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>closed_at</td>
+      <td>CAST("closed_at" AS TIMESTAMP)</td>
+      <td>To transform the 'closed_at' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column 'closed_at' has no distinct values (it's empty), we don't need to worry about formatting or parsing specific date-time strings. A straightforward CAST should suffice to change the data type.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>completed_at</td>
+      <td>CAST("completed_at" AS TIMESTAMP)</td>
+      <td>To transform the 'completed_at' column from DECIMAL to TIMESTAMP, we don't need any complex conversion or formatting. Since the column is already empty (has no distinct values), a simple CAST operation will suffice. This will change the data type of the column without affecting its content.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>custom_attributes</td>
+      <td>CAST("custom_attributes" AS JSON)</td>
+      <td>To transform the 'custom_attributes' column from VARCHAR to JSON in DuckDB, we need to use the CAST function. The column already contains JSON-formatted strings, so a simple CAST to JSON should suffice. This will parse the string content as JSON, allowing for easier manipulation and querying of the nested data structure.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>device_id</td>
+      <td>CAST("device_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'device_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'device_id' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>discount_description</td>
+      <td>CAST("discount_description" AS VARCHAR)</td>
+      <td>To transform the data type of the 'discount_description' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>discount_non_applicable_reason</td>
+      <td>CAST("discount_non_applicable_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'discount_non_applicable_reason' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>discount_title</td>
+      <td>CAST("discount_title" AS VARCHAR)</td>
+      <td>To transform the data type of the 'discount_title' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>discount_value_type</td>
+      <td>CAST("discount_value_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'discount_value_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently empty (as indicated by the empty list of distinct values), this transformation will not change any existing data but will modify the column's data type for future insertions.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>is_default_billing_address</td>
+      <td>CAST("is_default_billing_address" AS BOOLEAN)</td>
+      <td>To transform the data type of the column 'is_default_billing_address' from DECIMAL to BOOLEAN, we need to use a simple CAST function. In DuckDB, we can directly cast a DECIMAL to a BOOLEAN. The cast will follow these rules: 1. 0 will be cast to FALSE 2. Any non-zero value will be cast to TRUE 3. NULL values will remain NULL\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>is_deleted</td>
+      <td>CAST("is_deleted" AS BOOLEAN)</td>
+      <td>To transform the 'is_deleted' column from DECIMAL to BOOLEAN in DuckDB, we need to use a simple CAST function. Since the distinct values of 'is_deleted' are empty ([]), it suggests that the column might contain only NULL values or it's empty. However, we can still perform the cast operation. In DuckDB, when casting from DECIMAL to BOOLEAN, 0 is considered FALSE, and any non-zero value is considered TRUE. NULL values will remain NULL after the cast.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>is_discount_applicable</td>
+      <td>CAST("is_discount_applicable" AS BOOLEAN)</td>
+      <td>To transform the 'is_discount_applicable' column from DECIMAL to BOOLEAN, we need to use a simple CAST clause. In DuckDB, we can directly cast a numeric value to BOOLEAN. When casting to BOOLEAN, any non-zero value will be considered TRUE, while zero will be considered FALSE. This is a straightforward conversion that doesn't require any additional logic since the column appears to contain only numeric values (as it was originally DECIMAL).\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>last_updated_at</td>
+      <td>CAST("last_updated_at" AS TIMESTAMP)</td>
+      <td>To transform the 'last_updated_at' column from VARCHAR to TIMESTAMP in DuckDB, we don't need to use the strptime function because the date-time format in the given values is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.SSSSSS). DuckDB can automatically parse this format when casting to TIMESTAMP. Therefore, we can use a simple CAST function to convert the column to TIMESTAMP data type.\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>location_id</td>
+      <td>CAST("location_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'location_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Even though the distinct values list is empty, we can still perform this cast operation on the column.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>order_notes</td>
+      <td>CAST("order_notes" AS VARCHAR)</td>
+      <td>To transform the data type of the 'order_notes' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'order_notes' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>phone</td>
+      <td>CAST("phone" AS VARCHAR)</td>
+      <td>To transform the data type of the 'phone' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'phone' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>shipping_details</td>
+      <td>CAST("shipping_details" AS JSON)</td>
+      <td>To transform the 'shipping_details' column from DECIMAL to JSON, we need to use a simple CAST clause. However, it's important to note that casting from DECIMAL to JSON is not a typical operation and may not produce meaningful results. Usually, JSON would contain more complex data structures. If the column is actually storing JSON data as a string and was mistakenly typed as DECIMAL, this cast will convert it to a proper JSON type. If it truly contains decimal values, the cast will convert each number to a JSON number.\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>source_id</td>
+      <td>CAST("source_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'source_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Since the question states that 'source_id' has no distinct values (an empty list), this transformation will effectively create an empty VARCHAR column, but the syntax remains the same regardless of the content.\n</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>source_url</td>
+      <td>CAST("source_url" AS VARCHAR)</td>
+      <td>To transform the data type of the 'source_url' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each value in the column to a string representation. Even though the distinct values list is empty, we can still perform this cast operation on the column.\n</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>user_id</td>
+      <td>CAST("user_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'user_id' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each numeric value in the 'user_id' column to its string representation. Since the column is already of type DECIMAL, we don't need any additional formatting or manipulation before casting to VARCHAR.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>46</b> columns have missing values<br>
+                ✔️ <b>29</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>billing_address_id</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>billing_address_line1</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>billing_address_line2</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No secondary address line needed</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>billing_city</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>billing_company</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No company associated with the billing</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>billing_country</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>billing_country_code</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>billing_first_name</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing name provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>billing_full_name</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing name provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>billing_last_name</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing name provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>billing_latitude</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>billing_longitude</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>billing_phone</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No phone number provided for billing</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>billing_province</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>billing_province_code</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>billing_zip</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No billing address provided for the transaction</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>cc_cvv</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Credit card not used for the transaction</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>cc_exp_month</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Credit card not used for the transaction</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>cc_exp_year</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Credit card not used for the transaction</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>cc_first_name</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Credit card not used for the transaction</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>cc_last_name</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Credit card not used for the transaction</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>cc_number</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Credit card not used for the transaction</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>checkout_source</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>closed_at</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>completed_at</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>custom_attributes</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>device_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>discount_amount</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No discount applied to the transaction</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>discount_description</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No discount applied to the transaction</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>discount_non_applicable_reason</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No discount applied to the transaction</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>discount_title</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No discount applied to the transaction</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>discount_value</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No discount applied to the transaction</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>discount_value_type</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No discount applied to the transaction</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>display_currency</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>is_default_billing_address</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>is_deleted</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>is_discount_applicable</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>location_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>order_notes</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>payment_gateway</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>Not applicable when payment hasn't been processed yet.</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>phone</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>referral_source</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>shipping_details</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>source_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>source_url</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>user_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>checkout_source</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>closed_at</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>completed_at</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>custom_attributes</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>device_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>display_currency</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>is_default_billing_address</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>is_deleted</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>is_discount_applicable</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>location_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>order_notes</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>phone</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>referral_source</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>shipping_details</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>source_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>source_url</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>user_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [];
+    drawBarChart("bar_viz_billing_address_line2", data);
+data = [];
+    drawBarChart("bar_viz_billing_first_name", data);
+data = [];
+    drawBarChart("bar_viz_billing_full_name", data);
+data = [{'label': 'USD', 'value': 100.0}];
+    drawBarChart("bar_viz_currency", data);
+data = [{'label': 'USD', 'value': 100.0}];
+    drawBarChart("bar_viz_display_currency", data);
+data = [{'x': 1.1261131111, 'y': 1}];
+    binWidth = 1.1261131111;
+    drawHistogram("hist_viz_billing_latitude", data, binWidth);
+data = [{'label': 'paypal', 'value': 100.0}];
+    drawBarChart("bar_viz_payment_gateway", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_accepts_marketing", data);
+data = [{'label': 'Apt 0', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_address_line1", data);
+data = [{'label': 'USA', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_country", data);
+data = [{'label': 'en', 'value': 100.0}];
+    drawBarChart("bar_viz_customer_locale", data);
+data = [{'label': 'hyrehher@gmail....', 'value': 33.33333333333333}, {'label': 'hernebbe@hr.com', 'value': 33.33333333333333}, {'label': 'tnyrnbs@hh.com', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_email", data);
+data = [{'label': 'f050eda12f111b2...', 'value': 33.33333333333333}, {'label': 'a165dfd11226', 'value': 33.33333333333333}, {'label': 'l1abddd111c0211...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_checkout_token", data);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_discount_amount", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_taxes_included", data);
+data = [{'x': 9281.1, 'y': 1}, {'x': 27601.300000000003, 'y': 0}, {'x': 45921.5, 'y': 0}];
+    binWidth = 18320.2;
+    drawHistogram("hist_viz_customer_id", data, binWidth);
+data = [{'label': '#10160311', 'value': 33.33333333333333}, {'label': '#13311', 'value': 33.33333333333333}, {'label': '#166531', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_order_number", data);
+data = [{'label': '/collections/th...', 'value': 33.33333333333333}, {'label': '/collections/sa...', 'value': 33.33333333333333}, {'label': '/collections/ne...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_landing_page_url", data);
+data = [{'label': 'PA-11', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_province_code", data);
+data = [{'label': 'https://www.goo...', 'value': 50.0}, {'label': 'https://l.faceb...', 'value': 50.0}];
+    drawBarChart("bar_viz_referral_source", data);
+data = [{'label': 'US', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_country_code", data);
+data = [{'label': 'https://kitties...', 'value': 33.33333333333333}, {'label': 'https://kitties...', 'value': 33.33333333333333}, {'label': 'https://kitties...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_recovery_url", data);
+data = [{'label': 'web', 'value': 100.0}];
+    drawBarChart("bar_viz_source_name", data);
+data = [{'x': -21.502661, 'y': 1}];
+    binWidth = -21.502661;
+    drawHistogram("hist_viz_billing_longitude", data, binWidth);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_discount_value", data, binWidth);
+data = [{'label': 'aaaa211622dfb13...', 'value': 33.33333333333333}, {'label': '611faa630ce5e6b...', 'value': 33.33333333333333}, {'label': 'aaaaa61e1d11af3...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_cart_token", data);
+data = [{'label': 'Daytona Beach', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_city", data);
+data = [{'x': 14.86625, 'y': 1}, {'x': 23.89875, 'y': 0}, {'x': 32.931250000000006, 'y': 0}];
+    binWidth = 9.0325;
+    drawHistogram("hist_viz_subtotal", data, binWidth);
+data = [{'label': 'CA', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_province", data);
+data = [{'label': 'Calles', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_last_name", data);
+data = [{'label': '2020-11-12 10:0...', 'value': 33.33333333333333}, {'label': '2020-05-11 01:0...', 'value': 33.33333333333333}, {'label': '2021-11-11 02:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_abandoned_at", data);
+data = [];
+    drawBarChart("bar_viz_billing_address_id", data);
+data = [];
+    drawBarChart("bar_viz_billing_company", data);
+data = [{'label': '50266111110.0', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_phone", data);
+data = [];
+    drawBarChart("bar_viz_billing_zip", data);
+data = [];
+    drawBarChart("bar_viz_cc_cvv", data);
+data = [];
+    drawBarChart("bar_viz_cc_exp_month", data);
+data = [];
+    drawBarChart("bar_viz_cc_exp_year", data);
+data = [];
+    drawBarChart("bar_viz_cc_first_name", data);
+data = [];
+    drawBarChart("bar_viz_cc_last_name", data);
+data = [];
+    drawBarChart("bar_viz_cc_number", data);
+data = [{'label': '11111', 'value': 33.33333333333333}, {'label': '66531', 'value': 33.33333333333333}, {'label': '12111', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_checkout_id", data);
+data = [{'label': '[{"name":"segme...', 'value': 100.0}];
+    drawBarChart("bar_viz_custom_attributes", data);
+data = [];
+    drawBarChart("bar_viz_discount_description", data);
+data = [];
+    drawBarChart("bar_viz_discount_non_applicable_reason", data);
+data = [];
+    drawBarChart("bar_viz_discount_title", data);
+data = [];
+    drawBarChart("bar_viz_discount_value_type", data);
+data = [{'label': '2020-11-12 10:5...', 'value': 33.33333333333333}, {'label': '2021-11-11 02:0...', 'value': 33.33333333333333}, {'label': '2020-05-11 01:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_last_updated_at", data);
+
+
+</script>
+</body>
+</html>

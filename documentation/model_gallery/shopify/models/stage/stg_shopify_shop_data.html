@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>shopify_shop_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>setup_required</th>
+      <th>timezone</th>
+      <th>force_ssl</th>
+      <th>weight_unit</th>
+      <th>county_taxes</th>
+      <th>plan_display_name</th>
+      <th>has_gift_cards</th>
+      <th>cookie_consent_level</th>
+      <th>checkout_api_supported</th>
+      <th>_fivetran_deleted</th>
+      <th>eligible_for_payments</th>
+      <th>longitude</th>
+      <th>has_discounts</th>
+      <th>myshopify_domain</th>
+      <th>country_name</th>
+      <th>address_1</th>
+      <th>iana_timezone</th>
+      <th>password_enabled</th>
+      <th>domain_</th>
+      <th>has_storefront</th>
+      <th>province_code</th>
+      <th>email</th>
+      <th>country_code</th>
+      <th>multi_location_enabled</th>
+      <th>primary_locale</th>
+      <th>money_with_currency_format</th>
+      <th>taxes_included</th>
+      <th>currency</th>
+      <th>latitude</th>
+      <th>shop_owner</th>
+      <th>pre_launch_enabled</th>
+      <th>city</th>
+      <th>money_format</th>
+      <th>plan_name</th>
+      <th>money_in_emails_format</th>
+      <th>name</th>
+      <th>visitor_tracking_consent_preference</th>
+      <th>eligible_for_card_reader_giveaway</th>
+      <th>id</th>
+      <th>country</th>
+      <th>customer_email</th>
+      <th>requires_extra_payments_agreement</th>
+      <th>money_with_currency_in_emails_format</th>
+      <th>province</th>
+      <th>created_at</th>
+      <th>enabled_presentment_currencies</th>
+      <th>google_apps_domain</th>
+      <th>google_apps_login_enabled</th>
+      <th>updated_at</th>
+      <th>phone</th>
+      <th>zip</th>
+      <th>primary_location_id</th>
+      <th>tax_shipping</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>(GMT-05:00) America/New_York</td>
+      <td>True</td>
+      <td>lb</td>
+      <td>True</td>
+      <td>Shopify Plus</td>
+      <td>True</td>
+      <td>implicit</td>
+      <td>True</td>
+      <td>False</td>
+      <td>True</td>
+      <td>-123.12345</td>
+      <td>True</td>
+      <td>kitties.myshopify.com</td>
+      <td>United States</td>
+      <td>1 Main Street</td>
+      <td>America/New_York</td>
+      <td>False</td>
+      <td>kitties.com</td>
+      <td>True</td>
+      <td>NY</td>
+      <td>abc@kitties.com</td>
+      <td>US</td>
+      <td>True</td>
+      <td>en</td>
+      <td>${{amount}} USD</td>
+      <td>False</td>
+      <td>USD</td>
+      <td>80.1234</td>
+      <td>Garrett &amp; Alfredo</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>${{amount}}</td>
+      <td>shopify_plus</td>
+      <td>${{amount}}</td>
+      <td>Garrett &amp; Alfredo</td>
+      <td>allow_all</td>
+      <td>True</td>
+      <td>689</td>
+      <td>US</td>
+      <td>noreply@kitties.com</td>
+      <td>False</td>
+      <td>${{amount}} USD</td>
+      <td>New York</td>
+      <td>2018-12-10 16:24:00.000000</td>
+      <td>["USD"]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-12-07 00:26:36.000000</td>
+      <td>13373</td>
+      <td>10014</td>
+      <td>1234646345</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>setup_required</th>
+      <th>timezone</th>
+      <th>ssl_enforced</th>
+      <th>weight_unit</th>
+      <th>county_taxes_applied</th>
+      <th>plan_display_name</th>
+      <th>gift_cards_offered</th>
+      <th>cookie_consent_level</th>
+      <th>checkout_api_support</th>
+      <th>is_deleted</th>
+      <th>payment_processing_eligible</th>
+      <th>longitude</th>
+      <th>discounts_offered</th>
+      <th>shopify_domain</th>
+      <th>country_name</th>
+      <th>primary_address</th>
+      <th>shop_timezone</th>
+      <th>password_protection_enabled</th>
+      <th>shop_domain</th>
+      <th>storefront_active</th>
+      <th>state_province_code</th>
+      <th>owner_email</th>
+      <th>iso_country_code</th>
+      <th>multi_location_enabled</th>
+      <th>primary_language</th>
+      <th>money_with_currency_format</th>
+      <th>taxes_included</th>
+      <th>primary_currency</th>
+      <th>latitude</th>
+      <th>shop_owner</th>
+      <th>pre_launch_enabled</th>
+      <th>city</th>
+      <th>money_format</th>
+      <th>plan_name</th>
+      <th>email_currency_format</th>
+      <th>store_name</th>
+      <th>tracking_consent_preference</th>
+      <th>card_reader_promo_eligible</th>
+      <th>shop_id</th>
+      <th>country_code</th>
+      <th>customer_contact_email</th>
+      <th>extra_payment_agreement_required</th>
+      <th>email_currency_display_format</th>
+      <th>state_province</th>
+      <th>creation_timestamp</th>
+      <th>enabled_currencies</th>
+      <th>google_apps_domain</th>
+      <th>google_apps_login_enabled</th>
+      <th>last_updated</th>
+      <th>phone</th>
+      <th>postal_code</th>
+      <th>primary_location_id</th>
+      <th>tax_on_shipping</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>(GMT-05:00) America/New_York</td>
+      <td>True</td>
+      <td>lb</td>
+      <td>True</td>
+      <td>Shopify Plus</td>
+      <td>True</td>
+      <td>implicit</td>
+      <td>True</td>
+      <td>False</td>
+      <td>True</td>
+      <td>-123.12345</td>
+      <td>True</td>
+      <td>kitties.myshopify.com</td>
+      <td>United States</td>
+      <td>1 Main Street</td>
+      <td>America/New_York</td>
+      <td>False</td>
+      <td>kitties.com</td>
+      <td>True</td>
+      <td>NY</td>
+      <td>abc@kitties.com</td>
+      <td>US</td>
+      <td>True</td>
+      <td>en</td>
+      <td>${{amount}} USD</td>
+      <td>False</td>
+      <td>USD</td>
+      <td>80.1234</td>
+      <td>Garrett &amp; Alfredo</td>
+      <td>False</td>
+      <td>New York</td>
+      <td>${{amount}}</td>
+      <td>shopify_plus</td>
+      <td>${{amount}}</td>
+      <td>Garrett &amp; Alfredo</td>
+      <td>allow_all</td>
+      <td>True</td>
+      <td>689</td>
+      <td>US</td>
+      <td>noreply@kitties.com</td>
+      <td>False</td>
+      <td>${{amount}} USD</td>
+      <td>New York</td>
+      <td>2018-12-10 16:24:00</td>
+      <td>[USD]</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-12-07 00:26:36</td>
+      <td>13373</td>
+      <td>10014</td>
+      <td>1234646345</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">setup_required</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_setup_required"></div><b>📃 Summary:</b> Store setup completion status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">timezone</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_timezone"></div><b>📃 Summary:</b> Store's timezone<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ssl_enforced</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_ssl_enforced"></div><b>📃 Summary:</b> Indicates if SSL is enforced<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">weight_unit</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='lb'>lb</option><option value='kg'>kg</option><option value='g'>g</option><option value='oz'>oz</option><option value='t'>t</option><option value='mg'>mg</option><option value='stone'>stone</option><option value='cwt'>cwt</option><option value='µg'>µg</option><option value='slug'>slug</option></select></span><br><br><div id="bar_viz_weight_unit"></div><b>📃 Summary:</b> Unit of weight measurement<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">county_taxes_applied</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_county_taxes_applied"></div><b>📃 Summary:</b> Indicates if county taxes are applied<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">plan_display_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Basic'>Basic</option><option value='Shopify'>Shopify</option><option value='Advanced'>Advanced</option><option value='Shopify Plus'>Shopify Plus</option><option value='Starter'>Starter</option><option value='Lite'>Lite</option></select></span><br><br><div id="bar_viz_plan_display_name"></div><b>📃 Summary:</b> Displayed name of the Shopify plan<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gift_cards_offered</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_gift_cards_offered"></div><b>📃 Summary:</b> Indicates if shop offers gift cards<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cookie_consent_level</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='implicit'>implicit</option><option value='explicit'>explicit</option><option value='no_consent'>no_consent</option><option value='partial'>partial</option><option value='full'>full</option><option value='necessary_only'>necessary_only</option><option value='functional'>functional</option><option value='analytical'>analytical</option><option value='marketing'>marketing</option></select></span><br><br><div id="bar_viz_cookie_consent_level"></div><b>📃 Summary:</b> Level of cookie consent implemented<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">checkout_api_support</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_checkout_api_support"></div><b>📃 Summary:</b> Indicates if checkout API is supported<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payment_processing_eligible</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_payment_processing_eligible"></div><b>📃 Summary:</b> Eligibility for payment processing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">longitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_longitude"></div><b>📃 Summary:</b> Longitude coordinate of shop location<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">discounts_offered</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_discounts_offered"></div><b>📃 Summary:</b> Indicates if shop offers discounts<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shopify_domain</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_shopify_domain"></div><b>📃 Summary:</b> Shopify-provided domain for the store<br><b>🦄 Unique:</b> This column represents the Shopify-provided domain for each store. Each Shopify store has a unique myshopify.com domain, making this column unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">country_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_country_name"></div><b>📃 Summary:</b> Full name of the country<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">primary_address</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_primary_address"></div><b>📃 Summary:</b> Primary address of the shop<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shop_timezone</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shop_timezone"></div><b>📃 Summary:</b> IANA timezone of the shop<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">password_protection_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_password_protection_enabled"></div><b>📃 Summary:</b> Store password protection status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shop_domain</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_shop_domain"></div><b>📃 Summary:</b> Shop's domain name<br><b>🦄 Unique:</b> This column represents the custom domain name for the shop. Each shop is likely to have a unique domain name, making this column unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">storefront_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_storefront_active"></div><b>📃 Summary:</b> Indicates if shop has a storefront<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">state_province_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='AL'>AL</option><option value='AK'>AK</option><option value='AZ'>AZ</option><option value='AR'>AR</option><option value='CA'>CA</option><option value='CO'>CO</option><option value='CT'>CT</option><option value='DE'>DE</option><option value='FL'>FL</option><option value='GA'>GA</option><option value='HI'>HI</option><option value='ID'>ID</option><option value='IL'>IL</option><option value='IN'>IN</option><option value='IA'>IA</option><option value='KS'>KS</option><option value='KY'>KY</option><option value='LA'>LA</option><option value='ME'>ME</option><option value='MD'>MD</option><option value='MA'>MA</option><option value='MI'>MI</option><option value='MN'>MN</option><option value='MS'>MS</option><option value='MO'>MO</option><option value='MT'>MT</option><option value='NE'>NE</option><option value='NV'>NV</option><option value='NH'>NH</option><option value='NJ'>NJ</option><option value='NM'>NM</option><option value='NY'>NY</option><option value='NC'>NC</option><option value='ND'>ND</option><option value='OH'>OH</option><option value='OK'>OK</option><option value='OR'>OR</option><option value='PA'>PA</option><option value='RI'>RI</option><option value='SC'>SC</option><option value='SD'>SD</option><option value='TN'>TN</option><option value='TX'>TX</option><option value='UT'>UT</option><option value='VT'>VT</option><option value='VA'>VA</option><option value='WA'>WA</option><option value='WV'>WV</option><option value='WI'>WI</option><option value='WY'>WY</option><option value='DC'>DC</option><option value='AS'>AS</option><option value='GU'>GU</option><option value='MP'>MP</option><option value='PR'>PR</option><option value='VI'>VI</option><option value='AB'>AB</option><option value='BC'>BC</option><option value='MB'>MB</option><option value='NB'>NB</option><option value='NL'>NL</option><option value='NS'>NS</option><option value='NT'>NT</option><option value='NU'>NU</option><option value='ON'>ON</option><option value='PE'>PE</option><option value='QC'>QC</option><option value='SK'>SK</option><option value='YT'>YT</option></select></span><br><br><div id="bar_viz_state_province_code"></div><b>📃 Summary:</b> State or province code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">owner_email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_owner_email"></div><b>📃 Summary:</b> Shop owner's email address<br><b>🦄 Unique:</b> This column contains the shop owner's email address. For this table, each row is a unique Shopify shop. owner_email could be unique across rows as it's typically associated with a specific shop account.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">iso_country_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_iso_country_code"></div><b>📃 Summary:</b> ISO country code of shop location<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">multi_location_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_multi_location_enabled"></div><b>📃 Summary:</b> Multiple store locations enabled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">primary_language</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_primary_language"></div><b>📃 Summary:</b> Primary language of the store<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">money_with_currency_format</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_money_with_currency_format"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">taxes_included</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_taxes_included"></div><b>📃 Summary:</b> Prices include taxes status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">primary_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_primary_currency"></div><b>📃 Summary:</b> Primary currency used by the shop<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">latitude</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_latitude"></div><b>📃 Summary:</b> Latitude coordinate of shop location<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shop_owner</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_shop_owner"></div><b>📃 Summary:</b> Name of the store owner<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pre_launch_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_pre_launch_enabled"></div><b>📃 Summary:</b> Pre-launch mode status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_city"></div><b>📃 Summary:</b> City where the shop is located<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">money_format</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_money_format"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">plan_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='basic'>basic</option><option value='shopify'>shopify</option><option value='advanced'>advanced</option><option value='shopify_plus'>shopify_plus</option><option value='lite'>lite</option><option value='starter'>starter</option></select></span><br><br><div id="bar_viz_plan_name"></div><b>📃 Summary:</b> Internal name of the Shopify plan<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">email_currency_format</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='${{amount}}'>${{amount}}</option><option value='{{amount}} USD'>{{amount}} USD</option><option value='{{symbol}}{{amount}}'>{{symbol}}{{amount}}</option><option value='{{amount}} {{code}}'>{{amount}} {{code}}</option><option value='{{symbol}} {{amount}}'>{{symbol}} {{amount}}</option><option value='{{amount}}'>{{amount}}</option></select></span><br><br><div id="bar_viz_email_currency_format"></div><b>📃 Summary:</b> Email currency display format<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">store_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_store_name"></div><b>📃 Summary:</b> Store name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tracking_consent_preference</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='allow_all'>allow_all</option><option value='allow_essential'>allow_essential</option><option value='deny_all'>deny_all</option></select></span><br><br><div id="bar_viz_tracking_consent_preference"></div><b>📃 Summary:</b> Visitor tracking consent setting<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">card_reader_promo_eligible</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_card_reader_promo_eligible"></div><b>📃 Summary:</b> Eligibility for card reader promotion<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shop_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_shop_id"></div><b>📃 Summary:</b> Unique identifier for the shop<br><b>🦄 Unique:</b> This column represents the unique identifier for the shop. For this table, each row is a unique Shopify shop. The shop_id is designed to be a unique identifier for each shop, ensuring it's unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">country_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_country_code"></div><b>📃 Summary:</b> Country code where the shop is located<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_contact_email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_customer_contact_email"></div><b>📃 Summary:</b> Email for customer communications<br><b>🦄 Unique:</b> This column represents the email address for customer communications. For this table, each row is for a unique Shopify shop. Customer contact email could be unique across shops, as it's likely to be a shop-specific email address.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">extra_payment_agreement_required</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_extra_payment_agreement_required"></div><b>📃 Summary:</b> Additional payment agreement required<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">email_currency_display_format</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_email_currency_display_format"></div><b>📃 Summary:</b> Email currency display format with symbol<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">state_province</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_state_province"></div><b>📃 Summary:</b> Store's state or province<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_timestamp"></div><b>📃 Summary:</b> Timestamp of shop creation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">enabled_currencies</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_enabled_currencies"></div><b>📃 Summary:</b> List of enabled currencies for transactions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">google_apps_domain</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_google_apps_domain"></div><b>📃 Summary:</b> Google Apps domain if applicable<br><b>❓ Missing:</b> Not applicable if Google Apps integration isn't used.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">google_apps_login_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_google_apps_login_enabled"></div><b>📃 Summary:</b> Status of Google Apps login<br><b>❓ Missing:</b> Not applicable if Google Apps integration isn't used.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_updated</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_updated"></div><b>📃 Summary:</b> Last update timestamp<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">phone</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_phone"></div><b>📃 Summary:</b> Store contact phone number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">postal_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_postal_code"></div><b>📃 Summary:</b> Store's ZIP or postal code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">primary_location_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_primary_location_id"></div><b>📃 Summary:</b> ID of the main store location<br><b>🦄 Unique:</b> This column represents the ID of the main store location. For this table, each row is for a unique Shopify shop. This ID is likely to be unique for each shop as it represents a specific location.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tax_on_shipping</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_tax_on_shipping"></div><b>📃 Summary:</b> Shipping tax application status<br><b>❓ Missing:</b> Not applicable when no tax is charged on shipping.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about Shopify shops. It contains shop information like ID, address, currency, and domain. It includes shop settings such as tax configuration, checkout options, and enabled features. The table also has owner details, plan information, and location data. It represents a comprehensive profile of a Shopify store with its configurations and operational details.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>36</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the shop</td>
+      <td>shop_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>address_1</td>
+      <td>Primary address of the shop</td>
+      <td>primary_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>address_2</td>
+      <td>Secondary address of the shop</td>
+      <td>secondary_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>auto_configure_tax_inclusivity</td>
+      <td>Automatic tax inclusivity configuration setting</td>
+      <td>auto_tax_inclusivity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>checkout_api_supported</td>
+      <td>Indicates if checkout API is supported</td>
+      <td>checkout_api_support</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>city</td>
+      <td>City where the shop is located</td>
+      <td>city</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>cookie_consent_level</td>
+      <td>Level of cookie consent implemented</td>
+      <td>cookie_consent_level</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>country</td>
+      <td>Country code where the shop is located</td>
+      <td>country_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>country_code</td>
+      <td>ISO country code of shop location</td>
+      <td>iso_country_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>country_name</td>
+      <td>Full name of the country</td>
+      <td>country_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>county_taxes</td>
+      <td>Indicates if county taxes are applied</td>
+      <td>county_taxes_applied</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>created_at</td>
+      <td>Timestamp of shop creation</td>
+      <td>creation_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>currency</td>
+      <td>Primary currency used by the shop</td>
+      <td>primary_currency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>customer_email</td>
+      <td>Email for customer communications</td>
+      <td>customer_contact_email</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>domain_</td>
+      <td>Shop's domain name</td>
+      <td>shop_domain</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>eligible_for_card_reader_giveaway</td>
+      <td>Eligibility for card reader promotion</td>
+      <td>card_reader_promo_eligible</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>eligible_for_payments</td>
+      <td>Eligibility for payment processing</td>
+      <td>payment_processing_eligible</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>email</td>
+      <td>Shop owner's email address</td>
+      <td>owner_email</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>enabled_presentment_currencies</td>
+      <td>List of enabled currencies for transactions</td>
+      <td>enabled_currencies</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>force_ssl</td>
+      <td>Indicates if SSL is enforced</td>
+      <td>ssl_enforced</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>google_apps_domain</td>
+      <td>Google Apps domain if applicable</td>
+      <td>google_apps_domain</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>google_apps_login_enabled</td>
+      <td>Status of Google Apps login</td>
+      <td>google_apps_login_enabled</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>has_discounts</td>
+      <td>Indicates if shop offers discounts</td>
+      <td>discounts_offered</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>has_gift_cards</td>
+      <td>Indicates if shop offers gift cards</td>
+      <td>gift_cards_offered</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>has_storefront</td>
+      <td>Indicates if shop has a storefront</td>
+      <td>storefront_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>iana_timezone</td>
+      <td>IANA timezone of the shop</td>
+      <td>shop_timezone</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>latitude</td>
+      <td>Latitude coordinate of shop location</td>
+      <td>latitude</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>longitude</td>
+      <td>Longitude coordinate of shop location</td>
+      <td>longitude</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>money_format</td>
+      <td>Format for displaying monetary values</td>
+      <td>money_format</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>money_in_emails_format</td>
+      <td>Email currency display format</td>
+      <td>email_currency_format</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>money_with_currency_format</td>
+      <td>Currency display format with symbol</td>
+      <td>money_with_currency_format</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>money_with_currency_in_emails_format</td>
+      <td>Email currency display format with symbol</td>
+      <td>email_currency_display_format</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>multi_location_enabled</td>
+      <td>Multiple store locations enabled</td>
+      <td>multi_location_enabled</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>myshopify_domain</td>
+      <td>Shopify-provided domain for the store</td>
+      <td>shopify_domain</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>name</td>
+      <td>Store name</td>
+      <td>store_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>password_enabled</td>
+      <td>Store password protection status</td>
+      <td>password_protection_enabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>phone</td>
+      <td>Store contact phone number</td>
+      <td>phone</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>plan_display_name</td>
+      <td>Displayed name of the Shopify plan</td>
+      <td>plan_display_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>plan_name</td>
+      <td>Internal name of the Shopify plan</td>
+      <td>plan_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>pre_launch_enabled</td>
+      <td>Pre-launch mode status</td>
+      <td>pre_launch_enabled</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>primary_locale</td>
+      <td>Primary language of the store</td>
+      <td>primary_language</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>primary_location_id</td>
+      <td>ID of the main store location</td>
+      <td>primary_location_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>province</td>
+      <td>Store's state or province</td>
+      <td>state_province</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>province_code</td>
+      <td>State or province code</td>
+      <td>state_province_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>requires_extra_payments_agreement</td>
+      <td>Additional payment agreement required</td>
+      <td>extra_payment_agreement_required</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>setup_required</td>
+      <td>Store setup completion status</td>
+      <td>setup_required</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>shop_owner</td>
+      <td>Name of the store owner</td>
+      <td>shop_owner</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>source</td>
+      <td>Source of the store creation</td>
+      <td>creation_source</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>tax_shipping</td>
+      <td>Shipping tax application status</td>
+      <td>tax_on_shipping</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>taxes_included</td>
+      <td>Prices include taxes status</td>
+      <td>taxes_included</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>timezone</td>
+      <td>Store's timezone</td>
+      <td>timezone</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>updated_at</td>
+      <td>Last update timestamp</td>
+      <td>last_updated</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>visitor_tracking_consent_preference</td>
+      <td>Visitor tracking consent setting</td>
+      <td>tracking_consent_preference</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>weight_unit</td>
+      <td>Unit of weight measurement</td>
+      <td>weight_unit</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>zip</td>
+      <td>Store's ZIP or postal code</td>
+      <td>postal_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>secondary_address</b>: '200th Floor' is unusual because buildings rarely have more than 150 floors, making 200 floors extremely unlikely.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>200th Floor</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                🔍 <b>1</b> columns have disguised missing values<br>
+                ✔️ <b>1</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>secondary_address</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>11</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>auto_tax_inclusivity</td>
+      <td>CAST("auto_tax_inclusivity" AS BOOLEAN)</td>
+      <td>To transform the 'auto_tax_inclusivity' column from DECIMAL to BOOLEAN, we need to use a simple CAST function. In DuckDB, we can directly cast a DECIMAL to a BOOLEAN. The conversion follows these rules: - 0 becomes FALSE - Any non-zero value becomes TRUE - NULL remains NULL This transformation is straightforward and doesn't require any additional logic since the column only contains distinct values (though none were explicitly mentioned in the prompt).\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>creation_source</td>
+      <td>CAST("creation_source" AS VARCHAR)</td>
+      <td>To transform the data type of the 'creation_source' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the column is currently of type DECIMAL, casting it to VARCHAR will preserve the numeric information as a string.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>creation_timestamp</td>
+      <td>CAST("creation_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'creation_timestamp' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the timestamp ('2018-12-10 16:24:00.000000') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB's CAST function can automatically parse this format.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>enabled_currencies</td>
+      <td>from_json("enabled_currencies", '["VARCHAR"]')</td>
+      <td>To transform the 'enabled_currencies' column from VARCHAR to ARRAY, we need to use the JSON parsing function in DuckDB. The column appears to contain JSON strings representing arrays, so we can use the from_json() function to parse these strings into actual arrays.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>google_apps_domain</td>
+      <td>CAST("google_apps_domain" AS VARCHAR)</td>
+      <td>To transform the data type of the 'google_apps_domain' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case). This will convert each value in the column to its string representation.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>google_apps_login_enabled</td>
+      <td>CAST("google_apps_login_enabled" AS BOOLEAN)</td>
+      <td>To transform the data type of the column 'google_apps_login_enabled' from DECIMAL to BOOLEAN, we need to use a simple CAST clause in DuckDB. Since the column appears to contain only numeric values (likely 0 and 1), a direct cast to BOOLEAN should work. In DuckDB, non-zero values are considered TRUE, while zero is considered FALSE when casting to BOOLEAN.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>last_updated</td>
+      <td>CAST("last_updated" AS TIMESTAMP)</td>
+      <td>To transform the 'last_updated' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the timestamp ('2022-12-07 00:26:36.000000') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically interpret this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>phone</td>
+      <td>CAST("phone" AS VARCHAR)</td>
+      <td>To transform the data type of the 'phone' column from 'INT' to 'VARCHAR', we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since we're converting from INT to VARCHAR, a simple CAST operation will suffice. This will preserve the numeric value as a string.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>postal_code</td>
+      <td>CAST("postal_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'postal_code' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(column_name AS new_data_type). In this case, we're casting 'postal_code' to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>primary_location_id</td>
+      <td>CAST("primary_location_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'primary_location_id' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since we're converting from INT to VARCHAR, we don't need to specify a length for the VARCHAR as DuckDB will automatically accommodate the full integer value.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>tax_on_shipping</td>
+      <td>CAST("tax_on_shipping" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'tax_on_shipping' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function will convert each value in the column to its string representation. Since the column has no distinct values (it's empty or all NULL), this transformation will effectively create a column of empty strings or NULL values as VARCHAR.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                🔍 <b>6</b> columns have missing values<br>
+                ✔️ <b>3</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>auto_tax_inclusivity</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>creation_source</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>google_apps_domain</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if Google Apps integration isn't used.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>google_apps_login_enabled</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if Google Apps integration isn't used.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>secondary_address</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>tax_on_shipping</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable when no tax is charged on shipping.</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>auto_tax_inclusivity</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>creation_source</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>secondary_address</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_setup_required", data);
+data = [{'label': '(GMT-05:00) Ame...', 'value': 100.0}];
+    drawBarChart("bar_viz_timezone", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_ssl_enforced", data);
+data = [{'label': 'lb', 'value': 100.0}];
+    drawBarChart("bar_viz_weight_unit", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_county_taxes_applied", data);
+data = [{'label': 'Shopify Plus', 'value': 100.0}];
+    drawBarChart("bar_viz_plan_display_name", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_gift_cards_offered", data);
+data = [{'label': 'implicit', 'value': 100.0}];
+    drawBarChart("bar_viz_cookie_consent_level", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_checkout_api_support", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_payment_processing_eligible", data);
+data = [{'x': -123.12345, 'y': 1}];
+    binWidth = -123.12345;
+    drawHistogram("hist_viz_longitude", data, binWidth);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_discounts_offered", data);
+data = [{'label': 'kitties.myshopi...', 'value': 100.0}];
+    drawBarChart("bar_viz_shopify_domain", data);
+data = [{'label': 'United States', 'value': 100.0}];
+    drawBarChart("bar_viz_country_name", data);
+data = [{'label': '1 Main Street', 'value': 100.0}];
+    drawBarChart("bar_viz_primary_address", data);
+data = [{'label': 'America/New_Yor...', 'value': 100.0}];
+    drawBarChart("bar_viz_shop_timezone", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_password_protection_enabled", data);
+data = [{'label': 'kitties.com', 'value': 100.0}];
+    drawBarChart("bar_viz_shop_domain", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_storefront_active", data);
+data = [{'label': 'NY', 'value': 100.0}];
+    drawBarChart("bar_viz_state_province_code", data);
+data = [{'label': 'abc@kitties.com', 'value': 100.0}];
+    drawBarChart("bar_viz_owner_email", data);
+data = [{'label': 'US', 'value': 100.0}];
+    drawBarChart("bar_viz_iso_country_code", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_multi_location_enabled", data);
+data = [{'label': 'en', 'value': 100.0}];
+    drawBarChart("bar_viz_primary_language", data);
+data = [{'label': '${{amount}} USD', 'value': 100.0}];
+    drawBarChart("bar_viz_money_with_currency_format", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_taxes_included", data);
+data = [{'label': 'USD', 'value': 100.0}];
+    drawBarChart("bar_viz_primary_currency", data);
+data = [{'x': 80.1234, 'y': 1}];
+    binWidth = 80.1234;
+    drawHistogram("hist_viz_latitude", data, binWidth);
+data = [{'label': 'Garrett & Alfre...', 'value': 100.0}];
+    drawBarChart("bar_viz_shop_owner", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_pre_launch_enabled", data);
+data = [{'label': 'New York', 'value': 100.0}];
+    drawBarChart("bar_viz_city", data);
+data = [{'label': '${{amount}}', 'value': 100.0}];
+    drawBarChart("bar_viz_money_format", data);
+data = [{'label': 'shopify_plus', 'value': 100.0}];
+    drawBarChart("bar_viz_plan_name", data);
+data = [{'label': '${{amount}}', 'value': 100.0}];
+    drawBarChart("bar_viz_email_currency_format", data);
+data = [{'label': 'Garrett & Alfre...', 'value': 100.0}];
+    drawBarChart("bar_viz_store_name", data);
+data = [{'label': 'allow_all', 'value': 100.0}];
+    drawBarChart("bar_viz_tracking_consent_preference", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_card_reader_promo_eligible", data);
+data = [{'x': 689, 'y': 1}];
+    binWidth = 689;
+    drawHistogram("hist_viz_shop_id", data, binWidth);
+data = [{'label': 'US', 'value': 100.0}];
+    drawBarChart("bar_viz_country_code", data);
+data = [{'label': 'noreply@kitties...', 'value': 100.0}];
+    drawBarChart("bar_viz_customer_contact_email", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_extra_payment_agreement_required", data);
+data = [{'label': '${{amount}} USD', 'value': 100.0}];
+    drawBarChart("bar_viz_email_currency_display_format", data);
+data = [{'label': 'New York', 'value': 100.0}];
+    drawBarChart("bar_viz_state_province", data);
+data = [{'label': '2018-12-10 16:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_creation_timestamp", data);
+data = [{'label': "['USD']", 'value': 100.0}];
+    drawBarChart("bar_viz_enabled_currencies", data);
+data = [];
+    drawBarChart("bar_viz_google_apps_domain", data);
+data = [];
+    drawBarChart("bar_viz_google_apps_login_enabled", data);
+data = [{'label': '2022-12-07 00:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_updated", data);
+data = [{'label': '13373', 'value': 100.0}];
+    drawBarChart("bar_viz_phone", data);
+data = [{'label': '10014', 'value': 100.0}];
+    drawBarChart("bar_viz_postal_code", data);
+data = [{'label': '1234646345', 'value': 100.0}];
+    drawBarChart("bar_viz_primary_location_id", data);
+data = [];
+    drawBarChart("bar_viz_tax_on_shipping", data);
+
+
+</script>
+</body>
+</html>
