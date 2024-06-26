@@ -21253,12 +21253,13 @@ class CocoonBranchStep(Node):
         "✨ <b>Clean:</b> Give us a table, we'll clean and document it.",
         "🔍 <b>Profile:</b> Give us a table, we'll identify anomalies.",
         "🔗 <b>Standardization:</b> Give us a vocabulary, we will standardize tables.",
+        "🧩 <b>(Preview) Model:</b> Give us a database, we'll model it.",
         "🔧 <b>(Preview) Transform:</b> Give us source/target tables, we will transform.",
         "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a  Pipeline, we'll interpret it.",
         ]
         coming_labels = [
         "🔄 <b>(Coming Soon) Integrate:</b> Give us tables, we'll integrate them.",
-        "🧩 <b>(Coming Soon) Model:</b> Give us a database, we'll model it.",
+        
         "🛠️ <b>(Coming Soon) Pipeline Maintenance:</b> Give us a broken Pipeline, we'll repair it.",
         "📈 <b>(Coming Soon) Semantic:</b> Give us a database, we'll build metrics.",
         ]
@@ -21267,6 +21268,7 @@ class CocoonBranchStep(Node):
             "Data Stage Workflow",
             "Data Profiling Workflow",
             "Fuzzy Join Workflow",
+            "Data Vault Workflow",
             "Single Table Transformation Workflow",
             "DBT Project Explore Workflow",
         ]
@@ -25795,6 +25797,7 @@ def create_html_content_er_story(relation_map, relation_details, df_display=None
 
 
 
+class BuildERStory(Node):
     default_name = 'Build ER Story'
     default_description = 'This builds the ER story'
 
