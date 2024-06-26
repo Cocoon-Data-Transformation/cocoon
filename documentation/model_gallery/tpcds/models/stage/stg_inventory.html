@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>inventory</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>INV_ITEM_SK</th>
+      <th>INV_WAREHOUSE_SK</th>
+      <th>INV_QUANTITY_ON_HAND</th>
+      <th>INV_DATE_SK</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>1</td>
+      <td>211.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>1</td>
+      <td>235.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>4</td>
+      <td>1</td>
+      <td>859.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>7</td>
+      <td>1</td>
+      <td>704.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>8</td>
+      <td>1</td>
+      <td>891.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>10</td>
+      <td>1</td>
+      <td>834.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>13</td>
+      <td>1</td>
+      <td>591.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>14</td>
+      <td>1</td>
+      <td>579.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>16</td>
+      <td>1</td>
+      <td>622.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>19</td>
+      <td>1</td>
+      <td>745.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>20</td>
+      <td>1</td>
+      <td>405.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>22</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>25</td>
+      <td>1</td>
+      <td>676.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>26</td>
+      <td>1</td>
+      <td>865.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>28</td>
+      <td>1</td>
+      <td>24.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>31</td>
+      <td>1</td>
+      <td>170.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>32</td>
+      <td>1</td>
+      <td>797.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>34</td>
+      <td>1</td>
+      <td>332.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>37</td>
+      <td>1</td>
+      <td>618.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>38</td>
+      <td>1</td>
+      <td>909.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>40</td>
+      <td>1</td>
+      <td>738.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>43</td>
+      <td>1</td>
+      <td>699.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>44</td>
+      <td>1</td>
+      <td>975.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>46</td>
+      <td>1</td>
+      <td>551.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>49</td>
+      <td>1</td>
+      <td>857.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>50</td>
+      <td>1</td>
+      <td>894.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>52</td>
+      <td>1</td>
+      <td>279.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>55</td>
+      <td>1</td>
+      <td>206.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>56</td>
+      <td>1</td>
+      <td>746.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>58</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>61</td>
+      <td>1</td>
+      <td>154.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>62</td>
+      <td>1</td>
+      <td>888.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>64</td>
+      <td>1</td>
+      <td>773.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>67</td>
+      <td>1</td>
+      <td>107.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>68</td>
+      <td>1</td>
+      <td>801.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>70</td>
+      <td>1</td>
+      <td>749.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>73</td>
+      <td>1</td>
+      <td>419.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>74</td>
+      <td>1</td>
+      <td>541.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>76</td>
+      <td>1</td>
+      <td>359.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>79</td>
+      <td>1</td>
+      <td>578.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>80</td>
+      <td>1</td>
+      <td>42.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>82</td>
+      <td>1</td>
+      <td>83.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>85</td>
+      <td>1</td>
+      <td>192.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>86</td>
+      <td>1</td>
+      <td>567.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>88</td>
+      <td>1</td>
+      <td>710.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>91</td>
+      <td>1</td>
+      <td>282.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>92</td>
+      <td>1</td>
+      <td>631.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>94</td>
+      <td>1</td>
+      <td>587.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>97</td>
+      <td>1</td>
+      <td>645.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>98</td>
+      <td>1</td>
+      <td>667.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>100</td>
+      <td>1</td>
+      <td>26.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>103</td>
+      <td>1</td>
+      <td>224.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>104</td>
+      <td>1</td>
+      <td>901.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>106</td>
+      <td>1</td>
+      <td>887.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>109</td>
+      <td>1</td>
+      <td>455.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>110</td>
+      <td>1</td>
+      <td>784.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>112</td>
+      <td>1</td>
+      <td>742.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>115</td>
+      <td>1</td>
+      <td>978.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>116</td>
+      <td>1</td>
+      <td>207.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>118</td>
+      <td>1</td>
+      <td>462.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>121</td>
+      <td>1</td>
+      <td>406.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>122</td>
+      <td>1</td>
+      <td>559.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>124</td>
+      <td>1</td>
+      <td>999.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>127</td>
+      <td>1</td>
+      <td>870.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>128</td>
+      <td>1</td>
+      <td>982.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>130</td>
+      <td>1</td>
+      <td>700.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>133</td>
+      <td>1</td>
+      <td>26.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>134</td>
+      <td>1</td>
+      <td>356.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>136</td>
+      <td>1</td>
+      <td>143.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>139</td>
+      <td>1</td>
+      <td>838.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>140</td>
+      <td>1</td>
+      <td>846.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>142</td>
+      <td>1</td>
+      <td>657.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>145</td>
+      <td>1</td>
+      <td>181.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>146</td>
+      <td>1</td>
+      <td>730.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>148</td>
+      <td>1</td>
+      <td>49.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>151</td>
+      <td>1</td>
+      <td>652.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>152</td>
+      <td>1</td>
+      <td>861.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>154</td>
+      <td>1</td>
+      <td>329.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>157</td>
+      <td>1</td>
+      <td>286.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>158</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>160</td>
+      <td>1</td>
+      <td>62.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>163</td>
+      <td>1</td>
+      <td>894.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>164</td>
+      <td>1</td>
+      <td>463.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>166</td>
+      <td>1</td>
+      <td>458.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>169</td>
+      <td>1</td>
+      <td>696.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>170</td>
+      <td>1</td>
+      <td>450.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>172</td>
+      <td>1</td>
+      <td>842.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>175</td>
+      <td>1</td>
+      <td>79.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>176</td>
+      <td>1</td>
+      <td>260.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>178</td>
+      <td>1</td>
+      <td>894.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>181</td>
+      <td>1</td>
+      <td>4.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>182</td>
+      <td>1</td>
+      <td>281.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>184</td>
+      <td>1</td>
+      <td>797.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>187</td>
+      <td>1</td>
+      <td>981.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>188</td>
+      <td>1</td>
+      <td>58.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>190</td>
+      <td>1</td>
+      <td>834.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>193</td>
+      <td>1</td>
+      <td>54.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>194</td>
+      <td>1</td>
+      <td>856.0</td>
+      <td>2450815</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>196</td>
+      <td>1</td>
+      <td>803.0</td>
+      <td>2450815</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>item_id</th>
+      <th>warehouse_id</th>
+      <th>quantity_on_hand</th>
+      <th>inventory_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>1</td>
+      <td>211.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>1</td>
+      <td>235.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>4</td>
+      <td>1</td>
+      <td>859.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>7</td>
+      <td>1</td>
+      <td>704.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>8</td>
+      <td>1</td>
+      <td>891.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>10</td>
+      <td>1</td>
+      <td>834.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>13</td>
+      <td>1</td>
+      <td>591.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>14</td>
+      <td>1</td>
+      <td>579.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>16</td>
+      <td>1</td>
+      <td>622.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>19</td>
+      <td>1</td>
+      <td>745.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>20</td>
+      <td>1</td>
+      <td>405.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>22</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>25</td>
+      <td>1</td>
+      <td>676.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>26</td>
+      <td>1</td>
+      <td>865.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>28</td>
+      <td>1</td>
+      <td>24.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>31</td>
+      <td>1</td>
+      <td>170.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>32</td>
+      <td>1</td>
+      <td>797.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>34</td>
+      <td>1</td>
+      <td>332.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>37</td>
+      <td>1</td>
+      <td>618.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>38</td>
+      <td>1</td>
+      <td>909.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>40</td>
+      <td>1</td>
+      <td>738.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>43</td>
+      <td>1</td>
+      <td>699.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>44</td>
+      <td>1</td>
+      <td>975.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>46</td>
+      <td>1</td>
+      <td>551.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>49</td>
+      <td>1</td>
+      <td>857.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>50</td>
+      <td>1</td>
+      <td>894.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>52</td>
+      <td>1</td>
+      <td>279.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>55</td>
+      <td>1</td>
+      <td>206.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>56</td>
+      <td>1</td>
+      <td>746.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>58</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>61</td>
+      <td>1</td>
+      <td>154.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>62</td>
+      <td>1</td>
+      <td>888.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>64</td>
+      <td>1</td>
+      <td>773.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>67</td>
+      <td>1</td>
+      <td>107.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>68</td>
+      <td>1</td>
+      <td>801.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>70</td>
+      <td>1</td>
+      <td>749.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>73</td>
+      <td>1</td>
+      <td>419.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>74</td>
+      <td>1</td>
+      <td>541.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>76</td>
+      <td>1</td>
+      <td>359.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>79</td>
+      <td>1</td>
+      <td>578.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>80</td>
+      <td>1</td>
+      <td>42.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>82</td>
+      <td>1</td>
+      <td>83.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>85</td>
+      <td>1</td>
+      <td>192.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>86</td>
+      <td>1</td>
+      <td>567.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>88</td>
+      <td>1</td>
+      <td>710.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>91</td>
+      <td>1</td>
+      <td>282.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>92</td>
+      <td>1</td>
+      <td>631.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>94</td>
+      <td>1</td>
+      <td>587.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>97</td>
+      <td>1</td>
+      <td>645.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>98</td>
+      <td>1</td>
+      <td>667.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>100</td>
+      <td>1</td>
+      <td>26.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>103</td>
+      <td>1</td>
+      <td>224.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>104</td>
+      <td>1</td>
+      <td>901.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>106</td>
+      <td>1</td>
+      <td>887.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>109</td>
+      <td>1</td>
+      <td>455.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>110</td>
+      <td>1</td>
+      <td>784.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>112</td>
+      <td>1</td>
+      <td>742.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>115</td>
+      <td>1</td>
+      <td>978.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>116</td>
+      <td>1</td>
+      <td>207.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>118</td>
+      <td>1</td>
+      <td>462.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>121</td>
+      <td>1</td>
+      <td>406.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>122</td>
+      <td>1</td>
+      <td>559.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>124</td>
+      <td>1</td>
+      <td>999.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>127</td>
+      <td>1</td>
+      <td>870.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>128</td>
+      <td>1</td>
+      <td>982.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>130</td>
+      <td>1</td>
+      <td>700.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>133</td>
+      <td>1</td>
+      <td>26.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>134</td>
+      <td>1</td>
+      <td>356.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>136</td>
+      <td>1</td>
+      <td>143.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>139</td>
+      <td>1</td>
+      <td>838.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>140</td>
+      <td>1</td>
+      <td>846.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>142</td>
+      <td>1</td>
+      <td>657.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>145</td>
+      <td>1</td>
+      <td>181.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>146</td>
+      <td>1</td>
+      <td>730.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>148</td>
+      <td>1</td>
+      <td>49.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>151</td>
+      <td>1</td>
+      <td>652.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>152</td>
+      <td>1</td>
+      <td>861.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>154</td>
+      <td>1</td>
+      <td>329.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>157</td>
+      <td>1</td>
+      <td>286.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>158</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>160</td>
+      <td>1</td>
+      <td>62.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>163</td>
+      <td>1</td>
+      <td>894.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>164</td>
+      <td>1</td>
+      <td>463.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>166</td>
+      <td>1</td>
+      <td>458.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>169</td>
+      <td>1</td>
+      <td>696.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>170</td>
+      <td>1</td>
+      <td>450.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>172</td>
+      <td>1</td>
+      <td>842.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>175</td>
+      <td>1</td>
+      <td>79.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>176</td>
+      <td>1</td>
+      <td>260.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>178</td>
+      <td>1</td>
+      <td>894.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>181</td>
+      <td>1</td>
+      <td>4.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>182</td>
+      <td>1</td>
+      <td>281.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>184</td>
+      <td>1</td>
+      <td>797.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>187</td>
+      <td>1</td>
+      <td>981.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>188</td>
+      <td>1</td>
+      <td>58.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>190</td>
+      <td>1</td>
+      <td>834.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>193</td>
+      <td>1</td>
+      <td>54.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>194</td>
+      <td>1</td>
+      <td>856.0</td>
+      <td>4850816.0</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>196</td>
+      <td>1</td>
+      <td>803.0</td>
+      <td>4850816.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">item_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_item_id"></div><b>📃 Summary:</b> Unique identifier for inventory item<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">warehouse_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_warehouse_id"></div><b>📃 Summary:</b> Unique identifier for warehouse location<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">quantity_on_hand</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_quantity_on_hand"></div><b>📃 Summary:</b> Current quantity of item in stock<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">inventory_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_inventory_date"></div><b>📃 Summary:</b> Date of inventory record<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about inventory. It contains details of inventory items in warehouses. Each record represents an item's quantity on hand at a specific warehouse on a particular date. The table includes date, item, warehouse, and quantity information. This allows tracking of inventory levels across different locations and times.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>4</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>INV_DATE_SK</td>
+      <td>Date of inventory record</td>
+      <td>inventory_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>INV_ITEM_SK</td>
+      <td>Unique identifier for inventory item</td>
+      <td>item_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>INV_WAREHOUSE_SK</td>
+      <td>Unique identifier for warehouse location</td>
+      <td>warehouse_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>INV_QUANTITY_ON_HAND</td>
+      <td>Current quantity of item in stock</td>
+      <td>quantity_on_hand</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>1</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>inventory_date</td>
+      <td>julian(DATE '1858-11-17' + CAST("inventory_date" AS INTEGER))</td>
+      <td>To transform the 'inventory_date' column from INT to DATE, we need to use a simple CAST function. Since the value 2450815 appears to be in Julian Date format, DuckDB can automatically convert it to a standard date when casting to DATE type. We don't need to use strptime() in this case because the conversion is straightforward.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>1</b> columns have missing values<br>
+                ❌ No missing value is acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>quantity_on_hand</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>quantity_on_hand</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 5.875, 'y': 6}, {'x': 15.625, 'y': 5}, {'x': 25.375, 'y': 4}, {'x': 35.125, 'y': 5}, {'x': 44.875, 'y': 5}, {'x': 54.625, 'y': 5}, {'x': 64.375, 'y': 5}, {'x': 74.125, 'y': 4}, {'x': 83.875, 'y': 6}, {'x': 93.625, 'y': 5}, {'x': 103.375, 'y': 4}, {'x': 113.125, 'y': 5}, {'x': 122.875, 'y': 5}, {'x': 132.625, 'y': 5}, {'x': 142.375, 'y': 5}, {'x': 152.125, 'y': 4}, {'x': 161.875, 'y': 6}, {'x': 171.625, 'y': 5}, {'x': 181.375, 'y': 4}, {'x': 191.125, 'y': 6}];
+    binWidth = 9.75;
+    drawHistogram("hist_viz_item_id", data, binWidth);
+data = [{'x': 1, 'y': 99}];
+    binWidth = 1;
+    drawHistogram("hist_viz_warehouse_id", data, binWidth);
+data = [{'x': 28.875, 'y': 6}, {'x': 78.625, 'y': 5}, {'x': 128.375, 'y': 2}, {'x': 178.125, 'y': 4}, {'x': 227.875, 'y': 5}, {'x': 277.625, 'y': 5}, {'x': 327.375, 'y': 2}, {'x': 377.125, 'y': 2}, {'x': 426.875, 'y': 4}, {'x': 476.625, 'y': 4}, {'x': 526.375, 'y': 2}, {'x': 576.125, 'y': 6}, {'x': 625.875, 'y': 4}, {'x': 675.625, 'y': 7}, {'x': 725.375, 'y': 8}, {'x': 775.125, 'y': 4}, {'x': 824.875, 'y': 7}, {'x': 874.625, 'y': 12}, {'x': 924.375, 'y': 2}, {'x': 974.125, 'y': 5}];
+    binWidth = 49.75;
+    drawHistogram("hist_viz_quantity_on_hand", data, binWidth);
+data = [{'x': 4850816.0, 'y': 99}];
+    binWidth = 4850816.0;
+    drawHistogram("hist_viz_inventory_date", data, binWidth);
+
+
+</script>
+</body>
+</html>

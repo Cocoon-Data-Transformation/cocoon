@@ -1,0 +1,3347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>procedures</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>DESCRIPTION</th>
+      <th>BASE_COST</th>
+      <th>REASONDESCRIPTION</th>
+      <th>ENCOUNTER</th>
+      <th>PATIENT</th>
+      <th>CODE</th>
+      <th>STOP</th>
+      <th>START</th>
+      <th>REASONCODE</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>493.03</td>
+      <td>None</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2014-01-19T01:20:00Z</td>
+      <td>2014-01-19T01:05:00Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>523.74</td>
+      <td>None</td>
+      <td>79b413f6-c668-bf41-bce7-b403c40cf7a4</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>430193006</td>
+      <td>2021-09-23T02:59:04Z</td>
+      <td>2021-09-23T02:44:04Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>536.16</td>
+      <td>None</td>
+      <td>a79858c9-a74e-8ca3-c9a0-b63897e8fc05</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>430193006</td>
+      <td>2021-10-28T02:59:04Z</td>
+      <td>2021-10-28T02:44:04Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Clavicle X-ray</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>1600b01f-01b3-fd15-135f-c7c4a30d867f</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>168594001</td>
+      <td>2016-04-11T03:42:57Z</td>
+      <td>2016-04-11T03:12:57Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Admission to orthopedic department</td>
+      <td>431.40</td>
+      <td>Fracture of clavicle</td>
+      <td>1600b01f-01b3-fd15-135f-c7c4a30d867f</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>305428000</td>
+      <td>2016-04-11T04:55:57Z</td>
+      <td>2016-04-11T03:12:57Z</td>
+      <td>58150001.0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Suture open wound</td>
+      <td>7441.62</td>
+      <td>Facial laceration</td>
+      <td>17d8fd78-be39-d2f7-6032-74d712972fa3</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>288086009</td>
+      <td>2014-01-20T12:29:00Z</td>
+      <td>2014-01-20T12:00:39Z</td>
+      <td>370247008.0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Suture open wound</td>
+      <td>5885.26</td>
+      <td>Laceration of foot</td>
+      <td>3c131d0c-6d15-7fe1-1372-a3d8316b6d82</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>288086009</td>
+      <td>1988-04-27T21:56:54Z</td>
+      <td>1988-04-27T21:35:49Z</td>
+      <td>284551006.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Injection of tetanus antitoxin</td>
+      <td>1867.93</td>
+      <td>Laceration of foot</td>
+      <td>3c131d0c-6d15-7fe1-1372-a3d8316b6d82</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>384700001</td>
+      <td>1988-04-27T22:13:31Z</td>
+      <td>1988-04-27T21:56:54Z</td>
+      <td>284551006.0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>700.81</td>
+      <td>None</td>
+      <td>afa466b5-efb2-1d87-c7a1-d06c52ea5c62</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>430193006</td>
+      <td>1989-07-04T21:50:49Z</td>
+      <td>1989-07-04T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>349.48</td>
+      <td>None</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>430193006</td>
+      <td>2022-03-03T02:59:04Z</td>
+      <td>2022-03-03T02:44:04Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Throat culture (procedure)</td>
+      <td>1211.72</td>
+      <td>Acute viral pharyngitis (disorder)</td>
+      <td>9714ef9e-065c-12aa-757e-519ba1b4453b</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>117015009</td>
+      <td>2016-08-03T09:20:00Z</td>
+      <td>2016-08-03T09:05:00Z</td>
+      <td>195662009.0</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>345.01</td>
+      <td>None</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>430193006</td>
+      <td>2022-06-02T02:59:04Z</td>
+      <td>2022-06-02T02:44:04Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Ankle X-ray</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>1cedec53-a362-320c-d52a-ddbc57fbce63</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>19490002</td>
+      <td>2022-09-25T03:14:04Z</td>
+      <td>2022-09-25T02:44:04Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Bone immobilization</td>
+      <td>431.40</td>
+      <td>Fracture of ankle</td>
+      <td>1cedec53-a362-320c-d52a-ddbc57fbce63</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>274474001</td>
+      <td>2022-09-25T03:12:47Z</td>
+      <td>2022-09-25T02:44:04Z</td>
+      <td>16114001.0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Throat culture (procedure)</td>
+      <td>2674.76</td>
+      <td>Acute viral pharyngitis (disorder)</td>
+      <td>aa4ae34c-931d-09b3-6aac-ac093d1ed197</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>117015009</td>
+      <td>2017-12-08T20:20:00Z</td>
+      <td>2017-12-08T20:05:00Z</td>
+      <td>195662009.0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>510.82</td>
+      <td>None</td>
+      <td>4c6ebc7c-b7be-d3a0-67ca-6d91d2929430</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2018-02-11T01:20:00Z</td>
+      <td>2018-02-11T01:05:00Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>748.53</td>
+      <td>None</td>
+      <td>40f931f5-1f1c-06e8-0bbf-e50424c58ab1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>430193006</td>
+      <td>1990-07-10T21:50:49Z</td>
+      <td>1990-07-10T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Upper arm X-ray</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>59f48dfd-f1f6-faa7-f378-150137d46be4</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>1225002</td>
+      <td>1991-05-28T22:43:31Z</td>
+      <td>1991-05-28T22:13:31Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Bone immobilization</td>
+      <td>431.40</td>
+      <td>Fracture of forearm</td>
+      <td>59f48dfd-f1f6-faa7-f378-150137d46be4</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>274474001</td>
+      <td>1991-05-28T22:41:44Z</td>
+      <td>1991-05-28T22:13:31Z</td>
+      <td>65966004.0</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Assessment using Morse Fall Scale (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>762993000</td>
+      <td>1991-07-16T21:58:34Z</td>
+      <td>1991-07-16T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>171207006</td>
+      <td>1991-07-16T22:09:26Z</td>
+      <td>1991-07-16T21:58:34Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>30.96</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>715252007</td>
+      <td>1991-07-16T22:34:48Z</td>
+      <td>1991-07-16T22:09:26Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Assessment of substance use (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>428211000124100</td>
+      <td>1991-07-16T22:46:19Z</td>
+      <td>1991-07-16T22:34:48Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>868187001</td>
+      <td>1991-07-16T23:11:14Z</td>
+      <td>1991-07-16T22:46:19Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Anticipatory guidance (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>386516004</td>
+      <td>1991-07-16T23:19:23Z</td>
+      <td>1991-07-16T23:11:14Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>ee586a59-c876-4498-6f64-56c8ede79259</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>171207006</td>
+      <td>1992-07-21T21:49:15Z</td>
+      <td>1992-07-21T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>563.05</td>
+      <td>None</td>
+      <td>ee586a59-c876-4498-6f64-56c8ede79259</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>430193006</td>
+      <td>1992-07-21T21:50:49Z</td>
+      <td>1992-07-21T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>30.67</td>
+      <td>None</td>
+      <td>ee586a59-c876-4498-6f64-56c8ede79259</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>715252007</td>
+      <td>1992-07-21T22:15:48Z</td>
+      <td>1992-07-21T21:49:15Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>659.66</td>
+      <td>None</td>
+      <td>dbf4873d-7818-30bc-fdba-b0989e9b45a0</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2019-02-17T01:20:00Z</td>
+      <td>2019-02-17T01:05:00Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>282.05</td>
+      <td>None</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2020-02-23T01:20:00Z</td>
+      <td>2020-02-23T01:05:00Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Face mask (physical object)</td>
+      <td>2.10</td>
+      <td>Suspected COVID-19</td>
+      <td>a83a565f-0af5-9a29-6d7f-fdadb5c2b2a9</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>261352009</td>
+      <td>2020-08-21T01:16:39Z</td>
+      <td>2020-08-21T01:05:00Z</td>
+      <td>840544004.0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Assessment of substance use (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>428211000124100</td>
+      <td>2021-02-28T01:18:38Z</td>
+      <td>2021-02-28T01:05:00Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>868187001</td>
+      <td>2021-02-28T01:40:04Z</td>
+      <td>2021-02-28T01:18:38Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Anticipatory guidance (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>386516004</td>
+      <td>2021-02-28T01:52:30Z</td>
+      <td>2021-02-28T01:40:04Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>171207006</td>
+      <td>2022-03-06T01:17:23Z</td>
+      <td>2022-03-06T01:05:00Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>318.38</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2022-03-06T01:20:00Z</td>
+      <td>2022-03-06T01:05:00Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>30.27</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>715252007</td>
+      <td>2022-03-06T01:39:27Z</td>
+      <td>2022-03-06T01:17:23Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Assessment of substance use (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>428211000124100</td>
+      <td>2022-03-06T01:50:44Z</td>
+      <td>2022-03-06T01:39:27Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>868187001</td>
+      <td>2022-03-06T02:06:57Z</td>
+      <td>2022-03-06T01:50:44Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Anticipatory guidance (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>386516004</td>
+      <td>2022-03-06T02:16:18Z</td>
+      <td>2022-03-06T02:06:57Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>d092a760-19fd-1464-84e9-87a4aae36ee2</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>171207006</td>
+      <td>1993-07-27T21:47:13Z</td>
+      <td>1993-07-27T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>433.55</td>
+      <td>None</td>
+      <td>d092a760-19fd-1464-84e9-87a4aae36ee2</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>430193006</td>
+      <td>1993-07-27T21:50:49Z</td>
+      <td>1993-07-27T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>30.36</td>
+      <td>None</td>
+      <td>d092a760-19fd-1464-84e9-87a4aae36ee2</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>715252007</td>
+      <td>1993-07-27T22:11:03Z</td>
+      <td>1993-07-27T21:47:13Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Seizure Count Cerebral Cortex Electroencephalogram (EEG)</td>
+      <td>9117.89</td>
+      <td>None</td>
+      <td>6b0584be-b199-b2c8-68a1-d9652af9e0a2</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>54550000</td>
+      <td>1994-05-21T00:10:25Z</td>
+      <td>1994-05-20T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>c65401b1-f095-b85a-ed51-f2143cee6ea0</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>171207006</td>
+      <td>1994-08-02T21:47:07Z</td>
+      <td>1994-08-02T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>29.10</td>
+      <td>None</td>
+      <td>c65401b1-f095-b85a-ed51-f2143cee6ea0</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>715252007</td>
+      <td>1994-08-02T22:09:51Z</td>
+      <td>1994-08-02T21:47:07Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Certification procedure (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>310417005</td>
+      <td>1995-06-06T21:50:49Z</td>
+      <td>1995-06-06T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Notifications (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>185087000</td>
+      <td>1995-06-06T21:50:49Z</td>
+      <td>1995-06-06T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Initial patient assessment (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>315639002</td>
+      <td>1995-06-06T21:50:49Z</td>
+      <td>1995-06-06T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Development of individualized plan of care (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>370789001</td>
+      <td>1995-06-06T21:50:49Z</td>
+      <td>1995-06-06T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-06T21:50:49Z</td>
+      <td>1995-06-06T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-07T21:50:49Z</td>
+      <td>1995-06-07T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-08T21:50:49Z</td>
+      <td>1995-06-08T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-09T21:50:49Z</td>
+      <td>1995-06-09T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-10T21:50:49Z</td>
+      <td>1995-06-10T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-11T21:50:49Z</td>
+      <td>1995-06-11T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-12T21:50:49Z</td>
+      <td>1995-06-12T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-13T21:50:49Z</td>
+      <td>1995-06-13T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-14T21:50:49Z</td>
+      <td>1995-06-14T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-15T21:50:49Z</td>
+      <td>1995-06-15T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-16T21:50:49Z</td>
+      <td>1995-06-16T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-17T21:50:49Z</td>
+      <td>1995-06-17T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-18T21:50:49Z</td>
+      <td>1995-06-18T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-19T21:50:49Z</td>
+      <td>1995-06-19T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-20T21:50:49Z</td>
+      <td>1995-06-20T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-21T21:50:49Z</td>
+      <td>1995-06-21T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-22T21:50:49Z</td>
+      <td>1995-06-22T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-23T21:50:49Z</td>
+      <td>1995-06-23T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-24T21:50:49Z</td>
+      <td>1995-06-24T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-25T21:50:49Z</td>
+      <td>1995-06-25T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-26T21:50:49Z</td>
+      <td>1995-06-26T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-27T21:50:49Z</td>
+      <td>1995-06-27T21:35:49Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Certification procedure (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>310417005</td>
+      <td>2019-06-12T12:15:39Z</td>
+      <td>2019-06-12T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Notifications (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>185087000</td>
+      <td>2019-06-12T12:15:39Z</td>
+      <td>2019-06-12T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Initial patient assessment (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>315639002</td>
+      <td>2019-06-12T12:15:39Z</td>
+      <td>2019-06-12T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Development of individualized plan of care (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>370789001</td>
+      <td>2019-06-12T12:15:39Z</td>
+      <td>2019-06-12T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-12T12:15:39Z</td>
+      <td>2019-06-12T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-13T12:15:39Z</td>
+      <td>2019-06-13T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-14T12:15:39Z</td>
+      <td>2019-06-14T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-15T12:15:39Z</td>
+      <td>2019-06-15T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-16T12:15:39Z</td>
+      <td>2019-06-16T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-17T12:15:39Z</td>
+      <td>2019-06-17T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-18T12:15:39Z</td>
+      <td>2019-06-18T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-19T12:15:39Z</td>
+      <td>2019-06-19T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-20T12:15:39Z</td>
+      <td>2019-06-20T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-21T12:15:39Z</td>
+      <td>2019-06-21T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-22T12:15:39Z</td>
+      <td>2019-06-22T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Patient discharge (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>58000006</td>
+      <td>2019-06-23T12:15:39Z</td>
+      <td>2019-06-23T12:00:39Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Assessment of health and social care needs (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>710824005</td>
+      <td>2013-06-06T18:30:13Z</td>
+      <td>2013-06-06T17:35:55Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>171207006</td>
+      <td>2013-06-06T18:42:51Z</td>
+      <td>2013-06-06T18:30:13Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Depression screening using Patient Health Questionnaire Two-Item score (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>454711000124102</td>
+      <td>2013-06-06T19:03:36Z</td>
+      <td>2013-06-06T18:42:51Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Assessment of substance use (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>428211000124100</td>
+      <td>2013-06-06T19:18:14Z</td>
+      <td>2013-06-06T19:03:36Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>763302001</td>
+      <td>2013-06-06T19:38:23Z</td>
+      <td>2013-06-06T19:18:14Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Throat culture (procedure)</td>
+      <td>1397.20</td>
+      <td>Acute viral pharyngitis (disorder)</td>
+      <td>4ef35590-b109-e56c-16e5-bd0c6de65e6d</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>117015009</td>
+      <td>2013-11-26T03:50:55Z</td>
+      <td>2013-11-26T03:35:55Z</td>
+      <td>195662009.0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Removal of subcutaneous contraceptive</td>
+      <td>7718.89</td>
+      <td>None</td>
+      <td>b8d3e6ae-2297-f383-6b1b-df70e7dd1fe5</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>301807007</td>
+      <td>2014-07-24T18:15:35Z</td>
+      <td>2014-07-24T17:35:55Z</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Standard pregnancy test</td>
+      <td>3266.43</td>
+      <td>Normal pregnancy</td>
+      <td>fb93dac2-966f-fa44-4d83-11a755842f46</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>252160004</td>
+      <td>2014-09-18T17:50:55Z</td>
+      <td>2014-09-18T17:35:55Z</td>
+      <td>72892002.0</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Ultrasound scan for fetal viability</td>
+      <td>12413.00</td>
+      <td>Normal pregnancy</td>
+      <td>fb93dac2-966f-fa44-4d83-11a755842f46</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>169230002</td>
+      <td>2014-09-18T17:50:55Z</td>
+      <td>2014-09-18T17:35:55Z</td>
+      <td>72892002.0</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Physical examination</td>
+      <td>431.40</td>
+      <td>Normal pregnancy</td>
+      <td>f63d0ce4-83bc-1713-2aee-6ca3dcd5b1ab</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>5880005</td>
+      <td>2014-09-29T17:50:55Z</td>
+      <td>2014-09-29T17:35:55Z</td>
+      <td>72892002.0</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Depression screening</td>
+      <td>431.40</td>
+      <td>Normal pregnancy</td>
+      <td>f63d0ce4-83bc-1713-2aee-6ca3dcd5b1ab</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>171207006</td>
+      <td>2014-09-29T17:50:55Z</td>
+      <td>2014-09-29T17:35:55Z</td>
+      <td>72892002.0</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Assessment of health and social care needs (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>ac2e0b61-a9d0-89f6-c184-20256487d762</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>710824005</td>
+      <td>2015-06-11T18:32:36Z</td>
+      <td>2015-06-11T17:35:55Z</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>procedure_description</th>
+      <th>procedure_cost</th>
+      <th>reason_description</th>
+      <th>encounter_id</th>
+      <th>patient_id</th>
+      <th>procedure_code</th>
+      <th>procedure_end_time</th>
+      <th>procedure_start_time</th>
+      <th>reason_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>493.03</td>
+      <td>None</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2014-01-19 01:20:00</td>
+      <td>2014-01-19 01:05:00</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>523.74</td>
+      <td>None</td>
+      <td>79b413f6-c668-bf41-bce7-b403c40cf7a4</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>430193006</td>
+      <td>2021-09-23 02:59:04</td>
+      <td>2021-09-23 02:44:04</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>536.16</td>
+      <td>None</td>
+      <td>a79858c9-a74e-8ca3-c9a0-b63897e8fc05</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>430193006</td>
+      <td>2021-10-28 02:59:04</td>
+      <td>2021-10-28 02:44:04</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Clavicle X-ray</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>1600b01f-01b3-fd15-135f-c7c4a30d867f</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>168594001</td>
+      <td>2016-04-11 03:42:57</td>
+      <td>2016-04-11 03:12:57</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Admission to orthopedic department</td>
+      <td>431.40</td>
+      <td>Fracture of clavicle (disorder)</td>
+      <td>1600b01f-01b3-fd15-135f-c7c4a30d867f</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>305428000</td>
+      <td>2016-04-11 04:55:57</td>
+      <td>2016-04-11 03:12:57</td>
+      <td>58150001.0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Suture open wound</td>
+      <td>7441.62</td>
+      <td>Facial laceration (disorder)</td>
+      <td>17d8fd78-be39-d2f7-6032-74d712972fa3</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>288086009</td>
+      <td>2014-01-20 12:29:00</td>
+      <td>2014-01-20 12:00:39</td>
+      <td>370247008.0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Suture open wound</td>
+      <td>5885.26</td>
+      <td>Laceration of foot (disorder)</td>
+      <td>3c131d0c-6d15-7fe1-1372-a3d8316b6d82</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>288086009</td>
+      <td>1988-04-27 21:56:54</td>
+      <td>1988-04-27 21:35:49</td>
+      <td>284551006.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Injection of tetanus antitoxin</td>
+      <td>1867.93</td>
+      <td>Laceration of foot (disorder)</td>
+      <td>3c131d0c-6d15-7fe1-1372-a3d8316b6d82</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>384700001</td>
+      <td>1988-04-27 22:13:31</td>
+      <td>1988-04-27 21:56:54</td>
+      <td>284551006.0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>700.81</td>
+      <td>None</td>
+      <td>afa466b5-efb2-1d87-c7a1-d06c52ea5c62</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>430193006</td>
+      <td>1989-07-04 21:50:49</td>
+      <td>1989-07-04 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>349.48</td>
+      <td>None</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>430193006</td>
+      <td>2022-03-03 02:59:04</td>
+      <td>2022-03-03 02:44:04</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Throat culture (procedure)</td>
+      <td>1211.72</td>
+      <td>Acute viral pharyngitis (disorder)</td>
+      <td>9714ef9e-065c-12aa-757e-519ba1b4453b</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>117015009</td>
+      <td>2016-08-03 09:20:00</td>
+      <td>2016-08-03 09:05:00</td>
+      <td>195662009.0</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>345.01</td>
+      <td>None</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>430193006</td>
+      <td>2022-06-02 02:59:04</td>
+      <td>2022-06-02 02:44:04</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Ankle X-ray</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>1cedec53-a362-320c-d52a-ddbc57fbce63</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>19490002</td>
+      <td>2022-09-25 03:14:04</td>
+      <td>2022-09-25 02:44:04</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Bone immobilization</td>
+      <td>431.40</td>
+      <td>Fracture of ankle (disorder)</td>
+      <td>1cedec53-a362-320c-d52a-ddbc57fbce63</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>274474001</td>
+      <td>2022-09-25 03:12:47</td>
+      <td>2022-09-25 02:44:04</td>
+      <td>16114001.0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Throat culture (procedure)</td>
+      <td>2674.76</td>
+      <td>Acute viral pharyngitis (disorder)</td>
+      <td>aa4ae34c-931d-09b3-6aac-ac093d1ed197</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>117015009</td>
+      <td>2017-12-08 20:20:00</td>
+      <td>2017-12-08 20:05:00</td>
+      <td>195662009.0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>510.82</td>
+      <td>None</td>
+      <td>4c6ebc7c-b7be-d3a0-67ca-6d91d2929430</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2018-02-11 01:20:00</td>
+      <td>2018-02-11 01:05:00</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>748.53</td>
+      <td>None</td>
+      <td>40f931f5-1f1c-06e8-0bbf-e50424c58ab1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>430193006</td>
+      <td>1990-07-10 21:50:49</td>
+      <td>1990-07-10 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Upper arm X-ray</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>59f48dfd-f1f6-faa7-f378-150137d46be4</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>1225002</td>
+      <td>1991-05-28 22:43:31</td>
+      <td>1991-05-28 22:13:31</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Bone immobilization</td>
+      <td>431.40</td>
+      <td>Fracture of forearm (disorder)</td>
+      <td>59f48dfd-f1f6-faa7-f378-150137d46be4</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>274474001</td>
+      <td>1991-05-28 22:41:44</td>
+      <td>1991-05-28 22:13:31</td>
+      <td>65966004.0</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Assessment using Morse Fall Scale (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>762993000</td>
+      <td>1991-07-16 21:58:34</td>
+      <td>1991-07-16 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>171207006</td>
+      <td>1991-07-16 22:09:26</td>
+      <td>1991-07-16 21:58:34</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>30.96</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>715252007</td>
+      <td>1991-07-16 22:34:48</td>
+      <td>1991-07-16 22:09:26</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Assessment of substance use (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>428211000124100</td>
+      <td>1991-07-16 22:46:19</td>
+      <td>1991-07-16 22:34:48</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>868187001</td>
+      <td>1991-07-16 23:11:14</td>
+      <td>1991-07-16 22:46:19</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Anticipatory guidance (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>386516004</td>
+      <td>1991-07-16 23:19:23</td>
+      <td>1991-07-16 23:11:14</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>ee586a59-c876-4498-6f64-56c8ede79259</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>171207006</td>
+      <td>1992-07-21 21:49:15</td>
+      <td>1992-07-21 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>563.05</td>
+      <td>None</td>
+      <td>ee586a59-c876-4498-6f64-56c8ede79259</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>430193006</td>
+      <td>1992-07-21 21:50:49</td>
+      <td>1992-07-21 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>30.67</td>
+      <td>None</td>
+      <td>ee586a59-c876-4498-6f64-56c8ede79259</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>715252007</td>
+      <td>1992-07-21 22:15:48</td>
+      <td>1992-07-21 21:49:15</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>659.66</td>
+      <td>None</td>
+      <td>dbf4873d-7818-30bc-fdba-b0989e9b45a0</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2019-02-17 01:20:00</td>
+      <td>2019-02-17 01:05:00</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>282.05</td>
+      <td>None</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2020-02-23 01:20:00</td>
+      <td>2020-02-23 01:05:00</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Face mask (physical object)</td>
+      <td>2.10</td>
+      <td>Suspected COVID-19 (situation)</td>
+      <td>a83a565f-0af5-9a29-6d7f-fdadb5c2b2a9</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>261352009</td>
+      <td>2020-08-21 01:16:39</td>
+      <td>2020-08-21 01:05:00</td>
+      <td>840544004.0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Assessment of substance use (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>428211000124100</td>
+      <td>2021-02-28 01:18:38</td>
+      <td>2021-02-28 01:05:00</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>868187001</td>
+      <td>2021-02-28 01:40:04</td>
+      <td>2021-02-28 01:18:38</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Anticipatory guidance (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>386516004</td>
+      <td>2021-02-28 01:52:30</td>
+      <td>2021-02-28 01:40:04</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>171207006</td>
+      <td>2022-03-06 01:17:23</td>
+      <td>2022-03-06 01:05:00</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>318.38</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>430193006</td>
+      <td>2022-03-06 01:20:00</td>
+      <td>2022-03-06 01:05:00</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>30.27</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>715252007</td>
+      <td>2022-03-06 01:39:27</td>
+      <td>2022-03-06 01:17:23</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Assessment of substance use (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>428211000124100</td>
+      <td>2022-03-06 01:50:44</td>
+      <td>2022-03-06 01:39:27</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Assessment using Car  Relax  Alone  Forget  Friends  Trouble Screening Test (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>868187001</td>
+      <td>2022-03-06 02:06:57</td>
+      <td>2022-03-06 01:50:44</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Anticipatory guidance (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>386516004</td>
+      <td>2022-03-06 02:16:18</td>
+      <td>2022-03-06 02:06:57</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>d092a760-19fd-1464-84e9-87a4aae36ee2</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>171207006</td>
+      <td>1993-07-27 21:47:13</td>
+      <td>1993-07-27 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Medication Reconciliation (procedure)</td>
+      <td>433.55</td>
+      <td>None</td>
+      <td>d092a760-19fd-1464-84e9-87a4aae36ee2</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>430193006</td>
+      <td>1993-07-27 21:50:49</td>
+      <td>1993-07-27 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>30.36</td>
+      <td>None</td>
+      <td>d092a760-19fd-1464-84e9-87a4aae36ee2</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>715252007</td>
+      <td>1993-07-27 22:11:03</td>
+      <td>1993-07-27 21:47:13</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Seizure Count Cerebral Cortex Electroencephalogram (EEG)</td>
+      <td>9117.89</td>
+      <td>None</td>
+      <td>6b0584be-b199-b2c8-68a1-d9652af9e0a2</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>54550000</td>
+      <td>1994-05-21 00:10:25</td>
+      <td>1994-05-20 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>c65401b1-f095-b85a-ed51-f2143cee6ea0</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>171207006</td>
+      <td>1994-08-02 21:47:07</td>
+      <td>1994-08-02 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Depression screening using Patient Health Questionnaire Nine Item score (procedure)</td>
+      <td>29.10</td>
+      <td>None</td>
+      <td>c65401b1-f095-b85a-ed51-f2143cee6ea0</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>715252007</td>
+      <td>1994-08-02 22:09:51</td>
+      <td>1994-08-02 21:47:07</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Certification procedure (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>310417005</td>
+      <td>1995-06-06 21:50:49</td>
+      <td>1995-06-06 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Notifications (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>185087000</td>
+      <td>1995-06-06 21:50:49</td>
+      <td>1995-06-06 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Initial patient assessment (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>315639002</td>
+      <td>1995-06-06 21:50:49</td>
+      <td>1995-06-06 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Development of individualized plan of care (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>370789001</td>
+      <td>1995-06-06 21:50:49</td>
+      <td>1995-06-06 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-06 21:50:49</td>
+      <td>1995-06-06 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-07 21:50:49</td>
+      <td>1995-06-07 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-08 21:50:49</td>
+      <td>1995-06-08 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-09 21:50:49</td>
+      <td>1995-06-09 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-10 21:50:49</td>
+      <td>1995-06-10 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-11 21:50:49</td>
+      <td>1995-06-11 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-12 21:50:49</td>
+      <td>1995-06-12 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-13 21:50:49</td>
+      <td>1995-06-13 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-14 21:50:49</td>
+      <td>1995-06-14 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-15 21:50:49</td>
+      <td>1995-06-15 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-16 21:50:49</td>
+      <td>1995-06-16 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-17 21:50:49</td>
+      <td>1995-06-17 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-18 21:50:49</td>
+      <td>1995-06-18 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-19 21:50:49</td>
+      <td>1995-06-19 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-20 21:50:49</td>
+      <td>1995-06-20 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-21 21:50:49</td>
+      <td>1995-06-21 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-22 21:50:49</td>
+      <td>1995-06-22 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-23 21:50:49</td>
+      <td>1995-06-23 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-24 21:50:49</td>
+      <td>1995-06-24 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-25 21:50:49</td>
+      <td>1995-06-25 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-26 21:50:49</td>
+      <td>1995-06-26 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>a5830ef8-76cb-cf6e-9b64-098541cac0f1</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385763009</td>
+      <td>1995-06-27 21:50:49</td>
+      <td>1995-06-27 21:35:49</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Certification procedure (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>310417005</td>
+      <td>2019-06-12 12:15:39</td>
+      <td>2019-06-12 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Notifications (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>185087000</td>
+      <td>2019-06-12 12:15:39</td>
+      <td>2019-06-12 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Initial patient assessment (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>315639002</td>
+      <td>2019-06-12 12:15:39</td>
+      <td>2019-06-12 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Development of individualized plan of care (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>370789001</td>
+      <td>2019-06-12 12:15:39</td>
+      <td>2019-06-12 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-12 12:15:39</td>
+      <td>2019-06-12 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-13 12:15:39</td>
+      <td>2019-06-13 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-14 12:15:39</td>
+      <td>2019-06-14 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-15 12:15:39</td>
+      <td>2019-06-15 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-16 12:15:39</td>
+      <td>2019-06-16 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-17 12:15:39</td>
+      <td>2019-06-17 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-18 12:15:39</td>
+      <td>2019-06-18 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-19 12:15:39</td>
+      <td>2019-06-19 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-20 12:15:39</td>
+      <td>2019-06-20 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-21 12:15:39</td>
+      <td>2019-06-21 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Hospice care (regime/therapy)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>385763009</td>
+      <td>2019-06-22 12:15:39</td>
+      <td>2019-06-22 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Patient discharge (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7ede702d-03fb-31c7-8e34-fa66afb6e3cb</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>58000006</td>
+      <td>2019-06-23 12:15:39</td>
+      <td>2019-06-23 12:00:39</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Assessment of health and social care needs (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>710824005</td>
+      <td>2013-06-06 18:30:13</td>
+      <td>2013-06-06 17:35:55</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Depression screening (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>171207006</td>
+      <td>2013-06-06 18:42:51</td>
+      <td>2013-06-06 18:30:13</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Depression screening using Patient Health Questionnaire Two-Item score (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>454711000124102</td>
+      <td>2013-06-06 19:03:36</td>
+      <td>2013-06-06 18:42:51</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Assessment of substance use (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>428211000124100</td>
+      <td>2013-06-06 19:18:14</td>
+      <td>2013-06-06 19:03:36</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>763302001</td>
+      <td>2013-06-06 19:38:23</td>
+      <td>2013-06-06 19:18:14</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Throat culture (procedure)</td>
+      <td>1397.20</td>
+      <td>Acute viral pharyngitis (disorder)</td>
+      <td>4ef35590-b109-e56c-16e5-bd0c6de65e6d</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>117015009</td>
+      <td>2013-11-26 03:50:55</td>
+      <td>2013-11-26 03:35:55</td>
+      <td>195662009.0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Removal of subcutaneous contraceptive</td>
+      <td>7718.89</td>
+      <td>None</td>
+      <td>b8d3e6ae-2297-f383-6b1b-df70e7dd1fe5</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>301807007</td>
+      <td>2014-07-24 18:15:35</td>
+      <td>2014-07-24 17:35:55</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Standard pregnancy test</td>
+      <td>3266.43</td>
+      <td>Normal pregnancy</td>
+      <td>fb93dac2-966f-fa44-4d83-11a755842f46</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>252160004</td>
+      <td>2014-09-18 17:50:55</td>
+      <td>2014-09-18 17:35:55</td>
+      <td>72892002.0</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Ultrasound scan for fetal viability</td>
+      <td>12413.00</td>
+      <td>Normal pregnancy</td>
+      <td>fb93dac2-966f-fa44-4d83-11a755842f46</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>169230002</td>
+      <td>2014-09-18 17:50:55</td>
+      <td>2014-09-18 17:35:55</td>
+      <td>72892002.0</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Physical examination</td>
+      <td>431.40</td>
+      <td>Normal pregnancy</td>
+      <td>f63d0ce4-83bc-1713-2aee-6ca3dcd5b1ab</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>5880005</td>
+      <td>2014-09-29 17:50:55</td>
+      <td>2014-09-29 17:35:55</td>
+      <td>72892002.0</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Depression screening</td>
+      <td>431.40</td>
+      <td>Normal pregnancy</td>
+      <td>f63d0ce4-83bc-1713-2aee-6ca3dcd5b1ab</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>171207006</td>
+      <td>2014-09-29 17:50:55</td>
+      <td>2014-09-29 17:35:55</td>
+      <td>72892002.0</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Assessment of health and social care needs (procedure)</td>
+      <td>431.40</td>
+      <td>None</td>
+      <td>ac2e0b61-a9d0-89f6-c184-20256487d762</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>710824005</td>
+      <td>2015-06-11 18:32:36</td>
+      <td>2015-06-11 17:35:55</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">procedure_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_procedure_description"></div><b>📃 Summary:</b> Brief description of the medical procedure<br><b>🎨 Patterns:</b><br><ul><li><code>.+\s\(procedure\)$</code><br><i>Procedures ending with "(procedure)"</i></li><li><code>.+\s\(regime\/therapy\)$</code><br><i>Regimes or therapies ending with "(regime/therapy)"</i></li><li><code>.+\s\([^)]+\)$</code><br><i>General pattern for items in parentheses at the end</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">procedure_cost</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_procedure_cost"></div><b>📃 Summary:</b> Base cost of the medical procedure<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reason_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_reason_description"></div><b>📃 Summary:</b> Description of the reason for the procedure<br><b>❓ Missing:</b> Not applicable for procedures without specific medical reasons.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encounter_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encounter_id"></div><b>📃 Summary:</b> Unique identifier for the patient encounter<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">patient_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_patient_id"></div><b>📃 Summary:</b> Unique identifier for the patient<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">procedure_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_procedure_code"></div><b>📃 Summary:</b> Unique identifier for the medical procedure<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">procedure_end_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_procedure_end_time"></div><b>📃 Summary:</b> End time of the medical procedure<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">procedure_start_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_procedure_start_time"></div><b>📃 Summary:</b> Start time of the medical procedure<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reason_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_reason_code"></div><b>📃 Summary:</b> Code indicating reason for the procedure<br><b>❓ Missing:</b> Not applicable for procedures without specific medical reasons.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about medical procedures. It includes details such as start and stop times, patient and encounter IDs, procedure codes and descriptions, base costs, and reason codes. Each row represents a specific medical procedure performed on a patient. The table tracks various aspects of medical procedures, including timing, patient information, procedure details, and associated costs.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>9</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>START</td>
+      <td>Start time of the medical procedure</td>
+      <td>procedure_start_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>STOP</td>
+      <td>End time of the medical procedure</td>
+      <td>procedure_end_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>PATIENT</td>
+      <td>Unique identifier for the patient</td>
+      <td>patient_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>ENCOUNTER</td>
+      <td>Unique identifier for the patient encounter</td>
+      <td>encounter_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CODE</td>
+      <td>Unique identifier for the medical procedure</td>
+      <td>procedure_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>DESCRIPTION</td>
+      <td>Brief description of the medical procedure</td>
+      <td>procedure_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>BASE_COST</td>
+      <td>Base cost of the medical procedure</td>
+      <td>procedure_cost</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>REASONCODE</td>
+      <td>Code indicating reason for the procedure</td>
+      <td>reason_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>REASONDESCRIPTION</td>
+      <td>Description of the reason for the procedure</td>
+      <td>reason_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>reason_description</b>: 'Acute myeloid leukemia  disease (disorder)' has extra space. 'Overlapping malignant neoplasm of colon' and 'Polyp of colon' lack parenthetical classifications.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Acute myeloid leukemia  disease (disorder)</td>
+      <td>Acute myeloid leukemia disease (disorder)</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Overlapping malignant neoplasm of colon</td>
+      <td>Overlapping malignant neoplasm of colon (disorder)</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Polyp of colon</td>
+      <td>Polyp of colon (disorder)</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Fracture of ankle</td>
+      <td>Fracture of ankle (disorder)</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Fracture of clavicle</td>
+      <td>Fracture of clavicle (disorder)</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Laceration of foot</td>
+      <td>Laceration of foot (disorder)</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Laceration of thigh</td>
+      <td>Laceration of thigh (disorder)</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Suspected COVID-19</td>
+      <td>Suspected COVID-19 (situation)</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Facial laceration</td>
+      <td>Facial laceration (disorder)</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Laceration of forearm</td>
+      <td>Laceration of forearm (disorder)</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Asthma</td>
+      <td>Asthma (disorder)</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Fracture of forearm</td>
+      <td>Fracture of forearm (disorder)</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Fracture subluxation of wrist</td>
+      <td>Fracture subluxation of wrist (disorder)</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Injury of medial collateral ligament of knee</td>
+      <td>Injury of medial collateral ligament of knee (disorder)</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Neoplasm of prostate</td>
+      <td>Neoplasm of prostate (disorder)</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Recurrent rectal polyp</td>
+      <td>Recurrent rectal polyp (disorder)</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                ✔️ <b>6</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>encounter_id</td>
+      <td>CAST("encounter_id" AS UUID)</td>
+      <td>To transform the 'encounter_id' column from VARCHAR to UUID, we can use a simple CAST function in DuckDB. The current data already follows the UUID format (8-4-4-4-12 hexadecimal characters), so a straightforward cast should work. DuckDB supports UUID as a native data type, making this conversion straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>patient_id</td>
+      <td>CAST("patient_id" AS UUID)</td>
+      <td>To transform the 'patient_id' column from VARCHAR to UUID, we need to use a simple CAST function in DuckDB. The UUID data type is supported in DuckDB and can be used to store 128-bit UUID values. The current values in the 'patient_id' column appear to be in the standard UUID format, so a straightforward cast should work without any additional formatting or manipulation.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>procedure_code</td>
+      <td>CAST("procedure_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'procedure_code' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_data_type). In this case, we're casting the 'procedure_code' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>procedure_end_time</td>
+      <td>CAST("procedure_end_time" AS TIMESTAMP)</td>
+      <td>To transform the 'procedure_end_time' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the date-time string matches ISO 8601 format, which is directly compatible with DuckDB's TIMESTAMP type. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>procedure_start_time</td>
+      <td>CAST("procedure_start_time" AS TIMESTAMP)</td>
+      <td>To transform the 'procedure_start_time' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The data is already in a format that can be directly interpreted as a timestamp (ISO 8601 format), so we don't need to use strptime() for parsing. DuckDB can automatically interpret this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>reason_code</td>
+      <td>CAST("reason_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'reason_code' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. The CAST function in DuckDB can directly convert DECIMAL to VARCHAR without any intermediate steps.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                🔍 <b>2</b> columns have missing values<br>
+                ✔️ <b>2</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>reason_code</td>
+      <td>78.07</td>
+      <td>True</td>
+      <td>Not applicable for procedures without specific medical reasons.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>reason_description</td>
+      <td>78.07</td>
+      <td>True</td>
+      <td>Not applicable for procedures without specific medical reasons.</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Hospice care (r...', 'value': 9.230172580957921}, {'label': 'Nursing care/su...', 'value': 8.08609656777196}, {'label': 'Assessment of h...', 'value': 6.883847197983324}, {'label': 'Depression scre...', 'value': 6.767500484777972}, {'label': 'Depression scre...', 'value': 5.507077758386659}, {'label': 'Other values', 'value': 63.525305410122165}];
+    drawBarChart("bar_viz_procedure_description", data);
+data = [{'x': 4132.66925, 'y': 4842}, {'x': 12395.127749999998, 'y': 290}, {'x': 20657.586249999993, 'y': 21}, {'x': 28920.044749999994, 'y': 2}, {'x': 37182.503249999994, 'y': 1}, {'x': 45444.961749999995, 'y': 0}, {'x': 53707.420249999996, 'y': 0}, {'x': 61969.87874999999, 'y': 0}, {'x': 70232.33724999998, 'y': 0}, {'x': 78494.79574999999, 'y': 0}, {'x': 86757.25425, 'y': 0}, {'x': 95019.71274999998, 'y': 0}, {'x': 103282.17124999998, 'y': 0}, {'x': 111544.62975, 'y': 0}, {'x': 119807.08824999999, 'y': 0}, {'x': 128069.54674999998, 'y': 0}, {'x': 136332.00525, 'y': 0}, {'x': 144594.46375, 'y': 0}, {'x': 152856.92224999997, 'y': 0}, {'x': 161119.38074999998, 'y': 1}];
+    binWidth = 8262.458499999999;
+    drawHistogram("hist_viz_procedure_cost", data, binWidth);
+data = [{'label': 'Normal pregnanc...', 'value': 55.437665782493376}, {'label': 'Pulmonary emphy...', 'value': 10.521662245800178}, {'label': 'Sleep disorder ...', 'value': 8.134394341290893}, {'label': 'Child attention...', 'value': 7.073386383731211}, {'label': 'Malignant neopl...', 'value': 2.6525198938992043}, {'label': 'Other values', 'value': 16.180371352785148}];
+    drawBarChart("bar_viz_reason_description", data);
+data = [{'label': 'f5e8fb6a-65d4-d...', 'value': 2.365716501842156}, {'label': '44a2bcf7-c6e7-d...', 'value': 2.1330230754314523}, {'label': '9fe47a4c-3f07-8...', 'value': 1.4543339150668992}, {'label': '7318ff90-fd4b-6...', 'value': 1.3961605584642234}, {'label': '52112e52-b70a-2...', 'value': 1.202249369788637}, {'label': 'Other values', 'value': 91.44851657940663}];
+    drawBarChart("bar_viz_encounter_id", data);
+data = [{'label': '5dbb559c-7f46-f...', 'value': 5.662206709327129}, {'label': 'dd19ae3a-2f3a-a...', 'value': 5.507077758386659}, {'label': '53534989-404e-c...', 'value': 4.90595307349234}, {'label': 'da069417-667e-3...', 'value': 4.324219507465581}, {'label': 'b3b71304-fe5b-b...', 'value': 4.169090556525112}, {'label': 'Other values', 'value': 75.43145239480317}];
+    drawBarChart("bar_viz_patient_id", data);
+data = [{'label': '385763009', 'value': 9.230172580957921}, {'label': '410401003', 'value': 8.08609656777196}, {'label': '171207006', 'value': 7.155322862129145}, {'label': '710824005', 'value': 6.883847197983324}, {'label': '454711000124102', 'value': 5.507077758386659}, {'label': 'Other values', 'value': 63.137483032770994}];
+    drawBarChart("bar_viz_procedure_code", data);
+data = [{'label': '2019-07-09 23:1...', 'value': 0.3878223773511732}, {'label': '2017-03-10 05:4...', 'value': 0.3878223773511732}, {'label': '2021-12-31 05:4...', 'value': 0.3878223773511732}, {'label': '2014-04-08 20:2...', 'value': 0.3878223773511732}, {'label': '2015-05-19 20:2...', 'value': 0.3878223773511732}, {'label': 'Other values', 'value': 98.06088811324413}];
+    drawBarChart("bar_viz_procedure_end_time", data);
+data = [{'label': '2022-05-07 05:0...', 'value': 0.3878223773511732}, {'label': '2017-03-10 05:3...', 'value': 0.3878223773511732}, {'label': '2020-02-07 05:3...', 'value': 0.3878223773511732}, {'label': '2016-11-25 15:3...', 'value': 0.3878223773511732}, {'label': '2015-05-19 20:1...', 'value': 0.3878223773511732}, {'label': 'Other values', 'value': 98.06088811324413}];
+    drawBarChart("bar_viz_procedure_start_time", data);
+data = [{'label': '72892002.0', 'value': 55.437665782493376}, {'label': '87433001.0', 'value': 10.521662245800178}, {'label': '39898005.0', 'value': 8.134394341290893}, {'label': '192127007.0', 'value': 7.073386383731211}, {'label': '254837009.0', 'value': 2.6525198938992043}, {'label': 'Other values', 'value': 16.180371352785148}];
+    drawBarChart("bar_viz_reason_code", data);
+
+
+</script>
+</body>
+</html>

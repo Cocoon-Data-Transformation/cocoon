@@ -1,0 +1,4482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>customer_address</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>CA_ADDRESS_SK</th>
+      <th>CA_ADDRESS_ID</th>
+      <th>CA_STREET_NUMBER</th>
+      <th>CA_STREET_TYPE</th>
+      <th>CA_SUITE_NUMBER</th>
+      <th>CA_CITY</th>
+      <th>CA_COUNTY</th>
+      <th>CA_STATE</th>
+      <th>CA_ZIP</th>
+      <th>CA_COUNTRY</th>
+      <th>CA_GMT_OFFSET</th>
+      <th>CA_LOCATION_TYPE</th>
+      <th>CA_STREET_NAME</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>18.0</td>
+      <td>Parkway</td>
+      <td>Suite 280</td>
+      <td>Fairfield</td>
+      <td>Maricopa County</td>
+      <td>AZ</td>
+      <td>86192.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Jackson</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>362.0</td>
+      <td>RD</td>
+      <td>Suite 80</td>
+      <td>Fairview</td>
+      <td>Taos County</td>
+      <td>NM</td>
+      <td>85709.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Washington 6th</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>AAAAAAAADAAAAAAA</td>
+      <td>585.0</td>
+      <td>Circle</td>
+      <td>Suite Q</td>
+      <td>Pleasant Valley</td>
+      <td>York County</td>
+      <td>PA</td>
+      <td>12477.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Dogwood Washington</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>AAAAAAAAEAAAAAAA</td>
+      <td>111.0</td>
+      <td>Wy</td>
+      <td>Suite A</td>
+      <td>Oak Ridge</td>
+      <td>Kit Carson County</td>
+      <td>CO</td>
+      <td>88371.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Smith</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>AAAAAAAAFAAAAAAA</td>
+      <td>31.0</td>
+      <td>Blvd</td>
+      <td>Suite 180</td>
+      <td>Glendale</td>
+      <td>Barry County</td>
+      <td>MO</td>
+      <td>63951.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>College</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>AAAAAAAAGAAAAAAA</td>
+      <td>59.0</td>
+      <td>Parkway</td>
+      <td>Suite 100</td>
+      <td>Lakeview</td>
+      <td>Chelan County</td>
+      <td>WA</td>
+      <td>98579.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>single family</td>
+      <td>Williams Sixth</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>AAAAAAAAHAAAAAAA</td>
+      <td>NaN</td>
+      <td>Road</td>
+      <td>Suite U</td>
+      <td>Farmington</td>
+      <td>None</td>
+      <td>None</td>
+      <td>39145.0</td>
+      <td>United States</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>Hill 7th</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>AAAAAAAAIAAAAAAA</td>
+      <td>875.0</td>
+      <td>Ct.</td>
+      <td>Suite Y</td>
+      <td>Union</td>
+      <td>Bledsoe County</td>
+      <td>TN</td>
+      <td>38721.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Lincoln</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>AAAAAAAAJAAAAAAA</td>
+      <td>819.0</td>
+      <td>Ave</td>
+      <td>Suite 70</td>
+      <td>New Hope</td>
+      <td>Perry County</td>
+      <td>AL</td>
+      <td>39431.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>1st Laurel</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>AAAAAAAAKAAAAAAA</td>
+      <td>851.0</td>
+      <td>ST</td>
+      <td>Suite Y</td>
+      <td>Martinsville</td>
+      <td>Haines Borough</td>
+      <td>AK</td>
+      <td>90419.0</td>
+      <td>United States</td>
+      <td>-9.0</td>
+      <td>condo</td>
+      <td>Woodland Poplar</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>AAAAAAAALAAAAAAA</td>
+      <td>189.0</td>
+      <td>Street</td>
+      <td>Suite 470</td>
+      <td>Maple Grove</td>
+      <td>Madison County</td>
+      <td>MT</td>
+      <td>68252.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>13th 2nd</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>AAAAAAAAMAAAAAAA</td>
+      <td>76.0</td>
+      <td>Ct.</td>
+      <td>Suite O</td>
+      <td>Edgewood</td>
+      <td>Mifflin County</td>
+      <td>PA</td>
+      <td>10069.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Ash 8th</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>AAAAAAAANAAAAAAA</td>
+      <td>424.0</td>
+      <td>Ln</td>
+      <td>Suite 130</td>
+      <td>Greenville</td>
+      <td>Noxubee County</td>
+      <td>MS</td>
+      <td>51387.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Main Second</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>AAAAAAAAOAAAAAAA</td>
+      <td>923.0</td>
+      <td>Dr.</td>
+      <td>Suite 100</td>
+      <td>None</td>
+      <td>Lipscomb County</td>
+      <td>TX</td>
+      <td>77752.0</td>
+      <td>None</td>
+      <td>-6.0</td>
+      <td>None</td>
+      <td>Pine Oak</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>AAAAAAAAPAAAAAAA</td>
+      <td>314.0</td>
+      <td>Ct.</td>
+      <td>Suite B</td>
+      <td>Oakland</td>
+      <td>Washington County</td>
+      <td>OH</td>
+      <td>49843.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Spring</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>AAAAAAAAABAAAAAA</td>
+      <td>576.0</td>
+      <td>Street</td>
+      <td>Suite J</td>
+      <td>Valley View</td>
+      <td>Oldham County</td>
+      <td>TX</td>
+      <td>75124.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Adams Center</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>AAAAAAAABBAAAAAA</td>
+      <td>801.0</td>
+      <td>Dr.</td>
+      <td>Suite 0</td>
+      <td>Montpelier</td>
+      <td>Richland County</td>
+      <td>OH</td>
+      <td>48930.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Green</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>AAAAAAAACBAAAAAA</td>
+      <td>460.0</td>
+      <td>Court</td>
+      <td>Suite 480</td>
+      <td>Somerville</td>
+      <td>Potter County</td>
+      <td>SD</td>
+      <td>57783.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Maple Spruce</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>AAAAAAAADBAAAAAA</td>
+      <td>611.0</td>
+      <td>Way</td>
+      <td>Suite O</td>
+      <td>Oakdale</td>
+      <td>Tangipahoa Parish</td>
+      <td>LA</td>
+      <td>79584.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Wilson</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>AAAAAAAAEBAAAAAA</td>
+      <td>675.0</td>
+      <td>Street</td>
+      <td>Suite I</td>
+      <td>Hopewell</td>
+      <td>Williams County</td>
+      <td>OH</td>
+      <td>40587.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>Elm Wilson</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>AAAAAAAAFBAAAAAA</td>
+      <td>294.0</td>
+      <td>Ave</td>
+      <td>Suite 390</td>
+      <td>Springfield</td>
+      <td>Marshall County</td>
+      <td>SD</td>
+      <td>59303.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Jefferson Smith</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>AAAAAAAAGBAAAAAA</td>
+      <td>874.0</td>
+      <td>Avenue</td>
+      <td>Suite N</td>
+      <td>Green Acres</td>
+      <td>Perkins County</td>
+      <td>NE</td>
+      <td>67683.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Park Second</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>AAAAAAAAHBAAAAAA</td>
+      <td>230.0</td>
+      <td>Drive</td>
+      <td>Suite U</td>
+      <td>Newtown</td>
+      <td>Jewell County</td>
+      <td>KS</td>
+      <td>61749.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>6th Spring</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>AAAAAAAAIBAAAAAA</td>
+      <td>837.0</td>
+      <td>Street</td>
+      <td>Suite 200</td>
+      <td>Fairfield</td>
+      <td>Marin County</td>
+      <td>CA</td>
+      <td>96192.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>single family</td>
+      <td>4th</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>AAAAAAAAJBAAAAAA</td>
+      <td>986.0</td>
+      <td>Blvd</td>
+      <td>Suite F</td>
+      <td>Pleasant Grove</td>
+      <td>Coweta County</td>
+      <td>GA</td>
+      <td>34136.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>West East</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>AAAAAAAAKBAAAAAA</td>
+      <td>809.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Springdale</td>
+      <td>Forsyth County</td>
+      <td>None</td>
+      <td>28883.0</td>
+      <td>None</td>
+      <td>-5.0</td>
+      <td>None</td>
+      <td>Central</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>AAAAAAAALBAAAAAA</td>
+      <td>649.0</td>
+      <td>Ct.</td>
+      <td>Suite 400</td>
+      <td>Cedar</td>
+      <td>Utah County</td>
+      <td>UT</td>
+      <td>81229.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Williams</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>AAAAAAAAMBAAAAAA</td>
+      <td>992.0</td>
+      <td>Avenue</td>
+      <td>Suite N</td>
+      <td>Oak Hill</td>
+      <td>Montrose County</td>
+      <td>CO</td>
+      <td>87838.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Birch</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>AAAAAAAANBAAAAAA</td>
+      <td>572.0</td>
+      <td>Pkwy</td>
+      <td>Suite 160</td>
+      <td>Newport</td>
+      <td>Richland County</td>
+      <td>IL</td>
+      <td>61521.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>First Elevnth</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>AAAAAAAAOBAAAAAA</td>
+      <td>748.0</td>
+      <td>Avenue</td>
+      <td>Suite M</td>
+      <td>Wildwood</td>
+      <td>Clark County</td>
+      <td>MO</td>
+      <td>66871.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Oak</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>AAAAAAAAPBAAAAAA</td>
+      <td>291.0</td>
+      <td>Lane</td>
+      <td>Suite A</td>
+      <td>Forestville</td>
+      <td>Walworth County</td>
+      <td>SD</td>
+      <td>53027.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>East</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>AAAAAAAAACAAAAAA</td>
+      <td>243.0</td>
+      <td>Wy</td>
+      <td>Suite G</td>
+      <td>Oakland</td>
+      <td>Madison County</td>
+      <td>NC</td>
+      <td>29843.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>8th Lake</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>AAAAAAAABCAAAAAA</td>
+      <td>711.0</td>
+      <td>Ave</td>
+      <td>Suite 10</td>
+      <td>Pine Grove</td>
+      <td>Sumter County</td>
+      <td>GA</td>
+      <td>34593.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>3rd 4th</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>AAAAAAAACCAAAAAA</td>
+      <td>785.0</td>
+      <td>Ave</td>
+      <td>Suite 40</td>
+      <td>Greenville</td>
+      <td>Russell County</td>
+      <td>VA</td>
+      <td>21387.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>1st Cedar</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>AAAAAAAADCAAAAAA</td>
+      <td>814.0</td>
+      <td>Drive</td>
+      <td>Suite C</td>
+      <td>Waterloo</td>
+      <td>Henry County</td>
+      <td>VA</td>
+      <td>21675.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Washington Main</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>AAAAAAAAECAAAAAA</td>
+      <td>648.0</td>
+      <td>Court</td>
+      <td>Suite 410</td>
+      <td>Lakeview</td>
+      <td>Lewis County</td>
+      <td>TN</td>
+      <td>38579.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>South 15th</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>AAAAAAAAFCAAAAAA</td>
+      <td>999.0</td>
+      <td>Ct.</td>
+      <td>Suite 250</td>
+      <td>Sumner</td>
+      <td>Greenville County</td>
+      <td>SC</td>
+      <td>20519.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>4th</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>AAAAAAAAGCAAAAAA</td>
+      <td>912.0</td>
+      <td>Drive</td>
+      <td>Suite 190</td>
+      <td>Plainview</td>
+      <td>Baca County</td>
+      <td>CO</td>
+      <td>83683.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Second Hickory</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>AAAAAAAAHCAAAAAA</td>
+      <td>13.0</td>
+      <td>Ct.</td>
+      <td>Suite 280</td>
+      <td>Hamilton</td>
+      <td>Lee County</td>
+      <td>IA</td>
+      <td>52808.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>10th</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>AAAAAAAAICAAAAAA</td>
+      <td>369.0</td>
+      <td>Pkwy</td>
+      <td>Suite H</td>
+      <td>Bridgeport</td>
+      <td>Ferry County</td>
+      <td>WA</td>
+      <td>95817.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>single family</td>
+      <td>2nd Maple</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>AAAAAAAAJCAAAAAA</td>
+      <td>198.0</td>
+      <td>RD</td>
+      <td>Suite S</td>
+      <td>Oakland</td>
+      <td>Ouray County</td>
+      <td>CO</td>
+      <td>89843.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>apartment</td>
+      <td>Washington</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>AAAAAAAAKCAAAAAA</td>
+      <td>884.0</td>
+      <td>Court</td>
+      <td>Suite F</td>
+      <td>Riverside</td>
+      <td>Scott County</td>
+      <td>MS</td>
+      <td>59231.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Oak</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>AAAAAAAALCAAAAAA</td>
+      <td>762.0</td>
+      <td>Dr.</td>
+      <td>Suite F</td>
+      <td>Sulphur Springs</td>
+      <td>Jefferson County</td>
+      <td>IL</td>
+      <td>68354.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Spring</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>AAAAAAAAMCAAAAAA</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>Suite 490</td>
+      <td>None</td>
+      <td>O-Brien County</td>
+      <td>None</td>
+      <td>58721.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>AAAAAAAANCAAAAAA</td>
+      <td>206.0</td>
+      <td>Street</td>
+      <td>Suite 120</td>
+      <td>Union</td>
+      <td>Washington County</td>
+      <td>ME</td>
+      <td>9321.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>4th</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>AAAAAAAAOCAAAAAA</td>
+      <td>995.0</td>
+      <td>Boulevard</td>
+      <td>Suite 120</td>
+      <td>Union Hill</td>
+      <td>Forrest County</td>
+      <td>MS</td>
+      <td>57746.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Oak</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>AAAAAAAAPCAAAAAA</td>
+      <td>776.0</td>
+      <td>Wy</td>
+      <td>Suite 60</td>
+      <td>Pleasant Grove</td>
+      <td>Mercer County</td>
+      <td>KY</td>
+      <td>44136.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Washington View</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>AAAAAAAAADAAAAAA</td>
+      <td>895.0</td>
+      <td>Lane</td>
+      <td>Suite 480</td>
+      <td>Salem</td>
+      <td>James City County</td>
+      <td>VA</td>
+      <td>28048.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>Valley</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>AAAAAAAABDAAAAAA</td>
+      <td>583.0</td>
+      <td>Street</td>
+      <td>Suite 90</td>
+      <td>Fairfield</td>
+      <td>York County</td>
+      <td>ME</td>
+      <td>6792.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Highland 2nd</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>AAAAAAAACDAAAAAA</td>
+      <td>190.0</td>
+      <td>Wy</td>
+      <td>Suite D</td>
+      <td>Enterprise</td>
+      <td>Gray County</td>
+      <td>KS</td>
+      <td>61757.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>7th</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>AAAAAAAADDAAAAAA</td>
+      <td>845.0</td>
+      <td>Pkwy</td>
+      <td>Suite F</td>
+      <td>Green Acres</td>
+      <td>Hamblen County</td>
+      <td>TN</td>
+      <td>37683.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>5th</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>AAAAAAAAEDAAAAAA</td>
+      <td>472.0</td>
+      <td>ST</td>
+      <td>Suite 60</td>
+      <td>Oakdale</td>
+      <td>Muskingum County</td>
+      <td>OH</td>
+      <td>49584.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Ridge Park</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>AAAAAAAAFDAAAAAA</td>
+      <td>884.0</td>
+      <td>Boulevard</td>
+      <td>Suite 440</td>
+      <td>Riverview</td>
+      <td>McPherson County</td>
+      <td>SD</td>
+      <td>59003.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>College Franklin</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>AAAAAAAAGDAAAAAA</td>
+      <td>857.0</td>
+      <td>Boulevard</td>
+      <td>Suite V</td>
+      <td>Oak Hill</td>
+      <td>Martin County</td>
+      <td>NC</td>
+      <td>27838.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>10th 10th</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>AAAAAAAAHDAAAAAA</td>
+      <td>177.0</td>
+      <td>Way</td>
+      <td>Suite S</td>
+      <td>Ashland</td>
+      <td>Macomb County</td>
+      <td>MI</td>
+      <td>44244.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>Lee Adams</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>AAAAAAAAIDAAAAAA</td>
+      <td>49.0</td>
+      <td>Wy</td>
+      <td>Suite V</td>
+      <td>Woodland</td>
+      <td>Goodhue County</td>
+      <td>MN</td>
+      <td>54854.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Valley 14th</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>AAAAAAAAJDAAAAAA</td>
+      <td>625.0</td>
+      <td>RD</td>
+      <td>Suite J</td>
+      <td>Enterprise</td>
+      <td>Bottineau County</td>
+      <td>ND</td>
+      <td>51757.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>10th Oak</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>AAAAAAAAKDAAAAAA</td>
+      <td>917.0</td>
+      <td>Parkway</td>
+      <td>Suite 230</td>
+      <td>Union Hill</td>
+      <td>Canyon County</td>
+      <td>ID</td>
+      <td>87746.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Miller 15th</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>AAAAAAAALDAAAAAA</td>
+      <td>NaN</td>
+      <td>Court</td>
+      <td>None</td>
+      <td>Newtown</td>
+      <td>Valley County</td>
+      <td>MT</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>AAAAAAAAMDAAAAAA</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Forest Hills</td>
+      <td>Green County</td>
+      <td>KY</td>
+      <td>49237.0</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>apartment</td>
+      <td>Lee</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>AAAAAAAANDAAAAAA</td>
+      <td>159.0</td>
+      <td>Boulevard</td>
+      <td>Suite 20</td>
+      <td>Sulphur Springs</td>
+      <td>Laurel County</td>
+      <td>KY</td>
+      <td>48354.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Ridge</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>AAAAAAAAODAAAAAA</td>
+      <td>925.0</td>
+      <td>Lane</td>
+      <td>Suite 90</td>
+      <td>Riverdale</td>
+      <td>Lewis County</td>
+      <td>WV</td>
+      <td>29391.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>Lincoln</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>AAAAAAAAPDAAAAAA</td>
+      <td>416.0</td>
+      <td>Drive</td>
+      <td>Suite A</td>
+      <td>Midway</td>
+      <td>Jewell County</td>
+      <td>KS</td>
+      <td>61904.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Elevnth Green</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>AAAAAAAAAEAAAAAA</td>
+      <td>546.0</td>
+      <td>Circle</td>
+      <td>Suite 90</td>
+      <td>Macedonia</td>
+      <td>Trousdale County</td>
+      <td>TN</td>
+      <td>31087.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Meadow</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>AAAAAAAABEAAAAAA</td>
+      <td>147.0</td>
+      <td>RD</td>
+      <td>Suite 460</td>
+      <td>Bethel</td>
+      <td>Iowa County</td>
+      <td>IA</td>
+      <td>55281.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Fourth Lake</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>AAAAAAAACEAAAAAA</td>
+      <td>238.0</td>
+      <td>Road</td>
+      <td>Suite 470</td>
+      <td>Crossroads</td>
+      <td>Sioux County</td>
+      <td>NE</td>
+      <td>60534.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Pine</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>AAAAAAAADEAAAAAA</td>
+      <td>896.0</td>
+      <td>Street</td>
+      <td>Suite B</td>
+      <td>Flint</td>
+      <td>Van Buren County</td>
+      <td>IA</td>
+      <td>58909.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>11th</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>AAAAAAAAEEAAAAAA</td>
+      <td>240.0</td>
+      <td>Street</td>
+      <td>Suite H</td>
+      <td>Summit</td>
+      <td>Bledsoe County</td>
+      <td>TN</td>
+      <td>30499.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Laurel Forest</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>AAAAAAAAFEAAAAAA</td>
+      <td>37.0</td>
+      <td>Drive</td>
+      <td>Suite H</td>
+      <td>Glendale</td>
+      <td>Scott County</td>
+      <td>KY</td>
+      <td>43951.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Pine</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>AAAAAAAAGEAAAAAA</td>
+      <td>511.0</td>
+      <td>Parkway</td>
+      <td>Suite 210</td>
+      <td>White Oak</td>
+      <td>Union County</td>
+      <td>OH</td>
+      <td>46668.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>14th Sycamore</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>AAAAAAAAHEAAAAAA</td>
+      <td>38.0</td>
+      <td>Cir.</td>
+      <td>Suite 370</td>
+      <td>Lakeview</td>
+      <td>Nottoway County</td>
+      <td>VA</td>
+      <td>28579.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Ridge</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>AAAAAAAAIEAAAAAA</td>
+      <td>982.0</td>
+      <td>Blvd</td>
+      <td>Suite 20</td>
+      <td>Richville</td>
+      <td>Cascade County</td>
+      <td>MT</td>
+      <td>65945.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Willow</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>AAAAAAAAJEAAAAAA</td>
+      <td>158.0</td>
+      <td>Road</td>
+      <td>Suite B</td>
+      <td>Cedar Grove</td>
+      <td>Kingman County</td>
+      <td>KS</td>
+      <td>60411.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Green Broadway</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>AAAAAAAAKEAAAAAA</td>
+      <td>723.0</td>
+      <td>Boulevard</td>
+      <td>Suite C</td>
+      <td>Spring Hill</td>
+      <td>Wapello County</td>
+      <td>IA</td>
+      <td>56787.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Sycamore</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>AAAAAAAALEAAAAAA</td>
+      <td>32.0</td>
+      <td>Wy</td>
+      <td>Suite 480</td>
+      <td>Valley View</td>
+      <td>Cleburne County</td>
+      <td>AL</td>
+      <td>35124.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Pine</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>AAAAAAAAMEAAAAAA</td>
+      <td>257.0</td>
+      <td>Drive</td>
+      <td>Suite 420</td>
+      <td>Shiloh</td>
+      <td>Menominee County</td>
+      <td>MI</td>
+      <td>49275.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Walnut South</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>AAAAAAAANEAAAAAA</td>
+      <td>151.0</td>
+      <td>Wy</td>
+      <td>Suite U</td>
+      <td>Oak Grove</td>
+      <td>Thomas County</td>
+      <td>GA</td>
+      <td>38370.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Hill</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>AAAAAAAAOEAAAAAA</td>
+      <td>857.0</td>
+      <td>Boulevard</td>
+      <td>Suite 140</td>
+      <td>Green Acres</td>
+      <td>Potter County</td>
+      <td>SD</td>
+      <td>57683.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Railroad</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>AAAAAAAAPEAAAAAA</td>
+      <td>409.0</td>
+      <td>Cir.</td>
+      <td>Suite U</td>
+      <td>Farmington</td>
+      <td>Wayne County</td>
+      <td>TN</td>
+      <td>39145.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Park 7th</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>AAAAAAAAAFAAAAAA</td>
+      <td>298.0</td>
+      <td>Way</td>
+      <td>Suite J</td>
+      <td>Oakland</td>
+      <td>Grant County</td>
+      <td>KY</td>
+      <td>49843.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>12th</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>AAAAAAAABFAAAAAA</td>
+      <td>953.0</td>
+      <td>Pkwy</td>
+      <td>Suite 0</td>
+      <td>Union Hill</td>
+      <td>Brown County</td>
+      <td>TX</td>
+      <td>77746.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>River Spruce</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>AAAAAAAACFAAAAAA</td>
+      <td>97.0</td>
+      <td>Ln</td>
+      <td>Suite L</td>
+      <td>Buena Vista</td>
+      <td>Santa Clara County</td>
+      <td>CA</td>
+      <td>95752.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>single family</td>
+      <td>River Main</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>AAAAAAAADFAAAAAA</td>
+      <td>410.0</td>
+      <td>Drive</td>
+      <td>Suite 20</td>
+      <td>Bethel</td>
+      <td>Nueces County</td>
+      <td>TX</td>
+      <td>75281.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Spring Poplar</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>AAAAAAAAEFAAAAAA</td>
+      <td>886.0</td>
+      <td>Circle</td>
+      <td>Suite T</td>
+      <td>Warwick</td>
+      <td>Itawamba County</td>
+      <td>MS</td>
+      <td>51398.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Sunset</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>AAAAAAAAFFAAAAAA</td>
+      <td>476.0</td>
+      <td>Avenue</td>
+      <td>Suite R</td>
+      <td>Five Points</td>
+      <td>Crawford County</td>
+      <td>PA</td>
+      <td>16098.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Willow</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>AAAAAAAAGFAAAAAA</td>
+      <td>699.0</td>
+      <td>ST</td>
+      <td>Suite O</td>
+      <td>Five Points</td>
+      <td>Pike County</td>
+      <td>KY</td>
+      <td>46098.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>11th 14th</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>AAAAAAAAHFAAAAAA</td>
+      <td>NaN</td>
+      <td>Lane</td>
+      <td>None</td>
+      <td>Maple Grove</td>
+      <td>Claiborne County</td>
+      <td>None</td>
+      <td>58252.0</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>apartment</td>
+      <td>6th</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>AAAAAAAAIFAAAAAA</td>
+      <td>104.0</td>
+      <td>RD</td>
+      <td>Suite W</td>
+      <td>Frogtown</td>
+      <td>Bay County</td>
+      <td>MI</td>
+      <td>48784.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>9th</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>AAAAAAAAJFAAAAAA</td>
+      <td>440.0</td>
+      <td>Ave</td>
+      <td>Suite 200</td>
+      <td>Lakeside</td>
+      <td>Solano County</td>
+      <td>CA</td>
+      <td>99532.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>apartment</td>
+      <td>Church 7th</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>AAAAAAAAKFAAAAAA</td>
+      <td>892.0</td>
+      <td>Drive</td>
+      <td>Suite U</td>
+      <td>Centerville</td>
+      <td>Hettinger County</td>
+      <td>ND</td>
+      <td>50059.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>North East</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>AAAAAAAALFAAAAAA</td>
+      <td>936.0</td>
+      <td>Wy</td>
+      <td>None</td>
+      <td>Riverside</td>
+      <td>Murray County</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>AAAAAAAAMFAAAAAA</td>
+      <td>734.0</td>
+      <td>Boulevard</td>
+      <td>Suite V</td>
+      <td>Newtown</td>
+      <td>Boise County</td>
+      <td>ID</td>
+      <td>81749.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Ash Wilson</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>AAAAAAAANFAAAAAA</td>
+      <td>755.0</td>
+      <td>RD</td>
+      <td>Suite Q</td>
+      <td>Walnut Grove</td>
+      <td>Greenup County</td>
+      <td>KY</td>
+      <td>47752.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Washington Sunset</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>AAAAAAAAOFAAAAAA</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Lakeside</td>
+      <td>Washington County</td>
+      <td>GA</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>AAAAAAAAPFAAAAAA</td>
+      <td>571.0</td>
+      <td>Ln</td>
+      <td>Suite M</td>
+      <td>Woodland</td>
+      <td>Thayer County</td>
+      <td>NE</td>
+      <td>64854.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Hickory River</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>AAAAAAAAAGAAAAAA</td>
+      <td>246.0</td>
+      <td>RD</td>
+      <td>Suite A</td>
+      <td>Oakdale</td>
+      <td>Fulton County</td>
+      <td>KY</td>
+      <td>49584.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Cedar Franklin</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>AAAAAAAABGAAAAAA</td>
+      <td>858.0</td>
+      <td>Way</td>
+      <td>Suite 320</td>
+      <td>Enterprise</td>
+      <td>Hardin County</td>
+      <td>TX</td>
+      <td>71757.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Sunset Main</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>AAAAAAAACGAAAAAA</td>
+      <td>346.0</td>
+      <td>Road</td>
+      <td>Suite 370</td>
+      <td>Spring Hill</td>
+      <td>Labette County</td>
+      <td>KS</td>
+      <td>66787.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Walnut</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>AAAAAAAADGAAAAAA</td>
+      <td>222.0</td>
+      <td>Drive</td>
+      <td>Suite U</td>
+      <td>Wilson</td>
+      <td>Dickinson County</td>
+      <td>MI</td>
+      <td>46971.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Park View</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>address_surrogate_key</th>
+      <th>address_id</th>
+      <th>street_number</th>
+      <th>street_type</th>
+      <th>suite_number</th>
+      <th>city</th>
+      <th>county</th>
+      <th>state</th>
+      <th>zip_code</th>
+      <th>country</th>
+      <th>gmt_offset</th>
+      <th>residence_type</th>
+      <th>street_name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>18.0</td>
+      <td>Parkway</td>
+      <td>Suite 280</td>
+      <td>Fairfield</td>
+      <td>Maricopa County</td>
+      <td>AZ</td>
+      <td>86192.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Jackson</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>362.0</td>
+      <td>Road</td>
+      <td>Suite 80</td>
+      <td>Fairview</td>
+      <td>Taos County</td>
+      <td>NM</td>
+      <td>85709.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Washington and 6th</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>AAAAAAAADAAAAAAA</td>
+      <td>585.0</td>
+      <td>Circle</td>
+      <td>Suite Q</td>
+      <td>Pleasant Valley</td>
+      <td>York County</td>
+      <td>PA</td>
+      <td>12477.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Washington</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>AAAAAAAAEAAAAAAA</td>
+      <td>111.0</td>
+      <td>Way</td>
+      <td>Suite A</td>
+      <td>Oak Ridge</td>
+      <td>Kit Carson County</td>
+      <td>CO</td>
+      <td>88371.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Smith</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>AAAAAAAAFAAAAAAA</td>
+      <td>31.0</td>
+      <td>Boulevard</td>
+      <td>Suite 180</td>
+      <td>Glendale</td>
+      <td>Barry County</td>
+      <td>MO</td>
+      <td>63951.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>College</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>AAAAAAAAGAAAAAAA</td>
+      <td>59.0</td>
+      <td>Parkway</td>
+      <td>Suite 100</td>
+      <td>Lakeview</td>
+      <td>Chelan County</td>
+      <td>WA</td>
+      <td>98579.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>single family</td>
+      <td>Williams and Sixth</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>AAAAAAAAHAAAAAAA</td>
+      <td>NaN</td>
+      <td>Road</td>
+      <td>Suite U</td>
+      <td>Farmington</td>
+      <td>None</td>
+      <td>None</td>
+      <td>39145.0</td>
+      <td>United States</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>7th</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>AAAAAAAAIAAAAAAA</td>
+      <td>875.0</td>
+      <td>Court</td>
+      <td>Suite Y</td>
+      <td>Union</td>
+      <td>Bledsoe County</td>
+      <td>TN</td>
+      <td>38721.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Lincoln</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>AAAAAAAAJAAAAAAA</td>
+      <td>819.0</td>
+      <td>Avenue</td>
+      <td>Suite 70</td>
+      <td>New Hope</td>
+      <td>Perry County</td>
+      <td>AL</td>
+      <td>39431.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>1st</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>AAAAAAAAKAAAAAAA</td>
+      <td>851.0</td>
+      <td>Street</td>
+      <td>Suite Y</td>
+      <td>Martinsville</td>
+      <td>Haines Borough</td>
+      <td>AK</td>
+      <td>90419.0</td>
+      <td>United States</td>
+      <td>-9.0</td>
+      <td>condo</td>
+      <td>Woodland and Poplar</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>AAAAAAAALAAAAAAA</td>
+      <td>189.0</td>
+      <td>Street</td>
+      <td>Suite 470</td>
+      <td>Maple Grove</td>
+      <td>Madison County</td>
+      <td>MT</td>
+      <td>68252.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>13th</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>AAAAAAAAMAAAAAAA</td>
+      <td>76.0</td>
+      <td>Court</td>
+      <td>Suite O</td>
+      <td>Edgewood</td>
+      <td>Mifflin County</td>
+      <td>PA</td>
+      <td>10069.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>8th</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>AAAAAAAANAAAAAAA</td>
+      <td>424.0</td>
+      <td>Lane</td>
+      <td>Suite 130</td>
+      <td>Greenville</td>
+      <td>Noxubee County</td>
+      <td>MS</td>
+      <td>51387.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Main and Second</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>AAAAAAAAOAAAAAAA</td>
+      <td>923.0</td>
+      <td>Drive</td>
+      <td>Suite 100</td>
+      <td>None</td>
+      <td>Lipscomb County</td>
+      <td>TX</td>
+      <td>77752.0</td>
+      <td>None</td>
+      <td>-6.0</td>
+      <td>None</td>
+      <td>Pine and Oak</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>AAAAAAAAPAAAAAAA</td>
+      <td>314.0</td>
+      <td>Court</td>
+      <td>Suite B</td>
+      <td>Oakland</td>
+      <td>Washington County</td>
+      <td>OH</td>
+      <td>49843.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Spring</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>AAAAAAAAABAAAAAA</td>
+      <td>576.0</td>
+      <td>Street</td>
+      <td>Suite J</td>
+      <td>Valley View</td>
+      <td>Oldham County</td>
+      <td>TX</td>
+      <td>75124.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Adams Center</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>AAAAAAAABBAAAAAA</td>
+      <td>801.0</td>
+      <td>Drive</td>
+      <td>Suite 0</td>
+      <td>Montpelier</td>
+      <td>Richland County</td>
+      <td>OH</td>
+      <td>48930.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Green</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>AAAAAAAACBAAAAAA</td>
+      <td>460.0</td>
+      <td>Court</td>
+      <td>Suite 480</td>
+      <td>Somerville</td>
+      <td>Potter County</td>
+      <td>SD</td>
+      <td>57783.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Maple and Spruce</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>AAAAAAAADBAAAAAA</td>
+      <td>611.0</td>
+      <td>Way</td>
+      <td>Suite O</td>
+      <td>Oakdale</td>
+      <td>Tangipahoa Parish</td>
+      <td>LA</td>
+      <td>79584.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Wilson</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>AAAAAAAAEBAAAAAA</td>
+      <td>675.0</td>
+      <td>Street</td>
+      <td>Suite I</td>
+      <td>Hopewell</td>
+      <td>Williams County</td>
+      <td>OH</td>
+      <td>40587.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>Wilson</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>AAAAAAAAFBAAAAAA</td>
+      <td>294.0</td>
+      <td>Avenue</td>
+      <td>Suite 390</td>
+      <td>Springfield</td>
+      <td>Marshall County</td>
+      <td>SD</td>
+      <td>59303.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Jefferson</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>AAAAAAAAGBAAAAAA</td>
+      <td>874.0</td>
+      <td>Avenue</td>
+      <td>Suite N</td>
+      <td>Green Acres</td>
+      <td>Perkins County</td>
+      <td>NE</td>
+      <td>67683.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Park and Second</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>AAAAAAAAHBAAAAAA</td>
+      <td>230.0</td>
+      <td>Drive</td>
+      <td>Suite U</td>
+      <td>Newtown</td>
+      <td>Jewell County</td>
+      <td>KS</td>
+      <td>61749.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>6th</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>AAAAAAAAIBAAAAAA</td>
+      <td>837.0</td>
+      <td>Street</td>
+      <td>Suite 200</td>
+      <td>Fairfield</td>
+      <td>Marin County</td>
+      <td>CA</td>
+      <td>96192.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>single family</td>
+      <td>4th</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>AAAAAAAAJBAAAAAA</td>
+      <td>986.0</td>
+      <td>Boulevard</td>
+      <td>Suite F</td>
+      <td>Pleasant Grove</td>
+      <td>Coweta County</td>
+      <td>GA</td>
+      <td>34136.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>West East</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>AAAAAAAAKBAAAAAA</td>
+      <td>809.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Springdale</td>
+      <td>Forsyth County</td>
+      <td>None</td>
+      <td>28883.0</td>
+      <td>None</td>
+      <td>-5.0</td>
+      <td>None</td>
+      <td>Central</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>AAAAAAAALBAAAAAA</td>
+      <td>649.0</td>
+      <td>Court</td>
+      <td>Suite 400</td>
+      <td>Cedar</td>
+      <td>Utah County</td>
+      <td>UT</td>
+      <td>81229.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Williams</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>AAAAAAAAMBAAAAAA</td>
+      <td>992.0</td>
+      <td>Avenue</td>
+      <td>Suite N</td>
+      <td>Oak Hill</td>
+      <td>Montrose County</td>
+      <td>CO</td>
+      <td>87838.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Birch</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>AAAAAAAANBAAAAAA</td>
+      <td>572.0</td>
+      <td>Parkway</td>
+      <td>Suite 160</td>
+      <td>Newport</td>
+      <td>Richland County</td>
+      <td>IL</td>
+      <td>61521.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>11th</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>AAAAAAAAOBAAAAAA</td>
+      <td>748.0</td>
+      <td>Avenue</td>
+      <td>Suite M</td>
+      <td>Wildwood</td>
+      <td>Clark County</td>
+      <td>MO</td>
+      <td>66871.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Oak</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>AAAAAAAAPBAAAAAA</td>
+      <td>291.0</td>
+      <td>Lane</td>
+      <td>Suite A</td>
+      <td>Forestville</td>
+      <td>Walworth County</td>
+      <td>SD</td>
+      <td>53027.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>East</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>AAAAAAAAACAAAAAA</td>
+      <td>243.0</td>
+      <td>Way</td>
+      <td>Suite G</td>
+      <td>Oakland</td>
+      <td>Madison County</td>
+      <td>NC</td>
+      <td>29843.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>8th</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>AAAAAAAABCAAAAAA</td>
+      <td>711.0</td>
+      <td>Avenue</td>
+      <td>Suite 10</td>
+      <td>Pine Grove</td>
+      <td>Sumter County</td>
+      <td>GA</td>
+      <td>34593.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>3rd</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>AAAAAAAACCAAAAAA</td>
+      <td>785.0</td>
+      <td>Avenue</td>
+      <td>Suite 40</td>
+      <td>Greenville</td>
+      <td>Russell County</td>
+      <td>VA</td>
+      <td>21387.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>1st</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>AAAAAAAADCAAAAAA</td>
+      <td>814.0</td>
+      <td>Drive</td>
+      <td>Suite C</td>
+      <td>Waterloo</td>
+      <td>Henry County</td>
+      <td>VA</td>
+      <td>21675.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Washington and Main</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>AAAAAAAAECAAAAAA</td>
+      <td>648.0</td>
+      <td>Court</td>
+      <td>Suite 410</td>
+      <td>Lakeview</td>
+      <td>Lewis County</td>
+      <td>TN</td>
+      <td>38579.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>South 15th</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>AAAAAAAAFCAAAAAA</td>
+      <td>999.0</td>
+      <td>Court</td>
+      <td>Suite 250</td>
+      <td>Sumner</td>
+      <td>Greenville County</td>
+      <td>SC</td>
+      <td>20519.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>4th</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>AAAAAAAAGCAAAAAA</td>
+      <td>912.0</td>
+      <td>Drive</td>
+      <td>Suite 190</td>
+      <td>Plainview</td>
+      <td>Baca County</td>
+      <td>CO</td>
+      <td>83683.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Second and Hickory</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>AAAAAAAAHCAAAAAA</td>
+      <td>13.0</td>
+      <td>Court</td>
+      <td>Suite 280</td>
+      <td>Hamilton</td>
+      <td>Lee County</td>
+      <td>IA</td>
+      <td>52808.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>10th</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>AAAAAAAAICAAAAAA</td>
+      <td>369.0</td>
+      <td>Parkway</td>
+      <td>Suite H</td>
+      <td>Bridgeport</td>
+      <td>Ferry County</td>
+      <td>WA</td>
+      <td>95817.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>single family</td>
+      <td>2nd</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>AAAAAAAAJCAAAAAA</td>
+      <td>198.0</td>
+      <td>Road</td>
+      <td>Suite S</td>
+      <td>Oakland</td>
+      <td>Ouray County</td>
+      <td>CO</td>
+      <td>89843.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>apartment</td>
+      <td>Washington</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>AAAAAAAAKCAAAAAA</td>
+      <td>884.0</td>
+      <td>Court</td>
+      <td>Suite F</td>
+      <td>Riverside</td>
+      <td>Scott County</td>
+      <td>MS</td>
+      <td>59231.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Oak</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>AAAAAAAALCAAAAAA</td>
+      <td>762.0</td>
+      <td>Drive</td>
+      <td>Suite F</td>
+      <td>Sulphur Springs</td>
+      <td>Jefferson County</td>
+      <td>IL</td>
+      <td>68354.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Spring</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>AAAAAAAAMCAAAAAA</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>Suite 490</td>
+      <td>None</td>
+      <td>O-Brien County</td>
+      <td>None</td>
+      <td>58721.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>AAAAAAAANCAAAAAA</td>
+      <td>206.0</td>
+      <td>Street</td>
+      <td>Suite 120</td>
+      <td>Union</td>
+      <td>Washington County</td>
+      <td>ME</td>
+      <td>9321.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>4th</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>AAAAAAAAOCAAAAAA</td>
+      <td>995.0</td>
+      <td>Boulevard</td>
+      <td>Suite 120</td>
+      <td>Union Hill</td>
+      <td>Forrest County</td>
+      <td>MS</td>
+      <td>57746.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Oak</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>AAAAAAAAPCAAAAAA</td>
+      <td>776.0</td>
+      <td>Way</td>
+      <td>Suite 60</td>
+      <td>Pleasant Grove</td>
+      <td>Mercer County</td>
+      <td>KY</td>
+      <td>44136.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Washington View</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>AAAAAAAAADAAAAAA</td>
+      <td>895.0</td>
+      <td>Lane</td>
+      <td>Suite 480</td>
+      <td>Salem</td>
+      <td>James City County</td>
+      <td>VA</td>
+      <td>28048.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>Valley</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>AAAAAAAABDAAAAAA</td>
+      <td>583.0</td>
+      <td>Street</td>
+      <td>Suite 90</td>
+      <td>Fairfield</td>
+      <td>York County</td>
+      <td>ME</td>
+      <td>6792.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>2nd</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>AAAAAAAACDAAAAAA</td>
+      <td>190.0</td>
+      <td>Way</td>
+      <td>Suite D</td>
+      <td>Enterprise</td>
+      <td>Gray County</td>
+      <td>KS</td>
+      <td>61757.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>7th</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>AAAAAAAADDAAAAAA</td>
+      <td>845.0</td>
+      <td>Parkway</td>
+      <td>Suite F</td>
+      <td>Green Acres</td>
+      <td>Hamblen County</td>
+      <td>TN</td>
+      <td>37683.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>5th</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>AAAAAAAAEDAAAAAA</td>
+      <td>472.0</td>
+      <td>Street</td>
+      <td>Suite 60</td>
+      <td>Oakdale</td>
+      <td>Muskingum County</td>
+      <td>OH</td>
+      <td>49584.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Ridge Park</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>AAAAAAAAFDAAAAAA</td>
+      <td>884.0</td>
+      <td>Boulevard</td>
+      <td>Suite 440</td>
+      <td>Riverview</td>
+      <td>McPherson County</td>
+      <td>SD</td>
+      <td>59003.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>College</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>AAAAAAAAGDAAAAAA</td>
+      <td>857.0</td>
+      <td>Boulevard</td>
+      <td>Suite V</td>
+      <td>Oak Hill</td>
+      <td>Martin County</td>
+      <td>NC</td>
+      <td>27838.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>10th</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>AAAAAAAAHDAAAAAA</td>
+      <td>177.0</td>
+      <td>Way</td>
+      <td>Suite S</td>
+      <td>Ashland</td>
+      <td>Macomb County</td>
+      <td>MI</td>
+      <td>44244.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>Lee Adams</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>AAAAAAAAIDAAAAAA</td>
+      <td>49.0</td>
+      <td>Way</td>
+      <td>Suite V</td>
+      <td>Woodland</td>
+      <td>Goodhue County</td>
+      <td>MN</td>
+      <td>54854.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Valley and 14th</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>AAAAAAAAJDAAAAAA</td>
+      <td>625.0</td>
+      <td>Road</td>
+      <td>Suite J</td>
+      <td>Enterprise</td>
+      <td>Bottineau County</td>
+      <td>ND</td>
+      <td>51757.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>10th</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>AAAAAAAAKDAAAAAA</td>
+      <td>917.0</td>
+      <td>Parkway</td>
+      <td>Suite 230</td>
+      <td>Union Hill</td>
+      <td>Canyon County</td>
+      <td>ID</td>
+      <td>87746.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Miller and 15th</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>AAAAAAAALDAAAAAA</td>
+      <td>NaN</td>
+      <td>Court</td>
+      <td>None</td>
+      <td>Newtown</td>
+      <td>Valley County</td>
+      <td>MT</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>AAAAAAAAMDAAAAAA</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Forest Hills</td>
+      <td>Green County</td>
+      <td>KY</td>
+      <td>49237.0</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>apartment</td>
+      <td>Lee</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>AAAAAAAANDAAAAAA</td>
+      <td>159.0</td>
+      <td>Boulevard</td>
+      <td>Suite 20</td>
+      <td>Sulphur Springs</td>
+      <td>Laurel County</td>
+      <td>KY</td>
+      <td>48354.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Ridge</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>AAAAAAAAODAAAAAA</td>
+      <td>925.0</td>
+      <td>Lane</td>
+      <td>Suite 90</td>
+      <td>Riverdale</td>
+      <td>Lewis County</td>
+      <td>WV</td>
+      <td>29391.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>Lincoln</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>AAAAAAAAPDAAAAAA</td>
+      <td>416.0</td>
+      <td>Drive</td>
+      <td>Suite A</td>
+      <td>Midway</td>
+      <td>Jewell County</td>
+      <td>KS</td>
+      <td>61904.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>11th</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>AAAAAAAAAEAAAAAA</td>
+      <td>546.0</td>
+      <td>Circle</td>
+      <td>Suite 90</td>
+      <td>Macedonia</td>
+      <td>Trousdale County</td>
+      <td>TN</td>
+      <td>31087.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Meadow</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>AAAAAAAABEAAAAAA</td>
+      <td>147.0</td>
+      <td>Road</td>
+      <td>Suite 460</td>
+      <td>Bethel</td>
+      <td>Iowa County</td>
+      <td>IA</td>
+      <td>55281.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>4th</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>AAAAAAAACEAAAAAA</td>
+      <td>238.0</td>
+      <td>Road</td>
+      <td>Suite 470</td>
+      <td>Crossroads</td>
+      <td>Sioux County</td>
+      <td>NE</td>
+      <td>60534.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Pine</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>AAAAAAAADEAAAAAA</td>
+      <td>896.0</td>
+      <td>Street</td>
+      <td>Suite B</td>
+      <td>Flint</td>
+      <td>Van Buren County</td>
+      <td>IA</td>
+      <td>58909.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>11th</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>AAAAAAAAEEAAAAAA</td>
+      <td>240.0</td>
+      <td>Street</td>
+      <td>Suite H</td>
+      <td>Summit</td>
+      <td>Bledsoe County</td>
+      <td>TN</td>
+      <td>30499.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Laurel</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>AAAAAAAAFEAAAAAA</td>
+      <td>37.0</td>
+      <td>Drive</td>
+      <td>Suite H</td>
+      <td>Glendale</td>
+      <td>Scott County</td>
+      <td>KY</td>
+      <td>43951.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Pine</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>AAAAAAAAGEAAAAAA</td>
+      <td>511.0</td>
+      <td>Parkway</td>
+      <td>Suite 210</td>
+      <td>White Oak</td>
+      <td>Union County</td>
+      <td>OH</td>
+      <td>46668.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>condo</td>
+      <td>14th</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>AAAAAAAAHEAAAAAA</td>
+      <td>38.0</td>
+      <td>Circle</td>
+      <td>Suite 370</td>
+      <td>Lakeview</td>
+      <td>Nottoway County</td>
+      <td>VA</td>
+      <td>28579.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Ridge</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>AAAAAAAAIEAAAAAA</td>
+      <td>982.0</td>
+      <td>Boulevard</td>
+      <td>Suite 20</td>
+      <td>Richville</td>
+      <td>Cascade County</td>
+      <td>MT</td>
+      <td>65945.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Willow</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>AAAAAAAAJEAAAAAA</td>
+      <td>158.0</td>
+      <td>Road</td>
+      <td>Suite B</td>
+      <td>Cedar Grove</td>
+      <td>Kingman County</td>
+      <td>KS</td>
+      <td>60411.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Green</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>AAAAAAAAKEAAAAAA</td>
+      <td>723.0</td>
+      <td>Boulevard</td>
+      <td>Suite C</td>
+      <td>Spring Hill</td>
+      <td>Wapello County</td>
+      <td>IA</td>
+      <td>56787.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Sycamore</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>AAAAAAAALEAAAAAA</td>
+      <td>32.0</td>
+      <td>Way</td>
+      <td>Suite 480</td>
+      <td>Valley View</td>
+      <td>Cleburne County</td>
+      <td>AL</td>
+      <td>35124.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Pine</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>AAAAAAAAMEAAAAAA</td>
+      <td>257.0</td>
+      <td>Drive</td>
+      <td>Suite 420</td>
+      <td>Shiloh</td>
+      <td>Menominee County</td>
+      <td>MI</td>
+      <td>49275.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Walnut South</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>AAAAAAAANEAAAAAA</td>
+      <td>151.0</td>
+      <td>Way</td>
+      <td>Suite U</td>
+      <td>Oak Grove</td>
+      <td>Thomas County</td>
+      <td>GA</td>
+      <td>38370.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Hill</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>AAAAAAAAOEAAAAAA</td>
+      <td>857.0</td>
+      <td>Boulevard</td>
+      <td>Suite 140</td>
+      <td>Green Acres</td>
+      <td>Potter County</td>
+      <td>SD</td>
+      <td>57683.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>single family</td>
+      <td>Railroad</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>AAAAAAAAPEAAAAAA</td>
+      <td>409.0</td>
+      <td>Circle</td>
+      <td>Suite U</td>
+      <td>Farmington</td>
+      <td>Wayne County</td>
+      <td>TN</td>
+      <td>39145.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Park and 7th</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>AAAAAAAAAFAAAAAA</td>
+      <td>298.0</td>
+      <td>Way</td>
+      <td>Suite J</td>
+      <td>Oakland</td>
+      <td>Grant County</td>
+      <td>KY</td>
+      <td>49843.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>12th</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>AAAAAAAABFAAAAAA</td>
+      <td>953.0</td>
+      <td>Parkway</td>
+      <td>Suite 0</td>
+      <td>Union Hill</td>
+      <td>Brown County</td>
+      <td>TX</td>
+      <td>77746.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>River and Spruce</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>AAAAAAAACFAAAAAA</td>
+      <td>97.0</td>
+      <td>Lane</td>
+      <td>Suite L</td>
+      <td>Buena Vista</td>
+      <td>Santa Clara County</td>
+      <td>CA</td>
+      <td>95752.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>single family</td>
+      <td>River and Main</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>AAAAAAAADFAAAAAA</td>
+      <td>410.0</td>
+      <td>Drive</td>
+      <td>Suite 20</td>
+      <td>Bethel</td>
+      <td>Nueces County</td>
+      <td>TX</td>
+      <td>75281.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Spring and Poplar</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>AAAAAAAAEFAAAAAA</td>
+      <td>886.0</td>
+      <td>Circle</td>
+      <td>Suite T</td>
+      <td>Warwick</td>
+      <td>Itawamba County</td>
+      <td>MS</td>
+      <td>51398.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Sunset</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>AAAAAAAAFFAAAAAA</td>
+      <td>476.0</td>
+      <td>Avenue</td>
+      <td>Suite R</td>
+      <td>Five Points</td>
+      <td>Crawford County</td>
+      <td>PA</td>
+      <td>16098.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>Willow</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>AAAAAAAAGFAAAAAA</td>
+      <td>699.0</td>
+      <td>Street</td>
+      <td>Suite O</td>
+      <td>Five Points</td>
+      <td>Pike County</td>
+      <td>KY</td>
+      <td>46098.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>11th</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>AAAAAAAAHFAAAAAA</td>
+      <td>NaN</td>
+      <td>Lane</td>
+      <td>None</td>
+      <td>Maple Grove</td>
+      <td>Claiborne County</td>
+      <td>None</td>
+      <td>58252.0</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>apartment</td>
+      <td>6th</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>AAAAAAAAIFAAAAAA</td>
+      <td>104.0</td>
+      <td>Road</td>
+      <td>Suite W</td>
+      <td>Frogtown</td>
+      <td>Bay County</td>
+      <td>MI</td>
+      <td>48784.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>single family</td>
+      <td>9th</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>AAAAAAAAJFAAAAAA</td>
+      <td>440.0</td>
+      <td>Avenue</td>
+      <td>Suite 200</td>
+      <td>Lakeside</td>
+      <td>Solano County</td>
+      <td>CA</td>
+      <td>99532.0</td>
+      <td>United States</td>
+      <td>-8.0</td>
+      <td>apartment</td>
+      <td>7th</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>AAAAAAAAKFAAAAAA</td>
+      <td>892.0</td>
+      <td>Drive</td>
+      <td>Suite U</td>
+      <td>Centerville</td>
+      <td>Hettinger County</td>
+      <td>ND</td>
+      <td>50059.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>North East</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>AAAAAAAALFAAAAAA</td>
+      <td>936.0</td>
+      <td>Way</td>
+      <td>None</td>
+      <td>Riverside</td>
+      <td>Murray County</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>United States</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>AAAAAAAAMFAAAAAA</td>
+      <td>734.0</td>
+      <td>Boulevard</td>
+      <td>Suite V</td>
+      <td>Newtown</td>
+      <td>Boise County</td>
+      <td>ID</td>
+      <td>81749.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>Wilson</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>AAAAAAAANFAAAAAA</td>
+      <td>755.0</td>
+      <td>Road</td>
+      <td>Suite Q</td>
+      <td>Walnut Grove</td>
+      <td>Greenup County</td>
+      <td>KY</td>
+      <td>47752.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>apartment</td>
+      <td>Washington and Sunset</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>AAAAAAAAOFAAAAAA</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Lakeside</td>
+      <td>Washington County</td>
+      <td>GA</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>AAAAAAAAPFAAAAAA</td>
+      <td>571.0</td>
+      <td>Lane</td>
+      <td>Suite M</td>
+      <td>Woodland</td>
+      <td>Thayer County</td>
+      <td>NE</td>
+      <td>64854.0</td>
+      <td>United States</td>
+      <td>-7.0</td>
+      <td>condo</td>
+      <td>River</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>AAAAAAAAAGAAAAAA</td>
+      <td>246.0</td>
+      <td>Road</td>
+      <td>Suite A</td>
+      <td>Oakdale</td>
+      <td>Fulton County</td>
+      <td>KY</td>
+      <td>49584.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Cedar</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>AAAAAAAABGAAAAAA</td>
+      <td>858.0</td>
+      <td>Way</td>
+      <td>Suite 320</td>
+      <td>Enterprise</td>
+      <td>Hardin County</td>
+      <td>TX</td>
+      <td>71757.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>single family</td>
+      <td>Sunset and Main</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>AAAAAAAACGAAAAAA</td>
+      <td>346.0</td>
+      <td>Road</td>
+      <td>Suite 370</td>
+      <td>Spring Hill</td>
+      <td>Labette County</td>
+      <td>KS</td>
+      <td>66787.0</td>
+      <td>United States</td>
+      <td>-6.0</td>
+      <td>condo</td>
+      <td>Walnut</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>AAAAAAAADGAAAAAA</td>
+      <td>222.0</td>
+      <td>Drive</td>
+      <td>Suite U</td>
+      <td>Wilson</td>
+      <td>Dickinson County</td>
+      <td>MI</td>
+      <td>46971.0</td>
+      <td>United States</td>
+      <td>-5.0</td>
+      <td>apartment</td>
+      <td>Park View</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">address_surrogate_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_address_surrogate_key"></div><b>📃 Summary:</b> Surrogate key for the address<br><b>🦄 Unique:</b> This column is a surrogate key specifically created to uniquely identify each address record. For this table, each row represents a distinct customer address. address_surrogate_key is unique across rows, as it's designed to be a primary identifier.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">address_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_address_id"></div><b>📃 Summary:</b> Unique identifier for the address<br><b>🦄 Unique:</b> This column is described as a unique identifier for the address. For this table, each row represents a distinct customer address. address_id appears to be unique across rows, as it's intended to uniquely identify each address.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">street_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_street_number"></div><b>📃 Summary:</b> House or building number on the street<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">street_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_street_type"></div><b>📃 Summary:</b> Type of street (e.g., Parkway, RD, Circle)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">suite_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_suite_number"></div><b>📃 Summary:</b> Suite or apartment number if applicable<br><b>❓ Missing:</b> Not all residences have suite numbers.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_city"></div><b>📃 Summary:</b> City name of the address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">county</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_county"></div><b>📃 Summary:</b> County name of the address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_state"></div><b>📃 Summary:</b> State abbreviation of the address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">zip_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_zip_code"></div><b>📃 Summary:</b> ZIP code of the address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">country</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_country"></div><b>📃 Summary:</b> Country of the address<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gmt_offset</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_gmt_offset"></div><b>📃 Summary:</b> GMT offset of the address location<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">residence_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='single family'>single family</option><option value='condo'>condo</option><option value='apartment'>apartment</option><option value='townhouse'>townhouse</option><option value='duplex'>duplex</option><option value='mobile home'>mobile home</option><option value='tiny house'>tiny house</option><option value='co-op'>co-op</option><option value='loft'>loft</option><option value='studio'>studio</option><option value='bungalow'>bungalow</option><option value='cottage'>cottage</option><option value='mansion'>mansion</option><option value='villa'>villa</option><option value='penthouse'>penthouse</option><option value='dormitory'>dormitory</option><option value='boarding house'>boarding house</option><option value='houseboat'>houseboat</option><option value='yurt'>yurt</option><option value='treehouse'>treehouse</option></select></span><br><br><div id="bar_viz_residence_type"></div><b>📃 Summary:</b> Type of residence (e.g., condo, single family)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">street_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_street_name"></div><b>📃 Summary:</b> Name of the street<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about customer addresses. It includes unique identifiers for each address. It contains street details, city, county, state, and zip code. It also provides country, GMT offset, and location type. Each row represents a distinct customer address with its associated information.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>13</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>CA_ADDRESS_SK</td>
+      <td>Surrogate key for the address</td>
+      <td>address_surrogate_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CA_ADDRESS_ID</td>
+      <td>Unique identifier for the address</td>
+      <td>address_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>CA_STREET_NUMBER</td>
+      <td>House or building number on the street</td>
+      <td>street_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CA_STREET_NAME</td>
+      <td>Name of the street</td>
+      <td>street_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CA_STREET_TYPE</td>
+      <td>Type of street (e.g., Parkway, RD, Circle)</td>
+      <td>street_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CA_SUITE_NUMBER</td>
+      <td>Suite or apartment number if applicable</td>
+      <td>suite_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>CA_CITY</td>
+      <td>City name of the address</td>
+      <td>city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>CA_COUNTY</td>
+      <td>County name of the address</td>
+      <td>county</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>CA_STATE</td>
+      <td>State abbreviation of the address</td>
+      <td>state</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>CA_ZIP</td>
+      <td>ZIP code of the address</td>
+      <td>zip_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>CA_COUNTRY</td>
+      <td>Country of the address</td>
+      <td>country</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>CA_GMT_OFFSET</td>
+      <td>GMT offset of the address location</td>
+      <td>gmt_offset</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>CA_LOCATION_TYPE</td>
+      <td>Type of residence (e.g., condo, single family)</td>
+      <td>residence_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>✂️ 3. Leading and Trailing Whitespace</h2><br>
+                🔍 <b>1</b> columns have leading and trailing whitespace<br>
+                ✔️ <b>1</b> columns have been trimmed<br><br><br><h2>🚧 4. Erroneous Values</h2><br>
+            🔍 <b>2</b> columns have erroneous values<br><ol><li><b>street_type</b>: 'Drive' and 'Dr.', 'Street' and 'ST', 'Avenue' and 'Ave', 'Road' and 'RD' are redundant. Inconsistent punctuation in 'Ct.' and 'Cir.'.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Dr.</td>
+      <td>Drive</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ST</td>
+      <td>Street</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Ave</td>
+      <td>Avenue</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>RD</td>
+      <td>Road</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Ct.</td>
+      <td>Court</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Wy</td>
+      <td>Way</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Pkwy</td>
+      <td>Parkway</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Blvd</td>
+      <td>Boulevard</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Ln</td>
+      <td>Lane</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Cir.</td>
+      <td>Circle</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>street_name</b>: 10th, 10th 10th, and 10th Oak are inconsistent representations of 10th street. Similar issue with 11th and 11th 14th.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>10th 10th</td>
+      <td>10th</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>10th Oak</td>
+      <td>10th</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>11th 14th</td>
+      <td>11th</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>13th 2nd</td>
+      <td>13th</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>14th Sycamore</td>
+      <td>14th</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1st Cedar</td>
+      <td>1st</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>1st Laurel</td>
+      <td>1st</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2nd Maple</td>
+      <td>2nd</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>3rd 4th</td>
+      <td>3rd</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>6th Spring</td>
+      <td>6th</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>8th Lake</td>
+      <td>8th</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Ash 8th</td>
+      <td>8th</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Ash Wilson</td>
+      <td>Wilson</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Cedar Franklin</td>
+      <td>Cedar</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Church 7th</td>
+      <td>7th</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>College Franklin</td>
+      <td>College</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Dogwood Washington</td>
+      <td>Washington</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Elevnth Green</td>
+      <td>11th</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Elm Wilson</td>
+      <td>Wilson</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>First Elevnth</td>
+      <td>11th</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Fourth Lake</td>
+      <td>4th</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Green Broadway</td>
+      <td>Green</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Hickory River</td>
+      <td>River</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Highland 2nd</td>
+      <td>2nd</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Hill 7th</td>
+      <td>7th</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Jefferson Smith</td>
+      <td>Jefferson</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Laurel Forest</td>
+      <td>Laurel</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Main Second</td>
+      <td>Main and Second</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Maple Spruce</td>
+      <td>Maple and Spruce</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Miller 15th</td>
+      <td>Miller and 15th</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Park 7th</td>
+      <td>Park and 7th</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Park Second</td>
+      <td>Park and Second</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Pine Oak</td>
+      <td>Pine and Oak</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>River Main</td>
+      <td>River and Main</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>River Spruce</td>
+      <td>River and Spruce</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Second Hickory</td>
+      <td>Second and Hickory</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Spring Poplar</td>
+      <td>Spring and Poplar</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Sunset Main</td>
+      <td>Sunset and Main</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Valley 14th</td>
+      <td>Valley and 14th</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Washington 6th</td>
+      <td>Washington and 6th</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Washington Main</td>
+      <td>Washington and Main</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Washington Sunset</td>
+      <td>Washington and Sunset</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Williams Sixth</td>
+      <td>Williams and Sixth</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Woodland Poplar</td>
+      <td>Woodland and Poplar</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>❓ 5. Missing Values</h2><br>
+                🔍 <b>11</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>city</td>
+      <td>2.02</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>country</td>
+      <td>5.05</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>county</td>
+      <td>1.01</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>gmt_offset</td>
+      <td>5.05</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>residence_type</td>
+      <td>6.06</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>state</td>
+      <td>5.05</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>street_name</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>street_number</td>
+      <td>6.06</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>street_type</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>suite_number</td>
+      <td>6.06</td>
+      <td>True</td>
+      <td>Not all residences have suite numbers.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>zip_code</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>city</td>
+      <td>2.02</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>country</td>
+      <td>5.05</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>county</td>
+      <td>1.01</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>gmt_offset</td>
+      <td>5.05</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>residence_type</td>
+      <td>6.06</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>state</td>
+      <td>5.05</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>street_name</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>street_number</td>
+      <td>6.06</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>street_type</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>zip_code</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 3.45, 'y': 5}, {'x': 8.350000000000001, 'y': 5}, {'x': 13.25, 'y': 5}, {'x': 18.150000000000002, 'y': 5}, {'x': 23.05, 'y': 5}, {'x': 27.950000000000003, 'y': 5}, {'x': 32.85, 'y': 5}, {'x': 37.75, 'y': 5}, {'x': 42.650000000000006, 'y': 5}, {'x': 47.55, 'y': 4}, {'x': 52.45, 'y': 5}, {'x': 57.35000000000001, 'y': 5}, {'x': 62.25, 'y': 5}, {'x': 67.15, 'y': 5}, {'x': 72.05000000000001, 'y': 5}, {'x': 76.95, 'y': 5}, {'x': 81.85000000000001, 'y': 5}, {'x': 86.75, 'y': 5}, {'x': 91.65, 'y': 5}, {'x': 96.55000000000001, 'y': 5}];
+    binWidth = 4.9;
+    drawHistogram("hist_viz_address_surrogate_key", data, binWidth);
+data = [{'label': 'AAAAAAAADAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAFAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAGAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAIAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAMAAAAAA...', 'value': 1.0101010101010102}, {'label': 'Other values', 'value': 94.94949494949495}];
+    drawBarChart("bar_viz_address_id", data);
+data = [{'x': 37.65, 'y': 8}, {'x': 86.94999999999999, 'y': 4}, {'x': 136.25, 'y': 4}, {'x': 185.54999999999998, 'y': 5}, {'x': 234.85, 'y': 7}, {'x': 284.15, 'y': 3}, {'x': 333.44999999999993, 'y': 2}, {'x': 382.75, 'y': 2}, {'x': 432.04999999999995, 'y': 5}, {'x': 481.35, 'y': 3}, {'x': 530.65, 'y': 2}, {'x': 579.9499999999999, 'y': 5}, {'x': 629.25, 'y': 4}, {'x': 678.55, 'y': 2}, {'x': 727.8499999999999, 'y': 4}, {'x': 777.15, 'y': 5}, {'x': 826.4499999999999, 'y': 6}, {'x': 875.75, 'y': 11}, {'x': 925.05, 'y': 5}, {'x': 974.3499999999999, 'y': 6}];
+    binWidth = 49.3;
+    drawHistogram("hist_viz_street_number", data, binWidth);
+data = [{'label': 'Way', 'value': 12.631578947368421}, {'label': 'Drive', 'value': 12.631578947368421}, {'label': 'Road', 'value': 11.578947368421053}, {'label': 'Street', 'value': 11.578947368421053}, {'label': 'Boulevard', 'value': 10.526315789473683}, {'label': 'Other values', 'value': 41.05263157894737}];
+    drawBarChart("bar_viz_street_type", data);
+data = [{'label': 'Suite U', 'value': 6.451612903225806}, {'label': 'Suite A', 'value': 4.301075268817205}, {'label': 'Suite F', 'value': 4.301075268817205}, {'label': 'Suite O', 'value': 3.225806451612903}, {'label': 'Suite 20', 'value': 3.225806451612903}, {'label': 'Other values', 'value': 78.49462365591397}];
+    drawBarChart("bar_viz_suite_number", data);
+data = [{'label': 'Oakland', 'value': 4.123711340206185}, {'label': 'Oakdale', 'value': 3.0927835051546393}, {'label': 'Green Acres', 'value': 3.0927835051546393}, {'label': 'Newtown', 'value': 3.0927835051546393}, {'label': 'Lakeview', 'value': 3.0927835051546393}, {'label': 'Other values', 'value': 83.50515463917526}];
+    drawBarChart("bar_viz_city", data);
+data = [{'label': 'Washington Coun...', 'value': 3.061224489795918}, {'label': 'Madison County', 'value': 2.0408163265306123}, {'label': 'Potter County', 'value': 2.0408163265306123}, {'label': 'Lewis County', 'value': 2.0408163265306123}, {'label': 'Scott County', 'value': 2.0408163265306123}, {'label': 'Other values', 'value': 88.77551020408163}];
+    drawBarChart("bar_viz_county", data);
+data = [{'label': 'KY', 'value': 8.51063829787234}, {'label': 'TN', 'value': 6.382978723404255}, {'label': 'TX', 'value': 5.319148936170213}, {'label': 'KS', 'value': 5.319148936170213}, {'label': 'OH', 'value': 5.319148936170213}, {'label': 'Other values', 'value': 69.14893617021278}];
+    drawBarChart("bar_viz_state", data);
+data = [{'x': 9110.5, 'y': 3}, {'x': 13747.5, 'y': 1}, {'x': 18384.5, 'y': 2}, {'x': 23021.5, 'y': 2}, {'x': 27658.5, 'y': 6}, {'x': 32295.5, 'y': 4}, {'x': 36932.5, 'y': 7}, {'x': 41569.5, 'y': 2}, {'x': 46206.5, 'y': 8}, {'x': 50843.5, 'y': 14}, {'x': 55480.5, 'y': 6}, {'x': 60117.5, 'y': 12}, {'x': 64754.5, 'y': 5}, {'x': 69391.5, 'y': 3}, {'x': 74028.5, 'y': 3}, {'x': 78665.5, 'y': 3}, {'x': 83302.5, 'y': 3}, {'x': 87939.5, 'y': 6}, {'x': 92576.5, 'y': 1}, {'x': 97213.5, 'y': 5}];
+    binWidth = 4637.0;
+    drawHistogram("hist_viz_zip_code", data, binWidth);
+data = [{'label': 'United States', 'value': 100.0}];
+    drawBarChart("bar_viz_country", data);
+data = [{'x': -8.9, 'y': 1}, {'x': -8.7, 'y': 0}, {'x': -8.5, 'y': 0}, {'x': -8.3, 'y': 0}, {'x': -8.1, 'y': 0}, {'x': -7.9, 'y': 5}, {'x': -7.699999999999999, 'y': 0}, {'x': -7.5, 'y': 0}, {'x': -7.300000000000001, 'y': 0}, {'x': -7.1, 'y': 0}, {'x': -6.9, 'y': 20}, {'x': -6.699999999999999, 'y': 0}, {'x': -6.5, 'y': 0}, {'x': -6.3, 'y': 0}, {'x': -6.1, 'y': 0}, {'x': -5.9, 'y': 35}, {'x': -5.699999999999999, 'y': 0}, {'x': -5.5, 'y': 0}, {'x': -5.3, 'y': 0}, {'x': -5.1, 'y': 33}];
+    binWidth = 0.2;
+    drawHistogram("hist_viz_gmt_offset", data, binWidth);
+data = [{'label': 'single family', 'value': 41.935483870967744}, {'label': 'condo', 'value': 35.483870967741936}, {'label': 'apartment', 'value': 22.58064516129032}];
+    drawBarChart("bar_viz_residence_type", data);
+data = [{'label': '4th', 'value': 4.2105263157894735}, {'label': '11th', 'value': 4.2105263157894735}, {'label': 'Oak', 'value': 3.1578947368421053}, {'label': 'Wilson', 'value': 3.1578947368421053}, {'label': '10th', 'value': 3.1578947368421053}, {'label': 'Other values', 'value': 82.10526315789474}];
+    drawBarChart("bar_viz_street_name", data);
+
+
+</script>
+</body>
+</html>

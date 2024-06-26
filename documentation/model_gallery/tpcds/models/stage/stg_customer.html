@@ -1,0 +1,5446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>customer</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>C_CUSTOMER_SK</th>
+      <th>C_CUSTOMER_ID</th>
+      <th>C_CURRENT_ADDR_SK</th>
+      <th>C_SALUTATION</th>
+      <th>C_FIRST_NAME</th>
+      <th>C_LAST_NAME</th>
+      <th>C_BIRTH_COUNTRY</th>
+      <th>C_EMAIL_ADDRESS</th>
+      <th>C_BIRTH_DAY</th>
+      <th>C_BIRTH_MONTH</th>
+      <th>C_BIRTH_YEAR</th>
+      <th>C_CURRENT_CDEMO_SK</th>
+      <th>C_CURRENT_HDEMO_SK</th>
+      <th>C_FIRST_SALES_DATE_SK</th>
+      <th>C_FIRST_SHIPTO_DATE_SK</th>
+      <th>C_PREFERRED_CUST_FLAG</th>
+      <th>C_LAST_REVIEW_DATE_SK</th>
+      <th>C_LOGIN</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>946</td>
+      <td>Mr.</td>
+      <td>Javier</td>
+      <td>Lewis</td>
+      <td>CHILE</td>
+      <td>Javier.Lewis@VFAxlnZEvOx.org</td>
+      <td>9.0</td>
+      <td>12.0</td>
+      <td>1936.0</td>
+      <td>980124.0</td>
+      <td>7135.0</td>
+      <td>2452208.0</td>
+      <td>2452238.0</td>
+      <td>Y</td>
+      <td>2452508.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>655</td>
+      <td>Dr.</td>
+      <td>Amy</td>
+      <td>Moses</td>
+      <td>TOGO</td>
+      <td>Amy.Moses@Ovk9KjHH.com</td>
+      <td>9.0</td>
+      <td>4.0</td>
+      <td>1966.0</td>
+      <td>819667.0</td>
+      <td>1461.0</td>
+      <td>2452288.0</td>
+      <td>2452318.0</td>
+      <td>Y</td>
+      <td>2452318.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>AAAAAAAADAAAAAAA</td>
+      <td>572</td>
+      <td>Miss</td>
+      <td>Latisha</td>
+      <td>Hamilton</td>
+      <td>NIUE</td>
+      <td>Latisha.Hamilton@V.com</td>
+      <td>18.0</td>
+      <td>9.0</td>
+      <td>1979.0</td>
+      <td>1473522.0</td>
+      <td>6247.0</td>
+      <td>2449100.0</td>
+      <td>2449130.0</td>
+      <td>N</td>
+      <td>2452313.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>AAAAAAAAEAAAAAAA</td>
+      <td>558</td>
+      <td>Dr.</td>
+      <td>Michael</td>
+      <td>White</td>
+      <td>MEXICO</td>
+      <td>Michael.White@i.org</td>
+      <td>7.0</td>
+      <td>6.0</td>
+      <td>1983.0</td>
+      <td>1703214.0</td>
+      <td>3986.0</td>
+      <td>2450000.0</td>
+      <td>2450030.0</td>
+      <td>N</td>
+      <td>2452361.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>AAAAAAAAFAAAAAAA</td>
+      <td>368</td>
+      <td>Sir</td>
+      <td>Robert</td>
+      <td>Moran</td>
+      <td>FIJI</td>
+      <td>Robert.Moran@Hh.edu</td>
+      <td>8.0</td>
+      <td>5.0</td>
+      <td>1956.0</td>
+      <td>953372.0</td>
+      <td>4470.0</td>
+      <td>2449408.0</td>
+      <td>2449438.0</td>
+      <td>N</td>
+      <td>2452469.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>AAAAAAAAGAAAAAAA</td>
+      <td>82</td>
+      <td>Ms.</td>
+      <td>Brunilda</td>
+      <td>Sharp</td>
+      <td>SURINAME</td>
+      <td>Brunilda.Sharp@T3pylZEUQjm.org</td>
+      <td>4.0</td>
+      <td>12.0</td>
+      <td>1925.0</td>
+      <td>213219.0</td>
+      <td>6374.0</td>
+      <td>2451853.0</td>
+      <td>2451883.0</td>
+      <td>N</td>
+      <td>2452430.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>AAAAAAAAHAAAAAAA</td>
+      <td>814</td>
+      <td>Ms.</td>
+      <td>Fonda</td>
+      <td>Wiles</td>
+      <td>GAMBIA</td>
+      <td>Fonda.Wiles@S9KnyEtz9hv.org</td>
+      <td>24.0</td>
+      <td>4.0</td>
+      <td>1985.0</td>
+      <td>68377.0</td>
+      <td>3219.0</td>
+      <td>2451408.0</td>
+      <td>2451438.0</td>
+      <td>Y</td>
+      <td>2452360.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>AAAAAAAAIAAAAAAA</td>
+      <td>598</td>
+      <td>Sir</td>
+      <td>Ollie</td>
+      <td>Shipman</td>
+      <td>KOREA, REPUBLIC OF</td>
+      <td>Ollie.Shipman@be.org</td>
+      <td>26.0</td>
+      <td>12.0</td>
+      <td>1938.0</td>
+      <td>1215897.0</td>
+      <td>2471.0</td>
+      <td>2449376.0</td>
+      <td>2449406.0</td>
+      <td>N</td>
+      <td>2452334.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>AAAAAAAAJAAAAAAA</td>
+      <td>388</td>
+      <td>Sir</td>
+      <td>Karl</td>
+      <td>Gilbert</td>
+      <td>MONTSERRAT</td>
+      <td>Karl.Gilbert@Crg5KyP2IxX9C4d6.edu</td>
+      <td>26.0</td>
+      <td>10.0</td>
+      <td>1966.0</td>
+      <td>1168667.0</td>
+      <td>1404.0</td>
+      <td>2452245.0</td>
+      <td>2452275.0</td>
+      <td>N</td>
+      <td>2452454.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>AAAAAAAAKAAAAAAA</td>
+      <td>580</td>
+      <td>Ms.</td>
+      <td>Albert</td>
+      <td>Brunson</td>
+      <td>JORDAN</td>
+      <td>Albert.Brunson@62.com</td>
+      <td>15.0</td>
+      <td>10.0</td>
+      <td>1973.0</td>
+      <td>1207553.0</td>
+      <td>5143.0</td>
+      <td>2451323.0</td>
+      <td>2451353.0</td>
+      <td>N</td>
+      <td>2452641.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>AAAAAAAALAAAAAAA</td>
+      <td>999</td>
+      <td>Ms.</td>
+      <td>Betty</td>
+      <td>Williams</td>
+      <td>BURKINA FASO</td>
+      <td>Betty.Williams@xRtDqM1eLBVQNoYAJ.com</td>
+      <td>18.0</td>
+      <td>12.0</td>
+      <td>1963.0</td>
+      <td>1114415.0</td>
+      <td>6807.0</td>
+      <td>2452258.0</td>
+      <td>2452288.0</td>
+      <td>N</td>
+      <td>2452398.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>AAAAAAAAMAAAAAAA</td>
+      <td>366</td>
+      <td>Ms.</td>
+      <td>Margaret</td>
+      <td>Farias</td>
+      <td>TURKMENISTAN</td>
+      <td>Margaret.Farias@cb.edu</td>
+      <td>2.0</td>
+      <td>6.0</td>
+      <td>1956.0</td>
+      <td>502141.0</td>
+      <td>6577.0</td>
+      <td>2451009.0</td>
+      <td>2451039.0</td>
+      <td>N</td>
+      <td>2452634.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>AAAAAAAANAAAAAAA</td>
+      <td>6</td>
+      <td>Mrs.</td>
+      <td>Rosalinda</td>
+      <td>Grimes</td>
+      <td>UKRAINE</td>
+      <td>Rosalinda.Grimes@tC8pcU7Lt.edu</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td>1970.0</td>
+      <td>1128748.0</td>
+      <td>2777.0</td>
+      <td>2449628.0</td>
+      <td>2449658.0</td>
+      <td>N</td>
+      <td>2452616.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>AAAAAAAAOAAAAAAA</td>
+      <td>440</td>
+      <td>Mr.</td>
+      <td>Jack</td>
+      <td>Wilcox</td>
+      <td>SLOVENIA</td>
+      <td>Jack.Wilcox@Y3Etqyv3.org</td>
+      <td>30.0</td>
+      <td>3.0</td>
+      <td>1937.0</td>
+      <td>929344.0</td>
+      <td>892.0</td>
+      <td>2450288.0</td>
+      <td>2450318.0</td>
+      <td>N</td>
+      <td>2452641.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>AAAAAAAAPAAAAAAA</td>
+      <td>469</td>
+      <td>Ms.</td>
+      <td>Tonya</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>12.0</td>
+      <td>1969.0</td>
+      <td>NaN</td>
+      <td>134.0</td>
+      <td>2449010.0</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2452376.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>AAAAAAAAABAAAAAA</td>
+      <td>302</td>
+      <td>Dr.</td>
+      <td>Margie</td>
+      <td>Browning</td>
+      <td>PHILIPPINES</td>
+      <td>Margie.Browning@LM674NrE2.org</td>
+      <td>24.0</td>
+      <td>12.0</td>
+      <td>1933.0</td>
+      <td>1196373.0</td>
+      <td>3014.0</td>
+      <td>2451316.0</td>
+      <td>2451346.0</td>
+      <td>N</td>
+      <td>2452573.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>AAAAAAAABBAAAAAA</td>
+      <td>228</td>
+      <td>Dr.</td>
+      <td>Lee</td>
+      <td>Stovall</td>
+      <td>PHILIPPINES</td>
+      <td>Lee.Stovall@fqKC83UU0f.org</td>
+      <td>23.0</td>
+      <td>12.0</td>
+      <td>1972.0</td>
+      <td>707524.0</td>
+      <td>3876.0</td>
+      <td>2451038.0</td>
+      <td>2451068.0</td>
+      <td>N</td>
+      <td>2452454.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>AAAAAAAACBAAAAAA</td>
+      <td>456</td>
+      <td>Sir</td>
+      <td>Brad</td>
+      <td>Lynch</td>
+      <td>URUGUAY</td>
+      <td>Brad.Lynch@nAbai.edu</td>
+      <td>1.0</td>
+      <td>9.0</td>
+      <td>1950.0</td>
+      <td>1361151.0</td>
+      <td>6580.0</td>
+      <td>2450011.0</td>
+      <td>2450041.0</td>
+      <td>Y</td>
+      <td>2452549.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>AAAAAAAADBAAAAAA</td>
+      <td>581</td>
+      <td>Dr.</td>
+      <td>Andre</td>
+      <td>Moore</td>
+      <td>NICARAGUA</td>
+      <td>Andre.Moore@cTZLGYi1ZJi.org</td>
+      <td>20.0</td>
+      <td>10.0</td>
+      <td>1978.0</td>
+      <td>1161742.0</td>
+      <td>4238.0</td>
+      <td>2449550.0</td>
+      <td>2449580.0</td>
+      <td>N</td>
+      <td>2452576.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>AAAAAAAAEBAAAAAA</td>
+      <td>966</td>
+      <td>Mr.</td>
+      <td>Stanton</td>
+      <td>Dallas</td>
+      <td>SWITZERLAND</td>
+      <td>Stanton.Dallas@DBXgl18FGo.edu</td>
+      <td>17.0</td>
+      <td>5.0</td>
+      <td>1976.0</td>
+      <td>1185612.0</td>
+      <td>89.0</td>
+      <td>2450935.0</td>
+      <td>2450965.0</td>
+      <td>Y</td>
+      <td>2452334.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>AAAAAAAAFBAAAAAA</td>
+      <td>979</td>
+      <td>Miss</td>
+      <td>Naomi</td>
+      <td>Barnett</td>
+      <td>BAHAMAS</td>
+      <td>Naomi.Barnett@2T3V3OZOy4KBNAHsT.edu</td>
+      <td>18.0</td>
+      <td>5.0</td>
+      <td>1956.0</td>
+      <td>442697.0</td>
+      <td>6538.0</td>
+      <td>2451797.0</td>
+      <td>2451827.0</td>
+      <td>N</td>
+      <td>2452433.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>AAAAAAAAGBAAAAAA</td>
+      <td>467</td>
+      <td>Sir</td>
+      <td>Victor</td>
+      <td>Martinez</td>
+      <td>CAYMAN ISLANDS</td>
+      <td>Victor.Martinez@fC.edu</td>
+      <td>21.0</td>
+      <td>12.0</td>
+      <td>1991.0</td>
+      <td>490494.0</td>
+      <td>4504.0</td>
+      <td>2451435.0</td>
+      <td>2451465.0</td>
+      <td>N</td>
+      <td>2452529.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>AAAAAAAAHBAAAAAA</td>
+      <td>686</td>
+      <td>Sir</td>
+      <td>None</td>
+      <td>Garrison</td>
+      <td>None</td>
+      <td>Earl.Garrison@G3sM4P.com</td>
+      <td>NaN</td>
+      <td>5.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2107.0</td>
+      <td>2450982.0</td>
+      <td>2451012.0</td>
+      <td>N</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>AAAAAAAAIBAAAAAA</td>
+      <td>291</td>
+      <td>Dr.</td>
+      <td>Paul</td>
+      <td>Morris</td>
+      <td>GUINEA-BISSAU</td>
+      <td>Paul.Morris@FMGalegqc3.com</td>
+      <td>6.0</td>
+      <td>6.0</td>
+      <td>1951.0</td>
+      <td>17113.0</td>
+      <td>1102.0</td>
+      <td>2450068.0</td>
+      <td>2450098.0</td>
+      <td>Y</td>
+      <td>2452499.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>AAAAAAAAJBAAAAAA</td>
+      <td>933</td>
+      <td>Miss</td>
+      <td>Nancy</td>
+      <td>Mccormick</td>
+      <td>BAHAMAS</td>
+      <td>Nancy.Mccormick@DA26I9ZArLF9rxJ6Z.edu</td>
+      <td>6.0</td>
+      <td>10.0</td>
+      <td>1973.0</td>
+      <td>476176.0</td>
+      <td>3278.0</td>
+      <td>2449216.0</td>
+      <td>2449246.0</td>
+      <td>N</td>
+      <td>2452425.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>AAAAAAAAKBAAAAAA</td>
+      <td>206</td>
+      <td>Ms.</td>
+      <td>Monique</td>
+      <td>Baker</td>
+      <td>MOROCCO</td>
+      <td>Monique.Baker@9uEucNczY.org</td>
+      <td>14.0</td>
+      <td>6.0</td>
+      <td>1991.0</td>
+      <td>230278.0</td>
+      <td>1242.0</td>
+      <td>2449786.0</td>
+      <td>2449816.0</td>
+      <td>N</td>
+      <td>2452356.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>AAAAAAAALBAAAAAA</td>
+      <td>96</td>
+      <td>Dr.</td>
+      <td>Shawn</td>
+      <td>Prather</td>
+      <td>PUERTO RICO</td>
+      <td>Shawn.Prather@8BusRYegn6.org</td>
+      <td>7.0</td>
+      <td>3.0</td>
+      <td>1972.0</td>
+      <td>111621.0</td>
+      <td>835.0</td>
+      <td>2450581.0</td>
+      <td>2450611.0</td>
+      <td>N</td>
+      <td>2452353.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>AAAAAAAAMBAAAAAA</td>
+      <td>480</td>
+      <td>Miss</td>
+      <td>Edith</td>
+      <td>Hernandez</td>
+      <td>CÔTE D'IVOIRE</td>
+      <td>Edith.Hernandez@BNHL0k.com</td>
+      <td>17.0</td>
+      <td>8.0</td>
+      <td>1959.0</td>
+      <td>889961.0</td>
+      <td>897.0</td>
+      <td>2452585.0</td>
+      <td>2452615.0</td>
+      <td>Y</td>
+      <td>2452631.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>AAAAAAAANBAAAAAA</td>
+      <td>139</td>
+      <td>Ms.</td>
+      <td>Margaret</td>
+      <td>Collins</td>
+      <td>NETHERLANDS ANTILLES</td>
+      <td>Margaret.Collins@9obPr3UV.org</td>
+      <td>25.0</td>
+      <td>8.0</td>
+      <td>1973.0</td>
+      <td>1634269.0</td>
+      <td>1204.0</td>
+      <td>2452186.0</td>
+      <td>2452216.0</td>
+      <td>Y</td>
+      <td>2452496.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>AAAAAAAAOBAAAAAA</td>
+      <td>459</td>
+      <td>Dr.</td>
+      <td>Pamela</td>
+      <td>Luna</td>
+      <td>GUAM</td>
+      <td>Pamela.Luna@QBGuhL36lnA.edu</td>
+      <td>4.0</td>
+      <td>7.0</td>
+      <td>1956.0</td>
+      <td>84232.0</td>
+      <td>5869.0</td>
+      <td>2449886.0</td>
+      <td>2449916.0</td>
+      <td>Y</td>
+      <td>2452410.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>AAAAAAAAPBAAAAAA</td>
+      <td>128</td>
+      <td>Dr.</td>
+      <td>William</td>
+      <td>Craig</td>
+      <td>SPAIN</td>
+      <td>William.Craig@prVDE1E8AHc.org</td>
+      <td>13.0</td>
+      <td>6.0</td>
+      <td>1964.0</td>
+      <td>1275120.0</td>
+      <td>5724.0</td>
+      <td>2452024.0</td>
+      <td>2452054.0</td>
+      <td>N</td>
+      <td>2452336.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>AAAAAAAAACAAAAAA</td>
+      <td>290</td>
+      <td>Dr.</td>
+      <td>Kenneth</td>
+      <td>Wood</td>
+      <td>MOLDOVA, REPUBLIC OF</td>
+      <td>Kenneth.Wood@RIA.edu</td>
+      <td>2.0</td>
+      <td>8.0</td>
+      <td>1927.0</td>
+      <td>1369589.0</td>
+      <td>6163.0</td>
+      <td>2449441.0</td>
+      <td>2449471.0</td>
+      <td>N</td>
+      <td>2452510.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>AAAAAAAABCAAAAAA</td>
+      <td>438</td>
+      <td>Mrs.</td>
+      <td>Donna</td>
+      <td>Betts</td>
+      <td>FRANCE</td>
+      <td>Donna.Betts@YJ14k.edu</td>
+      <td>25.0</td>
+      <td>3.0</td>
+      <td>1958.0</td>
+      <td>1680761.0</td>
+      <td>5823.0</td>
+      <td>2451542.0</td>
+      <td>2451572.0</td>
+      <td>Y</td>
+      <td>2452455.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>AAAAAAAACCAAAAAA</td>
+      <td>501</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Woods</td>
+      <td>None</td>
+      <td>Brandon.Woods@hjKbf.edu</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2452162.0</td>
+      <td>2452192.0</td>
+      <td>None</td>
+      <td>2452408.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>AAAAAAAADCAAAAAA</td>
+      <td>231</td>
+      <td>Dr.</td>
+      <td>Marie</td>
+      <td>Peterson</td>
+      <td>KIRIBATI</td>
+      <td>Marie.Peterson@1zg9tydFHafA5.com</td>
+      <td>19.0</td>
+      <td>6.0</td>
+      <td>1953.0</td>
+      <td>339036.0</td>
+      <td>2057.0</td>
+      <td>2451907.0</td>
+      <td>2451937.0</td>
+      <td>N</td>
+      <td>2452581.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>AAAAAAAAECAAAAAA</td>
+      <td>585</td>
+      <td>Dr.</td>
+      <td>Anthony</td>
+      <td>Fisher</td>
+      <td>KYRGYZSTAN</td>
+      <td>Anthony.Fisher@jJrZfeDcz8P.com</td>
+      <td>29.0</td>
+      <td>11.0</td>
+      <td>1968.0</td>
+      <td>655414.0</td>
+      <td>2223.0</td>
+      <td>2449192.0</td>
+      <td>2449222.0</td>
+      <td>N</td>
+      <td>2452470.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>AAAAAAAAFCAAAAAA</td>
+      <td>943</td>
+      <td>Dr.</td>
+      <td>Dwight</td>
+      <td>Schneider</td>
+      <td>RUSSIAN FEDERATION</td>
+      <td>Dwight.Schneider@koxO7zAysvOd.com</td>
+      <td>9.0</td>
+      <td>1.0</td>
+      <td>1949.0</td>
+      <td>827972.0</td>
+      <td>2281.0</td>
+      <td>2449818.0</td>
+      <td>2449848.0</td>
+      <td>Y</td>
+      <td>2452293.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>AAAAAAAAGCAAAAAA</td>
+      <td>360</td>
+      <td>Mrs.</td>
+      <td>Ha</td>
+      <td>Carpenter</td>
+      <td>PARAGUAY</td>
+      <td>Ha.Carpenter@XgcUt4svNz.com</td>
+      <td>30.0</td>
+      <td>3.0</td>
+      <td>1939.0</td>
+      <td>766645.0</td>
+      <td>3879.0</td>
+      <td>2450293.0</td>
+      <td>2450323.0</td>
+      <td>Y</td>
+      <td>2452351.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>AAAAAAAAHCAAAAAA</td>
+      <td>844</td>
+      <td>Sir</td>
+      <td>Neil</td>
+      <td>Cox</td>
+      <td>ECUADOR</td>
+      <td>Neil.Cox@FRuR2bFK.com</td>
+      <td>14.0</td>
+      <td>12.0</td>
+      <td>1951.0</td>
+      <td>1617182.0</td>
+      <td>4013.0</td>
+      <td>2452101.0</td>
+      <td>2452131.0</td>
+      <td>N</td>
+      <td>2452586.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>AAAAAAAAICAAAAAA</td>
+      <td>45</td>
+      <td>None</td>
+      <td>Jacqueline</td>
+      <td>Hatfield</td>
+      <td>None</td>
+      <td>None</td>
+      <td>26.0</td>
+      <td>NaN</td>
+      <td>1942.0</td>
+      <td>1795301.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2451159.0</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>AAAAAAAAJCAAAAAA</td>
+      <td>316</td>
+      <td>Miss</td>
+      <td>Maxine</td>
+      <td>Carlson</td>
+      <td>ISLE OF MAN</td>
+      <td>Maxine.Carlson@StyP5lAokmQ29QHYMLa.edu</td>
+      <td>26.0</td>
+      <td>6.0</td>
+      <td>1939.0</td>
+      <td>941420.0</td>
+      <td>5068.0</td>
+      <td>2449959.0</td>
+      <td>2449989.0</td>
+      <td>N</td>
+      <td>2452464.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>AAAAAAAAKCAAAAAA</td>
+      <td>277</td>
+      <td>Dr.</td>
+      <td>Deborah</td>
+      <td>Burton</td>
+      <td>COMOROS</td>
+      <td>Deborah.Burton@xt.edu</td>
+      <td>17.0</td>
+      <td>1.0</td>
+      <td>1950.0</td>
+      <td>1867377.0</td>
+      <td>3327.0</td>
+      <td>2449839.0</td>
+      <td>2449869.0</td>
+      <td>N</td>
+      <td>2452498.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>AAAAAAAALCAAAAAA</td>
+      <td>743</td>
+      <td>Mr.</td>
+      <td>William</td>
+      <td>Warner</td>
+      <td>GUAM</td>
+      <td>William.Warner@zegnrzurU.org</td>
+      <td>5.0</td>
+      <td>12.0</td>
+      <td>1965.0</td>
+      <td>385562.0</td>
+      <td>3676.0</td>
+      <td>2451675.0</td>
+      <td>2451705.0</td>
+      <td>Y</td>
+      <td>2452537.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>AAAAAAAAMCAAAAAA</td>
+      <td>296</td>
+      <td>Miss</td>
+      <td>Mabel</td>
+      <td>Richmond</td>
+      <td>CAMBODIA</td>
+      <td>Mabel.Richmond@Tkla.edu</td>
+      <td>7.0</td>
+      <td>12.0</td>
+      <td>1932.0</td>
+      <td>497758.0</td>
+      <td>5427.0</td>
+      <td>2449720.0</td>
+      <td>2449750.0</td>
+      <td>Y</td>
+      <td>2452333.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>AAAAAAAANCAAAAAA</td>
+      <td>777</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Hammonds</td>
+      <td>NIGER</td>
+      <td>None</td>
+      <td>5.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1036174.0</td>
+      <td>2399.0</td>
+      <td>2451088.0</td>
+      <td>2451118.0</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>AAAAAAAAOCAAAAAA</td>
+      <td>386</td>
+      <td>Mrs.</td>
+      <td>Jane</td>
+      <td>Stephenson</td>
+      <td>TURKEY</td>
+      <td>Jane.Stephenson@lq8ZQLAUMZhR.edu</td>
+      <td>13.0</td>
+      <td>4.0</td>
+      <td>1990.0</td>
+      <td>843672.0</td>
+      <td>4729.0</td>
+      <td>2451827.0</td>
+      <td>2451857.0</td>
+      <td>Y</td>
+      <td>2452301.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>AAAAAAAAPCAAAAAA</td>
+      <td>469</td>
+      <td>Mr.</td>
+      <td>Luis</td>
+      <td>Young</td>
+      <td>BRUNEI DARUSSALAM</td>
+      <td>Luis.Young@0DmV.edu</td>
+      <td>3.0</td>
+      <td>12.0</td>
+      <td>1982.0</td>
+      <td>1634314.0</td>
+      <td>5368.0</td>
+      <td>2449135.0</td>
+      <td>2449165.0</td>
+      <td>N</td>
+      <td>2452586.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>AAAAAAAAADAAAAAA</td>
+      <td>252</td>
+      <td>Ms.</td>
+      <td>Jill</td>
+      <td>Jackson</td>
+      <td>LUXEMBOURG</td>
+      <td>Jill.Jackson@n6I7SF.org</td>
+      <td>15.0</td>
+      <td>9.0</td>
+      <td>1961.0</td>
+      <td>8817.0</td>
+      <td>311.0</td>
+      <td>2449501.0</td>
+      <td>2449531.0</td>
+      <td>N</td>
+      <td>2452575.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>AAAAAAAABDAAAAAA</td>
+      <td>581</td>
+      <td>Mr.</td>
+      <td>Steven</td>
+      <td>Venable</td>
+      <td>NETHERLANDS ANTILLES</td>
+      <td>Steven.Venable@0hA90vhfK7k9F4h.com</td>
+      <td>13.0</td>
+      <td>6.0</td>
+      <td>1961.0</td>
+      <td>936800.0</td>
+      <td>1514.0</td>
+      <td>2449334.0</td>
+      <td>2449364.0</td>
+      <td>N</td>
+      <td>2452350.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>AAAAAAAACDAAAAAA</td>
+      <td>567</td>
+      <td>Mr.</td>
+      <td>Christopher</td>
+      <td>Eller</td>
+      <td>AUSTRALIA</td>
+      <td>Christopher.Eller@gV5Ua7HOmt.com</td>
+      <td>24.0</td>
+      <td>11.0</td>
+      <td>1965.0</td>
+      <td>759177.0</td>
+      <td>72.0</td>
+      <td>2449354.0</td>
+      <td>2449384.0</td>
+      <td>N</td>
+      <td>2452520.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>AAAAAAAADDAAAAAA</td>
+      <td>688</td>
+      <td>Dr.</td>
+      <td>David</td>
+      <td>Nieves</td>
+      <td>CHRISTMAS ISLAND</td>
+      <td>David.Nieves@LcDkQ.edu</td>
+      <td>5.0</td>
+      <td>10.0</td>
+      <td>1926.0</td>
+      <td>532799.0</td>
+      <td>6920.0</td>
+      <td>2452360.0</td>
+      <td>2452390.0</td>
+      <td>N</td>
+      <td>2452570.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>AAAAAAAAEDAAAAAA</td>
+      <td>128</td>
+      <td>Mrs.</td>
+      <td>Wendy</td>
+      <td>Colley</td>
+      <td>FRENCH GUIANA</td>
+      <td>Wendy.Colley@qLBjqbAQQGj.edu</td>
+      <td>1.0</td>
+      <td>4.0</td>
+      <td>1982.0</td>
+      <td>534808.0</td>
+      <td>4768.0</td>
+      <td>2451391.0</td>
+      <td>2451421.0</td>
+      <td>N</td>
+      <td>2452553.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>AAAAAAAAFDAAAAAA</td>
+      <td>439</td>
+      <td>Mr.</td>
+      <td>Paul</td>
+      <td>Higgins</td>
+      <td>GABON</td>
+      <td>Paul.Higgins@qG9NrSTLz9HaNHX.edu</td>
+      <td>23.0</td>
+      <td>9.0</td>
+      <td>1950.0</td>
+      <td>1597348.0</td>
+      <td>7017.0</td>
+      <td>2451790.0</td>
+      <td>2451820.0</td>
+      <td>Y</td>
+      <td>2452447.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>AAAAAAAAGDAAAAAA</td>
+      <td>660</td>
+      <td>Ms.</td>
+      <td>Donna</td>
+      <td>King</td>
+      <td>TUNISIA</td>
+      <td>Donna.King@TEftU.com</td>
+      <td>3.0</td>
+      <td>2.0</td>
+      <td>1940.0</td>
+      <td>380102.0</td>
+      <td>2381.0</td>
+      <td>2449950.0</td>
+      <td>2449980.0</td>
+      <td>Y</td>
+      <td>2452446.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>AAAAAAAAHDAAAAAA</td>
+      <td>256</td>
+      <td>Dr.</td>
+      <td>Beryl</td>
+      <td>Thomason</td>
+      <td>UNITED KINGDOM</td>
+      <td>Beryl.Thomason@OeqefhtCmZTAj.com</td>
+      <td>12.0</td>
+      <td>8.0</td>
+      <td>1933.0</td>
+      <td>783093.0</td>
+      <td>1151.0</td>
+      <td>2451509.0</td>
+      <td>2451539.0</td>
+      <td>N</td>
+      <td>2452380.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>AAAAAAAAIDAAAAAA</td>
+      <td>524</td>
+      <td>Miss</td>
+      <td>Pamela</td>
+      <td>Delgado</td>
+      <td>GUERNSEY</td>
+      <td>Pamela.Delgado@8OpV0Ldj8vq2K9ZK.org</td>
+      <td>29.0</td>
+      <td>1.0</td>
+      <td>1960.0</td>
+      <td>344460.0</td>
+      <td>3092.0</td>
+      <td>2451394.0</td>
+      <td>2451424.0</td>
+      <td>N</td>
+      <td>2452334.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>AAAAAAAAJDAAAAAA</td>
+      <td>571</td>
+      <td>Mr.</td>
+      <td>Travis</td>
+      <td>Melendez</td>
+      <td>AFGHANISTAN</td>
+      <td>Travis.Melendez@344rCMk.edu</td>
+      <td>10.0</td>
+      <td>3.0</td>
+      <td>1961.0</td>
+      <td>752932.0</td>
+      <td>128.0</td>
+      <td>2449711.0</td>
+      <td>2449741.0</td>
+      <td>Y</td>
+      <td>2452606.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>AAAAAAAAKDAAAAAA</td>
+      <td>155</td>
+      <td>Mr.</td>
+      <td>Cecil</td>
+      <td>Peterman</td>
+      <td>ICELAND</td>
+      <td>Cecil.Peterman@tbeqEuUvS4ZM4Px9N.com</td>
+      <td>29.0</td>
+      <td>2.0</td>
+      <td>1988.0</td>
+      <td>528756.0</td>
+      <td>6879.0</td>
+      <td>2451356.0</td>
+      <td>2451386.0</td>
+      <td>Y</td>
+      <td>2452447.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>AAAAAAAALDAAAAAA</td>
+      <td>683</td>
+      <td>Miss</td>
+      <td>Melanie</td>
+      <td>Morrison</td>
+      <td>HUNGARY</td>
+      <td>Melanie.Morrison@F2foqn.edu</td>
+      <td>6.0</td>
+      <td>1.0</td>
+      <td>1947.0</td>
+      <td>1895444.0</td>
+      <td>4787.0</td>
+      <td>2451127.0</td>
+      <td>2451157.0</td>
+      <td>N</td>
+      <td>2452530.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>AAAAAAAAMDAAAAAA</td>
+      <td>282</td>
+      <td>Ms.</td>
+      <td>Dollie</td>
+      <td>Thao</td>
+      <td>SWITZERLAND</td>
+      <td>Dollie.Thao@Xead5vagsekdHDLUkv.edu</td>
+      <td>15.0</td>
+      <td>7.0</td>
+      <td>1990.0</td>
+      <td>1179671.0</td>
+      <td>3200.0</td>
+      <td>2449684.0</td>
+      <td>2449714.0</td>
+      <td>N</td>
+      <td>2452407.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>AAAAAAAANDAAAAAA</td>
+      <td>688</td>
+      <td>Sir</td>
+      <td>Joseph</td>
+      <td>White</td>
+      <td>SENEGAL</td>
+      <td>Joseph.White@c0EJ7pimuu.com</td>
+      <td>6.0</td>
+      <td>5.0</td>
+      <td>1978.0</td>
+      <td>1620078.0</td>
+      <td>6683.0</td>
+      <td>2451106.0</td>
+      <td>2451136.0</td>
+      <td>Y</td>
+      <td>2452462.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>AAAAAAAAODAAAAAA</td>
+      <td>413</td>
+      <td>Mr.</td>
+      <td>Matthew</td>
+      <td>Brown</td>
+      <td>KOREA, REPUBLIC OF</td>
+      <td>Matthew.Brown@F.edu</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>1973.0</td>
+      <td>821787.0</td>
+      <td>4700.0</td>
+      <td>2451824.0</td>
+      <td>2451854.0</td>
+      <td>Y</td>
+      <td>2452319.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>AAAAAAAAPDAAAAAA</td>
+      <td>716</td>
+      <td>Dr.</td>
+      <td>Frank</td>
+      <td>Morton</td>
+      <td>EGYPT</td>
+      <td>Frank.Morton@Hd7jNaA3s.com</td>
+      <td>26.0</td>
+      <td>4.0</td>
+      <td>1943.0</td>
+      <td>1790374.0</td>
+      <td>2445.0</td>
+      <td>2450149.0</td>
+      <td>2450179.0</td>
+      <td>N</td>
+      <td>2452425.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>AAAAAAAAAEAAAAAA</td>
+      <td>930</td>
+      <td>Dr.</td>
+      <td>Michael</td>
+      <td>Frye</td>
+      <td>CAPE VERDE</td>
+      <td>Michael.Frye@aM1HsbOs0smgpLo.org</td>
+      <td>27.0</td>
+      <td>6.0</td>
+      <td>1941.0</td>
+      <td>1260191.0</td>
+      <td>6284.0</td>
+      <td>2452349.0</td>
+      <td>2452379.0</td>
+      <td>N</td>
+      <td>2452426.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>AAAAAAAABEAAAAAA</td>
+      <td>584</td>
+      <td>Dr.</td>
+      <td>Rodney</td>
+      <td>Taft</td>
+      <td>VIRGIN ISLANDS, U.S.</td>
+      <td>Rodney.Taft@qe.com</td>
+      <td>18.0</td>
+      <td>9.0</td>
+      <td>1991.0</td>
+      <td>1778884.0</td>
+      <td>2234.0</td>
+      <td>2451868.0</td>
+      <td>2451898.0</td>
+      <td>N</td>
+      <td>2452353.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>AAAAAAAACEAAAAAA</td>
+      <td>882</td>
+      <td>Ms.</td>
+      <td>Julie</td>
+      <td>Chester</td>
+      <td>HONG KONG</td>
+      <td>Julie.Chester@Kv.com</td>
+      <td>8.0</td>
+      <td>9.0</td>
+      <td>1950.0</td>
+      <td>747190.0</td>
+      <td>6036.0</td>
+      <td>2449264.0</td>
+      <td>2449294.0</td>
+      <td>N</td>
+      <td>2452375.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>AAAAAAAADEAAAAAA</td>
+      <td>970</td>
+      <td>Dr.</td>
+      <td>Gerald</td>
+      <td>Thomas</td>
+      <td>NORWAY</td>
+      <td>Gerald.Thomas@zSuIGSgb6iyu.org</td>
+      <td>27.0</td>
+      <td>10.0</td>
+      <td>1948.0</td>
+      <td>1118294.0</td>
+      <td>2032.0</td>
+      <td>2452003.0</td>
+      <td>2452033.0</td>
+      <td>N</td>
+      <td>2452414.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>AAAAAAAAEEAAAAAA</td>
+      <td>126</td>
+      <td>Dr.</td>
+      <td>Arthur</td>
+      <td>Troy</td>
+      <td>LUXEMBOURG</td>
+      <td>Arthur.Troy@3VY5bV30AifrO.com</td>
+      <td>20.0</td>
+      <td>8.0</td>
+      <td>1928.0</td>
+      <td>779965.0</td>
+      <td>6069.0</td>
+      <td>2451906.0</td>
+      <td>2451936.0</td>
+      <td>Y</td>
+      <td>2452542.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>AAAAAAAAFEAAAAAA</td>
+      <td>366</td>
+      <td>Sir</td>
+      <td>Steven</td>
+      <td>Mcclellan</td>
+      <td>NEPAL</td>
+      <td>Steven.Mcclellan@UviyOLnu2m1POo.edu</td>
+      <td>15.0</td>
+      <td>1.0</td>
+      <td>1950.0</td>
+      <td>971368.0</td>
+      <td>4167.0</td>
+      <td>2450124.0</td>
+      <td>2450154.0</td>
+      <td>Y</td>
+      <td>2452340.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>AAAAAAAAGEAAAAAA</td>
+      <td>102</td>
+      <td>Sir</td>
+      <td>James</td>
+      <td>Smith</td>
+      <td>KUWAIT</td>
+      <td>James.Smith@ifJngGlNG.edu</td>
+      <td>7.0</td>
+      <td>12.0</td>
+      <td>1963.0</td>
+      <td>1460929.0</td>
+      <td>5492.0</td>
+      <td>2451914.0</td>
+      <td>2451944.0</td>
+      <td>N</td>
+      <td>2452342.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>AAAAAAAAHEAAAAAA</td>
+      <td>450</td>
+      <td>Mr.</td>
+      <td>Roderick</td>
+      <td>Rogers</td>
+      <td>OMAN</td>
+      <td>Roderick.Rogers@pJdioQ.com</td>
+      <td>4.0</td>
+      <td>11.0</td>
+      <td>1967.0</td>
+      <td>1292064.0</td>
+      <td>2257.0</td>
+      <td>2450218.0</td>
+      <td>2450248.0</td>
+      <td>N</td>
+      <td>2452462.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>AAAAAAAAIEAAAAAA</td>
+      <td>390</td>
+      <td>Dr.</td>
+      <td>Bradley</td>
+      <td>Barry</td>
+      <td>TAJIKISTAN</td>
+      <td>Bradley.Barry@Kq2ONpEXU9YSno31.edu</td>
+      <td>21.0</td>
+      <td>3.0</td>
+      <td>1937.0</td>
+      <td>1608738.0</td>
+      <td>6364.0</td>
+      <td>2451670.0</td>
+      <td>2451700.0</td>
+      <td>Y</td>
+      <td>2452601.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>AAAAAAAAJEAAAAAA</td>
+      <td>369</td>
+      <td>Mr.</td>
+      <td>David</td>
+      <td>Vasquez</td>
+      <td>ISRAEL</td>
+      <td>David.Vasquez@j.org</td>
+      <td>17.0</td>
+      <td>4.0</td>
+      <td>1956.0</td>
+      <td>425740.0</td>
+      <td>431.0</td>
+      <td>2449103.0</td>
+      <td>2449133.0</td>
+      <td>N</td>
+      <td>2452489.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>AAAAAAAAKEAAAAAA</td>
+      <td>269</td>
+      <td>Sir</td>
+      <td>Eric</td>
+      <td>Woods</td>
+      <td>SAINT LUCIA</td>
+      <td>Eric.Woods@CfPzy1AUqxd2.com</td>
+      <td>19.0</td>
+      <td>2.0</td>
+      <td>1953.0</td>
+      <td>1434225.0</td>
+      <td>347.0</td>
+      <td>2452611.0</td>
+      <td>2452641.0</td>
+      <td>Y</td>
+      <td>2452584.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>AAAAAAAALEAAAAAA</td>
+      <td>730</td>
+      <td>Dr.</td>
+      <td>Annie</td>
+      <td>Grant</td>
+      <td>TUVALU</td>
+      <td>Annie.Grant@tccug5KC1oT2nL.com</td>
+      <td>25.0</td>
+      <td>5.0</td>
+      <td>1925.0</td>
+      <td>1888603.0</td>
+      <td>143.0</td>
+      <td>2451725.0</td>
+      <td>2451755.0</td>
+      <td>Y</td>
+      <td>2452401.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>AAAAAAAAMEAAAAAA</td>
+      <td>691</td>
+      <td>Mr.</td>
+      <td>Craig</td>
+      <td>Lowry</td>
+      <td>WALLIS AND FUTUNA</td>
+      <td>Craig.Lowry@92zokgx8duX.org</td>
+      <td>7.0</td>
+      <td>3.0</td>
+      <td>1946.0</td>
+      <td>526064.0</td>
+      <td>2054.0</td>
+      <td>2451730.0</td>
+      <td>2451760.0</td>
+      <td>Y</td>
+      <td>2452430.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>AAAAAAAANEAAAAAA</td>
+      <td>154</td>
+      <td>Dr.</td>
+      <td>Darrin</td>
+      <td>Smith</td>
+      <td>UNITED STATES</td>
+      <td>Darrin.Smith@Mti.edu</td>
+      <td>30.0</td>
+      <td>5.0</td>
+      <td>1931.0</td>
+      <td>915180.0</td>
+      <td>2167.0</td>
+      <td>2451602.0</td>
+      <td>2451632.0</td>
+      <td>N</td>
+      <td>2452355.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>AAAAAAAAOEAAAAAA</td>
+      <td>264</td>
+      <td>Ms.</td>
+      <td>Wanda</td>
+      <td>Davis</td>
+      <td>NETHERLANDS ANTILLES</td>
+      <td>Wanda.Davis@I6s7DD86i6.edu</td>
+      <td>11.0</td>
+      <td>5.0</td>
+      <td>1940.0</td>
+      <td>1092537.0</td>
+      <td>3677.0</td>
+      <td>2449358.0</td>
+      <td>2449388.0</td>
+      <td>N</td>
+      <td>2452339.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>AAAAAAAAPEAAAAAA</td>
+      <td>539</td>
+      <td>Miss</td>
+      <td>Sandi</td>
+      <td>Tran</td>
+      <td>FRENCH GUIANA</td>
+      <td>Sandi.Tran@myikqStif1Q.edu</td>
+      <td>10.0</td>
+      <td>6.0</td>
+      <td>1937.0</td>
+      <td>389494.0</td>
+      <td>3493.0</td>
+      <td>2450833.0</td>
+      <td>2450863.0</td>
+      <td>Y</td>
+      <td>2452644.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>AAAAAAAAAFAAAAAA</td>
+      <td>727</td>
+      <td>Mrs.</td>
+      <td>Eleanor</td>
+      <td>Evans</td>
+      <td>CÔTE D'IVOIRE</td>
+      <td>Eleanor.Evans@zxvr5rl.org</td>
+      <td>21.0</td>
+      <td>12.0</td>
+      <td>1948.0</td>
+      <td>1499808.0</td>
+      <td>3891.0</td>
+      <td>2450528.0</td>
+      <td>2450558.0</td>
+      <td>N</td>
+      <td>2452413.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>AAAAAAAABFAAAAAA</td>
+      <td>306</td>
+      <td>Ms.</td>
+      <td>Jessica</td>
+      <td>Levesque</td>
+      <td>ALBANIA</td>
+      <td>Jessica.Levesque@06mGqI9mHG.org</td>
+      <td>17.0</td>
+      <td>7.0</td>
+      <td>1940.0</td>
+      <td>728917.0</td>
+      <td>388.0</td>
+      <td>2452532.0</td>
+      <td>2452562.0</td>
+      <td>Y</td>
+      <td>2452414.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>AAAAAAAACFAAAAAA</td>
+      <td>88</td>
+      <td>Sir</td>
+      <td>Max</td>
+      <td>Mueller</td>
+      <td>IRAQ</td>
+      <td>Max.Mueller@xqCZRBSrTGD6CBvXh.com</td>
+      <td>26.0</td>
+      <td>2.0</td>
+      <td>1947.0</td>
+      <td>75627.0</td>
+      <td>5081.0</td>
+      <td>2450327.0</td>
+      <td>2450357.0</td>
+      <td>N</td>
+      <td>2452303.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>AAAAAAAADFAAAAAA</td>
+      <td>824</td>
+      <td>Miss</td>
+      <td>Daisy</td>
+      <td>Flynn</td>
+      <td>NEW ZEALAND</td>
+      <td>Daisy.Flynn@288e6Z0csxJ.com</td>
+      <td>24.0</td>
+      <td>1.0</td>
+      <td>1943.0</td>
+      <td>976724.0</td>
+      <td>5574.0</td>
+      <td>2451002.0</td>
+      <td>2451032.0</td>
+      <td>N</td>
+      <td>2452338.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>AAAAAAAAEFAAAAAA</td>
+      <td>898</td>
+      <td>Mrs.</td>
+      <td>Ami</td>
+      <td>Montgomery</td>
+      <td>JAMAICA</td>
+      <td>Ami.Montgomery@VBSKqhL36j55.edu</td>
+      <td>2.0</td>
+      <td>5.0</td>
+      <td>1964.0</td>
+      <td>1250744.0</td>
+      <td>2821.0</td>
+      <td>2449466.0</td>
+      <td>2449496.0</td>
+      <td>Y</td>
+      <td>2452526.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>AAAAAAAAFFAAAAAA</td>
+      <td>575</td>
+      <td>Miss</td>
+      <td>Michele</td>
+      <td>Baldwin</td>
+      <td>GEORGIA</td>
+      <td>Michele.Baldwin@sIVO1J4U.org</td>
+      <td>30.0</td>
+      <td>10.0</td>
+      <td>1978.0</td>
+      <td>1293499.0</td>
+      <td>37.0</td>
+      <td>2449838.0</td>
+      <td>2449868.0</td>
+      <td>Y</td>
+      <td>2452491.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>AAAAAAAAGFAAAAAA</td>
+      <td>442</td>
+      <td>Dr.</td>
+      <td>Marvin</td>
+      <td>Matlock</td>
+      <td>BRUNEI DARUSSALAM</td>
+      <td>Marvin.Matlock@0FXEZp.org</td>
+      <td>21.0</td>
+      <td>10.0</td>
+      <td>1983.0</td>
+      <td>1428237.0</td>
+      <td>6963.0</td>
+      <td>2451530.0</td>
+      <td>2451560.0</td>
+      <td>Y</td>
+      <td>2452633.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>AAAAAAAAHFAAAAAA</td>
+      <td>30</td>
+      <td>Dr.</td>
+      <td>Kevin</td>
+      <td>White</td>
+      <td>BENIN</td>
+      <td>Kevin.White@x9oTPjEI6AdDQ7n4l.edu</td>
+      <td>2.0</td>
+      <td>7.0</td>
+      <td>1934.0</td>
+      <td>1452824.0</td>
+      <td>1427.0</td>
+      <td>2449374.0</td>
+      <td>2449404.0</td>
+      <td>N</td>
+      <td>2452492.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>AAAAAAAAIFAAAAAA</td>
+      <td>687</td>
+      <td>Dr.</td>
+      <td>Phyllis</td>
+      <td>Horner</td>
+      <td>UZBEKISTAN</td>
+      <td>Phyllis.Horner@uQy.edu</td>
+      <td>20.0</td>
+      <td>8.0</td>
+      <td>1965.0</td>
+      <td>495575.0</td>
+      <td>131.0</td>
+      <td>2450961.0</td>
+      <td>2450991.0</td>
+      <td>N</td>
+      <td>2452403.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>AAAAAAAAJFAAAAAA</td>
+      <td>318</td>
+      <td>Mrs.</td>
+      <td>Helen</td>
+      <td>Macdonald</td>
+      <td>DOMINICA</td>
+      <td>Helen.Macdonald@3d4.com</td>
+      <td>15.0</td>
+      <td>3.0</td>
+      <td>1981.0</td>
+      <td>694848.0</td>
+      <td>5383.0</td>
+      <td>2451395.0</td>
+      <td>2451425.0</td>
+      <td>Y</td>
+      <td>2452626.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>AAAAAAAAKFAAAAAA</td>
+      <td>139</td>
+      <td>Mr.</td>
+      <td>Nathan</td>
+      <td>Pond</td>
+      <td>GUYANA</td>
+      <td>Nathan.Pond@nPh7drM687MhI.org</td>
+      <td>7.0</td>
+      <td>5.0</td>
+      <td>1985.0</td>
+      <td>417827.0</td>
+      <td>5083.0</td>
+      <td>2451464.0</td>
+      <td>2451494.0</td>
+      <td>Y</td>
+      <td>2452637.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>AAAAAAAALFAAAAAA</td>
+      <td>906</td>
+      <td>Miss</td>
+      <td>Heather</td>
+      <td>White</td>
+      <td>MARTINIQUE</td>
+      <td>Heather.White@3JitjmxYQnXAtCNAl.com</td>
+      <td>28.0</td>
+      <td>3.0</td>
+      <td>1962.0</td>
+      <td>827176.0</td>
+      <td>2441.0</td>
+      <td>2450376.0</td>
+      <td>2450406.0</td>
+      <td>Y</td>
+      <td>2452295.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>AAAAAAAAMFAAAAAA</td>
+      <td>211</td>
+      <td>Miss</td>
+      <td>Crystal</td>
+      <td>Ryan</td>
+      <td>ECUADOR</td>
+      <td>Crystal.Ryan@Ju2rO6u.com</td>
+      <td>8.0</td>
+      <td>2.0</td>
+      <td>1973.0</td>
+      <td>953084.0</td>
+      <td>5771.0</td>
+      <td>2452552.0</td>
+      <td>2452582.0</td>
+      <td>Y</td>
+      <td>2452294.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>AAAAAAAANFAAAAAA</td>
+      <td>836</td>
+      <td>Sir</td>
+      <td>Clyde</td>
+      <td>Williams</td>
+      <td>FRENCH POLYNESIA</td>
+      <td>Clyde.Williams@en.com</td>
+      <td>6.0</td>
+      <td>10.0</td>
+      <td>1927.0</td>
+      <td>647375.0</td>
+      <td>6229.0</td>
+      <td>2449311.0</td>
+      <td>2449341.0</td>
+      <td>N</td>
+      <td>2452510.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>AAAAAAAAOFAAAAAA</td>
+      <td>287</td>
+      <td>Mr.</td>
+      <td>Craig</td>
+      <td>Byrd</td>
+      <td>FRENCH POLYNESIA</td>
+      <td>Craig.Byrd@Dc0OEMXkvvuJ.com</td>
+      <td>14.0</td>
+      <td>5.0</td>
+      <td>1982.0</td>
+      <td>451893.0</td>
+      <td>1990.0</td>
+      <td>2449523.0</td>
+      <td>2449553.0</td>
+      <td>Y</td>
+      <td>2452445.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>AAAAAAAAPFAAAAAA</td>
+      <td>23</td>
+      <td>Ms.</td>
+      <td>Elizabeth</td>
+      <td>Hollingsworth</td>
+      <td>GREECE</td>
+      <td>Elizabeth.Hollingsworth@lVpeDS5Rcs.com</td>
+      <td>17.0</td>
+      <td>4.0</td>
+      <td>1943.0</td>
+      <td>796503.0</td>
+      <td>1663.0</td>
+      <td>2452438.0</td>
+      <td>2452468.0</td>
+      <td>N</td>
+      <td>2452584.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>AAAAAAAAAGAAAAAA</td>
+      <td>611</td>
+      <td>Sir</td>
+      <td>Shaun</td>
+      <td>Lewis</td>
+      <td>NIGERIA</td>
+      <td>Shaun.Lewis@MTRUPYFTXf9.com</td>
+      <td>22.0</td>
+      <td>10.0</td>
+      <td>1955.0</td>
+      <td>1148074.0</td>
+      <td>6019.0</td>
+      <td>2451475.0</td>
+      <td>2451505.0</td>
+      <td>N</td>
+      <td>2452395.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>AAAAAAAABGAAAAAA</td>
+      <td>41</td>
+      <td>Mr.</td>
+      <td>Stewart</td>
+      <td>Ruffin</td>
+      <td>MYANMAR</td>
+      <td>Stewart.Ruffin@R7Mrx.edu</td>
+      <td>19.0</td>
+      <td>5.0</td>
+      <td>1971.0</td>
+      <td>418763.0</td>
+      <td>102.0</td>
+      <td>2452437.0</td>
+      <td>2452467.0</td>
+      <td>Y</td>
+      <td>2452528.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>AAAAAAAACGAAAAAA</td>
+      <td>853</td>
+      <td>Dr.</td>
+      <td>David</td>
+      <td>Lewis</td>
+      <td>KIRIBATI</td>
+      <td>David.Lewis@5mhvq.org</td>
+      <td>23.0</td>
+      <td>6.0</td>
+      <td>1965.0</td>
+      <td>574977.0</td>
+      <td>1615.0</td>
+      <td>2450864.0</td>
+      <td>2450894.0</td>
+      <td>N</td>
+      <td>2452558.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>AAAAAAAADGAAAAAA</td>
+      <td>228</td>
+      <td>Sir</td>
+      <td>Austin</td>
+      <td>Tran</td>
+      <td>NAMIBIA</td>
+      <td>Austin.Tran@ect7cnjLsucbd.edu</td>
+      <td>9.0</td>
+      <td>12.0</td>
+      <td>1961.0</td>
+      <td>622676.0</td>
+      <td>2152.0</td>
+      <td>2451657.0</td>
+      <td>2451687.0</td>
+      <td>Y</td>
+      <td>2452437.0</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>customer_key</th>
+      <th>customer_id</th>
+      <th>current_address_key</th>
+      <th>salutation</th>
+      <th>first_name</th>
+      <th>last_name</th>
+      <th>birth_country</th>
+      <th>email_address</th>
+      <th>birth_day</th>
+      <th>birth_month</th>
+      <th>birth_year</th>
+      <th>current_demographics_key</th>
+      <th>current_household_key</th>
+      <th>first_sale_date_key</th>
+      <th>first_shipment_date_key</th>
+      <th>is_preferred_customer</th>
+      <th>last_review_date_key</th>
+      <th>login</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>946</td>
+      <td>Mr.</td>
+      <td>Javier</td>
+      <td>Lewis</td>
+      <td>CHILE</td>
+      <td>Javier.Lewis@VFAxlnZEvOx.org</td>
+      <td>9.0</td>
+      <td>12.0</td>
+      <td>1936.0</td>
+      <td>980124.0</td>
+      <td>7135.0</td>
+      <td>2452208.0</td>
+      <td>2452238.0</td>
+      <td>True</td>
+      <td>2452508.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>655</td>
+      <td>Dr.</td>
+      <td>Amy</td>
+      <td>Moses</td>
+      <td>TOGO</td>
+      <td>Amy.Moses@Ovk9KjHH.com</td>
+      <td>9.0</td>
+      <td>4.0</td>
+      <td>1966.0</td>
+      <td>819667.0</td>
+      <td>1461.0</td>
+      <td>2452288.0</td>
+      <td>2452318.0</td>
+      <td>True</td>
+      <td>2452318.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>AAAAAAAADAAAAAAA</td>
+      <td>572</td>
+      <td>Miss</td>
+      <td>Latisha</td>
+      <td>Hamilton</td>
+      <td>NIUE</td>
+      <td>Latisha.Hamilton@V.com</td>
+      <td>18.0</td>
+      <td>9.0</td>
+      <td>1979.0</td>
+      <td>1473522.0</td>
+      <td>6247.0</td>
+      <td>2449100.0</td>
+      <td>2449130.0</td>
+      <td>False</td>
+      <td>2452313.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>AAAAAAAAEAAAAAAA</td>
+      <td>558</td>
+      <td>Dr.</td>
+      <td>Michael</td>
+      <td>White</td>
+      <td>MEXICO</td>
+      <td>Michael.White@i.org</td>
+      <td>7.0</td>
+      <td>6.0</td>
+      <td>1983.0</td>
+      <td>1703214.0</td>
+      <td>3986.0</td>
+      <td>2450000.0</td>
+      <td>2450030.0</td>
+      <td>False</td>
+      <td>2452361.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>AAAAAAAAFAAAAAAA</td>
+      <td>368</td>
+      <td>Sir</td>
+      <td>Robert</td>
+      <td>Moran</td>
+      <td>FIJI</td>
+      <td>Robert.Moran@Hh.edu</td>
+      <td>8.0</td>
+      <td>5.0</td>
+      <td>1956.0</td>
+      <td>953372.0</td>
+      <td>4470.0</td>
+      <td>2449408.0</td>
+      <td>2449438.0</td>
+      <td>False</td>
+      <td>2452469.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>AAAAAAAAGAAAAAAA</td>
+      <td>82</td>
+      <td>Ms.</td>
+      <td>Brunilda</td>
+      <td>Sharp</td>
+      <td>SURINAME</td>
+      <td>Brunilda.Sharp@T3pylZEUQjm.org</td>
+      <td>4.0</td>
+      <td>12.0</td>
+      <td>1925.0</td>
+      <td>213219.0</td>
+      <td>6374.0</td>
+      <td>2451853.0</td>
+      <td>2451883.0</td>
+      <td>False</td>
+      <td>2452430.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>AAAAAAAAHAAAAAAA</td>
+      <td>814</td>
+      <td>Ms.</td>
+      <td>Fonda</td>
+      <td>Wiles</td>
+      <td>GAMBIA</td>
+      <td>Fonda.Wiles@S9KnyEtz9hv.org</td>
+      <td>24.0</td>
+      <td>4.0</td>
+      <td>1985.0</td>
+      <td>68377.0</td>
+      <td>3219.0</td>
+      <td>2451408.0</td>
+      <td>2451438.0</td>
+      <td>True</td>
+      <td>2452360.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>AAAAAAAAIAAAAAAA</td>
+      <td>598</td>
+      <td>Sir</td>
+      <td>Ollie</td>
+      <td>Shipman</td>
+      <td>SOUTH KOREA</td>
+      <td>Ollie.Shipman@be.org</td>
+      <td>26.0</td>
+      <td>12.0</td>
+      <td>1938.0</td>
+      <td>1215897.0</td>
+      <td>2471.0</td>
+      <td>2449376.0</td>
+      <td>2449406.0</td>
+      <td>False</td>
+      <td>2452334.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>AAAAAAAAJAAAAAAA</td>
+      <td>388</td>
+      <td>Sir</td>
+      <td>Karl</td>
+      <td>Gilbert</td>
+      <td>MONTSERRAT</td>
+      <td>Karl.Gilbert@Crg5KyP2IxX9C4d6.edu</td>
+      <td>26.0</td>
+      <td>10.0</td>
+      <td>1966.0</td>
+      <td>1168667.0</td>
+      <td>1404.0</td>
+      <td>2452245.0</td>
+      <td>2452275.0</td>
+      <td>False</td>
+      <td>2452454.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>AAAAAAAAKAAAAAAA</td>
+      <td>580</td>
+      <td>Ms.</td>
+      <td>Albert</td>
+      <td>Brunson</td>
+      <td>JORDAN</td>
+      <td>Albert.Brunson@62.com</td>
+      <td>15.0</td>
+      <td>10.0</td>
+      <td>1973.0</td>
+      <td>1207553.0</td>
+      <td>5143.0</td>
+      <td>2451323.0</td>
+      <td>2451353.0</td>
+      <td>False</td>
+      <td>2452641.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>AAAAAAAALAAAAAAA</td>
+      <td>999</td>
+      <td>Ms.</td>
+      <td>Betty</td>
+      <td>Williams</td>
+      <td>BURKINA FASO</td>
+      <td>Betty.Williams@xRtDqM1eLBVQNoYAJ.com</td>
+      <td>18.0</td>
+      <td>12.0</td>
+      <td>1963.0</td>
+      <td>1114415.0</td>
+      <td>6807.0</td>
+      <td>2452258.0</td>
+      <td>2452288.0</td>
+      <td>False</td>
+      <td>2452398.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>AAAAAAAAMAAAAAAA</td>
+      <td>366</td>
+      <td>Ms.</td>
+      <td>Margaret</td>
+      <td>Farias</td>
+      <td>TURKMENISTAN</td>
+      <td>Margaret.Farias@cb.edu</td>
+      <td>2.0</td>
+      <td>6.0</td>
+      <td>1956.0</td>
+      <td>502141.0</td>
+      <td>6577.0</td>
+      <td>2451009.0</td>
+      <td>2451039.0</td>
+      <td>False</td>
+      <td>2452634.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>AAAAAAAANAAAAAAA</td>
+      <td>6</td>
+      <td>Mrs.</td>
+      <td>Rosalinda</td>
+      <td>Grimes</td>
+      <td>UKRAINE</td>
+      <td>Rosalinda.Grimes@tC8pcU7Lt.edu</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td>1970.0</td>
+      <td>1128748.0</td>
+      <td>2777.0</td>
+      <td>2449628.0</td>
+      <td>2449658.0</td>
+      <td>False</td>
+      <td>2452616.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>AAAAAAAAOAAAAAAA</td>
+      <td>440</td>
+      <td>Mr.</td>
+      <td>Jack</td>
+      <td>Wilcox</td>
+      <td>SLOVENIA</td>
+      <td>Jack.Wilcox@Y3Etqyv3.org</td>
+      <td>30.0</td>
+      <td>3.0</td>
+      <td>1937.0</td>
+      <td>929344.0</td>
+      <td>892.0</td>
+      <td>2450288.0</td>
+      <td>2450318.0</td>
+      <td>False</td>
+      <td>2452641.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>AAAAAAAAPAAAAAAA</td>
+      <td>469</td>
+      <td>Ms.</td>
+      <td>Tonya</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>12.0</td>
+      <td>1969.0</td>
+      <td>NaN</td>
+      <td>134.0</td>
+      <td>2449010.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2452376.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>AAAAAAAAABAAAAAA</td>
+      <td>302</td>
+      <td>Dr.</td>
+      <td>Margie</td>
+      <td>Browning</td>
+      <td>PHILIPPINES</td>
+      <td>Margie.Browning@LM674NrE2.org</td>
+      <td>24.0</td>
+      <td>12.0</td>
+      <td>1933.0</td>
+      <td>1196373.0</td>
+      <td>3014.0</td>
+      <td>2451316.0</td>
+      <td>2451346.0</td>
+      <td>False</td>
+      <td>2452573.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>AAAAAAAABBAAAAAA</td>
+      <td>228</td>
+      <td>Dr.</td>
+      <td>Lee</td>
+      <td>Stovall</td>
+      <td>PHILIPPINES</td>
+      <td>Lee.Stovall@fqKC83UU0f.org</td>
+      <td>23.0</td>
+      <td>12.0</td>
+      <td>1972.0</td>
+      <td>707524.0</td>
+      <td>3876.0</td>
+      <td>2451038.0</td>
+      <td>2451068.0</td>
+      <td>False</td>
+      <td>2452454.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>AAAAAAAACBAAAAAA</td>
+      <td>456</td>
+      <td>Sir</td>
+      <td>Brad</td>
+      <td>Lynch</td>
+      <td>URUGUAY</td>
+      <td>Brad.Lynch@nAbai.edu</td>
+      <td>1.0</td>
+      <td>9.0</td>
+      <td>1950.0</td>
+      <td>1361151.0</td>
+      <td>6580.0</td>
+      <td>2450011.0</td>
+      <td>2450041.0</td>
+      <td>True</td>
+      <td>2452549.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>AAAAAAAADBAAAAAA</td>
+      <td>581</td>
+      <td>Dr.</td>
+      <td>Andre</td>
+      <td>Moore</td>
+      <td>NICARAGUA</td>
+      <td>Andre.Moore@cTZLGYi1ZJi.org</td>
+      <td>20.0</td>
+      <td>10.0</td>
+      <td>1978.0</td>
+      <td>1161742.0</td>
+      <td>4238.0</td>
+      <td>2449550.0</td>
+      <td>2449580.0</td>
+      <td>False</td>
+      <td>2452576.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>AAAAAAAAEBAAAAAA</td>
+      <td>966</td>
+      <td>Mr.</td>
+      <td>Stanton</td>
+      <td>Dallas</td>
+      <td>SWITZERLAND</td>
+      <td>Stanton.Dallas@DBXgl18FGo.edu</td>
+      <td>17.0</td>
+      <td>5.0</td>
+      <td>1976.0</td>
+      <td>1185612.0</td>
+      <td>89.0</td>
+      <td>2450935.0</td>
+      <td>2450965.0</td>
+      <td>True</td>
+      <td>2452334.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>AAAAAAAAFBAAAAAA</td>
+      <td>979</td>
+      <td>Miss</td>
+      <td>Naomi</td>
+      <td>Barnett</td>
+      <td>BAHAMAS</td>
+      <td>Naomi.Barnett@2T3V3OZOy4KBNAHsT.edu</td>
+      <td>18.0</td>
+      <td>5.0</td>
+      <td>1956.0</td>
+      <td>442697.0</td>
+      <td>6538.0</td>
+      <td>2451797.0</td>
+      <td>2451827.0</td>
+      <td>False</td>
+      <td>2452433.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>AAAAAAAAGBAAAAAA</td>
+      <td>467</td>
+      <td>Sir</td>
+      <td>Victor</td>
+      <td>Martinez</td>
+      <td>CAYMAN ISLANDS</td>
+      <td>Victor.Martinez@fC.edu</td>
+      <td>21.0</td>
+      <td>12.0</td>
+      <td>1991.0</td>
+      <td>490494.0</td>
+      <td>4504.0</td>
+      <td>2451435.0</td>
+      <td>2451465.0</td>
+      <td>False</td>
+      <td>2452529.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>AAAAAAAAHBAAAAAA</td>
+      <td>686</td>
+      <td>Sir</td>
+      <td>None</td>
+      <td>Garrison</td>
+      <td>None</td>
+      <td>Earl.Garrison@G3sM4P.com</td>
+      <td>NaN</td>
+      <td>5.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2107.0</td>
+      <td>2450982.0</td>
+      <td>2451012.0</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>AAAAAAAAIBAAAAAA</td>
+      <td>291</td>
+      <td>Dr.</td>
+      <td>Paul</td>
+      <td>Morris</td>
+      <td>GUINEA-BISSAU</td>
+      <td>Paul.Morris@FMGalegqc3.com</td>
+      <td>6.0</td>
+      <td>6.0</td>
+      <td>1951.0</td>
+      <td>17113.0</td>
+      <td>1102.0</td>
+      <td>2450068.0</td>
+      <td>2450098.0</td>
+      <td>True</td>
+      <td>2452499.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>AAAAAAAAJBAAAAAA</td>
+      <td>933</td>
+      <td>Miss</td>
+      <td>Nancy</td>
+      <td>Mccormick</td>
+      <td>BAHAMAS</td>
+      <td>Nancy.Mccormick@DA26I9ZArLF9rxJ6Z.edu</td>
+      <td>6.0</td>
+      <td>10.0</td>
+      <td>1973.0</td>
+      <td>476176.0</td>
+      <td>3278.0</td>
+      <td>2449216.0</td>
+      <td>2449246.0</td>
+      <td>False</td>
+      <td>2452425.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>AAAAAAAAKBAAAAAA</td>
+      <td>206</td>
+      <td>Ms.</td>
+      <td>Monique</td>
+      <td>Baker</td>
+      <td>MOROCCO</td>
+      <td>Monique.Baker@9uEucNczY.org</td>
+      <td>14.0</td>
+      <td>6.0</td>
+      <td>1991.0</td>
+      <td>230278.0</td>
+      <td>1242.0</td>
+      <td>2449786.0</td>
+      <td>2449816.0</td>
+      <td>False</td>
+      <td>2452356.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>AAAAAAAALBAAAAAA</td>
+      <td>96</td>
+      <td>Dr.</td>
+      <td>Shawn</td>
+      <td>Prather</td>
+      <td>PUERTO RICO</td>
+      <td>Shawn.Prather@8BusRYegn6.org</td>
+      <td>7.0</td>
+      <td>3.0</td>
+      <td>1972.0</td>
+      <td>111621.0</td>
+      <td>835.0</td>
+      <td>2450581.0</td>
+      <td>2450611.0</td>
+      <td>False</td>
+      <td>2452353.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>AAAAAAAAMBAAAAAA</td>
+      <td>480</td>
+      <td>Miss</td>
+      <td>Edith</td>
+      <td>Hernandez</td>
+      <td>IVORY COAST</td>
+      <td>Edith.Hernandez@BNHL0k.com</td>
+      <td>17.0</td>
+      <td>8.0</td>
+      <td>1959.0</td>
+      <td>889961.0</td>
+      <td>897.0</td>
+      <td>2452585.0</td>
+      <td>2452615.0</td>
+      <td>True</td>
+      <td>2452631.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>AAAAAAAANBAAAAAA</td>
+      <td>139</td>
+      <td>Ms.</td>
+      <td>Margaret</td>
+      <td>Collins</td>
+      <td>NETHERLANDS ANTILLES</td>
+      <td>Margaret.Collins@9obPr3UV.org</td>
+      <td>25.0</td>
+      <td>8.0</td>
+      <td>1973.0</td>
+      <td>1634269.0</td>
+      <td>1204.0</td>
+      <td>2452186.0</td>
+      <td>2452216.0</td>
+      <td>True</td>
+      <td>2452496.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>AAAAAAAAOBAAAAAA</td>
+      <td>459</td>
+      <td>Dr.</td>
+      <td>Pamela</td>
+      <td>Luna</td>
+      <td>GUAM</td>
+      <td>Pamela.Luna@QBGuhL36lnA.edu</td>
+      <td>4.0</td>
+      <td>7.0</td>
+      <td>1956.0</td>
+      <td>84232.0</td>
+      <td>5869.0</td>
+      <td>2449886.0</td>
+      <td>2449916.0</td>
+      <td>True</td>
+      <td>2452410.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>AAAAAAAAPBAAAAAA</td>
+      <td>128</td>
+      <td>Dr.</td>
+      <td>William</td>
+      <td>Craig</td>
+      <td>SPAIN</td>
+      <td>William.Craig@prVDE1E8AHc.org</td>
+      <td>13.0</td>
+      <td>6.0</td>
+      <td>1964.0</td>
+      <td>1275120.0</td>
+      <td>5724.0</td>
+      <td>2452024.0</td>
+      <td>2452054.0</td>
+      <td>False</td>
+      <td>2452336.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>AAAAAAAAACAAAAAA</td>
+      <td>290</td>
+      <td>Dr.</td>
+      <td>Kenneth</td>
+      <td>Wood</td>
+      <td>MOLDOVA</td>
+      <td>Kenneth.Wood@RIA.edu</td>
+      <td>2.0</td>
+      <td>8.0</td>
+      <td>1927.0</td>
+      <td>1369589.0</td>
+      <td>6163.0</td>
+      <td>2449441.0</td>
+      <td>2449471.0</td>
+      <td>False</td>
+      <td>2452510.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>AAAAAAAABCAAAAAA</td>
+      <td>438</td>
+      <td>Mrs.</td>
+      <td>Donna</td>
+      <td>Betts</td>
+      <td>FRANCE</td>
+      <td>Donna.Betts@YJ14k.edu</td>
+      <td>25.0</td>
+      <td>3.0</td>
+      <td>1958.0</td>
+      <td>1680761.0</td>
+      <td>5823.0</td>
+      <td>2451542.0</td>
+      <td>2451572.0</td>
+      <td>True</td>
+      <td>2452455.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>AAAAAAAACCAAAAAA</td>
+      <td>501</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Woods</td>
+      <td>None</td>
+      <td>Brandon.Woods@hjKbf.edu</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2452162.0</td>
+      <td>2452192.0</td>
+      <td>NaN</td>
+      <td>2452408.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>AAAAAAAADCAAAAAA</td>
+      <td>231</td>
+      <td>Dr.</td>
+      <td>Marie</td>
+      <td>Peterson</td>
+      <td>KIRIBATI</td>
+      <td>Marie.Peterson@1zg9tydFHafA5.com</td>
+      <td>19.0</td>
+      <td>6.0</td>
+      <td>1953.0</td>
+      <td>339036.0</td>
+      <td>2057.0</td>
+      <td>2451907.0</td>
+      <td>2451937.0</td>
+      <td>False</td>
+      <td>2452581.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>AAAAAAAAECAAAAAA</td>
+      <td>585</td>
+      <td>Dr.</td>
+      <td>Anthony</td>
+      <td>Fisher</td>
+      <td>KYRGYZSTAN</td>
+      <td>Anthony.Fisher@jJrZfeDcz8P.com</td>
+      <td>29.0</td>
+      <td>11.0</td>
+      <td>1968.0</td>
+      <td>655414.0</td>
+      <td>2223.0</td>
+      <td>2449192.0</td>
+      <td>2449222.0</td>
+      <td>False</td>
+      <td>2452470.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>AAAAAAAAFCAAAAAA</td>
+      <td>943</td>
+      <td>Dr.</td>
+      <td>Dwight</td>
+      <td>Schneider</td>
+      <td>RUSSIA</td>
+      <td>Dwight.Schneider@koxO7zAysvOd.com</td>
+      <td>9.0</td>
+      <td>1.0</td>
+      <td>1949.0</td>
+      <td>827972.0</td>
+      <td>2281.0</td>
+      <td>2449818.0</td>
+      <td>2449848.0</td>
+      <td>True</td>
+      <td>2452293.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>AAAAAAAAGCAAAAAA</td>
+      <td>360</td>
+      <td>Mrs.</td>
+      <td>Ha</td>
+      <td>Carpenter</td>
+      <td>PARAGUAY</td>
+      <td>Ha.Carpenter@XgcUt4svNz.com</td>
+      <td>30.0</td>
+      <td>3.0</td>
+      <td>1939.0</td>
+      <td>766645.0</td>
+      <td>3879.0</td>
+      <td>2450293.0</td>
+      <td>2450323.0</td>
+      <td>True</td>
+      <td>2452351.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>AAAAAAAAHCAAAAAA</td>
+      <td>844</td>
+      <td>Sir</td>
+      <td>Neil</td>
+      <td>Cox</td>
+      <td>ECUADOR</td>
+      <td>Neil.Cox@FRuR2bFK.com</td>
+      <td>14.0</td>
+      <td>12.0</td>
+      <td>1951.0</td>
+      <td>1617182.0</td>
+      <td>4013.0</td>
+      <td>2452101.0</td>
+      <td>2452131.0</td>
+      <td>False</td>
+      <td>2452586.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>AAAAAAAAICAAAAAA</td>
+      <td>45</td>
+      <td>None</td>
+      <td>Jacqueline</td>
+      <td>Hatfield</td>
+      <td>None</td>
+      <td>None</td>
+      <td>26.0</td>
+      <td>NaN</td>
+      <td>1942.0</td>
+      <td>1795301.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2451159.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>AAAAAAAAJCAAAAAA</td>
+      <td>316</td>
+      <td>Miss</td>
+      <td>Maxine</td>
+      <td>Carlson</td>
+      <td>ISLE OF MAN</td>
+      <td>Maxine.Carlson@StyP5lAokmQ29QHYMLa.edu</td>
+      <td>26.0</td>
+      <td>6.0</td>
+      <td>1939.0</td>
+      <td>941420.0</td>
+      <td>5068.0</td>
+      <td>2449959.0</td>
+      <td>2449989.0</td>
+      <td>False</td>
+      <td>2452464.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>AAAAAAAAKCAAAAAA</td>
+      <td>277</td>
+      <td>Dr.</td>
+      <td>Deborah</td>
+      <td>Burton</td>
+      <td>COMOROS</td>
+      <td>Deborah.Burton@xt.edu</td>
+      <td>17.0</td>
+      <td>1.0</td>
+      <td>1950.0</td>
+      <td>1867377.0</td>
+      <td>3327.0</td>
+      <td>2449839.0</td>
+      <td>2449869.0</td>
+      <td>False</td>
+      <td>2452498.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>AAAAAAAALCAAAAAA</td>
+      <td>743</td>
+      <td>Mr.</td>
+      <td>William</td>
+      <td>Warner</td>
+      <td>GUAM</td>
+      <td>William.Warner@zegnrzurU.org</td>
+      <td>5.0</td>
+      <td>12.0</td>
+      <td>1965.0</td>
+      <td>385562.0</td>
+      <td>3676.0</td>
+      <td>2451675.0</td>
+      <td>2451705.0</td>
+      <td>True</td>
+      <td>2452537.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>AAAAAAAAMCAAAAAA</td>
+      <td>296</td>
+      <td>Miss</td>
+      <td>Mabel</td>
+      <td>Richmond</td>
+      <td>CAMBODIA</td>
+      <td>Mabel.Richmond@Tkla.edu</td>
+      <td>7.0</td>
+      <td>12.0</td>
+      <td>1932.0</td>
+      <td>497758.0</td>
+      <td>5427.0</td>
+      <td>2449720.0</td>
+      <td>2449750.0</td>
+      <td>True</td>
+      <td>2452333.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>AAAAAAAANCAAAAAA</td>
+      <td>777</td>
+      <td>None</td>
+      <td>None</td>
+      <td>Hammonds</td>
+      <td>NIGER</td>
+      <td>None</td>
+      <td>5.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1036174.0</td>
+      <td>2399.0</td>
+      <td>2451088.0</td>
+      <td>2451118.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>AAAAAAAAOCAAAAAA</td>
+      <td>386</td>
+      <td>Mrs.</td>
+      <td>Jane</td>
+      <td>Stephenson</td>
+      <td>TURKEY</td>
+      <td>Jane.Stephenson@lq8ZQLAUMZhR.edu</td>
+      <td>13.0</td>
+      <td>4.0</td>
+      <td>1990.0</td>
+      <td>843672.0</td>
+      <td>4729.0</td>
+      <td>2451827.0</td>
+      <td>2451857.0</td>
+      <td>True</td>
+      <td>2452301.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>AAAAAAAAPCAAAAAA</td>
+      <td>469</td>
+      <td>Mr.</td>
+      <td>Luis</td>
+      <td>Young</td>
+      <td>BRUNEI</td>
+      <td>Luis.Young@0DmV.edu</td>
+      <td>3.0</td>
+      <td>12.0</td>
+      <td>1982.0</td>
+      <td>1634314.0</td>
+      <td>5368.0</td>
+      <td>2449135.0</td>
+      <td>2449165.0</td>
+      <td>False</td>
+      <td>2452586.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>AAAAAAAAADAAAAAA</td>
+      <td>252</td>
+      <td>Ms.</td>
+      <td>Jill</td>
+      <td>Jackson</td>
+      <td>LUXEMBOURG</td>
+      <td>Jill.Jackson@n6I7SF.org</td>
+      <td>15.0</td>
+      <td>9.0</td>
+      <td>1961.0</td>
+      <td>8817.0</td>
+      <td>311.0</td>
+      <td>2449501.0</td>
+      <td>2449531.0</td>
+      <td>False</td>
+      <td>2452575.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>AAAAAAAABDAAAAAA</td>
+      <td>581</td>
+      <td>Mr.</td>
+      <td>Steven</td>
+      <td>Venable</td>
+      <td>NETHERLANDS ANTILLES</td>
+      <td>Steven.Venable@0hA90vhfK7k9F4h.com</td>
+      <td>13.0</td>
+      <td>6.0</td>
+      <td>1961.0</td>
+      <td>936800.0</td>
+      <td>1514.0</td>
+      <td>2449334.0</td>
+      <td>2449364.0</td>
+      <td>False</td>
+      <td>2452350.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>AAAAAAAACDAAAAAA</td>
+      <td>567</td>
+      <td>Mr.</td>
+      <td>Christopher</td>
+      <td>Eller</td>
+      <td>AUSTRALIA</td>
+      <td>Christopher.Eller@gV5Ua7HOmt.com</td>
+      <td>24.0</td>
+      <td>11.0</td>
+      <td>1965.0</td>
+      <td>759177.0</td>
+      <td>72.0</td>
+      <td>2449354.0</td>
+      <td>2449384.0</td>
+      <td>False</td>
+      <td>2452520.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>AAAAAAAADDAAAAAA</td>
+      <td>688</td>
+      <td>Dr.</td>
+      <td>David</td>
+      <td>Nieves</td>
+      <td>CHRISTMAS ISLAND</td>
+      <td>David.Nieves@LcDkQ.edu</td>
+      <td>5.0</td>
+      <td>10.0</td>
+      <td>1926.0</td>
+      <td>532799.0</td>
+      <td>6920.0</td>
+      <td>2452360.0</td>
+      <td>2452390.0</td>
+      <td>False</td>
+      <td>2452570.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>AAAAAAAAEDAAAAAA</td>
+      <td>128</td>
+      <td>Mrs.</td>
+      <td>Wendy</td>
+      <td>Colley</td>
+      <td>FRENCH GUIANA</td>
+      <td>Wendy.Colley@qLBjqbAQQGj.edu</td>
+      <td>1.0</td>
+      <td>4.0</td>
+      <td>1982.0</td>
+      <td>534808.0</td>
+      <td>4768.0</td>
+      <td>2451391.0</td>
+      <td>2451421.0</td>
+      <td>False</td>
+      <td>2452553.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>AAAAAAAAFDAAAAAA</td>
+      <td>439</td>
+      <td>Mr.</td>
+      <td>Paul</td>
+      <td>Higgins</td>
+      <td>GABON</td>
+      <td>Paul.Higgins@qG9NrSTLz9HaNHX.edu</td>
+      <td>23.0</td>
+      <td>9.0</td>
+      <td>1950.0</td>
+      <td>1597348.0</td>
+      <td>7017.0</td>
+      <td>2451790.0</td>
+      <td>2451820.0</td>
+      <td>True</td>
+      <td>2452447.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>AAAAAAAAGDAAAAAA</td>
+      <td>660</td>
+      <td>Ms.</td>
+      <td>Donna</td>
+      <td>King</td>
+      <td>TUNISIA</td>
+      <td>Donna.King@TEftU.com</td>
+      <td>3.0</td>
+      <td>2.0</td>
+      <td>1940.0</td>
+      <td>380102.0</td>
+      <td>2381.0</td>
+      <td>2449950.0</td>
+      <td>2449980.0</td>
+      <td>True</td>
+      <td>2452446.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>AAAAAAAAHDAAAAAA</td>
+      <td>256</td>
+      <td>Dr.</td>
+      <td>Beryl</td>
+      <td>Thomason</td>
+      <td>UNITED KINGDOM</td>
+      <td>Beryl.Thomason@OeqefhtCmZTAj.com</td>
+      <td>12.0</td>
+      <td>8.0</td>
+      <td>1933.0</td>
+      <td>783093.0</td>
+      <td>1151.0</td>
+      <td>2451509.0</td>
+      <td>2451539.0</td>
+      <td>False</td>
+      <td>2452380.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>AAAAAAAAIDAAAAAA</td>
+      <td>524</td>
+      <td>Miss</td>
+      <td>Pamela</td>
+      <td>Delgado</td>
+      <td>GUERNSEY</td>
+      <td>Pamela.Delgado@8OpV0Ldj8vq2K9ZK.org</td>
+      <td>29.0</td>
+      <td>1.0</td>
+      <td>1960.0</td>
+      <td>344460.0</td>
+      <td>3092.0</td>
+      <td>2451394.0</td>
+      <td>2451424.0</td>
+      <td>False</td>
+      <td>2452334.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>AAAAAAAAJDAAAAAA</td>
+      <td>571</td>
+      <td>Mr.</td>
+      <td>Travis</td>
+      <td>Melendez</td>
+      <td>AFGHANISTAN</td>
+      <td>Travis.Melendez@344rCMk.edu</td>
+      <td>10.0</td>
+      <td>3.0</td>
+      <td>1961.0</td>
+      <td>752932.0</td>
+      <td>128.0</td>
+      <td>2449711.0</td>
+      <td>2449741.0</td>
+      <td>True</td>
+      <td>2452606.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>AAAAAAAAKDAAAAAA</td>
+      <td>155</td>
+      <td>Mr.</td>
+      <td>Cecil</td>
+      <td>Peterman</td>
+      <td>ICELAND</td>
+      <td>Cecil.Peterman@tbeqEuUvS4ZM4Px9N.com</td>
+      <td>29.0</td>
+      <td>2.0</td>
+      <td>1988.0</td>
+      <td>528756.0</td>
+      <td>6879.0</td>
+      <td>2451356.0</td>
+      <td>2451386.0</td>
+      <td>True</td>
+      <td>2452447.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>AAAAAAAALDAAAAAA</td>
+      <td>683</td>
+      <td>Miss</td>
+      <td>Melanie</td>
+      <td>Morrison</td>
+      <td>HUNGARY</td>
+      <td>Melanie.Morrison@F2foqn.edu</td>
+      <td>6.0</td>
+      <td>1.0</td>
+      <td>1947.0</td>
+      <td>1895444.0</td>
+      <td>4787.0</td>
+      <td>2451127.0</td>
+      <td>2451157.0</td>
+      <td>False</td>
+      <td>2452530.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>AAAAAAAAMDAAAAAA</td>
+      <td>282</td>
+      <td>Ms.</td>
+      <td>Dollie</td>
+      <td>Thao</td>
+      <td>SWITZERLAND</td>
+      <td>Dollie.Thao@Xead5vagsekdHDLUkv.edu</td>
+      <td>15.0</td>
+      <td>7.0</td>
+      <td>1990.0</td>
+      <td>1179671.0</td>
+      <td>3200.0</td>
+      <td>2449684.0</td>
+      <td>2449714.0</td>
+      <td>False</td>
+      <td>2452407.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>AAAAAAAANDAAAAAA</td>
+      <td>688</td>
+      <td>Sir</td>
+      <td>Joseph</td>
+      <td>White</td>
+      <td>SENEGAL</td>
+      <td>Joseph.White@c0EJ7pimuu.com</td>
+      <td>6.0</td>
+      <td>5.0</td>
+      <td>1978.0</td>
+      <td>1620078.0</td>
+      <td>6683.0</td>
+      <td>2451106.0</td>
+      <td>2451136.0</td>
+      <td>True</td>
+      <td>2452462.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>AAAAAAAAODAAAAAA</td>
+      <td>413</td>
+      <td>Mr.</td>
+      <td>Matthew</td>
+      <td>Brown</td>
+      <td>SOUTH KOREA</td>
+      <td>Matthew.Brown@F.edu</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>1973.0</td>
+      <td>821787.0</td>
+      <td>4700.0</td>
+      <td>2451824.0</td>
+      <td>2451854.0</td>
+      <td>True</td>
+      <td>2452319.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>AAAAAAAAPDAAAAAA</td>
+      <td>716</td>
+      <td>Dr.</td>
+      <td>Frank</td>
+      <td>Morton</td>
+      <td>EGYPT</td>
+      <td>Frank.Morton@Hd7jNaA3s.com</td>
+      <td>26.0</td>
+      <td>4.0</td>
+      <td>1943.0</td>
+      <td>1790374.0</td>
+      <td>2445.0</td>
+      <td>2450149.0</td>
+      <td>2450179.0</td>
+      <td>False</td>
+      <td>2452425.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>AAAAAAAAAEAAAAAA</td>
+      <td>930</td>
+      <td>Dr.</td>
+      <td>Michael</td>
+      <td>Frye</td>
+      <td>CAPE VERDE</td>
+      <td>Michael.Frye@aM1HsbOs0smgpLo.org</td>
+      <td>27.0</td>
+      <td>6.0</td>
+      <td>1941.0</td>
+      <td>1260191.0</td>
+      <td>6284.0</td>
+      <td>2452349.0</td>
+      <td>2452379.0</td>
+      <td>False</td>
+      <td>2452426.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>AAAAAAAABEAAAAAA</td>
+      <td>584</td>
+      <td>Dr.</td>
+      <td>Rodney</td>
+      <td>Taft</td>
+      <td>US VIRGIN ISLANDS</td>
+      <td>Rodney.Taft@qe.com</td>
+      <td>18.0</td>
+      <td>9.0</td>
+      <td>1991.0</td>
+      <td>1778884.0</td>
+      <td>2234.0</td>
+      <td>2451868.0</td>
+      <td>2451898.0</td>
+      <td>False</td>
+      <td>2452353.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>AAAAAAAACEAAAAAA</td>
+      <td>882</td>
+      <td>Ms.</td>
+      <td>Julie</td>
+      <td>Chester</td>
+      <td>HONG KONG</td>
+      <td>Julie.Chester@Kv.com</td>
+      <td>8.0</td>
+      <td>9.0</td>
+      <td>1950.0</td>
+      <td>747190.0</td>
+      <td>6036.0</td>
+      <td>2449264.0</td>
+      <td>2449294.0</td>
+      <td>False</td>
+      <td>2452375.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>AAAAAAAADEAAAAAA</td>
+      <td>970</td>
+      <td>Dr.</td>
+      <td>Gerald</td>
+      <td>Thomas</td>
+      <td>NORWAY</td>
+      <td>Gerald.Thomas@zSuIGSgb6iyu.org</td>
+      <td>27.0</td>
+      <td>10.0</td>
+      <td>1948.0</td>
+      <td>1118294.0</td>
+      <td>2032.0</td>
+      <td>2452003.0</td>
+      <td>2452033.0</td>
+      <td>False</td>
+      <td>2452414.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>AAAAAAAAEEAAAAAA</td>
+      <td>126</td>
+      <td>Dr.</td>
+      <td>Arthur</td>
+      <td>Troy</td>
+      <td>LUXEMBOURG</td>
+      <td>Arthur.Troy@3VY5bV30AifrO.com</td>
+      <td>20.0</td>
+      <td>8.0</td>
+      <td>1928.0</td>
+      <td>779965.0</td>
+      <td>6069.0</td>
+      <td>2451906.0</td>
+      <td>2451936.0</td>
+      <td>True</td>
+      <td>2452542.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>AAAAAAAAFEAAAAAA</td>
+      <td>366</td>
+      <td>Sir</td>
+      <td>Steven</td>
+      <td>Mcclellan</td>
+      <td>NEPAL</td>
+      <td>Steven.Mcclellan@UviyOLnu2m1POo.edu</td>
+      <td>15.0</td>
+      <td>1.0</td>
+      <td>1950.0</td>
+      <td>971368.0</td>
+      <td>4167.0</td>
+      <td>2450124.0</td>
+      <td>2450154.0</td>
+      <td>True</td>
+      <td>2452340.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>AAAAAAAAGEAAAAAA</td>
+      <td>102</td>
+      <td>Sir</td>
+      <td>James</td>
+      <td>Smith</td>
+      <td>KUWAIT</td>
+      <td>James.Smith@ifJngGlNG.edu</td>
+      <td>7.0</td>
+      <td>12.0</td>
+      <td>1963.0</td>
+      <td>1460929.0</td>
+      <td>5492.0</td>
+      <td>2451914.0</td>
+      <td>2451944.0</td>
+      <td>False</td>
+      <td>2452342.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>AAAAAAAAHEAAAAAA</td>
+      <td>450</td>
+      <td>Mr.</td>
+      <td>Roderick</td>
+      <td>Rogers</td>
+      <td>OMAN</td>
+      <td>Roderick.Rogers@pJdioQ.com</td>
+      <td>4.0</td>
+      <td>11.0</td>
+      <td>1967.0</td>
+      <td>1292064.0</td>
+      <td>2257.0</td>
+      <td>2450218.0</td>
+      <td>2450248.0</td>
+      <td>False</td>
+      <td>2452462.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>AAAAAAAAIEAAAAAA</td>
+      <td>390</td>
+      <td>Dr.</td>
+      <td>Bradley</td>
+      <td>Barry</td>
+      <td>TAJIKISTAN</td>
+      <td>Bradley.Barry@Kq2ONpEXU9YSno31.edu</td>
+      <td>21.0</td>
+      <td>3.0</td>
+      <td>1937.0</td>
+      <td>1608738.0</td>
+      <td>6364.0</td>
+      <td>2451670.0</td>
+      <td>2451700.0</td>
+      <td>True</td>
+      <td>2452601.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>AAAAAAAAJEAAAAAA</td>
+      <td>369</td>
+      <td>Mr.</td>
+      <td>David</td>
+      <td>Vasquez</td>
+      <td>ISRAEL</td>
+      <td>David.Vasquez@j.org</td>
+      <td>17.0</td>
+      <td>4.0</td>
+      <td>1956.0</td>
+      <td>425740.0</td>
+      <td>431.0</td>
+      <td>2449103.0</td>
+      <td>2449133.0</td>
+      <td>False</td>
+      <td>2452489.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>AAAAAAAAKEAAAAAA</td>
+      <td>269</td>
+      <td>Sir</td>
+      <td>Eric</td>
+      <td>Woods</td>
+      <td>SAINT LUCIA</td>
+      <td>Eric.Woods@CfPzy1AUqxd2.com</td>
+      <td>19.0</td>
+      <td>2.0</td>
+      <td>1953.0</td>
+      <td>1434225.0</td>
+      <td>347.0</td>
+      <td>2452611.0</td>
+      <td>2452641.0</td>
+      <td>True</td>
+      <td>2452584.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>AAAAAAAALEAAAAAA</td>
+      <td>730</td>
+      <td>Dr.</td>
+      <td>Annie</td>
+      <td>Grant</td>
+      <td>TUVALU</td>
+      <td>Annie.Grant@tccug5KC1oT2nL.com</td>
+      <td>25.0</td>
+      <td>5.0</td>
+      <td>1925.0</td>
+      <td>1888603.0</td>
+      <td>143.0</td>
+      <td>2451725.0</td>
+      <td>2451755.0</td>
+      <td>True</td>
+      <td>2452401.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>AAAAAAAAMEAAAAAA</td>
+      <td>691</td>
+      <td>Mr.</td>
+      <td>Craig</td>
+      <td>Lowry</td>
+      <td>WALLIS AND FUTUNA</td>
+      <td>Craig.Lowry@92zokgx8duX.org</td>
+      <td>7.0</td>
+      <td>3.0</td>
+      <td>1946.0</td>
+      <td>526064.0</td>
+      <td>2054.0</td>
+      <td>2451730.0</td>
+      <td>2451760.0</td>
+      <td>True</td>
+      <td>2452430.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>AAAAAAAANEAAAAAA</td>
+      <td>154</td>
+      <td>Dr.</td>
+      <td>Darrin</td>
+      <td>Smith</td>
+      <td>UNITED STATES</td>
+      <td>Darrin.Smith@Mti.edu</td>
+      <td>30.0</td>
+      <td>5.0</td>
+      <td>1931.0</td>
+      <td>915180.0</td>
+      <td>2167.0</td>
+      <td>2451602.0</td>
+      <td>2451632.0</td>
+      <td>False</td>
+      <td>2452355.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>AAAAAAAAOEAAAAAA</td>
+      <td>264</td>
+      <td>Ms.</td>
+      <td>Wanda</td>
+      <td>Davis</td>
+      <td>NETHERLANDS ANTILLES</td>
+      <td>Wanda.Davis@I6s7DD86i6.edu</td>
+      <td>11.0</td>
+      <td>5.0</td>
+      <td>1940.0</td>
+      <td>1092537.0</td>
+      <td>3677.0</td>
+      <td>2449358.0</td>
+      <td>2449388.0</td>
+      <td>False</td>
+      <td>2452339.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>AAAAAAAAPEAAAAAA</td>
+      <td>539</td>
+      <td>Miss</td>
+      <td>Sandi</td>
+      <td>Tran</td>
+      <td>FRENCH GUIANA</td>
+      <td>Sandi.Tran@myikqStif1Q.edu</td>
+      <td>10.0</td>
+      <td>6.0</td>
+      <td>1937.0</td>
+      <td>389494.0</td>
+      <td>3493.0</td>
+      <td>2450833.0</td>
+      <td>2450863.0</td>
+      <td>True</td>
+      <td>2452644.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>AAAAAAAAAFAAAAAA</td>
+      <td>727</td>
+      <td>Mrs.</td>
+      <td>Eleanor</td>
+      <td>Evans</td>
+      <td>IVORY COAST</td>
+      <td>Eleanor.Evans@zxvr5rl.org</td>
+      <td>21.0</td>
+      <td>12.0</td>
+      <td>1948.0</td>
+      <td>1499808.0</td>
+      <td>3891.0</td>
+      <td>2450528.0</td>
+      <td>2450558.0</td>
+      <td>False</td>
+      <td>2452413.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>AAAAAAAABFAAAAAA</td>
+      <td>306</td>
+      <td>Ms.</td>
+      <td>Jessica</td>
+      <td>Levesque</td>
+      <td>ALBANIA</td>
+      <td>Jessica.Levesque@06mGqI9mHG.org</td>
+      <td>17.0</td>
+      <td>7.0</td>
+      <td>1940.0</td>
+      <td>728917.0</td>
+      <td>388.0</td>
+      <td>2452532.0</td>
+      <td>2452562.0</td>
+      <td>True</td>
+      <td>2452414.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>AAAAAAAACFAAAAAA</td>
+      <td>88</td>
+      <td>Sir</td>
+      <td>Max</td>
+      <td>Mueller</td>
+      <td>IRAQ</td>
+      <td>Max.Mueller@xqCZRBSrTGD6CBvXh.com</td>
+      <td>26.0</td>
+      <td>2.0</td>
+      <td>1947.0</td>
+      <td>75627.0</td>
+      <td>5081.0</td>
+      <td>2450327.0</td>
+      <td>2450357.0</td>
+      <td>False</td>
+      <td>2452303.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>AAAAAAAADFAAAAAA</td>
+      <td>824</td>
+      <td>Miss</td>
+      <td>Daisy</td>
+      <td>Flynn</td>
+      <td>NEW ZEALAND</td>
+      <td>Daisy.Flynn@288e6Z0csxJ.com</td>
+      <td>24.0</td>
+      <td>1.0</td>
+      <td>1943.0</td>
+      <td>976724.0</td>
+      <td>5574.0</td>
+      <td>2451002.0</td>
+      <td>2451032.0</td>
+      <td>False</td>
+      <td>2452338.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>AAAAAAAAEFAAAAAA</td>
+      <td>898</td>
+      <td>Mrs.</td>
+      <td>Ami</td>
+      <td>Montgomery</td>
+      <td>JAMAICA</td>
+      <td>Ami.Montgomery@VBSKqhL36j55.edu</td>
+      <td>2.0</td>
+      <td>5.0</td>
+      <td>1964.0</td>
+      <td>1250744.0</td>
+      <td>2821.0</td>
+      <td>2449466.0</td>
+      <td>2449496.0</td>
+      <td>True</td>
+      <td>2452526.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>AAAAAAAAFFAAAAAA</td>
+      <td>575</td>
+      <td>Miss</td>
+      <td>Michele</td>
+      <td>Baldwin</td>
+      <td>GEORGIA</td>
+      <td>Michele.Baldwin@sIVO1J4U.org</td>
+      <td>30.0</td>
+      <td>10.0</td>
+      <td>1978.0</td>
+      <td>1293499.0</td>
+      <td>37.0</td>
+      <td>2449838.0</td>
+      <td>2449868.0</td>
+      <td>True</td>
+      <td>2452491.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>AAAAAAAAGFAAAAAA</td>
+      <td>442</td>
+      <td>Dr.</td>
+      <td>Marvin</td>
+      <td>Matlock</td>
+      <td>BRUNEI</td>
+      <td>Marvin.Matlock@0FXEZp.org</td>
+      <td>21.0</td>
+      <td>10.0</td>
+      <td>1983.0</td>
+      <td>1428237.0</td>
+      <td>6963.0</td>
+      <td>2451530.0</td>
+      <td>2451560.0</td>
+      <td>True</td>
+      <td>2452633.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>AAAAAAAAHFAAAAAA</td>
+      <td>30</td>
+      <td>Dr.</td>
+      <td>Kevin</td>
+      <td>White</td>
+      <td>BENIN</td>
+      <td>Kevin.White@x9oTPjEI6AdDQ7n4l.edu</td>
+      <td>2.0</td>
+      <td>7.0</td>
+      <td>1934.0</td>
+      <td>1452824.0</td>
+      <td>1427.0</td>
+      <td>2449374.0</td>
+      <td>2449404.0</td>
+      <td>False</td>
+      <td>2452492.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>AAAAAAAAIFAAAAAA</td>
+      <td>687</td>
+      <td>Dr.</td>
+      <td>Phyllis</td>
+      <td>Horner</td>
+      <td>UZBEKISTAN</td>
+      <td>Phyllis.Horner@uQy.edu</td>
+      <td>20.0</td>
+      <td>8.0</td>
+      <td>1965.0</td>
+      <td>495575.0</td>
+      <td>131.0</td>
+      <td>2450961.0</td>
+      <td>2450991.0</td>
+      <td>False</td>
+      <td>2452403.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>AAAAAAAAJFAAAAAA</td>
+      <td>318</td>
+      <td>Mrs.</td>
+      <td>Helen</td>
+      <td>Macdonald</td>
+      <td>DOMINICA</td>
+      <td>Helen.Macdonald@3d4.com</td>
+      <td>15.0</td>
+      <td>3.0</td>
+      <td>1981.0</td>
+      <td>694848.0</td>
+      <td>5383.0</td>
+      <td>2451395.0</td>
+      <td>2451425.0</td>
+      <td>True</td>
+      <td>2452626.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>AAAAAAAAKFAAAAAA</td>
+      <td>139</td>
+      <td>Mr.</td>
+      <td>Nathan</td>
+      <td>Pond</td>
+      <td>GUYANA</td>
+      <td>Nathan.Pond@nPh7drM687MhI.org</td>
+      <td>7.0</td>
+      <td>5.0</td>
+      <td>1985.0</td>
+      <td>417827.0</td>
+      <td>5083.0</td>
+      <td>2451464.0</td>
+      <td>2451494.0</td>
+      <td>True</td>
+      <td>2452637.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>AAAAAAAALFAAAAAA</td>
+      <td>906</td>
+      <td>Miss</td>
+      <td>Heather</td>
+      <td>White</td>
+      <td>MARTINIQUE</td>
+      <td>Heather.White@3JitjmxYQnXAtCNAl.com</td>
+      <td>28.0</td>
+      <td>3.0</td>
+      <td>1962.0</td>
+      <td>827176.0</td>
+      <td>2441.0</td>
+      <td>2450376.0</td>
+      <td>2450406.0</td>
+      <td>True</td>
+      <td>2452295.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>AAAAAAAAMFAAAAAA</td>
+      <td>211</td>
+      <td>Miss</td>
+      <td>Crystal</td>
+      <td>Ryan</td>
+      <td>ECUADOR</td>
+      <td>Crystal.Ryan@Ju2rO6u.com</td>
+      <td>8.0</td>
+      <td>2.0</td>
+      <td>1973.0</td>
+      <td>953084.0</td>
+      <td>5771.0</td>
+      <td>2452552.0</td>
+      <td>2452582.0</td>
+      <td>True</td>
+      <td>2452294.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>AAAAAAAANFAAAAAA</td>
+      <td>836</td>
+      <td>Sir</td>
+      <td>Clyde</td>
+      <td>Williams</td>
+      <td>FRENCH POLYNESIA</td>
+      <td>Clyde.Williams@en.com</td>
+      <td>6.0</td>
+      <td>10.0</td>
+      <td>1927.0</td>
+      <td>647375.0</td>
+      <td>6229.0</td>
+      <td>2449311.0</td>
+      <td>2449341.0</td>
+      <td>False</td>
+      <td>2452510.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>AAAAAAAAOFAAAAAA</td>
+      <td>287</td>
+      <td>Mr.</td>
+      <td>Craig</td>
+      <td>Byrd</td>
+      <td>FRENCH POLYNESIA</td>
+      <td>Craig.Byrd@Dc0OEMXkvvuJ.com</td>
+      <td>14.0</td>
+      <td>5.0</td>
+      <td>1982.0</td>
+      <td>451893.0</td>
+      <td>1990.0</td>
+      <td>2449523.0</td>
+      <td>2449553.0</td>
+      <td>True</td>
+      <td>2452445.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>AAAAAAAAPFAAAAAA</td>
+      <td>23</td>
+      <td>Ms.</td>
+      <td>Elizabeth</td>
+      <td>Hollingsworth</td>
+      <td>GREECE</td>
+      <td>Elizabeth.Hollingsworth@lVpeDS5Rcs.com</td>
+      <td>17.0</td>
+      <td>4.0</td>
+      <td>1943.0</td>
+      <td>796503.0</td>
+      <td>1663.0</td>
+      <td>2452438.0</td>
+      <td>2452468.0</td>
+      <td>False</td>
+      <td>2452584.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>AAAAAAAAAGAAAAAA</td>
+      <td>611</td>
+      <td>Sir</td>
+      <td>Shaun</td>
+      <td>Lewis</td>
+      <td>NIGERIA</td>
+      <td>Shaun.Lewis@MTRUPYFTXf9.com</td>
+      <td>22.0</td>
+      <td>10.0</td>
+      <td>1955.0</td>
+      <td>1148074.0</td>
+      <td>6019.0</td>
+      <td>2451475.0</td>
+      <td>2451505.0</td>
+      <td>False</td>
+      <td>2452395.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>AAAAAAAABGAAAAAA</td>
+      <td>41</td>
+      <td>Mr.</td>
+      <td>Stewart</td>
+      <td>Ruffin</td>
+      <td>MYANMAR</td>
+      <td>Stewart.Ruffin@R7Mrx.edu</td>
+      <td>19.0</td>
+      <td>5.0</td>
+      <td>1971.0</td>
+      <td>418763.0</td>
+      <td>102.0</td>
+      <td>2452437.0</td>
+      <td>2452467.0</td>
+      <td>True</td>
+      <td>2452528.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>AAAAAAAACGAAAAAA</td>
+      <td>853</td>
+      <td>Dr.</td>
+      <td>David</td>
+      <td>Lewis</td>
+      <td>KIRIBATI</td>
+      <td>David.Lewis@5mhvq.org</td>
+      <td>23.0</td>
+      <td>6.0</td>
+      <td>1965.0</td>
+      <td>574977.0</td>
+      <td>1615.0</td>
+      <td>2450864.0</td>
+      <td>2450894.0</td>
+      <td>False</td>
+      <td>2452558.0</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>AAAAAAAADGAAAAAA</td>
+      <td>228</td>
+      <td>Sir</td>
+      <td>Austin</td>
+      <td>Tran</td>
+      <td>NAMIBIA</td>
+      <td>Austin.Tran@ect7cnjLsucbd.edu</td>
+      <td>9.0</td>
+      <td>12.0</td>
+      <td>1961.0</td>
+      <td>622676.0</td>
+      <td>2152.0</td>
+      <td>2451657.0</td>
+      <td>2451687.0</td>
+      <td>True</td>
+      <td>2452437.0</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_customer_key"></div><b>📃 Summary:</b> Customer surrogate key<br><b>🦄 Unique:</b> This column is a surrogate key for the customer. For this table, each row represents a unique customer, and customer_key is likely to be unique across rows as it's designed to be a primary identifier.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_customer_id"></div><b>📃 Summary:</b> Unique identifier for the customer<br><b>🦄 Unique:</b> This column is described as a unique identifier for the customer. For this table, each row represents a unique customer, and customer_id is likely to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">current_address_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_current_address_key"></div><b>📃 Summary:</b> Current address surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">salutation</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Dr.'>Dr.</option><option value='Mr.'>Mr.</option><option value='Ms.'>Ms.</option><option value='Sir'>Sir</option><option value='Miss'>Miss</option><option value='Mrs.'>Mrs.</option><option value='Mx.'>Mx.</option><option value='Prof.'>Prof.</option><option value='Rev.'>Rev.</option><option value='Lady'>Lady</option><option value='Lord'>Lord</option><option value='Dame'>Dame</option><option value='Madam'>Madam</option></select></span><br><br><div id="bar_viz_salutation"></div><b>📃 Summary:</b> Customer's formal greeting or title<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">first_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_first_name"></div><b>📃 Summary:</b> Customer's first name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_name"></div><b>📃 Summary:</b> Customer's last name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">birth_country</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_birth_country"></div><b>📃 Summary:</b> Country where the customer was born<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">email_address</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_email_address"></div><b>📃 Summary:</b> Customer's email address<br><b>🦄 Unique:</b> This column represents the customer's email address. In most systems, email addresses are required to be unique for each customer account. Assuming this is the case here, it could serve as a candidate key.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">birth_day</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_birth_day"></div><b>📃 Summary:</b> Day of the month the customer was born<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">birth_month</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_birth_month"></div><b>📃 Summary:</b> Month the customer was born<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">birth_year</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_birth_year"></div><b>📃 Summary:</b> Year the customer was born<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">current_demographics_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_current_demographics_key"></div><b>📃 Summary:</b> Current customer demographics surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">current_household_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_current_household_key"></div><b>📃 Summary:</b> Current household demographics surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">first_sale_date_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_first_sale_date_key"></div><b>📃 Summary:</b> Date of customer's first sale<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">first_shipment_date_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_first_shipment_date_key"></div><b>📃 Summary:</b> Date of customer's first shipment<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_preferred_customer</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_preferred_customer"></div><b>📃 Summary:</b> Indicates if customer is preferred<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_review_date_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_last_review_date_key"></div><b>📃 Summary:</b> Date of customer's last review<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">login</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_login"></div><b>📃 Summary:</b> Customer's login information<br><b>❓ Missing:</b> Not all customers may require or choose to have a login.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about customer details. It contains personal information like name, birth date, and country. It also includes customer-specific data such as customer ID, preferred status, and login details. The table tracks important dates related to customer interactions, like first shipment and sales dates, and last review date. Each customer has a unique identifier (C_CUSTOMER_SK) and various demographic keys for further categorization.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>18</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>C_CUSTOMER_SK</td>
+      <td>Customer surrogate key</td>
+      <td>customer_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>C_CUSTOMER_ID</td>
+      <td>Unique identifier for the customer</td>
+      <td>customer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>C_CURRENT_CDEMO_SK</td>
+      <td>Current customer demographics surrogate key</td>
+      <td>current_demographics_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>C_CURRENT_HDEMO_SK</td>
+      <td>Current household demographics surrogate key</td>
+      <td>current_household_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>C_CURRENT_ADDR_SK</td>
+      <td>Current address surrogate key</td>
+      <td>current_address_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>C_FIRST_SHIPTO_DATE_SK</td>
+      <td>Date of customer's first shipment</td>
+      <td>first_shipment_date_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>C_FIRST_SALES_DATE_SK</td>
+      <td>Date of customer's first sale</td>
+      <td>first_sale_date_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>C_SALUTATION</td>
+      <td>Customer's formal greeting or title</td>
+      <td>salutation</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>C_FIRST_NAME</td>
+      <td>Customer's first name</td>
+      <td>first_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>C_LAST_NAME</td>
+      <td>Customer's last name</td>
+      <td>last_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>C_PREFERRED_CUST_FLAG</td>
+      <td>Indicates if customer is preferred</td>
+      <td>is_preferred_customer</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>C_BIRTH_DAY</td>
+      <td>Day of the month the customer was born</td>
+      <td>birth_day</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>C_BIRTH_MONTH</td>
+      <td>Month the customer was born</td>
+      <td>birth_month</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>C_BIRTH_YEAR</td>
+      <td>Year the customer was born</td>
+      <td>birth_year</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>C_BIRTH_COUNTRY</td>
+      <td>Country where the customer was born</td>
+      <td>birth_country</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>C_LOGIN</td>
+      <td>Customer's login information</td>
+      <td>login</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>C_EMAIL_ADDRESS</td>
+      <td>Customer's email address</td>
+      <td>email_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>C_LAST_REVIEW_DATE_SK</td>
+      <td>Date of customer's last review</td>
+      <td>last_review_date_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>birth_country</b>: CÔTE D''IVOIRE has unusual apostrophes. KOREA, REPUBLIC OF is inconsistent with other country naming conventions.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>CÔTE D'IVOIRE</td>
+      <td>IVORY COAST</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>KOREA, REPUBLIC OF</td>
+      <td>SOUTH KOREA</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>BRUNEI DARUSSALAM</td>
+      <td>BRUNEI</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>MOLDOVA, REPUBLIC OF</td>
+      <td>MOLDOVA</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>VIRGIN ISLANDS, U.S.</td>
+      <td>US VIRGIN ISLANDS</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>RUSSIAN FEDERATION</td>
+      <td>RUSSIA</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                ✔️ <b>10</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>birth_day</td>
+      <td>CAST("birth_day" AS INT)</td>
+      <td>To transform the data type of the 'birth_day' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the values are already whole numbers stored as DECIMAL, a straightforward cast to INT will work without losing any information.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>birth_month</td>
+      <td>CAST("birth_month" AS INT)</td>
+      <td>To transform the data type of the 'birth_month' column from DECIMAL to INT, we need to use a simple CAST function in DuckDB. The CAST function will convert each decimal value to its corresponding integer value. Since the given values are already whole numbers (e.g., 12.0, 5.0), this conversion will effectively remove the decimal point without changing the actual month values.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>birth_year</td>
+      <td>CAST("birth_year" AS INT)</td>
+      <td>To transform the data type of the 'birth_year' column from DECIMAL to INT in DuckDB, we need to use the CAST function. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to INT. Since the values are already whole numbers (years), a simple cast to INT will work without losing any information.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>current_demographics_key</td>
+      <td>CAST("current_demographics_key" AS INT)</td>
+      <td>To transform the data type of the column 'current_demographics_key' from DECIMAL to INT, we need to use a simple CAST function in DuckDB. The CAST function will convert each value in the column to an integer, effectively removing any decimal places. This is safe to do in this case because all the distinct values provided are whole numbers (they all end in .0).\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>current_household_key</td>
+      <td>CAST("current_household_key" AS INT)</td>
+      <td>To transform the data type of the column 'current_household_key' from DECIMAL to INT in DuckDB, we need to use a simple CAST function. The CAST function in DuckDB allows us to convert one data type to another. In this case, we're converting from DECIMAL to INT. Since the values are already whole numbers (despite being stored as DECIMAL), a simple cast should suffice without any loss of information.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>first_sale_date_key</td>
+      <td>CAST("first_sale_date_key" AS INT)</td>
+      <td>To transform the data type of the 'first_sale_date_key' column from DECIMAL to INT, we need to use a simple CAST function in DuckDB. The CAST function will convert the decimal values to their nearest integer equivalents. Since the decimal values in this case appear to be whole numbers already (they don't have any fractional parts), the conversion should be straightforward without any loss of information.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>first_shipment_date_key</td>
+      <td>CAST("first_shipment_date_key" AS INT)</td>
+      <td>To transform the data type of the 'first_shipment_date_key' column from DECIMAL to INT, we need to use a simple CAST function in DuckDB. The CAST function will convert each value to an integer, effectively removing any decimal places. This is straightforward since the given values appear to be whole numbers stored as decimals.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>is_preferred_customer</td>
+      <td>CAST(CASE WHEN "is_preferred_customer" = 'Y' THEN TRUE WHEN "is_preferred_customer" = 'N' THEN FALSE ELSE NULL END AS BOOLEAN)</td>
+      <td>To transform the 'is_preferred_customer' column from VARCHAR to BOOLEAN in DuckDB, we need to use a CAST function. In DuckDB, when casting to BOOLEAN, 'Y' and 'y' are interpreted as TRUE, while 'N' and 'n' are interpreted as FALSE. This aligns perfectly with the distinct values we have in the column ('Y' and 'N'). Therefore, a simple CAST to BOOLEAN will correctly convert the values.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>last_review_date_key</td>
+      <td>CAST("last_review_date_key" AS INT)</td>
+      <td>To transform the data type of the 'last_review_date_key' column from DECIMAL to INT, we can use a simple CAST function in DuckDB. The CAST function will convert the decimal values to their nearest integer equivalents. Since the decimal values in this case appear to be whole numbers (they don't have any fractional parts), the conversion should be straightforward without any loss of information.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>login</td>
+      <td>CAST("login" AS VARCHAR)</td>
+      <td>To transform the data type of the 'login' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(column_name AS new_data_type). In this case, we're casting the 'login' column to VARCHAR.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                🔍 <b>15</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>birth_country</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>birth_day</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>birth_month</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>birth_year</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>current_demographics_key</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>current_household_key</td>
+      <td>2.02</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>email_address</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>first_name</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>first_sale_date_key</td>
+      <td>1.01</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>first_shipment_date_key</td>
+      <td>1.01</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>is_preferred_customer</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>last_name</td>
+      <td>1.01</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>last_review_date_key</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>login</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Not all customers may require or choose to have a login.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>salutation</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>birth_country</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>birth_day</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>birth_month</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>birth_year</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>current_demographics_key</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>current_household_key</td>
+      <td>2.02</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>email_address</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>first_name</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>first_sale_date_key</td>
+      <td>1.01</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>first_shipment_date_key</td>
+      <td>1.01</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>is_preferred_customer</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>last_name</td>
+      <td>1.01</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>last_review_date_key</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>salutation</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 3.45, 'y': 5}, {'x': 8.350000000000001, 'y': 5}, {'x': 13.25, 'y': 5}, {'x': 18.150000000000002, 'y': 5}, {'x': 23.05, 'y': 5}, {'x': 27.950000000000003, 'y': 5}, {'x': 32.85, 'y': 5}, {'x': 37.75, 'y': 5}, {'x': 42.650000000000006, 'y': 5}, {'x': 47.55, 'y': 4}, {'x': 52.45, 'y': 5}, {'x': 57.35000000000001, 'y': 5}, {'x': 62.25, 'y': 5}, {'x': 67.15, 'y': 5}, {'x': 72.05000000000001, 'y': 5}, {'x': 76.95, 'y': 5}, {'x': 81.85000000000001, 'y': 5}, {'x': 86.75, 'y': 5}, {'x': 91.65, 'y': 5}, {'x': 96.55000000000001, 'y': 5}];
+    binWidth = 4.9;
+    drawHistogram("hist_viz_customer_key", data, binWidth);
+data = [{'label': 'AAAAAAAADAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAFAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAGAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAIAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAMAAAAAA...', 'value': 1.0101010101010102}, {'label': 'Other values', 'value': 94.94949494949495}];
+    drawBarChart("bar_viz_customer_id", data);
+data = [{'x': 30.825, 'y': 5}, {'x': 80.475, 'y': 4}, {'x': 130.125, 'y': 6}, {'x': 179.77499999999998, 'y': 1}, {'x': 229.425, 'y': 6}, {'x': 279.075, 'y': 10}, {'x': 328.725, 'y': 3}, {'x': 378.375, 'y': 8}, {'x': 428.025, 'y': 6}, {'x': 477.67499999999995, 'y': 7}, {'x': 527.325, 'y': 2}, {'x': 576.9749999999999, 'y': 11}, {'x': 626.625, 'y': 1}, {'x': 676.275, 'y': 8}, {'x': 725.925, 'y': 4}, {'x': 775.575, 'y': 1}, {'x': 825.2249999999999, 'y': 4}, {'x': 874.875, 'y': 3}, {'x': 924.525, 'y': 5}, {'x': 974.175, 'y': 4}];
+    binWidth = 49.65;
+    drawHistogram("hist_viz_current_address_key", data, binWidth);
+data = [{'label': 'Dr.', 'value': 29.166666666666668}, {'label': 'Mr.', 'value': 17.708333333333336}, {'label': 'Ms.', 'value': 15.625}, {'label': 'Sir', 'value': 15.625}, {'label': 'Miss', 'value': 13.541666666666666}, {'label': 'Mrs.', 'value': 8.333333333333332}];
+    drawBarChart("bar_viz_salutation", data);
+data = [{'label': 'David', 'value': 3.125}, {'label': 'Michael', 'value': 2.083333333333333}, {'label': 'Margaret', 'value': 2.083333333333333}, {'label': 'Steven', 'value': 2.083333333333333}, {'label': 'Paul', 'value': 2.083333333333333}, {'label': 'Other values', 'value': 88.54166666666666}];
+    drawBarChart("bar_viz_first_name", data);
+data = [{'label': 'White', 'value': 4.081632653061225}, {'label': 'Lewis', 'value': 3.061224489795918}, {'label': 'Williams', 'value': 2.0408163265306123}, {'label': 'Woods', 'value': 2.0408163265306123}, {'label': 'Smith', 'value': 2.0408163265306123}, {'label': 'Other values', 'value': 86.73469387755102}];
+    drawBarChart("bar_viz_last_name", data);
+data = [{'label': 'NETHERLANDS ANT...', 'value': 3.1578947368421053}, {'label': 'SOUTH KOREA', 'value': 2.1052631578947367}, {'label': 'KIRIBATI', 'value': 2.1052631578947367}, {'label': 'ECUADOR', 'value': 2.1052631578947367}, {'label': 'FRENCH GUIANA', 'value': 2.1052631578947367}, {'label': 'Other values', 'value': 88.42105263157895}];
+    drawBarChart("bar_viz_birth_country", data);
+data = [{'label': 'Javier.Lewis@VF...', 'value': 1.0416666666666665}, {'label': 'Latisha.Hamilto...', 'value': 1.0416666666666665}, {'label': 'Karl.Gilbert@Cr...', 'value': 1.0416666666666665}, {'label': 'Jack.Wilcox@Y3E...', 'value': 1.0416666666666665}, {'label': 'Brad.Lynch@nAba...', 'value': 1.0416666666666665}, {'label': 'Other values', 'value': 94.79166666666666}];
+    drawBarChart("bar_viz_email_address", data);
+data = [{'x': 1.725, 'y': 8}, {'x': 3.175, 'y': 2}, {'x': 4.625, 'y': 6}, {'x': 6.074999999999999, 'y': 5}, {'x': 7.525, 'y': 9}, {'x': 8.975, 'y': 4}, {'x': 10.425, 'y': 3}, {'x': 11.875, 'y': 1}, {'x': 13.325, 'y': 6}, {'x': 14.774999999999999, 'y': 5}, {'x': 16.225, 'y': 0}, {'x': 17.674999999999997, 'y': 10}, {'x': 19.125, 'y': 3}, {'x': 20.575, 'y': 7}, {'x': 22.025, 'y': 1}, {'x': 23.475, 'y': 7}, {'x': 24.924999999999997, 'y': 3}, {'x': 26.375, 'y': 8}, {'x': 27.825, 'y': 1}, {'x': 29.275, 'y': 7}];
+    binWidth = 1.45;
+    drawHistogram("hist_viz_birth_day", data, binWidth);
+data = [{'x': 1.275, 'y': 6}, {'x': 1.8250000000000002, 'y': 5}, {'x': 2.375, 'y': 0}, {'x': 2.9250000000000003, 'y': 10}, {'x': 3.475, 'y': 0}, {'x': 4.025, 'y': 7}, {'x': 4.575000000000001, 'y': 0}, {'x': 5.125, 'y': 12}, {'x': 5.675000000000001, 'y': 0}, {'x': 6.225, 'y': 12}, {'x': 6.775, 'y': 4}, {'x': 7.325000000000001, 'y': 0}, {'x': 7.875, 'y': 6}, {'x': 8.425, 'y': 0}, {'x': 8.975000000000001, 'y': 6}, {'x': 9.525, 'y': 0}, {'x': 10.075000000000001, 'y': 10}, {'x': 10.625, 'y': 0}, {'x': 11.175, 'y': 3}, {'x': 11.725000000000001, 'y': 15}];
+    binWidth = 0.55;
+    drawHistogram("hist_viz_birth_month", data, binWidth);
+data = [{'x': 1926.65, 'y': 6}, {'x': 1929.9499999999998, 'y': 1}, {'x': 1933.25, 'y': 4}, {'x': 1936.5500000000002, 'y': 5}, {'x': 1939.85, 'y': 6}, {'x': 1943.15, 'y': 4}, {'x': 1946.4499999999998, 'y': 5}, {'x': 1949.75, 'y': 8}, {'x': 1953.0500000000002, 'y': 2}, {'x': 1956.35, 'y': 6}, {'x': 1959.65, 'y': 7}, {'x': 1962.9499999999998, 'y': 5}, {'x': 1966.25, 'y': 7}, {'x': 1969.5500000000002, 'y': 4}, {'x': 1972.85, 'y': 7}, {'x': 1976.15, 'y': 1}, {'x': 1979.4499999999998, 'y': 5}, {'x': 1982.75, 'y': 5}, {'x': 1986.0500000000002, 'y': 2}, {'x': 1989.35, 'y': 6}];
+    binWidth = 3.3;
+    drawHistogram("hist_viz_birth_year", data, binWidth);
+data = [{'x': 55982.675, 'y': 5}, {'x': 150314.02500000002, 'y': 1}, {'x': 244645.37500000003, 'y': 2}, {'x': 338976.72500000003, 'y': 4}, {'x': 433308.075, 'y': 7}, {'x': 527639.425, 'y': 8}, {'x': 621970.7750000001, 'y': 4}, {'x': 716302.125, 'y': 6}, {'x': 810633.4750000001, 'y': 9}, {'x': 904964.825, 'y': 5}, {'x': 999296.175, 'y': 6}, {'x': 1093627.5250000001, 'y': 4}, {'x': 1187958.875, 'y': 8}, {'x': 1282290.225, 'y': 5}, {'x': 1376621.5750000002, 'y': 2}, {'x': 1470952.925, 'y': 6}, {'x': 1565284.2750000001, 'y': 2}, {'x': 1659615.625, 'y': 6}, {'x': 1753946.975, 'y': 3}, {'x': 1848278.3250000002, 'y': 3}];
+    binWidth = 94331.35;
+    drawHistogram("hist_viz_current_demographics_key", data, binWidth);
+data = [{'x': 214.45, 'y': 11}, {'x': 569.3499999999999, 'y': 1}, {'x': 924.2499999999999, 'y': 3}, {'x': 1279.1499999999999, 'y': 6}, {'x': 1634.05, 'y': 4}, {'x': 1988.9499999999998, 'y': 6}, {'x': 2343.8499999999995, 'y': 10}, {'x': 2698.75, 'y': 2}, {'x': 3053.6499999999996, 'y': 4}, {'x': 3408.55, 'y': 3}, {'x': 3763.45, 'y': 5}, {'x': 4118.349999999999, 'y': 4}, {'x': 4473.25, 'y': 2}, {'x': 4828.15, 'y': 4}, {'x': 5183.049999999999, 'y': 4}, {'x': 5537.95, 'y': 5}, {'x': 5892.849999999999, 'y': 7}, {'x': 6247.75, 'y': 6}, {'x': 6602.65, 'y': 4}, {'x': 6957.549999999999, 'y': 6}];
+    binWidth = 354.9;
+    drawHistogram("hist_viz_current_household_key", data, binWidth);
+data = [{'x': 2449100.025, 'y': 4}, {'x': 2449280.075, 'y': 7}, {'x': 2449460.125, 'y': 8}, {'x': 2449640.175, 'y': 4}, {'x': 2449820.225, 'y': 5}, {'x': 2450000.275, 'y': 5}, {'x': 2450180.325, 'y': 3}, {'x': 2450360.375, 'y': 4}, {'x': 2450540.425, 'y': 2}, {'x': 2450720.475, 'y': 0}, {'x': 2450900.525, 'y': 5}, {'x': 2451080.575, 'y': 6}, {'x': 2451260.625, 'y': 2}, {'x': 2451440.675, 'y': 10}, {'x': 2451620.725, 'y': 5}, {'x': 2451800.775, 'y': 8}, {'x': 2451980.825, 'y': 5}, {'x': 2452160.875, 'y': 5}, {'x': 2452340.925, 'y': 4}, {'x': 2452520.975, 'y': 6}];
+    binWidth = 180.05;
+    drawHistogram("hist_viz_first_sale_date_key", data, binWidth);
+data = [{'x': 2449217.775, 'y': 6}, {'x': 2449393.325, 'y': 8}, {'x': 2449568.875, 'y': 4}, {'x': 2449744.425, 'y': 5}, {'x': 2449919.975, 'y': 6}, {'x': 2450095.525, 'y': 5}, {'x': 2450271.075, 'y': 4}, {'x': 2450446.625, 'y': 1}, {'x': 2450622.175, 'y': 2}, {'x': 2450797.725, 'y': 1}, {'x': 2450973.275, 'y': 6}, {'x': 2451148.825, 'y': 5}, {'x': 2451324.375, 'y': 3}, {'x': 2451499.925, 'y': 10}, {'x': 2451675.475, 'y': 6}, {'x': 2451851.025, 'y': 8}, {'x': 2452026.575, 'y': 3}, {'x': 2452202.125, 'y': 6}, {'x': 2452377.675, 'y': 3}, {'x': 2452553.225, 'y': 6}];
+    binWidth = 175.55;
+    drawHistogram("hist_viz_first_shipment_date_key", data, binWidth);
+data = [{'label': 'False', 'value': 58.94736842105262}, {'label': 'True', 'value': 41.05263157894737}];
+    drawBarChart("bar_viz_is_preferred_customer", data);
+data = [{'x': 2452301.775, 'y': 5}, {'x': 2452319.325, 'y': 3}, {'x': 2452336.875, 'y': 9}, {'x': 2452354.425, 'y': 8}, {'x': 2452371.975, 'y': 3}, {'x': 2452389.525, 'y': 2}, {'x': 2452407.075, 'y': 8}, {'x': 2452424.625, 'y': 6}, {'x': 2452442.175, 'y': 5}, {'x': 2452459.725, 'y': 6}, {'x': 2452477.275, 'y': 2}, {'x': 2452494.825, 'y': 6}, {'x': 2452512.375, 'y': 4}, {'x': 2452529.925, 'y': 5}, {'x': 2452547.475, 'y': 3}, {'x': 2452565.025, 'y': 3}, {'x': 2452582.575, 'y': 7}, {'x': 2452600.125, 'y': 2}, {'x': 2452617.675, 'y': 2}, {'x': 2452635.225, 'y': 7}];
+    binWidth = 17.55;
+    drawHistogram("hist_viz_last_review_date_key", data, binWidth);
+data = [];
+    drawBarChart("bar_viz_login", data);
+
+
+</script>
+</body>
+</html>

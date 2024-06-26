@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>payers</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>NAME</th>
+      <th>OWNERSHIP</th>
+      <th>AMOUNT_COVERED</th>
+      <th>AMOUNT_UNCOVERED</th>
+      <th>REVENUE</th>
+      <th>COVERED_ENCOUNTERS</th>
+      <th>UNCOVERED_ENCOUNTERS</th>
+      <th>COVERED_MEDICATIONS</th>
+      <th>UNCOVERED_MEDICATIONS</th>
+      <th>COVERED_PROCEDURES</th>
+      <th>UNCOVERED_PROCEDURES</th>
+      <th>COVERED_IMMUNIZATIONS</th>
+      <th>UNCOVERED_IMMUNIZATIONS</th>
+      <th>UNIQUE_CUSTOMERS</th>
+      <th>QOLS_AVG</th>
+      <th>MEMBER_MONTHS</th>
+      <th>Id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Medicare</td>
+      <td>GOVERNMENT</td>
+      <td>3245258.85</td>
+      <td>57324.03</td>
+      <td>460290.60</td>
+      <td>927</td>
+      <td>0</td>
+      <td>918</td>
+      <td>0</td>
+      <td>1270</td>
+      <td>0</td>
+      <td>202</td>
+      <td>0</td>
+      <td>16</td>
+      <td>0.753073</td>
+      <td>2748</td>
+      <td>a735bf55-83e9-331a-899d-a82a60b9f60c</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Medicaid</td>
+      <td>GOVERNMENT</td>
+      <td>6112421.45</td>
+      <td>103336.16</td>
+      <td>45600.00</td>
+      <td>1217</td>
+      <td>0</td>
+      <td>286</td>
+      <td>0</td>
+      <td>1908</td>
+      <td>0</td>
+      <td>534</td>
+      <td>0</td>
+      <td>19</td>
+      <td>0.953093</td>
+      <td>4524</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>UnitedHealthcare</td>
+      <td>PRIVATE</td>
+      <td>37929.59</td>
+      <td>28070.66</td>
+      <td>218949.27</td>
+      <td>49</td>
+      <td>0</td>
+      <td>10</td>
+      <td>0</td>
+      <td>36</td>
+      <td>0</td>
+      <td>41</td>
+      <td>0</td>
+      <td>3</td>
+      <td>0.800393</td>
+      <td>384</td>
+      <td>d31fccc3-1767-390d-966a-22a5156f4219</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Cigna Health</td>
+      <td>PRIVATE</td>
+      <td>2110812.70</td>
+      <td>318590.30</td>
+      <td>2102717.53</td>
+      <td>727</td>
+      <td>0</td>
+      <td>236</td>
+      <td>0</td>
+      <td>765</td>
+      <td>0</td>
+      <td>412</td>
+      <td>0</td>
+      <td>13</td>
+      <td>0.939912</td>
+      <td>3660</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Dual Eligible</td>
+      <td>GOVERNMENT</td>
+      <td>931603.10</td>
+      <td>8658.65</td>
+      <td>2990.00</td>
+      <td>201</td>
+      <td>0</td>
+      <td>84</td>
+      <td>0</td>
+      <td>231</td>
+      <td>0</td>
+      <td>48</td>
+      <td>0</td>
+      <td>5</td>
+      <td>0.878956</td>
+      <td>300</td>
+      <td>d18ef2e6-ef40-324c-be54-34a5ee865625</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Blue Cross Blue Shield</td>
+      <td>PRIVATE</td>
+      <td>2892929.84</td>
+      <td>294566.55</td>
+      <td>2361484.19</td>
+      <td>634</td>
+      <td>0</td>
+      <td>187</td>
+      <td>0</td>
+      <td>1186</td>
+      <td>0</td>
+      <td>298</td>
+      <td>0</td>
+      <td>21</td>
+      <td>0.557441</td>
+      <td>5976</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Humana</td>
+      <td>PRIVATE</td>
+      <td>1367291.40</td>
+      <td>270899.39</td>
+      <td>1884917.60</td>
+      <td>530</td>
+      <td>0</td>
+      <td>162</td>
+      <td>0</td>
+      <td>816</td>
+      <td>0</td>
+      <td>364</td>
+      <td>0</td>
+      <td>10</td>
+      <td>0.851986</td>
+      <td>3276</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Aetna</td>
+      <td>PRIVATE</td>
+      <td>2687988.71</td>
+      <td>263197.52</td>
+      <td>1690679.14</td>
+      <td>540</td>
+      <td>0</td>
+      <td>141</td>
+      <td>0</td>
+      <td>734</td>
+      <td>0</td>
+      <td>177</td>
+      <td>0</td>
+      <td>6</td>
+      <td>0.977580</td>
+      <td>2904</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Anthem</td>
+      <td>PRIVATE</td>
+      <td>2089796.91</td>
+      <td>307811.25</td>
+      <td>2114210.93</td>
+      <td>608</td>
+      <td>0</td>
+      <td>195</td>
+      <td>0</td>
+      <td>836</td>
+      <td>0</td>
+      <td>293</td>
+      <td>0</td>
+      <td>6</td>
+      <td>0.913062</td>
+      <td>3648</td>
+      <td>734afbd6-4794-363b-9bc0-6a3981533ed5</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>NO_INSURANCE</td>
+      <td>NO_INSURANCE</td>
+      <td>0.00</td>
+      <td>6794881.83</td>
+      <td>0.00</td>
+      <td>0</td>
+      <td>1553</td>
+      <td>0</td>
+      <td>276</td>
+      <td>0</td>
+      <td>2114</td>
+      <td>0</td>
+      <td>623</td>
+      <td>16</td>
+      <td>0.898998</td>
+      <td>7464</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>payer_name</th>
+      <th>OWNERSHIP</th>
+      <th>total_covered_amount</th>
+      <th>total_uncovered_amount</th>
+      <th>REVENUE</th>
+      <th>covered_encounters_count</th>
+      <th>uncovered_encounters_count</th>
+      <th>covered_medications_count</th>
+      <th>uncovered_medications_count</th>
+      <th>covered_procedures_count</th>
+      <th>uncovered_procedures_count</th>
+      <th>covered_immunizations_count</th>
+      <th>uncovered_immunizations_count</th>
+      <th>UNIQUE_CUSTOMERS</th>
+      <th>average_quality_of_life_score</th>
+      <th>MEMBER_MONTHS</th>
+      <th>payer_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Medicare</td>
+      <td>GOVERNMENT</td>
+      <td>3245258.85</td>
+      <td>57324.03</td>
+      <td>460290.60</td>
+      <td>927</td>
+      <td>0</td>
+      <td>918</td>
+      <td>0</td>
+      <td>1270</td>
+      <td>0</td>
+      <td>202</td>
+      <td>0</td>
+      <td>16</td>
+      <td>0.753073</td>
+      <td>2748</td>
+      <td>a735bf55-83e9-331a-899d-a82a60b9f60c</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Medicaid</td>
+      <td>GOVERNMENT</td>
+      <td>6112421.45</td>
+      <td>103336.16</td>
+      <td>45600.00</td>
+      <td>1217</td>
+      <td>0</td>
+      <td>286</td>
+      <td>0</td>
+      <td>1908</td>
+      <td>0</td>
+      <td>534</td>
+      <td>0</td>
+      <td>19</td>
+      <td>0.953093</td>
+      <td>4524</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>UnitedHealthcare</td>
+      <td>PRIVATE</td>
+      <td>37929.59</td>
+      <td>28070.66</td>
+      <td>218949.27</td>
+      <td>49</td>
+      <td>0</td>
+      <td>10</td>
+      <td>0</td>
+      <td>36</td>
+      <td>0</td>
+      <td>41</td>
+      <td>0</td>
+      <td>3</td>
+      <td>0.800393</td>
+      <td>384</td>
+      <td>d31fccc3-1767-390d-966a-22a5156f4219</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Cigna Health</td>
+      <td>PRIVATE</td>
+      <td>2110812.70</td>
+      <td>318590.30</td>
+      <td>2102717.53</td>
+      <td>727</td>
+      <td>0</td>
+      <td>236</td>
+      <td>0</td>
+      <td>765</td>
+      <td>0</td>
+      <td>412</td>
+      <td>0</td>
+      <td>13</td>
+      <td>0.939912</td>
+      <td>3660</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Dual Eligible</td>
+      <td>GOVERNMENT</td>
+      <td>931603.10</td>
+      <td>8658.65</td>
+      <td>2990.00</td>
+      <td>201</td>
+      <td>0</td>
+      <td>84</td>
+      <td>0</td>
+      <td>231</td>
+      <td>0</td>
+      <td>48</td>
+      <td>0</td>
+      <td>5</td>
+      <td>0.878956</td>
+      <td>300</td>
+      <td>d18ef2e6-ef40-324c-be54-34a5ee865625</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Blue Cross Blue Shield</td>
+      <td>PRIVATE</td>
+      <td>2892929.84</td>
+      <td>294566.55</td>
+      <td>2361484.19</td>
+      <td>634</td>
+      <td>0</td>
+      <td>187</td>
+      <td>0</td>
+      <td>1186</td>
+      <td>0</td>
+      <td>298</td>
+      <td>0</td>
+      <td>21</td>
+      <td>0.557441</td>
+      <td>5976</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Humana</td>
+      <td>PRIVATE</td>
+      <td>1367291.40</td>
+      <td>270899.39</td>
+      <td>1884917.60</td>
+      <td>530</td>
+      <td>0</td>
+      <td>162</td>
+      <td>0</td>
+      <td>816</td>
+      <td>0</td>
+      <td>364</td>
+      <td>0</td>
+      <td>10</td>
+      <td>0.851986</td>
+      <td>3276</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Aetna</td>
+      <td>PRIVATE</td>
+      <td>2687988.71</td>
+      <td>263197.52</td>
+      <td>1690679.14</td>
+      <td>540</td>
+      <td>0</td>
+      <td>141</td>
+      <td>0</td>
+      <td>734</td>
+      <td>0</td>
+      <td>177</td>
+      <td>0</td>
+      <td>6</td>
+      <td>0.977580</td>
+      <td>2904</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Anthem</td>
+      <td>PRIVATE</td>
+      <td>2089796.91</td>
+      <td>307811.25</td>
+      <td>2114210.93</td>
+      <td>608</td>
+      <td>0</td>
+      <td>195</td>
+      <td>0</td>
+      <td>836</td>
+      <td>0</td>
+      <td>293</td>
+      <td>0</td>
+      <td>6</td>
+      <td>0.913062</td>
+      <td>3648</td>
+      <td>734afbd6-4794-363b-9bc0-6a3981533ed5</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>NO_INSURANCE</td>
+      <td>NO_INSURANCE</td>
+      <td>0.00</td>
+      <td>6794881.83</td>
+      <td>0.00</td>
+      <td>0</td>
+      <td>1553</td>
+      <td>0</td>
+      <td>276</td>
+      <td>0</td>
+      <td>2114</td>
+      <td>0</td>
+      <td>623</td>
+      <td>16</td>
+      <td>0.898998</td>
+      <td>7464</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payer_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Aetna'>Aetna</option><option value='Anthem'>Anthem</option><option value='Blue Cross Blue Shield'>Blue Cross Blue Shield</option><option value='Cigna Health'>Cigna Health</option><option value='Dual Eligible'>Dual Eligible</option><option value='Humana'>Humana</option><option value='Medicaid'>Medicaid</option><option value='Medicare'>Medicare</option><option value='NO_INSURANCE'>NO_INSURANCE</option><option value='UnitedHealthcare'>UnitedHealthcare</option><option value='Kaiser Permanente'>Kaiser Permanente</option><option value='Molina Healthcare'>Molina Healthcare</option><option value='Centene'>Centene</option><option value='WellCare'>WellCare</option><option value='TRICARE'>TRICARE</option><option value='Veterans Health Administration'>Veterans Health Administration</option><option value='CHAMPVA'>CHAMPVA</option><option value='State-specific Medicaid programs (e.g., Medi-Cal for California)'>State-specific Medicaid programs (e.g., Medi-Cal for California)</option><option value='Other regional or local insurance providers'>Other regional or local insurance providers</option></select></span><br><br><div id="bar_viz_payer_name"></div><b>📃 Summary:</b> Name of the health insurance payer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">OWNERSHIP</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='PRIVATE'>PRIVATE</option><option value='GOVERNMENT'>GOVERNMENT</option><option value='NO_INSURANCE'>NO_INSURANCE</option></select></span><br><br><div id="bar_viz_OWNERSHIP"></div><b>📃 Summary:</b> Type of ownership (government or private)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_covered_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_covered_amount"></div><b>📃 Summary:</b> Total amount covered by the payer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_uncovered_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_uncovered_amount"></div><b>📃 Summary:</b> Total amount not covered by the payer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">REVENUE</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_REVENUE"></div><b>📃 Summary:</b> Total revenue of the payer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">covered_encounters_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_covered_encounters_count"></div><b>📃 Summary:</b> Number of covered healthcare encounters<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">uncovered_encounters_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_uncovered_encounters_count"></div><b>📃 Summary:</b> Number of uncovered healthcare encounters<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">covered_medications_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_covered_medications_count"></div><b>📃 Summary:</b> Number of covered medications<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">uncovered_medications_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_uncovered_medications_count"></div><b>📃 Summary:</b> Number of uncovered medications<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">covered_procedures_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_covered_procedures_count"></div><b>📃 Summary:</b> Number of covered medical procedures<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">uncovered_procedures_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_uncovered_procedures_count"></div><b>📃 Summary:</b> Number of uncovered medical procedures<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">covered_immunizations_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_covered_immunizations_count"></div><b>📃 Summary:</b> Number of covered immunizations<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">uncovered_immunizations_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_uncovered_immunizations_count"></div><b>📃 Summary:</b> Number of uncovered immunizations<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">UNIQUE_CUSTOMERS</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_UNIQUE_CUSTOMERS"></div><b>📃 Summary:</b> Number of unique customers<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">average_quality_of_life_score</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_average_quality_of_life_score"></div><b>📃 Summary:</b> Average quality of life score<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">MEMBER_MONTHS</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_MEMBER_MONTHS"></div><b>📃 Summary:</b> Total months of member enrollment<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_payer_id"></div><b>📃 Summary:</b> Unique identifier for the payer<br><b>🦄 Unique:</b> This column is a unique identifier for each payer. For this table, each row represents a distinct payer, and payer_id appears to be unique across rows.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about health insurance payers. It includes both government and private payers. Details include payer name, ownership type, contact information, financial data, encounter counts, medication and procedure coverage, customer information, and quality metrics. Key fields are covered/uncovered amounts, revenue, encounter types, unique customers, quality of life score, and member months.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>18</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Id</td>
+      <td>Unique identifier for the payer</td>
+      <td>payer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>NAME</td>
+      <td>Name of the health insurance payer</td>
+      <td>payer_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>OWNERSHIP</td>
+      <td>Type of ownership (government or private)</td>
+      <td>OWNERSHIP</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>ADDRESS</td>
+      <td>Physical address of the payer's office</td>
+      <td>payer_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CITY</td>
+      <td>City where the payer is located</td>
+      <td>payer_city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>STATE_HEADQUARTERED</td>
+      <td>State where the payer is headquartered</td>
+      <td>headquarters_state</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>ZIP</td>
+      <td>ZIP code of the payer's location</td>
+      <td>payer_zip_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>PHONE</td>
+      <td>Contact phone number for the payer</td>
+      <td>payer_phone</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>AMOUNT_COVERED</td>
+      <td>Total amount covered by the payer</td>
+      <td>total_covered_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>AMOUNT_UNCOVERED</td>
+      <td>Total amount not covered by the payer</td>
+      <td>total_uncovered_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>REVENUE</td>
+      <td>Total revenue of the payer</td>
+      <td>REVENUE</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>COVERED_ENCOUNTERS</td>
+      <td>Number of covered healthcare encounters</td>
+      <td>covered_encounters_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>UNCOVERED_ENCOUNTERS</td>
+      <td>Number of uncovered healthcare encounters</td>
+      <td>uncovered_encounters_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>COVERED_MEDICATIONS</td>
+      <td>Number of covered medications</td>
+      <td>covered_medications_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>UNCOVERED_MEDICATIONS</td>
+      <td>Number of uncovered medications</td>
+      <td>uncovered_medications_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>COVERED_PROCEDURES</td>
+      <td>Number of covered medical procedures</td>
+      <td>covered_procedures_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>UNCOVERED_PROCEDURES</td>
+      <td>Number of uncovered medical procedures</td>
+      <td>uncovered_procedures_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>COVERED_IMMUNIZATIONS</td>
+      <td>Number of covered immunizations</td>
+      <td>covered_immunizations_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>UNCOVERED_IMMUNIZATIONS</td>
+      <td>Number of uncovered immunizations</td>
+      <td>uncovered_immunizations_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>UNIQUE_CUSTOMERS</td>
+      <td>Number of unique customers</td>
+      <td>UNIQUE_CUSTOMERS</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>QOLS_AVG</td>
+      <td>Average quality of life score</td>
+      <td>average_quality_of_life_score</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>MEMBER_MONTHS</td>
+      <td>Total months of member enrollment</td>
+      <td>MEMBER_MONTHS</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>6</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>headquarters_state</td>
+      <td>CAST("headquarters_state" AS VARCHAR)</td>
+      <td>To transform the data type of the 'headquarters_state' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>payer_address</td>
+      <td>CAST("payer_address" AS VARCHAR)</td>
+      <td>To transform the data type of the 'payer_address' column from DECIMAL to VARCHAR, we need to use a simple CAST operation. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we'll proceed with the cast as requested. In DuckDB, the syntax for this operation is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>payer_city</td>
+      <td>CAST("payer_city" AS VARCHAR)</td>
+      <td>To transform the data type of the 'payer_city' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>payer_id</td>
+      <td>CAST("payer_id" AS UUID)</td>
+      <td>To transform the 'payer_id' column from VARCHAR to UUID, we need to use a simple CAST function. In DuckDB, the UUID data type is supported, so we can directly cast the VARCHAR to UUID. The values provided are already in the standard UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward cast should work without any additional formatting.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>payer_phone</td>
+      <td>CAST("payer_phone" AS VARCHAR)</td>
+      <td>To transform the data type of the 'payer_phone' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the current distinct values are empty, this cast will ensure that any future numeric values in this column will be treated as strings.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>payer_zip_code</td>
+      <td>CAST("payer_zip_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'payer_zip_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representations. Even though the current distinct values are empty, this transformation will ensure that any future zip code entries are stored as strings, which is typically more appropriate for zip codes as they can contain leading zeros or non-numeric characters in some cases.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>5</b> columns have missing values<br>
+                ❌ No missing value is acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>headquarters_state</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>payer_address</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>payer_city</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>payer_phone</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>payer_zip_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>headquarters_state</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>payer_address</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>payer_city</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>payer_phone</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>payer_zip_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Medicaid', 'value': 10.0}, {'label': 'Dual Eligible', 'value': 10.0}, {'label': 'Medicare', 'value': 10.0}, {'label': 'Cigna Health', 'value': 10.0}, {'label': 'UnitedHealthcar...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_payer_name", data);
+data = [{'label': 'PRIVATE', 'value': 60.0}, {'label': 'GOVERNMENT', 'value': 30.0}, {'label': 'NO_INSURANCE', 'value': 10.0}];
+    drawBarChart("bar_viz_OWNERSHIP", data);
+data = [{'x': 152810.53625, 'y': 2}, {'x': 458431.60875, 'y': 0}, {'x': 764052.68125, 'y': 0}, {'x': 1069673.7537500001, 'y': 1}, {'x': 1375294.82625, 'y': 1}, {'x': 1680915.8987500002, 'y': 0}, {'x': 1986536.9712500002, 'y': 2}, {'x': 2292158.04375, 'y': 0}, {'x': 2597779.11625, 'y': 1}, {'x': 2903400.1887499997, 'y': 1}];
+    binWidth = 305621.0725;
+    drawHistogram("hist_viz_total_covered_amount", data, binWidth);
+data = [{'x': 178314.22950000002, 'y': 9}, {'x': 517625.3885, 'y': 0}, {'x': 856936.5475, 'y': 0}, {'x': 1196247.7064999999, 'y': 0}, {'x': 1535558.8654999998, 'y': 0}, {'x': 1874870.0244999998, 'y': 0}, {'x': 2214181.1835, 'y': 0}, {'x': 2553492.3425, 'y': 0}, {'x': 2892803.5015, 'y': 0}, {'x': 3232114.6604999998, 'y': 0}];
+    binWidth = 339311.159;
+    drawHistogram("hist_viz_total_uncovered_amount", data, binWidth);
+data = [{'x': 59037.10475, 'y': 3}, {'x': 177111.31425, 'y': 1}, {'x': 295185.52375, 'y': 0}, {'x': 413259.73325, 'y': 1}, {'x': 531333.9427499999, 'y': 0}, {'x': 649408.15225, 'y': 0}, {'x': 767482.3617499999, 'y': 0}, {'x': 885556.57125, 'y': 0}, {'x': 1003630.7807499999, 'y': 0}, {'x': 1121704.9902499998, 'y': 0}];
+    binWidth = 118074.2095;
+    drawHistogram("hist_viz_REVENUE", data, binWidth);
+data = [{'x': 30.425, 'y': 2}, {'x': 91.275, 'y': 0}, {'x': 152.125, 'y': 0}, {'x': 212.97500000000002, 'y': 1}, {'x': 273.825, 'y': 0}, {'x': 334.675, 'y': 0}, {'x': 395.525, 'y': 0}, {'x': 456.375, 'y': 0}, {'x': 517.225, 'y': 2}, {'x': 578.075, 'y': 1}];
+    binWidth = 60.85;
+    drawHistogram("hist_viz_covered_encounters_count", data, binWidth);
+data = [{'x': 38.825, 'y': 9}, {'x': 116.47500000000001, 'y': 0}, {'x': 194.125, 'y': 0}, {'x': 271.77500000000003, 'y': 0}, {'x': 349.425, 'y': 0}, {'x': 427.07500000000005, 'y': 0}, {'x': 504.725, 'y': 0}, {'x': 582.375, 'y': 0}, {'x': 660.0250000000001, 'y': 0}, {'x': 737.675, 'y': 0}];
+    binWidth = 77.65;
+    drawHistogram("hist_viz_uncovered_encounters_count", data, binWidth);
+data = [{'x': 22.95, 'y': 2}, {'x': 68.85, 'y': 1}, {'x': 114.75, 'y': 0}, {'x': 160.64999999999998, 'y': 2}, {'x': 206.55, 'y': 2}, {'x': 252.45, 'y': 1}, {'x': 298.35, 'y': 1}, {'x': 344.25, 'y': 0}, {'x': 390.15, 'y': 0}, {'x': 436.04999999999995, 'y': 0}];
+    binWidth = 45.9;
+    drawHistogram("hist_viz_covered_medications_count", data, binWidth);
+data = [{'x': 6.9, 'y': 9}, {'x': 20.700000000000003, 'y': 0}, {'x': 34.5, 'y': 0}, {'x': 48.300000000000004, 'y': 0}, {'x': 62.1, 'y': 0}, {'x': 75.9, 'y': 0}, {'x': 89.70000000000002, 'y': 0}, {'x': 103.5, 'y': 0}, {'x': 117.30000000000001, 'y': 0}, {'x': 131.1, 'y': 0}];
+    binWidth = 13.8;
+    drawHistogram("hist_viz_uncovered_medications_count", data, binWidth);
+data = [{'x': 47.7, 'y': 2}, {'x': 143.10000000000002, 'y': 0}, {'x': 238.50000000000003, 'y': 1}, {'x': 333.90000000000003, 'y': 0}, {'x': 429.3, 'y': 0}, {'x': 524.7, 'y': 0}, {'x': 620.1000000000001, 'y': 0}, {'x': 715.5, 'y': 1}, {'x': 810.9000000000001, 'y': 3}, {'x': 906.3, 'y': 0}];
+    binWidth = 95.4;
+    drawHistogram("hist_viz_covered_procedures_count", data, binWidth);
+data = [{'x': 52.85, 'y': 9}, {'x': 158.55, 'y': 0}, {'x': 264.25, 'y': 0}, {'x': 369.95000000000005, 'y': 0}, {'x': 475.65, 'y': 0}, {'x': 581.35, 'y': 0}, {'x': 687.05, 'y': 0}, {'x': 792.75, 'y': 0}, {'x': 898.45, 'y': 0}, {'x': 1004.1500000000001, 'y': 0}];
+    binWidth = 105.7;
+    drawHistogram("hist_viz_uncovered_procedures_count", data, binWidth);
+data = [{'x': 13.35, 'y': 1}, {'x': 40.05, 'y': 2}, {'x': 66.75, 'y': 0}, {'x': 93.44999999999999, 'y': 0}, {'x': 120.15, 'y': 0}, {'x': 146.85, 'y': 0}, {'x': 173.55, 'y': 1}, {'x': 200.25, 'y': 1}, {'x': 226.95, 'y': 0}, {'x': 253.64999999999998, 'y': 0}];
+    binWidth = 26.7;
+    drawHistogram("hist_viz_covered_immunizations_count", data, binWidth);
+data = [{'x': 15.575, 'y': 9}, {'x': 46.724999999999994, 'y': 0}, {'x': 77.875, 'y': 0}, {'x': 109.02499999999999, 'y': 0}, {'x': 140.175, 'y': 0}, {'x': 171.325, 'y': 0}, {'x': 202.47499999999997, 'y': 0}, {'x': 233.625, 'y': 0}, {'x': 264.775, 'y': 0}, {'x': 295.92499999999995, 'y': 0}];
+    binWidth = 31.15;
+    drawHistogram("hist_viz_uncovered_immunizations_count", data, binWidth);
+data = [{'x': 3.45, 'y': 1}, {'x': 4.35, 'y': 0}, {'x': 5.25, 'y': 1}, {'x': 6.15, 'y': 2}, {'x': 7.05, 'y': 0}, {'x': 7.95, 'y': 0}, {'x': 8.850000000000001, 'y': 0}, {'x': 9.75, 'y': 1}, {'x': 10.649999999999999, 'y': 0}, {'x': 11.55, 'y': 0}];
+    binWidth = 0.9;
+    drawHistogram("hist_viz_UNIQUE_CUSTOMERS", data, binWidth);
+data = [{'x': 0.5679449057342425, 'y': 1}, {'x': 0.5889518585233156, 'y': 0}, {'x': 0.6099588113123886, 'y': 0}, {'x': 0.6309657641014618, 'y': 0}, {'x': 0.6519727168905348, 'y': 0}, {'x': 0.6729796696796079, 'y': 0}, {'x': 0.6939866224686809, 'y': 0}, {'x': 0.714993575257754, 'y': 0}, {'x': 0.736000528046827, 'y': 0}, {'x': 0.7570074808359001, 'y': 1}];
+    binWidth = 0.02100695278907307;
+    drawHistogram("hist_viz_average_quality_of_life_score", data, binWidth);
+data = [{'x': 479.1, 'y': 2}, {'x': 837.3, 'y': 0}, {'x': 1195.5, 'y': 0}, {'x': 1553.6999999999998, 'y': 0}, {'x': 1911.9, 'y': 0}, {'x': 2270.1, 'y': 0}, {'x': 2628.3, 'y': 1}, {'x': 2986.5, 'y': 1}, {'x': 3344.7, 'y': 1}, {'x': 3702.8999999999996, 'y': 2}];
+    binWidth = 358.2;
+    drawHistogram("hist_viz_MEMBER_MONTHS", data, binWidth);
+data = [{'label': 'd31fccc3-1767-3...', 'value': 10.0}, {'label': '8fa6c185-e44e-3...', 'value': 10.0}, {'label': 'b1c428d6-4f07-3...', 'value': 10.0}, {'label': 'a735bf55-83e9-3...', 'value': 10.0}, {'label': 'df166300-5a78-3...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_payer_id", data);
+
+
+</script>
+</body>
+</html>

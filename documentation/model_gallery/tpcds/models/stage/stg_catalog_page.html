@@ -1,0 +1,3234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>catalog_page</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>CP_CATALOG_PAGE_SK</th>
+      <th>CP_CATALOG_PAGE_ID</th>
+      <th>CP_START_DATE_SK</th>
+      <th>CP_END_DATE_SK</th>
+      <th>CP_DEPARTMENT</th>
+      <th>CP_CATALOG_NUMBER</th>
+      <th>CP_CATALOG_PAGE_NUMBER</th>
+      <th>CP_TYPE</th>
+      <th>CP_DESCRIPTION</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>1.0</td>
+      <td>bi-annual</td>
+      <td>In general basic characters welcome. Clearly lively friends conv</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>2.0</td>
+      <td>bi-annual</td>
+      <td>English areas will leave prisoners. Too public countries ought to become beneath the years.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>AAAAAAAADAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>3.0</td>
+      <td>bi-annual</td>
+      <td>Times could not address disabled indians. Effectively public ports c</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>AAAAAAAAEAAAAAAA</td>
+      <td>2450815</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>bi-annual</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>AAAAAAAAFAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>5.0</td>
+      <td>bi-annual</td>
+      <td>Classic buildings ensure in a tests. Real years may not receive open systems. Now broad m</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>AAAAAAAAGAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>6.0</td>
+      <td>bi-annual</td>
+      <td>Exciting principles wish greatly only excellent women. Appropriate fortunes shall not</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>AAAAAAAAHAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>7.0</td>
+      <td>bi-annual</td>
+      <td>National services must not come at least into a girls</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>AAAAAAAAIAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>8.0</td>
+      <td>bi-annual</td>
+      <td>Areas see early for a pounds. New goods study too serious women. Unwittingly sorry incentives shall</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>AAAAAAAAJAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>9.0</td>
+      <td>bi-annual</td>
+      <td>Intensive, economic changes resist bloody of course simple economies;</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>AAAAAAAAKAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>10.0</td>
+      <td>bi-annual</td>
+      <td>Careful, intense funds balance perhaps boys. Romantic chips remove legs. Direct birds get</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>AAAAAAAALAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>11.0</td>
+      <td>bi-annual</td>
+      <td>At least national countries live by an sales. Weap</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>AAAAAAAAMAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>12.0</td>
+      <td>bi-annual</td>
+      <td>Girls indicate so in a countries. Natural, emotional weeks try a</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>AAAAAAAANAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>13.0</td>
+      <td>bi-annual</td>
+      <td>Miles see mainly clear hands. Villages finish there blue figures. Moreover wide students travel poo</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>AAAAAAAAOAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>14.0</td>
+      <td>bi-annual</td>
+      <td>Rooms would say ago economic sections. Essential properties might not support groups. Ago rare eye</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>AAAAAAAAPAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>15.0</td>
+      <td>bi-annual</td>
+      <td>Legal, required ends may not improve in the pictures. Really social structur</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>AAAAAAAAABAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>16.0</td>
+      <td>bi-annual</td>
+      <td>Schools must know now empty legs; generally daily children use sharp, loca</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>AAAAAAAABBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>17.0</td>
+      <td>bi-annual</td>
+      <td>More than true carers can ensure at a officers. Candidates s</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>AAAAAAAACBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>18.0</td>
+      <td>bi-annual</td>
+      <td>Shops end problems. Urban experiences play new stores. Institutions order as residential places.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>AAAAAAAADBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>19.0</td>
+      <td>bi-annual</td>
+      <td>Poor, hostile guidelines could hope alone early things. Secret,</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>AAAAAAAAEBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>20.0</td>
+      <td>bi-annual</td>
+      <td>Appropriate years kill. Probably male units come perhaps between the minutes.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>AAAAAAAAFBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>21.0</td>
+      <td>bi-annual</td>
+      <td>Gentle fields understand forward high parental faciliti</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>AAAAAAAAGBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>22.0</td>
+      <td>bi-annual</td>
+      <td>Square, good women can refuse. Women allow over courses. Entire, dail</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>AAAAAAAAHBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>23.0</td>
+      <td>bi-annual</td>
+      <td>Level, ordinary names would change institutional principles. Fe</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>AAAAAAAAIBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>24.0</td>
+      <td>bi-annual</td>
+      <td>For once public conditions could help even single, free vehicles. Soldi</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>AAAAAAAAJBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>25.0</td>
+      <td>bi-annual</td>
+      <td>Dimensions ensure by a enquiries. Special times may practise much full, bad books; l</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>AAAAAAAAKBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>26.0</td>
+      <td>bi-annual</td>
+      <td>Nervously reasonable sanctions would not supply often structures. National dangers relieve never</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>AAAAAAAALBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>27.0</td>
+      <td>bi-annual</td>
+      <td>Ready restaurants can represent previously perfectly educational thanks; adjacent quantities t</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>AAAAAAAAMBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>28.0</td>
+      <td>bi-annual</td>
+      <td>Also new funds must not find in addition essential poor friends; now</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>AAAAAAAANBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>29.0</td>
+      <td>bi-annual</td>
+      <td>Small circumstances enter almost potentially spare individuals. Residential women launch</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>AAAAAAAAOBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>30.0</td>
+      <td>bi-annual</td>
+      <td>Western, legislative courses cause truly else strange costs. Only grey windows come without a depo</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>AAAAAAAAPBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>31.0</td>
+      <td>bi-annual</td>
+      <td>Differences would complete previously at a notes. Important</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>AAAAAAAAACAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>32.0</td>
+      <td>bi-annual</td>
+      <td>Quickly industrial trousers remember poor, practica</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>AAAAAAAABCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>33.0</td>
+      <td>bi-annual</td>
+      <td>Here divine knees could not recall then before a meals. Resources use commercial,</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>AAAAAAAACCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>34.0</td>
+      <td>bi-annual</td>
+      <td>Old, essential demonstrations watch absolutely; never woo</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>AAAAAAAADCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>35.0</td>
+      <td>bi-annual</td>
+      <td>Simple blocks feel now whole police. Available meanings must shine clearly real, good departmen</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>AAAAAAAAECAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>36.0</td>
+      <td>bi-annual</td>
+      <td>Dead rats contain central, interesting years. Classes go.</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>AAAAAAAAFCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>37.0</td>
+      <td>bi-annual</td>
+      <td>Approaches demonstrate requirements. Public views can need hard. Almost alone</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>AAAAAAAAGCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>38.0</td>
+      <td>bi-annual</td>
+      <td>Ready perceptions close only with a conservatives.</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>AAAAAAAAHCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>39.0</td>
+      <td>bi-annual</td>
+      <td>Vastly favorite systems may not imply manufacturing, new facilities. Eventually wo</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>AAAAAAAAICAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>40.0</td>
+      <td>bi-annual</td>
+      <td>Social, full questions learn already cautiously unemployed solicitors. Alone, close s</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>AAAAAAAAJCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>41.0</td>
+      <td>bi-annual</td>
+      <td>True friends may not pay once at first good issues. Girls ought to grow t</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>AAAAAAAAKCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>42.0</td>
+      <td>bi-annual</td>
+      <td>Fine animals may expect solidly. Highest extra vessels take here simila</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>AAAAAAAALCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>43.0</td>
+      <td>bi-annual</td>
+      <td>Relatively darling limits must not forgive. Rural, dry folk h</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>AAAAAAAAMCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>44.0</td>
+      <td>bi-annual</td>
+      <td>More likely movements shall identify badly other sensitive ideas. Fully other views could not</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>AAAAAAAANCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>45.0</td>
+      <td>bi-annual</td>
+      <td>Full heads imply unfortunately good policies. However different periods will not avoid highly in</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>AAAAAAAAOCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>46.0</td>
+      <td>bi-annual</td>
+      <td>Old beings used to raise. Curtains cannot enable just sites. Cells can say western talks;</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>AAAAAAAAPCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>47.0</td>
+      <td>bi-annual</td>
+      <td>Dangerous, desirable relations might forget always free activities. Values ough</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>AAAAAAAAADAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>48.0</td>
+      <td>bi-annual</td>
+      <td>Moving, parliamentary women seal only glad, little damages. Electoral ways</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>AAAAAAAABDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>49.0</td>
+      <td>bi-annual</td>
+      <td>Old, extensive months cannot write political numbers. Minor lips know as usual f</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>AAAAAAAACDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>50.0</td>
+      <td>bi-annual</td>
+      <td>Now metropolitan prices survive institutions. Internal cheeks</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>AAAAAAAADDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>51.0</td>
+      <td>bi-annual</td>
+      <td>Superior, pink men should plant also recent, very fears. Purposes see other men. Tough, particular</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>AAAAAAAAEDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>52.0</td>
+      <td>bi-annual</td>
+      <td>Urban, large girls could go. Actions might guard about key ot</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>AAAAAAAAFDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>53.0</td>
+      <td>bi-annual</td>
+      <td>Relevant, major backs fly just private findings. New workers must not keep l</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>AAAAAAAAGDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>54.0</td>
+      <td>bi-annual</td>
+      <td>Rights should reassure as to a borders; difficult, efficient servants might no</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>AAAAAAAAHDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>55.0</td>
+      <td>bi-annual</td>
+      <td>Male requirements can make. Catholic results load maybe common ba</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>AAAAAAAAIDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>56.0</td>
+      <td>bi-annual</td>
+      <td>Men talk even like a days. Still large feelings see new, quick hotels. Far black relations should</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>AAAAAAAAJDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>57.0</td>
+      <td>bi-annual</td>
+      <td>Expressly local horses shall undertake perhaps able, co</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>AAAAAAAAKDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>58.0</td>
+      <td>bi-annual</td>
+      <td>Tasks work fun trees. Old employees make colonial, good signs. Famous emo</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>AAAAAAAALDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>59.0</td>
+      <td>bi-annual</td>
+      <td>Free, like figures will not leave once similar, eas</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>AAAAAAAAMDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>60.0</td>
+      <td>bi-annual</td>
+      <td>Teachers would choose always average investments. Unable, illegal sorts see. Shadows sha</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>AAAAAAAANDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>61.0</td>
+      <td>bi-annual</td>
+      <td>Glad developments improve still unable, invisible communications. High processes ru</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>AAAAAAAAODAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>62.0</td>
+      <td>bi-annual</td>
+      <td>Indeed poor enemies change so to a hours. Either public circumstan</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>AAAAAAAAPDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>63.0</td>
+      <td>bi-annual</td>
+      <td>Possible, general practitioners must mate in a companies. Small developments per</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>AAAAAAAAAEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>64.0</td>
+      <td>bi-annual</td>
+      <td>New, other men would hear secret costs. Major lines might think. Modern hands shall</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>AAAAAAAABEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>65.0</td>
+      <td>bi-annual</td>
+      <td>Otherwise vast titles could comprehend just, strong forms. Historic, european owners enha</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>AAAAAAAACEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>66.0</td>
+      <td>bi-annual</td>
+      <td>Simple types stir oddly. More head depths could tak</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>AAAAAAAADEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>67.0</td>
+      <td>bi-annual</td>
+      <td>Other developments shall not race in order objective wings. Nearby departments</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>AAAAAAAAEEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>68.0</td>
+      <td>bi-annual</td>
+      <td>More big police cannot give important, difficult clients. Black, early vessels use</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>AAAAAAAAFEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>69.0</td>
+      <td>bi-annual</td>
+      <td>More basic colleagues should shift; muscles make however legal authorities.</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>AAAAAAAAGEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>70.0</td>
+      <td>bi-annual</td>
+      <td>Visual, major matters witness together so-called days. Obviously sharp men spend meanwhile els</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>AAAAAAAAHEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>71.0</td>
+      <td>bi-annual</td>
+      <td>Numbers may create now concerned families. Machines must</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>AAAAAAAAIEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>72.0</td>
+      <td>bi-annual</td>
+      <td>Sometimes lexical police shall affect women. Personal banks could not cost e</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>AAAAAAAAJEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>73.0</td>
+      <td>bi-annual</td>
+      <td>Journalists develop civil, open methods. Very normal vehicles used t</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>AAAAAAAAKEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>74.0</td>
+      <td>bi-annual</td>
+      <td>Cheap problems obtain national, new organisations. Certain, suitable words</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>AAAAAAAALEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>75.0</td>
+      <td>bi-annual</td>
+      <td>Specifically russian plans must use neither grand shares. Harsh, french results increase</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>AAAAAAAAMEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>76.0</td>
+      <td>bi-annual</td>
+      <td>Entirely normal thousands cannot rely just important ti</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>AAAAAAAANEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>77.0</td>
+      <td>bi-annual</td>
+      <td>American years swallow only, nice thanks. Obvious materials might not discuss just.</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>AAAAAAAAOEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>78.0</td>
+      <td>bi-annual</td>
+      <td>Intelligent buildings might not keep here new cases. Sole</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>AAAAAAAAPEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>79.0</td>
+      <td>bi-annual</td>
+      <td>Complaints release views. Really internal interpretations used to make funny, important</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>AAAAAAAAAFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>80.0</td>
+      <td>bi-annual</td>
+      <td>Words know difficult, lucky areas. Over red parts need extr</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>AAAAAAAABFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>81.0</td>
+      <td>bi-annual</td>
+      <td>Vital findings come more about convincing firms. Hor</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>AAAAAAAACFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>82.0</td>
+      <td>bi-annual</td>
+      <td>Colonial interests reach also. Results will not pursue seconds. Labour other</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>AAAAAAAADFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>83.0</td>
+      <td>bi-annual</td>
+      <td>In order compatible schools float particular families. Briefly strong words used</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>AAAAAAAAEFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>84.0</td>
+      <td>bi-annual</td>
+      <td>Industrial cars exist workers. Dependent pages should consider straig</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>AAAAAAAAFFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>85.0</td>
+      <td>bi-annual</td>
+      <td>Minutes ought to keep marginal states. New, financial nurses become later. Legally engl</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>AAAAAAAAGFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>86.0</td>
+      <td>bi-annual</td>
+      <td>Talks draw totally manufacturers. Lines evolve very; conditions see mi</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>AAAAAAAAHFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>87.0</td>
+      <td>bi-annual</td>
+      <td>Away dramatic letters say slightly for a advisers. Severe, difficult points entail h</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>AAAAAAAAIFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>88.0</td>
+      <td>bi-annual</td>
+      <td>Particular projects involve always final lakes. Subjects must move</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>AAAAAAAAJFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>89.0</td>
+      <td>bi-annual</td>
+      <td>More responsible bands pursue then including a tasks; extremely traditional numbe</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>AAAAAAAAKFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>90.0</td>
+      <td>bi-annual</td>
+      <td>Enough real studies should not appear weekends. Rich,</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>AAAAAAAALFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>91.0</td>
+      <td>bi-annual</td>
+      <td>Safe prices grow there enough private boys. Priorities come eventually forces. Regi</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>AAAAAAAAMFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>92.0</td>
+      <td>bi-annual</td>
+      <td>Years can know. Available, dead degrees may begin ever. Docto</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>AAAAAAAANFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>93.0</td>
+      <td>bi-annual</td>
+      <td>Perfectly mild differences must visit deaf years. Attractive, interesting women might not tie to t</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>AAAAAAAAOFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>94.0</td>
+      <td>bi-annual</td>
+      <td>Equal, other calls maintain simply. Newspapers cannot touch f</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>AAAAAAAAPFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>95.0</td>
+      <td>bi-annual</td>
+      <td>Bonds include completely critical principles. Charges walk just forms. Subsequent, ti</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>AAAAAAAAAGAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>96.0</td>
+      <td>bi-annual</td>
+      <td>Then other details will stop nuclear officers. Capital expenses carve far options. Stru</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>AAAAAAAABGAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>97.0</td>
+      <td>bi-annual</td>
+      <td>Trees help far also ideal debts. Old, outstanding forces</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>AAAAAAAACGAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>98.0</td>
+      <td>bi-annual</td>
+      <td>Still fine services would surrender urban results; mean, serious considerations may say</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>AAAAAAAADGAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>99.0</td>
+      <td>bi-annual</td>
+      <td>Useful, white courts leave almost high fingers. Popular, basic words plan</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>page_surrogate_key</th>
+      <th>page_id</th>
+      <th>start_date_key</th>
+      <th>end_date_key</th>
+      <th>department</th>
+      <th>catalog_id</th>
+      <th>page_number</th>
+      <th>catalog_type</th>
+      <th>page_description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>1.0</td>
+      <td>bi-annual</td>
+      <td>In general basic characters welcome. Clearly lively friends conv</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>2.0</td>
+      <td>bi-annual</td>
+      <td>English areas will leave prisoners. Too public countries ought to become beneath the years.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>AAAAAAAADAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>3.0</td>
+      <td>bi-annual</td>
+      <td>Times could not address disabled indians. Effectively public ports c</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>AAAAAAAAEAAAAAAA</td>
+      <td>2450815</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>bi-annual</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>AAAAAAAAFAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>5.0</td>
+      <td>bi-annual</td>
+      <td>Classic buildings ensure in a tests. Real years may not receive open systems. Now broad m</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>AAAAAAAAGAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>6.0</td>
+      <td>bi-annual</td>
+      <td>Exciting principles wish greatly only excellent women. Appropriate fortunes shall not</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>AAAAAAAAHAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>7.0</td>
+      <td>bi-annual</td>
+      <td>National services must not come at least into a girls</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>AAAAAAAAIAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>8.0</td>
+      <td>bi-annual</td>
+      <td>Areas see early for a pounds. New goods study too serious women. Unwittingly sorry incentives shall</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>AAAAAAAAJAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>9.0</td>
+      <td>bi-annual</td>
+      <td>Intensive, economic changes resist bloody of course simple economies;</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>AAAAAAAAKAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>10.0</td>
+      <td>bi-annual</td>
+      <td>Careful, intense funds balance perhaps boys. Romantic chips remove legs. Direct birds get</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>AAAAAAAALAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>11.0</td>
+      <td>bi-annual</td>
+      <td>At least national countries live by an sales. Weap</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>AAAAAAAAMAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>12.0</td>
+      <td>bi-annual</td>
+      <td>Girls indicate so in a countries. Natural, emotional weeks try a</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>AAAAAAAANAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>13.0</td>
+      <td>bi-annual</td>
+      <td>Miles see mainly clear hands. Villages finish there blue figures. Moreover wide students travel poo</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>AAAAAAAAOAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>14.0</td>
+      <td>bi-annual</td>
+      <td>Rooms would say ago economic sections. Essential properties might not support groups. Ago rare eye</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>AAAAAAAAPAAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>15.0</td>
+      <td>bi-annual</td>
+      <td>Legal, required ends may not improve in the pictures. Really social structur</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>AAAAAAAAABAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>16.0</td>
+      <td>bi-annual</td>
+      <td>Schools must know now empty legs; generally daily children use sharp, loca</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>AAAAAAAABBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>17.0</td>
+      <td>bi-annual</td>
+      <td>More than true carers can ensure at a officers. Candidates s</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>AAAAAAAACBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>18.0</td>
+      <td>bi-annual</td>
+      <td>Shops end problems. Urban experiences play new stores. Institutions order as residential places.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>AAAAAAAADBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>19.0</td>
+      <td>bi-annual</td>
+      <td>Poor, hostile guidelines could hope alone early things. Secret,</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>AAAAAAAAEBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>20.0</td>
+      <td>bi-annual</td>
+      <td>Appropriate years kill. Probably male units come perhaps between the minutes.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>AAAAAAAAFBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>21.0</td>
+      <td>bi-annual</td>
+      <td>Gentle fields understand forward high parental faciliti</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>AAAAAAAAGBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>22.0</td>
+      <td>bi-annual</td>
+      <td>Square, good women can refuse. Women allow over courses. Entire, dail</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>AAAAAAAAHBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>23.0</td>
+      <td>bi-annual</td>
+      <td>Level, ordinary names would change institutional principles. Fe</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>AAAAAAAAIBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>24.0</td>
+      <td>bi-annual</td>
+      <td>For once public conditions could help even single, free vehicles. Soldi</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>AAAAAAAAJBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>25.0</td>
+      <td>bi-annual</td>
+      <td>Dimensions ensure by a enquiries. Special times may practise much full, bad books; l</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>AAAAAAAAKBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>26.0</td>
+      <td>bi-annual</td>
+      <td>Nervously reasonable sanctions would not supply often structures. National dangers relieve never</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>AAAAAAAALBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>27.0</td>
+      <td>bi-annual</td>
+      <td>Ready restaurants can represent previously perfectly educational thanks; adjacent quantities t</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>AAAAAAAAMBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>28.0</td>
+      <td>bi-annual</td>
+      <td>Also new funds must not find in addition essential poor friends; now</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>AAAAAAAANBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>29.0</td>
+      <td>bi-annual</td>
+      <td>Small circumstances enter almost potentially spare individuals. Residential women launch</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>AAAAAAAAOBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>30.0</td>
+      <td>bi-annual</td>
+      <td>Western, legislative courses cause truly else strange costs. Only grey windows come without a depo</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>AAAAAAAAPBAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>31.0</td>
+      <td>bi-annual</td>
+      <td>Differences would complete previously at a notes. Important</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>AAAAAAAAACAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>32.0</td>
+      <td>bi-annual</td>
+      <td>Quickly industrial trousers remember poor, practica</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>AAAAAAAABCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>33.0</td>
+      <td>bi-annual</td>
+      <td>Here divine knees could not recall then before a meals. Resources use commercial,</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>AAAAAAAACCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>34.0</td>
+      <td>bi-annual</td>
+      <td>Old, essential demonstrations watch absolutely; never woo</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>AAAAAAAADCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>35.0</td>
+      <td>bi-annual</td>
+      <td>Simple blocks feel now whole police. Available meanings must shine clearly real, good departmen</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>AAAAAAAAECAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>36.0</td>
+      <td>bi-annual</td>
+      <td>Dead rats contain central, interesting years. Classes go.</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>AAAAAAAAFCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>37.0</td>
+      <td>bi-annual</td>
+      <td>Approaches demonstrate requirements. Public views can need hard. Almost alone</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>AAAAAAAAGCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>38.0</td>
+      <td>bi-annual</td>
+      <td>Ready perceptions close only with a conservatives.</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>AAAAAAAAHCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>39.0</td>
+      <td>bi-annual</td>
+      <td>Vastly favorite systems may not imply manufacturing, new facilities. Eventually wo</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>AAAAAAAAICAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>40.0</td>
+      <td>bi-annual</td>
+      <td>Social, full questions learn already cautiously unemployed solicitors. Alone, close s</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>AAAAAAAAJCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>41.0</td>
+      <td>bi-annual</td>
+      <td>True friends may not pay once at first good issues. Girls ought to grow t</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>AAAAAAAAKCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>42.0</td>
+      <td>bi-annual</td>
+      <td>Fine animals may expect solidly. Highest extra vessels take here simila</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>AAAAAAAALCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>43.0</td>
+      <td>bi-annual</td>
+      <td>Relatively darling limits must not forgive. Rural, dry folk h</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>AAAAAAAAMCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>44.0</td>
+      <td>bi-annual</td>
+      <td>More likely movements shall identify badly other sensitive ideas. Fully other views could not</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>AAAAAAAANCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>45.0</td>
+      <td>bi-annual</td>
+      <td>Full heads imply unfortunately good policies. However different periods will not avoid highly in</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>AAAAAAAAOCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>46.0</td>
+      <td>bi-annual</td>
+      <td>Old beings used to raise. Curtains cannot enable just sites. Cells can say western talks;</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>AAAAAAAAPCAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>47.0</td>
+      <td>bi-annual</td>
+      <td>Dangerous, desirable relations might forget always free activities. Values ough</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>AAAAAAAAADAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>48.0</td>
+      <td>bi-annual</td>
+      <td>Moving, parliamentary women seal only glad, little damages. Electoral ways</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>AAAAAAAABDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>49.0</td>
+      <td>bi-annual</td>
+      <td>Old, extensive months cannot write political numbers. Minor lips know as usual f</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>AAAAAAAACDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>50.0</td>
+      <td>bi-annual</td>
+      <td>Now metropolitan prices survive institutions. Internal cheeks</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>AAAAAAAADDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>51.0</td>
+      <td>bi-annual</td>
+      <td>Superior, pink men should plant also recent, very fears. Purposes see other men. Tough, particular</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>AAAAAAAAEDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>52.0</td>
+      <td>bi-annual</td>
+      <td>Urban, large girls could go. Actions might guard about key ot</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>AAAAAAAAFDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>53.0</td>
+      <td>bi-annual</td>
+      <td>Relevant, major backs fly just private findings. New workers must not keep l</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>AAAAAAAAGDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>54.0</td>
+      <td>bi-annual</td>
+      <td>Rights should reassure as to a borders; difficult, efficient servants might no</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>AAAAAAAAHDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>55.0</td>
+      <td>bi-annual</td>
+      <td>Male requirements can make. Catholic results load maybe common ba</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>AAAAAAAAIDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>56.0</td>
+      <td>bi-annual</td>
+      <td>Men talk even like a days. Still large feelings see new, quick hotels. Far black relations should</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>AAAAAAAAJDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>57.0</td>
+      <td>bi-annual</td>
+      <td>Expressly local horses shall undertake perhaps able, co</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>AAAAAAAAKDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>58.0</td>
+      <td>bi-annual</td>
+      <td>Tasks work fun trees. Old employees make colonial, good signs. Famous emo</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>AAAAAAAALDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>59.0</td>
+      <td>bi-annual</td>
+      <td>Free, like figures will not leave once similar, eas</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>AAAAAAAAMDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>60.0</td>
+      <td>bi-annual</td>
+      <td>Teachers would choose always average investments. Unable, illegal sorts see. Shadows sha</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>AAAAAAAANDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>61.0</td>
+      <td>bi-annual</td>
+      <td>Glad developments improve still unable, invisible communications. High processes ru</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>AAAAAAAAODAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>62.0</td>
+      <td>bi-annual</td>
+      <td>Indeed poor enemies change so to a hours. Either public circumstan</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>AAAAAAAAPDAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>63.0</td>
+      <td>bi-annual</td>
+      <td>Possible, general practitioners must mate in a companies. Small developments per</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>AAAAAAAAAEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>64.0</td>
+      <td>bi-annual</td>
+      <td>New, other men would hear secret costs. Major lines might think. Modern hands shall</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>AAAAAAAABEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>65.0</td>
+      <td>bi-annual</td>
+      <td>Otherwise vast titles could comprehend just, strong forms. Historic, european owners enha</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>AAAAAAAACEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>66.0</td>
+      <td>bi-annual</td>
+      <td>Simple types stir oddly. More head depths could tak</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>AAAAAAAADEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>67.0</td>
+      <td>bi-annual</td>
+      <td>Other developments shall not race in order objective wings. Nearby departments</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>AAAAAAAAEEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>68.0</td>
+      <td>bi-annual</td>
+      <td>More big police cannot give important, difficult clients. Black, early vessels use</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>AAAAAAAAFEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>69.0</td>
+      <td>bi-annual</td>
+      <td>More basic colleagues should shift; muscles make however legal authorities.</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>AAAAAAAAGEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>70.0</td>
+      <td>bi-annual</td>
+      <td>Visual, major matters witness together so-called days. Obviously sharp men spend meanwhile els</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>AAAAAAAAHEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>71.0</td>
+      <td>bi-annual</td>
+      <td>Numbers may create now concerned families. Machines must</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>AAAAAAAAIEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>72.0</td>
+      <td>bi-annual</td>
+      <td>Sometimes lexical police shall affect women. Personal banks could not cost e</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>AAAAAAAAJEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>73.0</td>
+      <td>bi-annual</td>
+      <td>Journalists develop civil, open methods. Very normal vehicles used t</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>AAAAAAAAKEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>74.0</td>
+      <td>bi-annual</td>
+      <td>Cheap problems obtain national, new organisations. Certain, suitable words</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>AAAAAAAALEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>75.0</td>
+      <td>bi-annual</td>
+      <td>Specifically russian plans must use neither grand shares. Harsh, french results increase</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>AAAAAAAAMEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>76.0</td>
+      <td>bi-annual</td>
+      <td>Entirely normal thousands cannot rely just important ti</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>AAAAAAAANEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>77.0</td>
+      <td>bi-annual</td>
+      <td>American years swallow only, nice thanks. Obvious materials might not discuss just.</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>AAAAAAAAOEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>78.0</td>
+      <td>bi-annual</td>
+      <td>Intelligent buildings might not keep here new cases. Sole</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>AAAAAAAAPEAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>79.0</td>
+      <td>bi-annual</td>
+      <td>Complaints release views. Really internal interpretations used to make funny, important</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>AAAAAAAAAFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>80.0</td>
+      <td>bi-annual</td>
+      <td>Words know difficult, lucky areas. Over red parts need extr</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>AAAAAAAABFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>81.0</td>
+      <td>bi-annual</td>
+      <td>Vital findings come more about convincing firms. Hor</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>AAAAAAAACFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>82.0</td>
+      <td>bi-annual</td>
+      <td>Colonial interests reach also. Results will not pursue seconds. Labour other</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>AAAAAAAADFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>83.0</td>
+      <td>bi-annual</td>
+      <td>In order compatible schools float particular families. Briefly strong words used</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>AAAAAAAAEFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>84.0</td>
+      <td>bi-annual</td>
+      <td>Industrial cars exist workers. Dependent pages should consider straig</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>AAAAAAAAFFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>85.0</td>
+      <td>bi-annual</td>
+      <td>Minutes ought to keep marginal states. New, financial nurses become later. Legally engl</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>AAAAAAAAGFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>86.0</td>
+      <td>bi-annual</td>
+      <td>Talks draw totally manufacturers. Lines evolve very; conditions see mi</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>AAAAAAAAHFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>87.0</td>
+      <td>bi-annual</td>
+      <td>Away dramatic letters say slightly for a advisers. Severe, difficult points entail h</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>AAAAAAAAIFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>88.0</td>
+      <td>bi-annual</td>
+      <td>Particular projects involve always final lakes. Subjects must move</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>AAAAAAAAJFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>89.0</td>
+      <td>bi-annual</td>
+      <td>More responsible bands pursue then including a tasks; extremely traditional numbe</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>AAAAAAAAKFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>90.0</td>
+      <td>bi-annual</td>
+      <td>Enough real studies should not appear weekends. Rich,</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>AAAAAAAALFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>91.0</td>
+      <td>bi-annual</td>
+      <td>Safe prices grow there enough private boys. Priorities come eventually forces. Regi</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>AAAAAAAAMFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>92.0</td>
+      <td>bi-annual</td>
+      <td>Years can know. Available, dead degrees may begin ever. Docto</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>AAAAAAAANFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>93.0</td>
+      <td>bi-annual</td>
+      <td>Perfectly mild differences must visit deaf years. Attractive, interesting women might not tie to t</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>AAAAAAAAOFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>94.0</td>
+      <td>bi-annual</td>
+      <td>Equal, other calls maintain simply. Newspapers cannot touch f</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>AAAAAAAAPFAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>95.0</td>
+      <td>bi-annual</td>
+      <td>Bonds include completely critical principles. Charges walk just forms. Subsequent, ti</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>AAAAAAAAAGAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>96.0</td>
+      <td>bi-annual</td>
+      <td>Then other details will stop nuclear officers. Capital expenses carve far options. Stru</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>AAAAAAAABGAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>97.0</td>
+      <td>bi-annual</td>
+      <td>Trees help far also ideal debts. Old, outstanding forces</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>AAAAAAAACGAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>98.0</td>
+      <td>bi-annual</td>
+      <td>Still fine services would surrender urban results; mean, serious considerations may say</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>AAAAAAAADGAAAAAA</td>
+      <td>2450815</td>
+      <td>2450996.0</td>
+      <td>DEPARTMENT</td>
+      <td>1</td>
+      <td>99.0</td>
+      <td>bi-annual</td>
+      <td>Useful, white courts leave almost high fingers. Popular, basic words plan</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">page_surrogate_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_page_surrogate_key"></div><b>📃 Summary:</b> Surrogate key for the catalog page<br><b>🦄 Unique:</b> This column is a surrogate key specifically created to uniquely identify each catalog page. For this table, each row represents a unique catalog page, and the page_surrogate_key is designed to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">page_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_page_id"></div><b>📃 Summary:</b> Unique identifier for each catalog page<br><b>🦄 Unique:</b> This column is described as a unique identifier for each catalog page. For this table, each row represents a unique catalog page, and the page_id is intended to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">start_date_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_start_date_key"></div><b>📃 Summary:</b> Surrogate key for the start date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">end_date_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_end_date_key"></div><b>📃 Summary:</b> Surrogate key for the end date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">department</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Electronics'>Electronics</option><option value='Clothing'>Clothing</option><option value='Home & Garden'>Home & Garden</option><option value='Toys & Games'>Toys & Games</option><option value='Sports & Outdoors'>Sports & Outdoors</option><option value='Beauty & Personal Care'>Beauty & Personal Care</option><option value='Books'>Books</option><option value='Music'>Music</option><option value='Movies & TV'>Movies & TV</option><option value='Automotive'>Automotive</option><option value='Grocery'>Grocery</option><option value='Pet Supplies'>Pet Supplies</option><option value='Health & Wellness'>Health & Wellness</option><option value='Jewelry'>Jewelry</option><option value='Office Supplies'>Office Supplies</option><option value='Baby & Kids'>Baby & Kids</option><option value='Furniture'>Furniture</option><option value='Appliances'>Appliances</option><option value='Tools & Home Improvement'>Tools & Home Improvement</option><option value='Arts & Crafts'>Arts & Crafts</option><option value='DEPARTMENT'>DEPARTMENT</option></select></span><br><br><div id="bar_viz_department"></div><b>📃 Summary:</b> Department associated with the catalog page<br><b>❓ Missing:</b> Possibly represents a general or non-departmental page.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">catalog_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_catalog_id"></div><b>📃 Summary:</b> Identifier for the catalog<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">page_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_page_number"></div><b>📃 Summary:</b> Number of the page within the catalog<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">catalog_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='annual'>annual</option><option value='bi-annual'>bi-annual</option><option value='quarterly'>quarterly</option><option value='monthly'>monthly</option><option value='weekly'>weekly</option><option value='daily'>daily</option><option value='seasonal'>seasonal</option><option value='special edition'>special edition</option></select></span><br><br><div id="bar_viz_catalog_type"></div><b>📃 Summary:</b> Type of catalog (e.g., bi-annual)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">page_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_page_description"></div><b>📃 Summary:</b> Brief description of the catalog page content<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about catalog pages. It contains information such as catalog page ID, start and end dates, department, catalog number, page number, description, and type. Each row represents a unique catalog page with its associated details. The type appears to be consistently "bi-annual" for the given samples.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>9</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>CP_CATALOG_PAGE_SK</td>
+      <td>Surrogate key for the catalog page</td>
+      <td>page_surrogate_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CP_CATALOG_PAGE_ID</td>
+      <td>Unique identifier for each catalog page</td>
+      <td>page_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>CP_START_DATE_SK</td>
+      <td>Surrogate key for the start date</td>
+      <td>start_date_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CP_END_DATE_SK</td>
+      <td>Surrogate key for the end date</td>
+      <td>end_date_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CP_DEPARTMENT</td>
+      <td>Department associated with the catalog page</td>
+      <td>department</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CP_CATALOG_NUMBER</td>
+      <td>Identifier for the catalog</td>
+      <td>catalog_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>CP_CATALOG_PAGE_NUMBER</td>
+      <td>Number of the page within the catalog</td>
+      <td>page_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>CP_DESCRIPTION</td>
+      <td>Brief description of the catalog page content</td>
+      <td>page_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>CP_TYPE</td>
+      <td>Type of catalog (e.g., bi-annual)</td>
+      <td>catalog_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>✂️ 3. Leading and Trailing Whitespace</h2><br>
+                🔍 <b>1</b> columns have leading and trailing whitespace<br>
+                ✔️ <b>1</b> columns have been trimmed<br><br><br><h2>🚧 4. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>page_description</b>: Values are unusual because they are incomplete sentences, often cut off mid-word or mid-phrase.<br>❌ The column has not been cleaned<br><br></li></ol><br><h2>❓ 5. Missing Values</h2><br>
+                🔍 <b>4</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>department</td>
+      <td>1.01</td>
+      <td>True</td>
+      <td>Possibly represents a general or non-departmental page.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>end_date_key</td>
+      <td>1.01</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>page_description</td>
+      <td>1.01</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>page_number</td>
+      <td>1.01</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>end_date_key</td>
+      <td>1.01</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>page_description</td>
+      <td>1.01</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>page_number</td>
+      <td>1.01</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 3.45, 'y': 5}, {'x': 8.350000000000001, 'y': 5}, {'x': 13.25, 'y': 5}, {'x': 18.150000000000002, 'y': 5}, {'x': 23.05, 'y': 5}, {'x': 27.950000000000003, 'y': 5}, {'x': 32.85, 'y': 5}, {'x': 37.75, 'y': 5}, {'x': 42.650000000000006, 'y': 5}, {'x': 47.55, 'y': 4}, {'x': 52.45, 'y': 5}, {'x': 57.35000000000001, 'y': 5}, {'x': 62.25, 'y': 5}, {'x': 67.15, 'y': 5}, {'x': 72.05000000000001, 'y': 5}, {'x': 76.95, 'y': 5}, {'x': 81.85000000000001, 'y': 5}, {'x': 86.75, 'y': 5}, {'x': 91.65, 'y': 5}, {'x': 96.55000000000001, 'y': 5}];
+    binWidth = 4.9;
+    drawHistogram("hist_viz_page_surrogate_key", data, binWidth);
+data = [{'label': 'AAAAAAAAKAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAALAAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAADBAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAAJBAAAAA...', 'value': 1.0101010101010102}, {'label': 'AAAAAAAABCAAAAA...', 'value': 1.0101010101010102}, {'label': 'Other values', 'value': 94.94949494949495}];
+    drawBarChart("bar_viz_page_id", data);
+data = [{'x': 2450815, 'y': 99}];
+    binWidth = 2450815;
+    drawHistogram("hist_viz_start_date_key", data, binWidth);
+data = [{'x': 2450996.0, 'y': 98}];
+    binWidth = 2450996.0;
+    drawHistogram("hist_viz_end_date_key", data, binWidth);
+data = [{'label': 'DEPARTMENT', 'value': 100.0}];
+    drawBarChart("bar_viz_department", data);
+data = [{'x': 1, 'y': 99}];
+    binWidth = 1;
+    drawHistogram("hist_viz_catalog_id", data, binWidth);
+data = [{'x': 3.45, 'y': 4}, {'x': 8.350000000000001, 'y': 5}, {'x': 13.25, 'y': 5}, {'x': 18.150000000000002, 'y': 5}, {'x': 23.05, 'y': 5}, {'x': 27.950000000000003, 'y': 5}, {'x': 32.85, 'y': 5}, {'x': 37.75, 'y': 5}, {'x': 42.650000000000006, 'y': 5}, {'x': 47.55, 'y': 4}, {'x': 52.45, 'y': 5}, {'x': 57.35000000000001, 'y': 5}, {'x': 62.25, 'y': 5}, {'x': 67.15, 'y': 5}, {'x': 72.05000000000001, 'y': 5}, {'x': 76.95, 'y': 5}, {'x': 81.85000000000001, 'y': 5}, {'x': 86.75, 'y': 5}, {'x': 91.65, 'y': 5}, {'x': 96.55000000000001, 'y': 5}];
+    binWidth = 4.9;
+    drawHistogram("hist_viz_page_number", data, binWidth);
+data = [{'label': 'bi-annual', 'value': 100.0}];
+    drawBarChart("bar_viz_catalog_type", data);
+data = [{'label': 'Intensive, econ...', 'value': 1.0204081632653061}, {'label': 'Rooms would say...', 'value': 1.0204081632653061}, {'label': 'In general basi...', 'value': 1.0204081632653061}, {'label': 'Times could not...', 'value': 1.0204081632653061}, {'label': 'Classic buildin...', 'value': 1.0204081632653061}, {'label': 'Other values', 'value': 94.89795918367348}];
+    drawBarChart("bar_viz_page_description", data);
+
+
+</script>
+</body>
+</html>

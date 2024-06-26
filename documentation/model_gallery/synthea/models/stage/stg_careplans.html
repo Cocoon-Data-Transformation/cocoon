@@ -1,0 +1,3317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>careplans</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>DESCRIPTION</th>
+      <th>REASONCODE</th>
+      <th>REASONDESCRIPTION</th>
+      <th>Id</th>
+      <th>ENCOUNTER</th>
+      <th>STOP</th>
+      <th>PATIENT</th>
+      <th>CODE</th>
+      <th>START</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Fracture care</td>
+      <td>58150001.0</td>
+      <td>Fracture of clavicle</td>
+      <td>e5cc23db-c84f-3ded-411d-deb020dfcb4c</td>
+      <td>1600b01f-01b3-fd15-135f-c7c4a30d867f</td>
+      <td>2016-07-23</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>385691007</td>
+      <td>2016-04-11</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Wound care</td>
+      <td>284551006.0</td>
+      <td>Laceration of foot</td>
+      <td>d70b9f2f-745e-f594-4983-b48790e4291f</td>
+      <td>3c131d0c-6d15-7fe1-1372-a3d8316b6d82</td>
+      <td>1988-05-12</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>225358003</td>
+      <td>1988-04-27</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>54b5c4bb-1df6-0892-7097-416ecea0f44f</td>
+      <td>d6df3fd6-e4a0-9b51-ebd5-c6394be154eb</td>
+      <td>1990-07-10</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>53950000</td>
+      <td>1989-09-03</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Wound care</td>
+      <td>370247008.0</td>
+      <td>Facial laceration</td>
+      <td>254cfb18-3266-be35-b8c4-8a6a89ce0547</td>
+      <td>17d8fd78-be39-d2f7-6032-74d712972fa3</td>
+      <td>2014-02-03</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>225358003</td>
+      <td>2014-01-20</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>7e07f691-b437-c62b-4379-0a8e55812747</td>
+      <td>5fbc8a13-6944-a854-c4cb-bbd04e969ee1</td>
+      <td>2017-09-02</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>47387005</td>
+      <td>2017-06-08</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Fracture care</td>
+      <td>16114001.0</td>
+      <td>Fracture of ankle</td>
+      <td>3afa6e0d-303b-1172-9dc1-a1e8dc996381</td>
+      <td>1cedec53-a362-320c-d52a-ddbc57fbce63</td>
+      <td>None</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>385691007</td>
+      <td>2022-09-25</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Self-care interventions (procedure)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>65fce626-8442-c6b6-f76b-a724cd56e289</td>
+      <td>75b6f598-e8e7-dfa7-22f6-c02c27cfee92</td>
+      <td>None</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>384758001</td>
+      <td>1974-09-12</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Fracture care</td>
+      <td>65966004.0</td>
+      <td>Fracture of forearm</td>
+      <td>c9c2e553-92ce-169e-93ab-cdae42abce3c</td>
+      <td>59f48dfd-f1f6-faa7-f378-150137d46be4</td>
+      <td>1991-07-16</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385691007</td>
+      <td>1991-05-28</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>6e79278b-2c83-fdbc-0631-b927c1df1751</td>
+      <td>bcf78369-9e90-fe7c-894a-3accb1b2bfa3</td>
+      <td>2020-02-23</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>53950000</td>
+      <td>2019-05-19</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Infectious disease care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>b9643221-a898-52f7-ca52-10eb92fe1079</td>
+      <td>a83a565f-0af5-9a29-6d7f-fdadb5c2b2a9</td>
+      <td>2020-08-21</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>736376001</td>
+      <td>2020-08-21</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Infectious disease care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>a090c9d9-c527-f934-cb99-42ffb48fb859</td>
+      <td>a83a565f-0af5-9a29-6d7f-fdadb5c2b2a9</td>
+      <td>2020-09-13</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>736376001</td>
+      <td>2020-08-21</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Physiotherapy care plan (record artifact)</td>
+      <td>44465007.0</td>
+      <td>Sprain of ankle</td>
+      <td>f0ca4a5a-da2c-91e5-8efd-263ddcff4bb5</td>
+      <td>e2363506-d56c-0d6f-ec1d-7d136aef363c</td>
+      <td>2018-07-20</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>773513001</td>
+      <td>2018-06-23</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Musculoskeletal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>184a9986-b137-18f2-74d4-3dac46fc9074</td>
+      <td>8a77a82e-7d1b-0c61-ab7b-ca56d333490c</td>
+      <td>2017-06-25</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>408869004</td>
+      <td>2017-04-19</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>27e38ecd-dc8e-c180-43d6-86ddaf45f284</td>
+      <td>d2b96a32-694d-35ed-7a53-0a163704b3f9</td>
+      <td>2021-06-24</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>53950000</td>
+      <td>2020-10-21</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>96f04436-c009-50d9-007b-80144db5c6a1</td>
+      <td>de095379-a3d2-1c46-0312-08424ac5a9d7</td>
+      <td>None</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>276239002</td>
+      <td>2017-03-03</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>d4ff8397-e4f6-076d-57e8-d986966266cd</td>
+      <td>1ea79b05-b6ad-a695-a583-0a39174f14b1</td>
+      <td>2019-08-17</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>47387005</td>
+      <td>2019-07-09</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>fae8f3b1-1120-793d-b127-d83014bd7250</td>
+      <td>561693fd-7c3a-236a-fd0c-31772a199544</td>
+      <td>2013-02-28</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>53950000</td>
+      <td>2012-03-29</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Fracture care</td>
+      <td>16114001.0</td>
+      <td>Fracture of ankle</td>
+      <td>35da4ed5-4ad6-c37a-99c7-fbe15c8e08cc</td>
+      <td>a3f6aeb1-56b5-7e85-9f6f-8eb5ce364257</td>
+      <td>2015-01-09</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>385691007</td>
+      <td>2014-10-18</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Overactivity/inattention behavior management</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>24d15925-4876-1b90-a3c9-574b86f835bb</td>
+      <td>edde62c4-db5e-136b-aeb4-bbd377e07821</td>
+      <td>2018-07-03</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>386522008</td>
+      <td>2015-06-07</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Wound care</td>
+      <td>370247008.0</td>
+      <td>Facial laceration</td>
+      <td>7c6ca99e-455f-d8fd-3903-2cef7117b6b6</td>
+      <td>f6fa799c-dd9b-7f5c-b855-80ad16ca61d6</td>
+      <td>2022-08-18</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>225358003</td>
+      <td>2022-07-27</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>edf2b938-b422-e37f-20de-6c046585b2be</td>
+      <td>37bb52fa-5cb1-3512-cefc-1b3159a02ba5</td>
+      <td>None</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>134435003</td>
+      <td>2022-09-19</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Overactivity/inattention behavior management</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>9fe765b3-8ace-9ac2-5972-97ca2aafe1e9</td>
+      <td>a93136db-d61e-a6e6-2ea6-0a35fff590eb</td>
+      <td>2013-03-23</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>386522008</td>
+      <td>2010-05-02</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Fracture care</td>
+      <td>58150001.0</td>
+      <td>Fracture of clavicle</td>
+      <td>60836d05-8bce-c46c-f9d6-46976bea2f9a</td>
+      <td>0148026b-b4db-1663-19ed-a6a51d3c33b2</td>
+      <td>2014-03-20</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>385691007</td>
+      <td>2013-11-23</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bfa2c6e1-21ba-9011-cab5-b9fcb128c3c9</td>
+      <td>c46618a4-e41c-acc2-14bf-5f7a2b343734</td>
+      <td>2014-03-04</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>276239002</td>
+      <td>2014-02-02</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>57c77dc9-7035-dd41-13e7-1d18805d6e66</td>
+      <td>dc08f637-f260-4115-9456-7563c41453e5</td>
+      <td>2015-01-21</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>47387005</td>
+      <td>2014-11-28</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>6b0f2515-6ee7-6a38-2fd3-79c3157d3906</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>2020-02-24</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>53950000</td>
+      <td>2019-04-09</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bea84bb5-dfc4-d783-b91d-ba6934f63ae0</td>
+      <td>3dd72519-2521-c203-e811-4282eb8e4bc1</td>
+      <td>2021-04-15</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>53950000</td>
+      <td>2020-10-22</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Physiotherapy care plan (record artifact)</td>
+      <td>44465007.0</td>
+      <td>Sprain of ankle</td>
+      <td>b9b90ec6-fda9-e7c4-7203-ce01e06d626d</td>
+      <td>186658bc-2fc0-fcd3-9cb2-d8aeb00a2bfd</td>
+      <td>2019-02-16</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>773513001</td>
+      <td>2019-01-15</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>86000c22-37bf-e772-8a59-eaea731e16fb</td>
+      <td>4685cc46-7d85-cf20-0f78-26751e8aa352</td>
+      <td>2021-07-16</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>134435003</td>
+      <td>2020-11-27</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>5d022e9e-cb96-2b23-8dfe-029346f794e4</td>
+      <td>13a69895-45bd-a47a-5094-c1b7bc8aca5b</td>
+      <td>2014-05-12</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>53950000</td>
+      <td>2013-08-19</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Musculoskeletal care</td>
+      <td>239872002.0</td>
+      <td>Osteoarthritis of hip</td>
+      <td>485ecd82-beeb-e7ee-e24a-3fa60e0eaa87</td>
+      <td>ccbe3bc6-a95e-ad27-9038-98697b4afbfe</td>
+      <td>None</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>408869004</td>
+      <td>2008-12-25</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2e667bf1-9bb8-9758-033e-245654059eb2</td>
+      <td>a384aab8-c9a9-ecf8-fe03-ba5c4db7ea7d</td>
+      <td>2014-03-09</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>276239002</td>
+      <td>2014-02-06</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Physiotherapy care plan (record artifact)</td>
+      <td>44465007.0</td>
+      <td>Sprain of ankle</td>
+      <td>16d61624-9844-26e7-3c9a-377378d7c4a0</td>
+      <td>fba8d030-b84f-c968-35b5-adb2b1bc83a4</td>
+      <td>2015-03-02</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>773513001</td>
+      <td>2015-01-22</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>fc00d7d8-188c-a261-6a0a-fe845c5bcabf</td>
+      <td>484e57bc-7ba2-d0bd-8952-273f37f95594</td>
+      <td>2017-02-15</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>47387005</td>
+      <td>2017-01-08</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Musculoskeletal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>826fb2c9-165a-e975-68c3-532c60dbe728</td>
+      <td>68e54405-5d36-a495-fe89-3894f9f16954</td>
+      <td>2021-07-08</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>408869004</td>
+      <td>2021-05-25</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>b179a6d0-d174-1b76-7c97-451379a3d663</td>
+      <td>c2f9d9bc-ca00-a759-3078-5e21385946cc</td>
+      <td>None</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>443402002</td>
+      <td>2018-08-21</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Skin condition care</td>
+      <td>24079001.0</td>
+      <td>Atopic dermatitis</td>
+      <td>4385ba5a-3a00-f79a-9450-06dc2a2ff102</td>
+      <td>2b410574-f2c8-8a92-26bb-39ab6106c0d9</td>
+      <td>2018-04-21</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>711282006</td>
+      <td>2001-01-30</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Self-care interventions (procedure)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bdc02622-106a-8c9d-5566-e405484496e7</td>
+      <td>88bde367-23bf-dadb-f13d-c274e86d10c7</td>
+      <td>None</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>384758001</td>
+      <td>2001-02-16</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Asthma self management</td>
+      <td>233678006.0</td>
+      <td>Childhood asthma</td>
+      <td>f5c0e9a5-becd-9df9-60a7-f52adde2146a</td>
+      <td>d28f35dc-04e2-4748-9d70-8f48817d7f6f</td>
+      <td>None</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>699728000</td>
+      <td>2004-09-04</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Allergic disorder monitoring</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>303fc030-7bb4-ca9f-7dd4-d59203af92e9</td>
+      <td>649bc21b-4f2f-e3df-414f-b08ec4b79bd2</td>
+      <td>2017-10-18</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>170836005</td>
+      <td>2013-10-26</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>64ffbb2d-27c0-7480-ddd0-163506a0f5df</td>
+      <td>7d8c7d43-a315-0656-7cbd-5c3691e0c68a</td>
+      <td>2022-11-19</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>134435003</td>
+      <td>2022-05-07</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Burn care</td>
+      <td>403190006.0</td>
+      <td>First degree burn</td>
+      <td>dec7677e-0b71-940b-62dd-6ead7c5b31d6</td>
+      <td>fa316c28-e0ec-7f6a-077d-7455278b511d</td>
+      <td>2022-09-17</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>133901003</td>
+      <td>2022-08-17</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>6cf394c5-7cc8-e378-8a37-c8739ac9826f</td>
+      <td>bc7bf69d-6e2c-fccd-b76b-ae4ac0815482</td>
+      <td>2022-12-08</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>53950000</td>
+      <td>2022-11-26</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>85beffa5-5cab-e193-5512-0291dbe4a87a</td>
+      <td>5e5d48ef-f2fa-6940-72e3-08f24b15d73c</td>
+      <td>2016-05-07</td>
+      <td>bc1efffb-0983-081f-d4c4-3345f6f2abbd</td>
+      <td>53950000</td>
+      <td>2015-05-16</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>b2c1a126-81ff-7f75-8566-707b7de8fda2</td>
+      <td>16eba14c-5a9c-bce7-33a1-f3f6c7fdaf6b</td>
+      <td>1989-01-06</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>53950000</td>
+      <td>1988-12-25</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>74efadef-6ca6-0434-8afc-a8c7f7a02d07</td>
+      <td>71154994-99cb-1859-da47-be6aefdc4632</td>
+      <td>None</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>698360004</td>
+      <td>1993-07-26</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Chronic obstructive pulmonary disease clinical management plan</td>
+      <td>87433001.0</td>
+      <td>Pulmonary emphysema (disorder)</td>
+      <td>7149fb79-6036-74e2-38f4-2a6056f20e2e</td>
+      <td>53550222-7920-d954-8131-bdc89637746d</td>
+      <td>None</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>412776001</td>
+      <td>2004-05-24</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>ace0b9d4-e281-c3c5-b15f-d294dc457c33</td>
+      <td>8f32786d-026d-5119-4d8a-84d9f8eef311</td>
+      <td>None</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>443402002</td>
+      <td>2012-11-05</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>c6deaf35-52d6-3157-492b-23d038432142</td>
+      <td>66429346-83d6-8436-fb6d-ecebc0f2704d</td>
+      <td>2018-12-10</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>53950000</td>
+      <td>2017-12-07</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Burn care</td>
+      <td>403191005.0</td>
+      <td>Second degree burn</td>
+      <td>83840648-8bef-2dff-3f3a-3b0ae23041b8</td>
+      <td>9be78a44-3e5b-5c54-cae8-b8f508801b03</td>
+      <td>2022-12-25</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>133901003</td>
+      <td>2022-10-09</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2ad803e2-cd0b-c0de-31ee-178a2b15f482</td>
+      <td>9fe47a4c-3f07-8b90-198c-f48106e8a87e</td>
+      <td>None</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>53950000</td>
+      <td>2022-10-22</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Care plan (record artifact)</td>
+      <td>78275009.0</td>
+      <td>Obstructive sleep apnea syndrome (disorder)</td>
+      <td>5d8b04bb-a58b-7b32-9b8f-79a79a60824f</td>
+      <td>9f507a92-2203-54ff-2d40-aa4d13166823</td>
+      <td>None</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>734163000</td>
+      <td>1991-05-08</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>62c94d9b-1a46-59bd-3600-a692c99d7550</td>
+      <td>2bf8ae5b-ff3d-ab87-09e5-74581c3cd750</td>
+      <td>None</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>698360004</td>
+      <td>2003-06-12</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>fefecf1c-0817-0217-5589-135a184947fa</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>None</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>443402002</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Hyperlipidemia clinical management plan</td>
+      <td>55822004.0</td>
+      <td>Hyperlipidemia</td>
+      <td>3bff08dc-4be0-28ab-7d29-703a7794dd73</td>
+      <td>56a022d5-aa3c-19ea-1dc6-5141dea1a37c</td>
+      <td>None</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>736285004</td>
+      <td>2016-04-21</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>71d61465-7781-08cd-0671-df419b2e2217</td>
+      <td>10026572-799c-9daf-a280-d8fb390515f1</td>
+      <td>2017-07-01</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>47387005</td>
+      <td>2017-04-24</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>0230c15f-ca7e-fb14-e033-bd99434757a3</td>
+      <td>ad56cef8-5934-6d81-d1a4-099bf2cfdc83</td>
+      <td>2019-07-25</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>53950000</td>
+      <td>2018-07-26</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Cancer care plan</td>
+      <td>109838007.0</td>
+      <td>Overlapping malignant neoplasm of colon</td>
+      <td>23712249-8a74-9447-31b8-3ad7c7e717ab</td>
+      <td>e5cf158a-b940-d630-e142-c45d7e860ee0</td>
+      <td>2022-10-23</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>395082007</td>
+      <td>2020-06-18</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Major surgery care management (procedure)</td>
+      <td>109838007.0</td>
+      <td>Overlapping malignant neoplasm of colon</td>
+      <td>45fbdefb-ccfc-7da4-9bfd-0b5f28a91b45</td>
+      <td>e4062c95-46cd-19d3-b3ac-31c7795e7dae</td>
+      <td>2020-07-15</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>737567002</td>
+      <td>2020-06-29</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Self-care interventions (procedure)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>69001e4e-d377-e164-ce9b-85e5b98a8fa2</td>
+      <td>0d761ff4-5715-95f6-e657-64d731804a89</td>
+      <td>None</td>
+      <td>fca2a21e-3319-131a-7e84-ff984b871e16</td>
+      <td>384758001</td>
+      <td>1980-03-08</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2dd4eaa4-e9c4-3077-777c-f378c0755b1d</td>
+      <td>8113c51c-0268-3c11-a2f0-10ee246ea179</td>
+      <td>None</td>
+      <td>fca2a21e-3319-131a-7e84-ff984b871e16</td>
+      <td>734163000</td>
+      <td>2018-06-19</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>42dcfd40-9d9f-5ae8-4c8a-955829cc2178</td>
+      <td>d6592d90-2bf6-1115-9d22-c430fb0d5178</td>
+      <td>None</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>698360004</td>
+      <td>2005-12-19</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Burn care</td>
+      <td>403190006.0</td>
+      <td>First degree burn</td>
+      <td>6f7ee756-0584-8c97-36a0-1fee4e3adf6f</td>
+      <td>fcaa8f49-3188-b423-bafd-1b26b272a838</td>
+      <td>2020-02-13</td>
+      <td>fca2a21e-3319-131a-7e84-ff984b871e16</td>
+      <td>133901003</td>
+      <td>2019-11-15</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>a0d239d3-739a-7e42-5ff1-3abe0f56b1ad</td>
+      <td>08252ced-a449-3e53-2e21-f4f9718fd84d</td>
+      <td>2015-05-11</td>
+      <td>1d13ebc3-0635-059a-5fe9-82c92ede84ec</td>
+      <td>53950000</td>
+      <td>2014-10-24</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>4850b72b-c3dd-84b5-5b65-4b18581efac5</td>
+      <td>e7e54617-0d71-a305-9321-16996976aa44</td>
+      <td>2017-05-22</td>
+      <td>1d13ebc3-0635-059a-5fe9-82c92ede84ec</td>
+      <td>53950000</td>
+      <td>2016-11-04</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>3fa5c8c0-bcbf-34ce-715f-76268a266f90</td>
+      <td>fe9f7bdb-852f-d1fa-c55b-7ae00e2b3495</td>
+      <td>2020-06-08</td>
+      <td>1d13ebc3-0635-059a-5fe9-82c92ede84ec</td>
+      <td>53950000</td>
+      <td>2020-01-09</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Burn care</td>
+      <td>403190006.0</td>
+      <td>First degree burn</td>
+      <td>30922f54-f18b-e29a-8ef2-1bdd5e74a0c3</td>
+      <td>18f4978f-78c7-931d-ab73-84021cc1cd91</td>
+      <td>2021-07-25</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>133901003</td>
+      <td>2021-03-27</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>0ff99edf-1e0b-8551-66a2-d9a08bff372c</td>
+      <td>473b03f5-d3b1-be82-5a20-98f29b4fb568</td>
+      <td>None</td>
+      <td>c8fbb10b-b54e-8182-d71c-c552bd1c58b1</td>
+      <td>443402002</td>
+      <td>2016-04-09</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Diabetes self management plan</td>
+      <td>44054006.0</td>
+      <td>Diabetes</td>
+      <td>c27665ab-80af-474c-947c-2289fe93cc3f</td>
+      <td>e1b0250b-ff2f-6814-68e2-b38da9bdbcce</td>
+      <td>None</td>
+      <td>c8fbb10b-b54e-8182-d71c-c552bd1c58b1</td>
+      <td>698360004</td>
+      <td>2018-04-21</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>7aaacf55-5f6a-7aee-25d2-edac3fb3ea96</td>
+      <td>23d99808-f0ac-9bbf-20f2-7fda06be7fe2</td>
+      <td>1932-10-15</td>
+      <td>0cd0df97-9d92-5d95-fbde-6b0a7e6af1c8</td>
+      <td>53950000</td>
+      <td>1932-08-10</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>b09d8fb1-076f-941b-0f2c-8b9f89e5a075</td>
+      <td>243dc138-5584-2f56-608a-979949e1dc4d</td>
+      <td>2021-05-08</td>
+      <td>c8fbb10b-b54e-8182-d71c-c552bd1c58b1</td>
+      <td>53950000</td>
+      <td>2020-10-21</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>a08c66ba-0b27-d341-5b8e-363af29d8f05</td>
+      <td>aed756af-fc33-b23c-72b4-356e9256e7e5</td>
+      <td>None</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>443402002</td>
+      <td>1990-11-27</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Head injury rehabilitation</td>
+      <td>62564004.0</td>
+      <td>Concussion with loss of consciousness</td>
+      <td>1133ce7f-af3e-c427-52d2-f1f597b7e5ed</td>
+      <td>72931e07-b014-286e-b1bd-ac6ae8d60f33</td>
+      <td>1937-03-17</td>
+      <td>0cd0df97-9d92-5d95-fbde-6b0a7e6af1c8</td>
+      <td>47387005</td>
+      <td>1936-12-27</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>8fbd8550-56fc-2394-bbdb-0c95bfd6675e</td>
+      <td>a7d87179-a55b-becc-0cf5-301736b8d296</td>
+      <td>None</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>698360004</td>
+      <td>1999-09-14</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Care plan (record artifact)</td>
+      <td>78275009.0</td>
+      <td>Obstructive sleep apnea syndrome (disorder)</td>
+      <td>5036c35a-0ef5-bf53-30f6-f6a54b9e4053</td>
+      <td>d4722a89-3586-1385-3a6d-81f059b3f281</td>
+      <td>None</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>734163000</td>
+      <td>2005-11-17</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Asthma self management</td>
+      <td>233678006.0</td>
+      <td>Childhood asthma</td>
+      <td>8743c7d2-43f4-c764-8eab-3a9713214597</td>
+      <td>f19be010-7316-3453-69e4-8a8b0dac51b0</td>
+      <td>None</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>699728000</td>
+      <td>2005-12-03</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Wound care</td>
+      <td>284551006.0</td>
+      <td>Laceration of foot</td>
+      <td>265a166f-5725-ffa5-3cd2-2ef1516de3b6</td>
+      <td>49a6ef95-8b49-d1bf-b59c-06bff4aa8c13</td>
+      <td>2014-04-26</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>225358003</td>
+      <td>2014-04-01</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Musculoskeletal care</td>
+      <td>239872002.0</td>
+      <td>Osteoarthritis of hip</td>
+      <td>572072c2-71eb-4e9b-8185-4b7e3d998e50</td>
+      <td>68cac7a8-f3bc-b633-eebe-5ea1fd330e56</td>
+      <td>None</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>408869004</td>
+      <td>2009-05-20</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>eae0d4ca-6ca1-f695-c4c2-068528ff2ad3</td>
+      <td>64190059-0f5e-8a7b-2713-9c04dde0667c</td>
+      <td>None</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>698360004</td>
+      <td>2010-01-02</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>04f331be-0d85-cdc3-3ae6-dd53aafa96bb</td>
+      <td>4e3eae21-bdee-1c5c-16d0-2409f10b7dd6</td>
+      <td>2015-05-01</td>
+      <td>92bc26b1-c317-7db6-492e-3c8ea452b36d</td>
+      <td>53950000</td>
+      <td>2014-10-04</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Physiotherapy care plan (record artifact)</td>
+      <td>44465007.0</td>
+      <td>Sprain of ankle</td>
+      <td>a649c719-fcc4-89ea-5cf1-cfa334200c47</td>
+      <td>dfcf9dd2-d667-e9e2-ee8a-9a79876f1e03</td>
+      <td>2015-08-13</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>773513001</td>
+      <td>2015-07-26</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Self-care interventions (procedure)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>cc3e1476-9f39-63dc-a46c-1d6fbce715ba</td>
+      <td>219063cc-c0c2-d625-5e9a-639593b755cb</td>
+      <td>None</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>384758001</td>
+      <td>2008-04-21</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>edfd078a-d3b7-05cf-e446-acb2fc0171df</td>
+      <td>68cdb790-bdc6-81c9-30d4-c41ae00bc426</td>
+      <td>2014-03-09</td>
+      <td>27948426-0f88-0e3b-dd6b-8bd9d8512892</td>
+      <td>276239002</td>
+      <td>2014-02-06</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Fracture care</td>
+      <td>58150001.0</td>
+      <td>Fracture of clavicle</td>
+      <td>5305ea3f-510f-4c88-91c1-989de22e6cf6</td>
+      <td>781d8946-ee28-40ad-e623-90ac49d5fe37</td>
+      <td>2017-03-06</td>
+      <td>92bc26b1-c317-7db6-492e-3c8ea452b36d</td>
+      <td>385691007</td>
+      <td>2016-12-09</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>4ee12f67-8875-56e9-91a1-7bcbb48f741b</td>
+      <td>fc47ed17-21f7-bd07-3ab5-b3f74d8a7bca</td>
+      <td>2013-08-28</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>53950000</td>
+      <td>2013-03-30</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Allergic disorder monitoring</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>339caba7-c158-529c-b518-308eaf9a041e</td>
+      <td>d76aa8ab-4933-4606-4223-4a0fc64dcad5</td>
+      <td>2019-09-22</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>170836005</td>
+      <td>2015-08-19</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>678237d4-c66c-ccad-09d8-8817bd45382d</td>
+      <td>99b07c8d-1848-0e5a-9ce2-44094d19bc05</td>
+      <td>None</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>698360004</td>
+      <td>1985-07-02</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Musculoskeletal care</td>
+      <td>239873007.0</td>
+      <td>Osteoarthritis of knee</td>
+      <td>94a701ed-abb5-97b9-bd40-40e102b08ec0</td>
+      <td>8becba25-a859-f12c-1eaf-7324b23856c7</td>
+      <td>None</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>408869004</td>
+      <td>2004-08-09</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>c2a18053-e7f7-b876-6b3a-5a998cc1e9c2</td>
+      <td>bd4f0cba-58d4-5cbf-41a5-3c3e67017416</td>
+      <td>2020-02-11</td>
+      <td>27948426-0f88-0e3b-dd6b-8bd9d8512892</td>
+      <td>134435003</td>
+      <td>2019-07-09</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Wound care</td>
+      <td>283385000.0</td>
+      <td>Laceration of thigh</td>
+      <td>498254ff-9a49-08c5-3759-01f50bcee5ac</td>
+      <td>91dbec2b-47d7-e4b9-1e47-db4b3bd14465</td>
+      <td>2021-07-23</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>225358003</td>
+      <td>2021-07-05</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>62ec9a21-0c2c-9285-b1a0-81ea0975b23a</td>
+      <td>a8b90b37-943e-6da5-3bcf-57eeaa4a2f93</td>
+      <td>2022-02-15</td>
+      <td>27948426-0f88-0e3b-dd6b-8bd9d8512892</td>
+      <td>134435003</td>
+      <td>2021-07-13</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>aa96e868-f82d-01eb-838b-bb4efcd975cb</td>
+      <td>b1fc3ff8-633f-bb59-eb5b-4b4fba23a23c</td>
+      <td>2014-01-19</td>
+      <td>100881d9-7b59-8060-2772-f41b276970fc</td>
+      <td>134435003</td>
+      <td>2013-06-23</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>7e2dac53-36a0-8181-bca7-e9ee22ebc651</td>
+      <td>c7a934ef-5468-f34b-4c3f-01993aa8954d</td>
+      <td>None</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>443402002</td>
+      <td>2020-06-23</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Musculoskeletal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>7862166e-f1c3-a4d7-7406-9ee73ba2dfa0</td>
+      <td>333f3e99-b833-a0b6-15fe-b164506ababc</td>
+      <td>2021-11-25</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>408869004</td>
+      <td>2021-10-22</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Discharge care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bd62cb7f-b0d7-d260-2bdb-09ff54df209d</td>
+      <td>d34fd08e-3f91-d681-7195-5a139b42461d</td>
+      <td>None</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>736372004</td>
+      <td>2018-08-28</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>fc2eee21-d507-ae06-ac4a-3dff2c5b52f6</td>
+      <td>6b65ee46-71e0-7913-24ae-f010775db9b2</td>
+      <td>None</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>698360004</td>
+      <td>1995-09-30</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bac6b187-37d4-76fb-9cea-0411078a7174</td>
+      <td>3f0bd6ad-7aac-a156-d749-4a0909e55fb5</td>
+      <td>2014-03-05</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>276239002</td>
+      <td>2014-02-03</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>9640b522-76ea-4196-c82a-c4ea24963b7b</td>
+      <td>92401fe6-56b2-b9ce-a73f-3b30798c9fd4</td>
+      <td>None</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>443402002</td>
+      <td>2014-08-16</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>f83037a8-5639-c8d9-4d2f-88debf26d71f</td>
+      <td>024655a0-4422-a3d1-b1f3-8178083ddc36</td>
+      <td>2016-08-27</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>53950000</td>
+      <td>2016-01-03</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Discharge care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>938093d2-868c-d1b7-003c-16c845747815</td>
+      <td>ac79a2e5-9f67-7a55-7aa7-2da80dbd7a22</td>
+      <td>None</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>736372004</td>
+      <td>2018-01-28</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>procedure_description</th>
+      <th>condition_code</th>
+      <th>condition_description</th>
+      <th>care_plan_id</th>
+      <th>encounter_id</th>
+      <th>end_date</th>
+      <th>patient_id</th>
+      <th>procedure_code</th>
+      <th>start_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Fracture care</td>
+      <td>58150001.0</td>
+      <td>Fracture of clavicle</td>
+      <td>e5cc23db-c84f-3ded-411d-deb020dfcb4c</td>
+      <td>1600b01f-01b3-fd15-135f-c7c4a30d867f</td>
+      <td>2016-07-23</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>385691007</td>
+      <td>2016-04-11</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Wound care</td>
+      <td>284551006.0</td>
+      <td>Laceration of foot</td>
+      <td>d70b9f2f-745e-f594-4983-b48790e4291f</td>
+      <td>3c131d0c-6d15-7fe1-1372-a3d8316b6d82</td>
+      <td>1988-05-12</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>225358003</td>
+      <td>1988-04-27</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>54b5c4bb-1df6-0892-7097-416ecea0f44f</td>
+      <td>d6df3fd6-e4a0-9b51-ebd5-c6394be154eb</td>
+      <td>1990-07-10</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>53950000</td>
+      <td>1989-09-03</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Wound care</td>
+      <td>370247008.0</td>
+      <td>Facial laceration</td>
+      <td>254cfb18-3266-be35-b8c4-8a6a89ce0547</td>
+      <td>17d8fd78-be39-d2f7-6032-74d712972fa3</td>
+      <td>2014-02-03</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>225358003</td>
+      <td>2014-01-20</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>7e07f691-b437-c62b-4379-0a8e55812747</td>
+      <td>5fbc8a13-6944-a854-c4cb-bbd04e969ee1</td>
+      <td>2017-09-02</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>47387005</td>
+      <td>2017-06-08</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Fracture care</td>
+      <td>16114001.0</td>
+      <td>Fracture of ankle</td>
+      <td>3afa6e0d-303b-1172-9dc1-a1e8dc996381</td>
+      <td>1cedec53-a362-320c-d52a-ddbc57fbce63</td>
+      <td>NaT</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>385691007</td>
+      <td>2022-09-25</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Self-care interventions (procedure)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>65fce626-8442-c6b6-f76b-a724cd56e289</td>
+      <td>75b6f598-e8e7-dfa7-22f6-c02c27cfee92</td>
+      <td>NaT</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>384758001</td>
+      <td>1974-09-12</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Fracture care</td>
+      <td>65966004.0</td>
+      <td>Fracture of forearm</td>
+      <td>c9c2e553-92ce-169e-93ab-cdae42abce3c</td>
+      <td>59f48dfd-f1f6-faa7-f378-150137d46be4</td>
+      <td>1991-07-16</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>385691007</td>
+      <td>1991-05-28</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>6e79278b-2c83-fdbc-0631-b927c1df1751</td>
+      <td>bcf78369-9e90-fe7c-894a-3accb1b2bfa3</td>
+      <td>2020-02-23</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>53950000</td>
+      <td>2019-05-19</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Infectious disease care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>b9643221-a898-52f7-ca52-10eb92fe1079</td>
+      <td>a83a565f-0af5-9a29-6d7f-fdadb5c2b2a9</td>
+      <td>2020-08-21</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>736376001</td>
+      <td>2020-08-21</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Infectious disease care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>a090c9d9-c527-f934-cb99-42ffb48fb859</td>
+      <td>a83a565f-0af5-9a29-6d7f-fdadb5c2b2a9</td>
+      <td>2020-09-13</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>736376001</td>
+      <td>2020-08-21</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Physiotherapy care plan (record artifact)</td>
+      <td>44465007.0</td>
+      <td>Sprain of ankle</td>
+      <td>f0ca4a5a-da2c-91e5-8efd-263ddcff4bb5</td>
+      <td>e2363506-d56c-0d6f-ec1d-7d136aef363c</td>
+      <td>2018-07-20</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>773513001</td>
+      <td>2018-06-23</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Musculoskeletal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>184a9986-b137-18f2-74d4-3dac46fc9074</td>
+      <td>8a77a82e-7d1b-0c61-ab7b-ca56d333490c</td>
+      <td>2017-06-25</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>408869004</td>
+      <td>2017-04-19</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>27e38ecd-dc8e-c180-43d6-86ddaf45f284</td>
+      <td>d2b96a32-694d-35ed-7a53-0a163704b3f9</td>
+      <td>2021-06-24</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>53950000</td>
+      <td>2020-10-21</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>96f04436-c009-50d9-007b-80144db5c6a1</td>
+      <td>de095379-a3d2-1c46-0312-08424ac5a9d7</td>
+      <td>NaT</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>276239002</td>
+      <td>2017-03-03</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>d4ff8397-e4f6-076d-57e8-d986966266cd</td>
+      <td>1ea79b05-b6ad-a695-a583-0a39174f14b1</td>
+      <td>2019-08-17</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>47387005</td>
+      <td>2019-07-09</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>fae8f3b1-1120-793d-b127-d83014bd7250</td>
+      <td>561693fd-7c3a-236a-fd0c-31772a199544</td>
+      <td>2013-02-28</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>53950000</td>
+      <td>2012-03-29</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Fracture care</td>
+      <td>16114001.0</td>
+      <td>Fracture of ankle</td>
+      <td>35da4ed5-4ad6-c37a-99c7-fbe15c8e08cc</td>
+      <td>a3f6aeb1-56b5-7e85-9f6f-8eb5ce364257</td>
+      <td>2015-01-09</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>385691007</td>
+      <td>2014-10-18</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Overactivity/inattention behavior management</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>24d15925-4876-1b90-a3c9-574b86f835bb</td>
+      <td>edde62c4-db5e-136b-aeb4-bbd377e07821</td>
+      <td>2018-07-03</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>386522008</td>
+      <td>2015-06-07</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Wound care</td>
+      <td>370247008.0</td>
+      <td>Facial laceration</td>
+      <td>7c6ca99e-455f-d8fd-3903-2cef7117b6b6</td>
+      <td>f6fa799c-dd9b-7f5c-b855-80ad16ca61d6</td>
+      <td>2022-08-18</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>225358003</td>
+      <td>2022-07-27</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>edf2b938-b422-e37f-20de-6c046585b2be</td>
+      <td>37bb52fa-5cb1-3512-cefc-1b3159a02ba5</td>
+      <td>NaT</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>134435003</td>
+      <td>2022-09-19</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Overactivity/inattention behavior management</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>9fe765b3-8ace-9ac2-5972-97ca2aafe1e9</td>
+      <td>a93136db-d61e-a6e6-2ea6-0a35fff590eb</td>
+      <td>2013-03-23</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>386522008</td>
+      <td>2010-05-02</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Fracture care</td>
+      <td>58150001.0</td>
+      <td>Fracture of clavicle</td>
+      <td>60836d05-8bce-c46c-f9d6-46976bea2f9a</td>
+      <td>0148026b-b4db-1663-19ed-a6a51d3c33b2</td>
+      <td>2014-03-20</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>385691007</td>
+      <td>2013-11-23</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bfa2c6e1-21ba-9011-cab5-b9fcb128c3c9</td>
+      <td>c46618a4-e41c-acc2-14bf-5f7a2b343734</td>
+      <td>2014-03-04</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>276239002</td>
+      <td>2014-02-02</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>57c77dc9-7035-dd41-13e7-1d18805d6e66</td>
+      <td>dc08f637-f260-4115-9456-7563c41453e5</td>
+      <td>2015-01-21</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>47387005</td>
+      <td>2014-11-28</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>6b0f2515-6ee7-6a38-2fd3-79c3157d3906</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>2020-02-24</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>53950000</td>
+      <td>2019-04-09</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bea84bb5-dfc4-d783-b91d-ba6934f63ae0</td>
+      <td>3dd72519-2521-c203-e811-4282eb8e4bc1</td>
+      <td>2021-04-15</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>53950000</td>
+      <td>2020-10-22</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Physiotherapy care plan (record artifact)</td>
+      <td>44465007.0</td>
+      <td>Sprain of ankle</td>
+      <td>b9b90ec6-fda9-e7c4-7203-ce01e06d626d</td>
+      <td>186658bc-2fc0-fcd3-9cb2-d8aeb00a2bfd</td>
+      <td>2019-02-16</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>773513001</td>
+      <td>2019-01-15</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>86000c22-37bf-e772-8a59-eaea731e16fb</td>
+      <td>4685cc46-7d85-cf20-0f78-26751e8aa352</td>
+      <td>2021-07-16</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>134435003</td>
+      <td>2020-11-27</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>5d022e9e-cb96-2b23-8dfe-029346f794e4</td>
+      <td>13a69895-45bd-a47a-5094-c1b7bc8aca5b</td>
+      <td>2014-05-12</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>53950000</td>
+      <td>2013-08-19</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Musculoskeletal care</td>
+      <td>239872002.0</td>
+      <td>Osteoarthritis of hip</td>
+      <td>485ecd82-beeb-e7ee-e24a-3fa60e0eaa87</td>
+      <td>ccbe3bc6-a95e-ad27-9038-98697b4afbfe</td>
+      <td>NaT</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>408869004</td>
+      <td>2008-12-25</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2e667bf1-9bb8-9758-033e-245654059eb2</td>
+      <td>a384aab8-c9a9-ecf8-fe03-ba5c4db7ea7d</td>
+      <td>2014-03-09</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>276239002</td>
+      <td>2014-02-06</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Physiotherapy care plan (record artifact)</td>
+      <td>44465007.0</td>
+      <td>Sprain of ankle</td>
+      <td>16d61624-9844-26e7-3c9a-377378d7c4a0</td>
+      <td>fba8d030-b84f-c968-35b5-adb2b1bc83a4</td>
+      <td>2015-03-02</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>773513001</td>
+      <td>2015-01-22</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>fc00d7d8-188c-a261-6a0a-fe845c5bcabf</td>
+      <td>484e57bc-7ba2-d0bd-8952-273f37f95594</td>
+      <td>2017-02-15</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>47387005</td>
+      <td>2017-01-08</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Musculoskeletal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>826fb2c9-165a-e975-68c3-532c60dbe728</td>
+      <td>68e54405-5d36-a495-fe89-3894f9f16954</td>
+      <td>2021-07-08</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>408869004</td>
+      <td>2021-05-25</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>b179a6d0-d174-1b76-7c97-451379a3d663</td>
+      <td>c2f9d9bc-ca00-a759-3078-5e21385946cc</td>
+      <td>NaT</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>443402002</td>
+      <td>2018-08-21</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Skin condition care</td>
+      <td>24079001.0</td>
+      <td>Atopic dermatitis</td>
+      <td>4385ba5a-3a00-f79a-9450-06dc2a2ff102</td>
+      <td>2b410574-f2c8-8a92-26bb-39ab6106c0d9</td>
+      <td>2018-04-21</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>711282006</td>
+      <td>2001-01-30</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Self-care interventions (procedure)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bdc02622-106a-8c9d-5566-e405484496e7</td>
+      <td>88bde367-23bf-dadb-f13d-c274e86d10c7</td>
+      <td>NaT</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>384758001</td>
+      <td>2001-02-16</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Asthma self management</td>
+      <td>233678006.0</td>
+      <td>Childhood asthma</td>
+      <td>f5c0e9a5-becd-9df9-60a7-f52adde2146a</td>
+      <td>d28f35dc-04e2-4748-9d70-8f48817d7f6f</td>
+      <td>NaT</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>699728000</td>
+      <td>2004-09-04</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Allergic disorder monitoring</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>303fc030-7bb4-ca9f-7dd4-d59203af92e9</td>
+      <td>649bc21b-4f2f-e3df-414f-b08ec4b79bd2</td>
+      <td>2017-10-18</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>170836005</td>
+      <td>2013-10-26</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>64ffbb2d-27c0-7480-ddd0-163506a0f5df</td>
+      <td>7d8c7d43-a315-0656-7cbd-5c3691e0c68a</td>
+      <td>2022-11-19</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>134435003</td>
+      <td>2022-05-07</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Burn care</td>
+      <td>403190006.0</td>
+      <td>First degree burn</td>
+      <td>dec7677e-0b71-940b-62dd-6ead7c5b31d6</td>
+      <td>fa316c28-e0ec-7f6a-077d-7455278b511d</td>
+      <td>2022-09-17</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>133901003</td>
+      <td>2022-08-17</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>6cf394c5-7cc8-e378-8a37-c8739ac9826f</td>
+      <td>bc7bf69d-6e2c-fccd-b76b-ae4ac0815482</td>
+      <td>2022-12-08</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>53950000</td>
+      <td>2022-11-26</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>85beffa5-5cab-e193-5512-0291dbe4a87a</td>
+      <td>5e5d48ef-f2fa-6940-72e3-08f24b15d73c</td>
+      <td>2016-05-07</td>
+      <td>bc1efffb-0983-081f-d4c4-3345f6f2abbd</td>
+      <td>53950000</td>
+      <td>2015-05-16</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>b2c1a126-81ff-7f75-8566-707b7de8fda2</td>
+      <td>16eba14c-5a9c-bce7-33a1-f3f6c7fdaf6b</td>
+      <td>1989-01-06</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>53950000</td>
+      <td>1988-12-25</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>74efadef-6ca6-0434-8afc-a8c7f7a02d07</td>
+      <td>71154994-99cb-1859-da47-be6aefdc4632</td>
+      <td>NaT</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>698360004</td>
+      <td>1993-07-26</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Chronic obstructive pulmonary disease clinical management plan</td>
+      <td>87433001.0</td>
+      <td>Pulmonary emphysema</td>
+      <td>7149fb79-6036-74e2-38f4-2a6056f20e2e</td>
+      <td>53550222-7920-d954-8131-bdc89637746d</td>
+      <td>NaT</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>412776001</td>
+      <td>2004-05-24</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>ace0b9d4-e281-c3c5-b15f-d294dc457c33</td>
+      <td>8f32786d-026d-5119-4d8a-84d9f8eef311</td>
+      <td>NaT</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>443402002</td>
+      <td>2012-11-05</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>c6deaf35-52d6-3157-492b-23d038432142</td>
+      <td>66429346-83d6-8436-fb6d-ecebc0f2704d</td>
+      <td>2018-12-10</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>53950000</td>
+      <td>2017-12-07</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Burn care</td>
+      <td>403191005.0</td>
+      <td>Second degree burn</td>
+      <td>83840648-8bef-2dff-3f3a-3b0ae23041b8</td>
+      <td>9be78a44-3e5b-5c54-cae8-b8f508801b03</td>
+      <td>2022-12-25</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>133901003</td>
+      <td>2022-10-09</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2ad803e2-cd0b-c0de-31ee-178a2b15f482</td>
+      <td>9fe47a4c-3f07-8b90-198c-f48106e8a87e</td>
+      <td>NaT</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>53950000</td>
+      <td>2022-10-22</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Care plan (record artifact)</td>
+      <td>78275009.0</td>
+      <td>Obstructive sleep apnea syndrome</td>
+      <td>5d8b04bb-a58b-7b32-9b8f-79a79a60824f</td>
+      <td>9f507a92-2203-54ff-2d40-aa4d13166823</td>
+      <td>NaT</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>734163000</td>
+      <td>1991-05-08</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>62c94d9b-1a46-59bd-3600-a692c99d7550</td>
+      <td>2bf8ae5b-ff3d-ab87-09e5-74581c3cd750</td>
+      <td>NaT</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>698360004</td>
+      <td>2003-06-12</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>fefecf1c-0817-0217-5589-135a184947fa</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>NaT</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>443402002</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Hyperlipidemia clinical management plan</td>
+      <td>55822004.0</td>
+      <td>Hyperlipidemia</td>
+      <td>3bff08dc-4be0-28ab-7d29-703a7794dd73</td>
+      <td>56a022d5-aa3c-19ea-1dc6-5141dea1a37c</td>
+      <td>NaT</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>736285004</td>
+      <td>2016-04-21</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Head injury rehabilitation</td>
+      <td>62106007.0</td>
+      <td>Concussion with no loss of consciousness</td>
+      <td>71d61465-7781-08cd-0671-df419b2e2217</td>
+      <td>10026572-799c-9daf-a280-d8fb390515f1</td>
+      <td>2017-07-01</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>47387005</td>
+      <td>2017-04-24</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>0230c15f-ca7e-fb14-e033-bd99434757a3</td>
+      <td>ad56cef8-5934-6d81-d1a4-099bf2cfdc83</td>
+      <td>2019-07-25</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>53950000</td>
+      <td>2018-07-26</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Cancer care plan</td>
+      <td>109838007.0</td>
+      <td>Overlapping malignant neoplasm of colon</td>
+      <td>23712249-8a74-9447-31b8-3ad7c7e717ab</td>
+      <td>e5cf158a-b940-d630-e142-c45d7e860ee0</td>
+      <td>2022-10-23</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>395082007</td>
+      <td>2020-06-18</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Major surgery care management (procedure)</td>
+      <td>109838007.0</td>
+      <td>Overlapping malignant neoplasm of colon</td>
+      <td>45fbdefb-ccfc-7da4-9bfd-0b5f28a91b45</td>
+      <td>e4062c95-46cd-19d3-b3ac-31c7795e7dae</td>
+      <td>2020-07-15</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>737567002</td>
+      <td>2020-06-29</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Self-care interventions (procedure)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>69001e4e-d377-e164-ce9b-85e5b98a8fa2</td>
+      <td>0d761ff4-5715-95f6-e657-64d731804a89</td>
+      <td>NaT</td>
+      <td>fca2a21e-3319-131a-7e84-ff984b871e16</td>
+      <td>384758001</td>
+      <td>1980-03-08</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2dd4eaa4-e9c4-3077-777c-f378c0755b1d</td>
+      <td>8113c51c-0268-3c11-a2f0-10ee246ea179</td>
+      <td>NaT</td>
+      <td>fca2a21e-3319-131a-7e84-ff984b871e16</td>
+      <td>734163000</td>
+      <td>2018-06-19</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>42dcfd40-9d9f-5ae8-4c8a-955829cc2178</td>
+      <td>d6592d90-2bf6-1115-9d22-c430fb0d5178</td>
+      <td>NaT</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>698360004</td>
+      <td>2005-12-19</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Burn care</td>
+      <td>403190006.0</td>
+      <td>First degree burn</td>
+      <td>6f7ee756-0584-8c97-36a0-1fee4e3adf6f</td>
+      <td>fcaa8f49-3188-b423-bafd-1b26b272a838</td>
+      <td>2020-02-13</td>
+      <td>fca2a21e-3319-131a-7e84-ff984b871e16</td>
+      <td>133901003</td>
+      <td>2019-11-15</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>a0d239d3-739a-7e42-5ff1-3abe0f56b1ad</td>
+      <td>08252ced-a449-3e53-2e21-f4f9718fd84d</td>
+      <td>2015-05-11</td>
+      <td>1d13ebc3-0635-059a-5fe9-82c92ede84ec</td>
+      <td>53950000</td>
+      <td>2014-10-24</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>4850b72b-c3dd-84b5-5b65-4b18581efac5</td>
+      <td>e7e54617-0d71-a305-9321-16996976aa44</td>
+      <td>2017-05-22</td>
+      <td>1d13ebc3-0635-059a-5fe9-82c92ede84ec</td>
+      <td>53950000</td>
+      <td>2016-11-04</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>3fa5c8c0-bcbf-34ce-715f-76268a266f90</td>
+      <td>fe9f7bdb-852f-d1fa-c55b-7ae00e2b3495</td>
+      <td>2020-06-08</td>
+      <td>1d13ebc3-0635-059a-5fe9-82c92ede84ec</td>
+      <td>53950000</td>
+      <td>2020-01-09</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Burn care</td>
+      <td>403190006.0</td>
+      <td>First degree burn</td>
+      <td>30922f54-f18b-e29a-8ef2-1bdd5e74a0c3</td>
+      <td>18f4978f-78c7-931d-ab73-84021cc1cd91</td>
+      <td>2021-07-25</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>133901003</td>
+      <td>2021-03-27</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>0ff99edf-1e0b-8551-66a2-d9a08bff372c</td>
+      <td>473b03f5-d3b1-be82-5a20-98f29b4fb568</td>
+      <td>NaT</td>
+      <td>c8fbb10b-b54e-8182-d71c-c552bd1c58b1</td>
+      <td>443402002</td>
+      <td>2016-04-09</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Diabetes self management plan</td>
+      <td>44054006.0</td>
+      <td>Diabetes</td>
+      <td>c27665ab-80af-474c-947c-2289fe93cc3f</td>
+      <td>e1b0250b-ff2f-6814-68e2-b38da9bdbcce</td>
+      <td>NaT</td>
+      <td>c8fbb10b-b54e-8182-d71c-c552bd1c58b1</td>
+      <td>698360004</td>
+      <td>2018-04-21</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>7aaacf55-5f6a-7aee-25d2-edac3fb3ea96</td>
+      <td>23d99808-f0ac-9bbf-20f2-7fda06be7fe2</td>
+      <td>1932-10-15</td>
+      <td>0cd0df97-9d92-5d95-fbde-6b0a7e6af1c8</td>
+      <td>53950000</td>
+      <td>1932-08-10</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>b09d8fb1-076f-941b-0f2c-8b9f89e5a075</td>
+      <td>243dc138-5584-2f56-608a-979949e1dc4d</td>
+      <td>2021-05-08</td>
+      <td>c8fbb10b-b54e-8182-d71c-c552bd1c58b1</td>
+      <td>53950000</td>
+      <td>2020-10-21</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>a08c66ba-0b27-d341-5b8e-363af29d8f05</td>
+      <td>aed756af-fc33-b23c-72b4-356e9256e7e5</td>
+      <td>NaT</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>443402002</td>
+      <td>1990-11-27</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Head injury rehabilitation</td>
+      <td>62564004.0</td>
+      <td>Concussion with loss of consciousness</td>
+      <td>1133ce7f-af3e-c427-52d2-f1f597b7e5ed</td>
+      <td>72931e07-b014-286e-b1bd-ac6ae8d60f33</td>
+      <td>1937-03-17</td>
+      <td>0cd0df97-9d92-5d95-fbde-6b0a7e6af1c8</td>
+      <td>47387005</td>
+      <td>1936-12-27</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>8fbd8550-56fc-2394-bbdb-0c95bfd6675e</td>
+      <td>a7d87179-a55b-becc-0cf5-301736b8d296</td>
+      <td>NaT</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>698360004</td>
+      <td>1999-09-14</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Care plan (record artifact)</td>
+      <td>78275009.0</td>
+      <td>Obstructive sleep apnea syndrome</td>
+      <td>5036c35a-0ef5-bf53-30f6-f6a54b9e4053</td>
+      <td>d4722a89-3586-1385-3a6d-81f059b3f281</td>
+      <td>NaT</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>734163000</td>
+      <td>2005-11-17</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Asthma self management</td>
+      <td>233678006.0</td>
+      <td>Childhood asthma</td>
+      <td>8743c7d2-43f4-c764-8eab-3a9713214597</td>
+      <td>f19be010-7316-3453-69e4-8a8b0dac51b0</td>
+      <td>NaT</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>699728000</td>
+      <td>2005-12-03</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Wound care</td>
+      <td>284551006.0</td>
+      <td>Laceration of foot</td>
+      <td>265a166f-5725-ffa5-3cd2-2ef1516de3b6</td>
+      <td>49a6ef95-8b49-d1bf-b59c-06bff4aa8c13</td>
+      <td>2014-04-26</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>225358003</td>
+      <td>2014-04-01</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Musculoskeletal care</td>
+      <td>239872002.0</td>
+      <td>Osteoarthritis of hip</td>
+      <td>572072c2-71eb-4e9b-8185-4b7e3d998e50</td>
+      <td>68cac7a8-f3bc-b633-eebe-5ea1fd330e56</td>
+      <td>NaT</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>408869004</td>
+      <td>2009-05-20</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>eae0d4ca-6ca1-f695-c4c2-068528ff2ad3</td>
+      <td>64190059-0f5e-8a7b-2713-9c04dde0667c</td>
+      <td>NaT</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>698360004</td>
+      <td>2010-01-02</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>04f331be-0d85-cdc3-3ae6-dd53aafa96bb</td>
+      <td>4e3eae21-bdee-1c5c-16d0-2409f10b7dd6</td>
+      <td>2015-05-01</td>
+      <td>92bc26b1-c317-7db6-492e-3c8ea452b36d</td>
+      <td>53950000</td>
+      <td>2014-10-04</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Physiotherapy care plan (record artifact)</td>
+      <td>44465007.0</td>
+      <td>Sprain of ankle</td>
+      <td>a649c719-fcc4-89ea-5cf1-cfa334200c47</td>
+      <td>dfcf9dd2-d667-e9e2-ee8a-9a79876f1e03</td>
+      <td>2015-08-13</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>773513001</td>
+      <td>2015-07-26</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Self-care interventions (procedure)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>cc3e1476-9f39-63dc-a46c-1d6fbce715ba</td>
+      <td>219063cc-c0c2-d625-5e9a-639593b755cb</td>
+      <td>NaT</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>384758001</td>
+      <td>2008-04-21</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>edfd078a-d3b7-05cf-e446-acb2fc0171df</td>
+      <td>68cdb790-bdc6-81c9-30d4-c41ae00bc426</td>
+      <td>2014-03-09</td>
+      <td>27948426-0f88-0e3b-dd6b-8bd9d8512892</td>
+      <td>276239002</td>
+      <td>2014-02-06</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Fracture care</td>
+      <td>58150001.0</td>
+      <td>Fracture of clavicle</td>
+      <td>5305ea3f-510f-4c88-91c1-989de22e6cf6</td>
+      <td>781d8946-ee28-40ad-e623-90ac49d5fe37</td>
+      <td>2017-03-06</td>
+      <td>92bc26b1-c317-7db6-492e-3c8ea452b36d</td>
+      <td>385691007</td>
+      <td>2016-12-09</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>4ee12f67-8875-56e9-91a1-7bcbb48f741b</td>
+      <td>fc47ed17-21f7-bd07-3ab5-b3f74d8a7bca</td>
+      <td>2013-08-28</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>53950000</td>
+      <td>2013-03-30</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Allergic disorder monitoring</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>339caba7-c158-529c-b518-308eaf9a041e</td>
+      <td>d76aa8ab-4933-4606-4223-4a0fc64dcad5</td>
+      <td>2019-09-22</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>170836005</td>
+      <td>2015-08-19</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>678237d4-c66c-ccad-09d8-8817bd45382d</td>
+      <td>99b07c8d-1848-0e5a-9ce2-44094d19bc05</td>
+      <td>NaT</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>698360004</td>
+      <td>1985-07-02</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Musculoskeletal care</td>
+      <td>239873007.0</td>
+      <td>Osteoarthritis of knee</td>
+      <td>94a701ed-abb5-97b9-bd40-40e102b08ec0</td>
+      <td>8becba25-a859-f12c-1eaf-7324b23856c7</td>
+      <td>NaT</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>408869004</td>
+      <td>2004-08-09</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>c2a18053-e7f7-b876-6b3a-5a998cc1e9c2</td>
+      <td>bd4f0cba-58d4-5cbf-41a5-3c3e67017416</td>
+      <td>2020-02-11</td>
+      <td>27948426-0f88-0e3b-dd6b-8bd9d8512892</td>
+      <td>134435003</td>
+      <td>2019-07-09</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Wound care</td>
+      <td>283385000.0</td>
+      <td>Laceration of thigh</td>
+      <td>498254ff-9a49-08c5-3759-01f50bcee5ac</td>
+      <td>91dbec2b-47d7-e4b9-1e47-db4b3bd14465</td>
+      <td>2021-07-23</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>225358003</td>
+      <td>2021-07-05</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>62ec9a21-0c2c-9285-b1a0-81ea0975b23a</td>
+      <td>a8b90b37-943e-6da5-3bcf-57eeaa4a2f93</td>
+      <td>2022-02-15</td>
+      <td>27948426-0f88-0e3b-dd6b-8bd9d8512892</td>
+      <td>134435003</td>
+      <td>2021-07-13</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Routine antenatal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>aa96e868-f82d-01eb-838b-bb4efcd975cb</td>
+      <td>b1fc3ff8-633f-bb59-eb5b-4b4fba23a23c</td>
+      <td>2014-01-19</td>
+      <td>100881d9-7b59-8060-2772-f41b276970fc</td>
+      <td>134435003</td>
+      <td>2013-06-23</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>7e2dac53-36a0-8181-bca7-e9ee22ebc651</td>
+      <td>c7a934ef-5468-f34b-4c3f-01993aa8954d</td>
+      <td>NaT</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>443402002</td>
+      <td>2020-06-23</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Musculoskeletal care</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>7862166e-f1c3-a4d7-7406-9ee73ba2dfa0</td>
+      <td>333f3e99-b833-a0b6-15fe-b164506ababc</td>
+      <td>2021-11-25</td>
+      <td>8cfec0eb-f022-f332-55f5-38a2c35f5b84</td>
+      <td>408869004</td>
+      <td>2021-10-22</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Discharge care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bd62cb7f-b0d7-d260-2bdb-09ff54df209d</td>
+      <td>d34fd08e-3f91-d681-7195-5a139b42461d</td>
+      <td>NaT</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>736372004</td>
+      <td>2018-08-28</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Diabetes self management plan</td>
+      <td>15777000.0</td>
+      <td>Prediabetes</td>
+      <td>fc2eee21-d507-ae06-ac4a-3dff2c5b52f6</td>
+      <td>6b65ee46-71e0-7913-24ae-f010775db9b2</td>
+      <td>NaT</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>698360004</td>
+      <td>1995-09-30</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Therapy (regime/therapy)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>bac6b187-37d4-76fb-9cea-0411078a7174</td>
+      <td>3f0bd6ad-7aac-a156-d749-4a0909e55fb5</td>
+      <td>2014-03-05</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>276239002</td>
+      <td>2014-02-03</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Lifestyle education regarding hypertension</td>
+      <td>59621000.0</td>
+      <td>Hypertension</td>
+      <td>9640b522-76ea-4196-c82a-c4ea24963b7b</td>
+      <td>92401fe6-56b2-b9ce-a73f-3b30798c9fd4</td>
+      <td>NaT</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>443402002</td>
+      <td>2014-08-16</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Respiratory therapy</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>f83037a8-5639-c8d9-4d2f-88debf26d71f</td>
+      <td>024655a0-4422-a3d1-b1f3-8178083ddc36</td>
+      <td>2016-08-27</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>53950000</td>
+      <td>2016-01-03</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Discharge care plan (record artifact)</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>938093d2-868c-d1b7-003c-16c845747815</td>
+      <td>ac79a2e5-9f67-7a55-7aa7-2da80dbd7a22</td>
+      <td>NaT</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>736372004</td>
+      <td>2018-01-28</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">procedure_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_procedure_description"></div><b>📃 Summary:</b> Description of the medical procedure or treatment<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">condition_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_condition_code"></div><b>📃 Summary:</b> Code for the underlying medical condition<br><b>❓ Missing:</b> Not applicable when no specific condition is being treated.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">condition_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_condition_description"></div><b>📃 Summary:</b> Description of the underlying medical condition<br><b>❓ Missing:</b> Not applicable when no specific condition is being treated.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">care_plan_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_care_plan_id"></div><b>📃 Summary:</b> Unique identifier for the care plan<br><b>🦄 Unique:</b> This column represents a unique identifier for each care plan. For this table, each row represents a distinct care plan. care_plan_id is unique across rows as it's designed to be a unique identifier for care plans.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encounter_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encounter_id"></div><b>📃 Summary:</b> Unique identifier for the medical encounter<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">end_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_end_date"></div><b>📃 Summary:</b> End date of the care plan<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">patient_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_patient_id"></div><b>📃 Summary:</b> Unique identifier for the patient<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">procedure_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_procedure_code"></div><b>📃 Summary:</b> Medical procedure or treatment code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">start_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_start_date"></div><b>📃 Summary:</b> Start date of the care plan<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about care plans for patients. It shows the start and stop dates of care plans. Each plan is linked to a patient and an encounter. The plans have codes and descriptions for treatments. Some plans also include reason codes and descriptions for the underlying conditions. The table connects patients, medical encounters, treatments, and diagnoses in a healthcare context.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>9</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Id</td>
+      <td>Unique identifier for the care plan</td>
+      <td>care_plan_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>START</td>
+      <td>Start date of the care plan</td>
+      <td>start_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>STOP</td>
+      <td>End date of the care plan</td>
+      <td>end_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>PATIENT</td>
+      <td>Unique identifier for the patient</td>
+      <td>patient_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>ENCOUNTER</td>
+      <td>Unique identifier for the medical encounter</td>
+      <td>encounter_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CODE</td>
+      <td>Medical procedure or treatment code</td>
+      <td>procedure_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>DESCRIPTION</td>
+      <td>Description of the medical procedure or treatment</td>
+      <td>procedure_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>REASONCODE</td>
+      <td>Code for the underlying medical condition</td>
+      <td>condition_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>REASONDESCRIPTION</td>
+      <td>Description of the underlying medical condition</td>
+      <td>condition_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>condition_description</b>: Some conditions include '(disorder)' while others don't, creating inconsistency in labeling.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Chronic congestive heart failure (disorder)</td>
+      <td>Chronic congestive heart failure</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Obstructive sleep apnea syndrome (disorder)</td>
+      <td>Obstructive sleep apnea syndrome</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Alzheimer's disease (disorder)</td>
+      <td>Alzheimer's disease</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Pulmonary emphysema (disorder)</td>
+      <td>Pulmonary emphysema</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Sleep apnea (disorder)</td>
+      <td>Sleep apnea</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                ✔️ <b>6</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>care_plan_id</td>
+      <td>CAST("care_plan_id" AS UUID)</td>
+      <td>To transform the 'care_plan_id' column from VARCHAR to UUID, we can use a simple CAST function in DuckDB. The provided regex pattern and sample values indicate that the 'care_plan_id' column already contains data in a valid UUID format. Therefore, a straightforward cast to UUID should work without any additional data manipulation.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>encounter_id</td>
+      <td>CAST("encounter_id" AS UUID)</td>
+      <td>To transform the 'encounter_id' column from VARCHAR to UUID, we can use a simple CAST function in DuckDB. The current format of the 'encounter_id' values already matches the standard UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward cast should work without any additional formatting or manipulation.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>end_date</td>
+      <td>CAST("end_date" AS DATE)</td>
+      <td>To transform the 'end_date' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the dates in the 'end_date' column is already in the ISO 8601 format (YYYY-MM-DD), which is directly compatible with the DATE type in DuckDB. Therefore, we don't need to use the strptime function to parse the date string; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>patient_id</td>
+      <td>CAST("patient_id" AS UUID)</td>
+      <td>To transform the 'patient_id' column from VARCHAR to UUID, we need to use a simple CAST function. In DuckDB, UUIDs are supported as a native data type, so we can directly cast the VARCHAR to UUID. This will work because the values in the 'patient_id' column are already in the standard UUID format (8-4-4-4-12 hexadecimal digits).\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>procedure_code</td>
+      <td>CAST("procedure_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'procedure_code' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>start_date</td>
+      <td>CAST("start_date" AS DATE)</td>
+      <td>To transform the 'start_date' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the dates in the 'start_date' column is already in the ISO format (YYYY-MM-DD), which is directly compatible with DuckDB's DATE type. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                🔍 <b>3</b> columns have missing values<br>
+                ✔️ <b>2</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>condition_code</td>
+      <td>46.32</td>
+      <td>True</td>
+      <td>Not applicable when no specific condition is being treated.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>condition_description</td>
+      <td>46.32</td>
+      <td>True</td>
+      <td>Not applicable when no specific condition is being treated.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>end_date</td>
+      <td>45.02</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>end_date</td>
+      <td>45.02</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Respiratory the...', 'value': 16.883116883116884}, {'label': 'Diabetes self m...', 'value': 9.090909090909092}, {'label': 'Lifestyle educa...', 'value': 7.792207792207792}, {'label': 'Musculoskeletal...', 'value': 6.493506493506493}, {'label': 'Routine antenat...', 'value': 5.627705627705628}, {'label': 'Other values', 'value': 54.112554112554115}];
+    drawBarChart("bar_viz_procedure_description", data);
+data = [{'x': 26493775.1, 'y': 27}, {'x': 47927325.3, 'y': 21}, {'x': 69360875.5, 'y': 38}, {'x': 90794425.69999999, 'y': 7}, {'x': 112227975.9, 'y': 2}, {'x': 133661526.1, 'y': 1}, {'x': 155095076.3, 'y': 0}, {'x': 176528626.5, 'y': 0}, {'x': 197962176.7, 'y': 2}, {'x': 219395726.89999998, 'y': 0}, {'x': 240829277.1, 'y': 10}, {'x': 262262827.29999998, 'y': 1}, {'x': 283696377.5, 'y': 7}, {'x': 305129927.7, 'y': 0}, {'x': 326563477.9, 'y': 0}, {'x': 347997028.1, 'y': 0}, {'x': 369430578.29999995, 'y': 2}, {'x': 390864128.5, 'y': 0}, {'x': 412297678.7, 'y': 5}, {'x': 433731228.9, 'y': 1}];
+    binWidth = 21433550.2;
+    drawHistogram("hist_viz_condition_code", data, binWidth);
+data = [{'label': 'Prediabetes', 'value': 16.129032258064516}, {'label': 'Hypertension', 'value': 14.516129032258066}, {'label': 'Concussion with...', 'value': 8.064516129032258}, {'label': 'Hyperlipidemia', 'value': 7.258064516129033}, {'label': 'Obstructive sle...', 'value': 4.032258064516129}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_condition_description", data);
+data = [{'label': 'd70b9f2f-745e-f...', 'value': 0.4329004329004329}, {'label': '7e07f691-b437-c...', 'value': 0.4329004329004329}, {'label': 'c9c2e553-92ce-1...', 'value': 0.4329004329004329}, {'label': '6e79278b-2c83-f...', 'value': 0.4329004329004329}, {'label': 'd4ff8397-e4f6-0...', 'value': 0.4329004329004329}, {'label': 'Other values', 'value': 97.83549783549783}];
+    drawBarChart("bar_viz_care_plan_id", data);
+data = [{'label': '00aa6b45-4523-8...', 'value': 0.8658008658008658}, {'label': '09e9e73c-41d1-b...', 'value': 0.8658008658008658}, {'label': 'cbc60251-08a8-f...', 'value': 0.8658008658008658}, {'label': '2d44d9df-67e8-c...', 'value': 0.8658008658008658}, {'label': 'a83a565f-0af5-9...', 'value': 0.8658008658008658}, {'label': 'Other values', 'value': 95.67099567099568}];
+    drawBarChart("bar_viz_encounter_id", data);
+data = [{'label': '2014-03-09', 'value': 1.574803149606299}, {'label': '2014-03-05', 'value': 1.574803149606299}, {'label': '1991-07-16', 'value': 0.7874015748031495}, {'label': '2020-08-21', 'value': 0.7874015748031495}, {'label': '2019-08-17', 'value': 0.7874015748031495}, {'label': 'Other values', 'value': 94.48818897637796}];
+    drawBarChart("bar_viz_end_date", data);
+data = [{'label': 'dd19ae3a-2f3a-a...', 'value': 4.329004329004329}, {'label': '53534989-404e-c...', 'value': 3.896103896103896}, {'label': '5dbb559c-7f46-f...', 'value': 3.896103896103896}, {'label': '98308074-8188-7...', 'value': 3.896103896103896}, {'label': 'da069417-667e-3...', 'value': 3.463203463203463}, {'label': 'Other values', 'value': 80.51948051948052}];
+    drawBarChart("bar_viz_patient_id", data);
+data = [{'label': '53950000', 'value': 16.883116883116884}, {'label': '698360004', 'value': 9.090909090909092}, {'label': '443402002', 'value': 7.792207792207792}, {'label': '408869004', 'value': 6.493506493506493}, {'label': '134435003', 'value': 5.627705627705628}, {'label': 'Other values', 'value': 54.112554112554115}];
+    drawBarChart("bar_viz_procedure_code", data);
+data = [{'label': '2020-10-21', 'value': 1.2987012987012987}, {'label': '2014-02-03', 'value': 0.8658008658008658}, {'label': '2021-03-07', 'value': 0.8658008658008658}, {'label': '2020-12-18', 'value': 0.8658008658008658}, {'label': '1994-12-25', 'value': 0.8658008658008658}, {'label': 'Other values', 'value': 95.23809523809523}];
+    drawBarChart("bar_viz_start_date", data);
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,4253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>medications</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>DESCRIPTION</th>
+      <th>BASE_COST</th>
+      <th>PAYER_COVERAGE</th>
+      <th>DISPENSES</th>
+      <th>TOTALCOST</th>
+      <th>REASONDESCRIPTION</th>
+      <th>ENCOUNTER</th>
+      <th>CODE</th>
+      <th>START</th>
+      <th>STOP</th>
+      <th>PATIENT</th>
+      <th>PAYER</th>
+      <th>REASONCODE</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Clopidogrel 75 MG Oral Tablet</td>
+      <td>631.42</td>
+      <td>0.00</td>
+      <td>162</td>
+      <td>102290.04</td>
+      <td>None</td>
+      <td>546912c2-aa40-a2e0-f148-af23fa171af0</td>
+      <td>309362</td>
+      <td>2009-09-02T12:00:39Z</td>
+      <td>None</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Simvastatin 20 MG Oral Tablet</td>
+      <td>323.20</td>
+      <td>29.40</td>
+      <td>162</td>
+      <td>52358.40</td>
+      <td>None</td>
+      <td>546912c2-aa40-a2e0-f148-af23fa171af0</td>
+      <td>312961</td>
+      <td>2009-09-02T12:00:39Z</td>
+      <td>None</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>24 HR metoprolol succinate 100 MG Extended Release Oral Tablet</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>162</td>
+      <td>21050.28</td>
+      <td>None</td>
+      <td>546912c2-aa40-a2e0-f148-af23fa171af0</td>
+      <td>866412</td>
+      <td>2009-09-02T12:00:39Z</td>
+      <td>None</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Nitroglycerin 0.4 MG/ACTUAT Mucosal Spray</td>
+      <td>702.61</td>
+      <td>672.61</td>
+      <td>162</td>
+      <td>113822.82</td>
+      <td>None</td>
+      <td>546912c2-aa40-a2e0-f148-af23fa171af0</td>
+      <td>705129</td>
+      <td>2009-09-02T12:00:39Z</td>
+      <td>None</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Ibuprofen 100 MG Oral Tablet</td>
+      <td>332.42</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>997.26</td>
+      <td>None</td>
+      <td>1600b01f-01b3-fd15-135f-c7c4a30d867f</td>
+      <td>198405</td>
+      <td>2016-04-11T04:55:57Z</td>
+      <td>2016-07-23T04:55:57Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Acetaminophen 160 MG Chewable Tablet</td>
+      <td>58.31</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>58.31</td>
+      <td>None</td>
+      <td>3c131d0c-6d15-7fe1-1372-a3d8316b6d82</td>
+      <td>313820</td>
+      <td>1988-04-27T22:13:31Z</td>
+      <td>1988-05-12T22:13:31Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>98.65</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>98.65</td>
+      <td>Acute bronchitis (disorder)</td>
+      <td>d6df3fd6-e4a0-9b51-ebd5-c6394be154eb</td>
+      <td>313782</td>
+      <td>1989-09-03T18:35:49Z</td>
+      <td>1989-09-17T18:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Naproxen sodium 220 MG Oral Tablet</td>
+      <td>328.89</td>
+      <td>76.71</td>
+      <td>1</td>
+      <td>328.89</td>
+      <td>None</td>
+      <td>17d8fd78-be39-d2f7-6032-74d712972fa3</td>
+      <td>849574</td>
+      <td>2014-01-20T12:29:00Z</td>
+      <td>2014-02-03T12:29:00Z</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>a735bf55-83e9-331a-899d-a82a60b9f60c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Acetaminophen 160 MG Chewable Tablet</td>
+      <td>56.89</td>
+      <td>26.89</td>
+      <td>3</td>
+      <td>170.67</td>
+      <td>None</td>
+      <td>1cedec53-a362-320c-d52a-ddbc57fbce63</td>
+      <td>313820</td>
+      <td>2022-09-25T03:12:47Z</td>
+      <td>None</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>734afbd6-4794-363b-9bc0-6a3981533ed5</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Penicillin V Potassium 250 MG Oral Tablet</td>
+      <td>130.66</td>
+      <td>80.66</td>
+      <td>1</td>
+      <td>130.66</td>
+      <td>Streptococcal sore throat (disorder)</td>
+      <td>b88a0319-f64e-4ccb-c70a-e91dfc8f94eb</td>
+      <td>834061</td>
+      <td>1990-01-11T06:35:49Z</td>
+      <td>1990-01-25T05:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>43878008.0</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Acetaminophen 160 MG Chewable Tablet</td>
+      <td>59.82</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>59.82</td>
+      <td>None</td>
+      <td>59f48dfd-f1f6-faa7-f378-150137d46be4</td>
+      <td>313820</td>
+      <td>1991-05-28T22:41:44Z</td>
+      <td>1991-07-16T22:41:44Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>86.00</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>86.00</td>
+      <td>Acute bronchitis (disorder)</td>
+      <td>bcf78369-9e90-fe7c-894a-3accb1b2bfa3</td>
+      <td>313782</td>
+      <td>2019-05-19T04:05:00Z</td>
+      <td>2019-06-02T04:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>clonazePAM 0.25 MG Oral Tablet</td>
+      <td>11451.36</td>
+      <td>11301.36</td>
+      <td>13</td>
+      <td>148867.68</td>
+      <td>Seizure disorder</td>
+      <td>6b0584be-b199-b2c8-68a1-d9652af9e0a2</td>
+      <td>204892</td>
+      <td>1994-05-21T00:10:25Z</td>
+      <td>None</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>128613002.0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>diphenhydrAMINE Hydrochloride 25 MG Oral Tablet</td>
+      <td>126.44</td>
+      <td>101.15</td>
+      <td>574</td>
+      <td>72576.56</td>
+      <td>None</td>
+      <td>abab24f4-e849-9177-cca5-8036def51921</td>
+      <td>1049630</td>
+      <td>1975-10-21T17:35:55Z</td>
+      <td>None</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>a735bf55-83e9-331a-899d-a82a60b9f60c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>doxycycline hyclate 100 MG</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>556</td>
+      <td>72246.64</td>
+      <td>Viral sinusitis (disorder)</td>
+      <td>d69c0fad-2dd2-fa5e-dd52-7355118a2f1b</td>
+      <td>1649987</td>
+      <td>1977-04-16T00:35:55Z</td>
+      <td>None</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>444814009.0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>75.99</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>75.99</td>
+      <td>None</td>
+      <td>e2363506-d56c-0d6f-ec1d-7d136aef363c</td>
+      <td>313782</td>
+      <td>2018-06-23T18:24:01Z</td>
+      <td>2018-07-20T18:24:01Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1 ML medroxyPROGESTERone acetate 150 MG/ML Injection</td>
+      <td>349.97</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>4199.64</td>
+      <td>None</td>
+      <td>99d22293-882f-827f-6368-340a3b548c26</td>
+      <td>1000126</td>
+      <td>2018-10-15T23:21:40Z</td>
+      <td>2019-10-10T23:37:15Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Naproxen sodium 220 MG Oral Tablet</td>
+      <td>224.67</td>
+      <td>74.67</td>
+      <td>2</td>
+      <td>449.34</td>
+      <td>None</td>
+      <td>8a77a82e-7d1b-0c61-ab7b-ca56d333490c</td>
+      <td>849574</td>
+      <td>2017-04-19T15:37:58Z</td>
+      <td>2017-06-25T15:37:58Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>7016.33</td>
+      <td>5342.33</td>
+      <td>3</td>
+      <td>21048.99</td>
+      <td>None</td>
+      <td>ce5a8ef3-f393-0d3e-b2dc-fcc03fe8cc3f</td>
+      <td>856987</td>
+      <td>2017-01-18T01:44:18Z</td>
+      <td>2017-02-06T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>93.32</td>
+      <td>63.32</td>
+      <td>1</td>
+      <td>93.32</td>
+      <td>Acute bronchitis (disorder)</td>
+      <td>d2b96a32-694d-35ed-7a53-0a163704b3f9</td>
+      <td>313782</td>
+      <td>2020-10-21T22:50:09Z</td>
+      <td>2020-10-29T22:50:09Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>16541.50</td>
+      <td>16511.50</td>
+      <td>3</td>
+      <td>49624.50</td>
+      <td>None</td>
+      <td>f71dc354-1527-92b0-2ecf-39d3f99e4f72</td>
+      <td>856987</td>
+      <td>2017-02-06T01:44:18Z</td>
+      <td>2018-02-12T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>de095379-a3d2-1c46-0312-08424ac5a9d7</td>
+      <td>245134</td>
+      <td>2017-03-03T15:44:18Z</td>
+      <td>2018-02-12T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet</td>
+      <td>1165.77</td>
+      <td>1115.77</td>
+      <td>1</td>
+      <td>1165.77</td>
+      <td>Viral sinusitis (disorder)</td>
+      <td>5c569178-7925-20d0-7c0f-353efcfc2e38</td>
+      <td>562251</td>
+      <td>2019-03-25T21:27:22Z</td>
+      <td>2019-04-18T21:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>444814009.0</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Jolivette 28 Day Pack</td>
+      <td>627.06</td>
+      <td>577.06</td>
+      <td>12</td>
+      <td>7524.72</td>
+      <td>None</td>
+      <td>169a3458-1703-1007-71d0-5412927a0bef</td>
+      <td>757594</td>
+      <td>2019-12-28T15:27:22Z</td>
+      <td>2020-12-22T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>88.14</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>88.14</td>
+      <td>None</td>
+      <td>f6fa799c-dd9b-7f5c-b855-80ad16ca61d6</td>
+      <td>313782</td>
+      <td>2022-07-27T15:58:41Z</td>
+      <td>2022-08-18T15:58:41Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Trinessa 28 Day Pack</td>
+      <td>643.69</td>
+      <td>613.69</td>
+      <td>12</td>
+      <td>7724.28</td>
+      <td>None</td>
+      <td>5109b1f2-33fe-5611-2a21-968236742cb3</td>
+      <td>751905</td>
+      <td>2021-10-03T11:20:42Z</td>
+      <td>2022-09-28T11:20:42Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Natazia 28 Day Pack</td>
+      <td>572.35</td>
+      <td>542.35</td>
+      <td>3</td>
+      <td>1717.05</td>
+      <td>None</td>
+      <td>2aa8f1f2-0457-aadb-829a-a6665281d376</td>
+      <td>978950</td>
+      <td>2022-09-28T11:20:42Z</td>
+      <td>None</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Ibuprofen 100 MG Oral Tablet</td>
+      <td>150.90</td>
+      <td>0.00</td>
+      <td>2</td>
+      <td>301.80</td>
+      <td>None</td>
+      <td>a3f6aeb1-56b5-7e85-9f6f-8eb5ce364257</td>
+      <td>198405</td>
+      <td>2014-10-18T17:11:06Z</td>
+      <td>2015-01-09T17:11:06Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Penicillin V Potassium 250 MG Oral Tablet</td>
+      <td>110.56</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>110.56</td>
+      <td>Acute viral pharyngitis (disorder)</td>
+      <td>f1b77487-991a-e982-f6bc-47c1247b2f8e</td>
+      <td>834061</td>
+      <td>2016-03-20T00:39:19Z</td>
+      <td>2016-03-28T13:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>195662009.0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>NuvaRing 0.12/0.015 MG per 24HR 21 Day Vaginal Ring</td>
+      <td>603.41</td>
+      <td>573.41</td>
+      <td>12</td>
+      <td>7240.92</td>
+      <td>None</td>
+      <td>835c84e3-958d-2e60-7892-5658954b599d</td>
+      <td>1367439</td>
+      <td>2012-10-29T07:10:25Z</td>
+      <td>2013-10-24T07:10:25Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Meperidine Hydrochloride 50 MG Oral Tablet</td>
+      <td>1691.91</td>
+      <td>1541.91</td>
+      <td>4</td>
+      <td>6767.64</td>
+      <td>None</td>
+      <td>0148026b-b4db-1663-19ed-a6a51d3c33b2</td>
+      <td>861467</td>
+      <td>2013-11-23T02:01:23Z</td>
+      <td>2014-01-21T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Etonogestrel 68 MG Drug Implant</td>
+      <td>8871.69</td>
+      <td>8841.69</td>
+      <td>12</td>
+      <td>106460.28</td>
+      <td>None</td>
+      <td>909ab863-bdf1-a363-5546-4ed4e579c087</td>
+      <td>389221</td>
+      <td>2013-10-24T07:10:25Z</td>
+      <td>2014-10-19T07:46:54Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>90.18</td>
+      <td>40.18</td>
+      <td>3</td>
+      <td>270.54</td>
+      <td>None</td>
+      <td>0148026b-b4db-1663-19ed-a6a51d3c33b2</td>
+      <td>313782</td>
+      <td>2013-11-23T02:01:23Z</td>
+      <td>2014-03-20T02:01:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>6818.87</td>
+      <td>6768.87</td>
+      <td>3</td>
+      <td>20456.61</td>
+      <td>None</td>
+      <td>c46618a4-e41c-acc2-14bf-5f7a2b343734</td>
+      <td>856987</td>
+      <td>2014-02-02T00:28:23Z</td>
+      <td>2014-02-14T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>168 HR Ethinyl Estradiol 0.00146 MG/HR / norelgestromin 0.00625 MG/HR Transdermal System</td>
+      <td>588.80</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>7065.60</td>
+      <td>None</td>
+      <td>72a14116-47c8-bfb9-5692-079db9227fa7</td>
+      <td>1534809</td>
+      <td>2014-10-19T07:46:54Z</td>
+      <td>2015-10-14T07:46:54Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>563.30</td>
+      <td>513.30</td>
+      <td>3</td>
+      <td>1689.90</td>
+      <td>None</td>
+      <td>31691852-4ee0-5b6f-714f-31ebc3762f3c</td>
+      <td>856987</td>
+      <td>2014-02-14T00:28:23Z</td>
+      <td>2015-02-20T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>916fd8eb-69fa-2ce9-4a25-4dfe618577dc</td>
+      <td>1860491</td>
+      <td>2017-05-02T15:44:18Z</td>
+      <td>2018-02-12T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>8eec4808-5544-3d72-22af-3aff29eec66f</td>
+      <td>245134</td>
+      <td>2018-02-12T01:44:18Z</td>
+      <td>2019-02-18T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>8eec4808-5544-3d72-22af-3aff29eec66f</td>
+      <td>1860491</td>
+      <td>2018-02-12T01:44:18Z</td>
+      <td>2019-02-18T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>2875.96</td>
+      <td>1557.33</td>
+      <td>3</td>
+      <td>8627.88</td>
+      <td>None</td>
+      <td>8eec4808-5544-3d72-22af-3aff29eec66f</td>
+      <td>856987</td>
+      <td>2018-02-12T01:44:18Z</td>
+      <td>2019-02-18T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>4daa28c7-e9d5-c8ce-a469-a9cfe75dfc75</td>
+      <td>245134</td>
+      <td>2019-02-18T01:44:18Z</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>4daa28c7-e9d5-c8ce-a469-a9cfe75dfc75</td>
+      <td>1860491</td>
+      <td>2019-02-18T01:44:18Z</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>33672.92</td>
+      <td>32198.80</td>
+      <td>3</td>
+      <td>101018.76</td>
+      <td>None</td>
+      <td>4daa28c7-e9d5-c8ce-a469-a9cfe75dfc75</td>
+      <td>856987</td>
+      <td>2019-02-18T01:44:18Z</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>0585729c-e96d-be8f-e474-61de1e40ca38</td>
+      <td>245134</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>0585729c-e96d-be8f-e474-61de1e40ca38</td>
+      <td>1860491</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>27930.52</td>
+      <td>26456.40</td>
+      <td>3</td>
+      <td>83791.56</td>
+      <td>None</td>
+      <td>0585729c-e96d-be8f-e474-61de1e40ca38</td>
+      <td>856987</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>94.47</td>
+      <td>64.47</td>
+      <td>1</td>
+      <td>94.47</td>
+      <td>Acute bronchitis (disorder)</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>313782</td>
+      <td>2019-04-09T07:52:11Z</td>
+      <td>2019-04-21T07:52:11Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>245134</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>2020-02-24T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>1860491</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>2020-02-24T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>33096.33</td>
+      <td>33066.33</td>
+      <td>3</td>
+      <td>99288.99</td>
+      <td>None</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>856987</td>
+      <td>2019-04-15T01:44:18Z</td>
+      <td>2020-02-24T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>d1aeb5f1-0808-f4f3-daae-23e22ac1bfb7</td>
+      <td>245134</td>
+      <td>2020-02-24T01:44:18Z</td>
+      <td>2021-03-01T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>d1aeb5f1-0808-f4f3-daae-23e22ac1bfb7</td>
+      <td>1860491</td>
+      <td>2020-02-24T01:44:18Z</td>
+      <td>2021-03-01T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>29957.71</td>
+      <td>29927.71</td>
+      <td>3</td>
+      <td>89873.13</td>
+      <td>None</td>
+      <td>d1aeb5f1-0808-f4f3-daae-23e22ac1bfb7</td>
+      <td>856987</td>
+      <td>2020-02-24T01:44:18Z</td>
+      <td>2021-03-01T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>377c48cd-db36-6215-e7e8-6afbc2327c6e</td>
+      <td>245134</td>
+      <td>2021-03-01T01:44:18Z</td>
+      <td>2022-03-07T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>377c48cd-db36-6215-e7e8-6afbc2327c6e</td>
+      <td>1860491</td>
+      <td>2021-03-01T01:44:18Z</td>
+      <td>2022-03-07T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>9999.83</td>
+      <td>8525.71</td>
+      <td>3</td>
+      <td>29999.49</td>
+      <td>None</td>
+      <td>377c48cd-db36-6215-e7e8-6afbc2327c6e</td>
+      <td>856987</td>
+      <td>2021-03-01T01:44:18Z</td>
+      <td>2022-03-07T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>78.06</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>78.06</td>
+      <td>Acute bronchitis (disorder)</td>
+      <td>3dd72519-2521-c203-e811-4282eb8e4bc1</td>
+      <td>313782</td>
+      <td>2020-10-22T13:58:27Z</td>
+      <td>2020-11-11T13:58:27Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Amoxicillin 250 MG Oral Capsule</td>
+      <td>198.45</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>198.45</td>
+      <td>None</td>
+      <td>4c0ff03e-bff7-81b5-fbd6-41d8d07a29d2</td>
+      <td>308182</td>
+      <td>2021-08-06T16:39:19Z</td>
+      <td>2021-08-20T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>105.54</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>105.54</td>
+      <td>None</td>
+      <td>4c0ff03e-bff7-81b5-fbd6-41d8d07a29d2</td>
+      <td>313782</td>
+      <td>2021-08-06T16:39:19Z</td>
+      <td>2021-08-20T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>70885489-6780-39b8-becc-6e313fb0b05c</td>
+      <td>245134</td>
+      <td>2022-03-07T01:44:18Z</td>
+      <td>None</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>70885489-6780-39b8-becc-6e313fb0b05c</td>
+      <td>1860491</td>
+      <td>2022-03-07T01:44:18Z</td>
+      <td>None</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Jolivette 28 Day Pack</td>
+      <td>417.53</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>5010.36</td>
+      <td>None</td>
+      <td>1f4c69df-4036-a342-6c7b-b8e87f3224ac</td>
+      <td>757594</td>
+      <td>2016-10-08T07:46:54Z</td>
+      <td>2017-10-03T07:46:54Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>9928.55</td>
+      <td>8951.59</td>
+      <td>3</td>
+      <td>29785.65</td>
+      <td>None</td>
+      <td>70885489-6780-39b8-becc-6e313fb0b05c</td>
+      <td>856987</td>
+      <td>2022-03-07T01:44:18Z</td>
+      <td>None</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Jolivette 28 Day Pack</td>
+      <td>547.06</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>6564.72</td>
+      <td>None</td>
+      <td>3c331817-0a5b-c60d-7cfe-cfc6ccd0c853</td>
+      <td>757594</td>
+      <td>2017-10-03T07:46:54Z</td>
+      <td>2018-09-28T07:46:54Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>69.44</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>69.44</td>
+      <td>None</td>
+      <td>186658bc-2fc0-fcd3-9cb2-d8aeb00a2bfd</td>
+      <td>313782</td>
+      <td>2019-01-15T07:29:03Z</td>
+      <td>2019-02-16T07:29:03Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>1 ML medroxyprogesterone acetate 150 MG/ML Injection</td>
+      <td>28.90</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>346.80</td>
+      <td>None</td>
+      <td>6b2923c0-eb4a-c935-7148-5c09e471ceca</td>
+      <td>1000126</td>
+      <td>2021-09-12T07:46:54Z</td>
+      <td>2022-09-07T08:01:16Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Errin 28 Day Pack</td>
+      <td>698.47</td>
+      <td>668.47</td>
+      <td>4</td>
+      <td>2793.88</td>
+      <td>None</td>
+      <td>33b3ef57-461c-5fae-2fc6-efc358d05c65</td>
+      <td>831533</td>
+      <td>2022-09-07T08:01:16Z</td>
+      <td>None</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Errin 28 Day Pack</td>
+      <td>457.33</td>
+      <td>201.88</td>
+      <td>12</td>
+      <td>5487.96</td>
+      <td>None</td>
+      <td>6607d3a9-d0de-f7c3-96ec-37ab90811f06</td>
+      <td>831533</td>
+      <td>2012-05-12T19:29:52Z</td>
+      <td>2013-05-07T19:29:52Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Mirena 52 MG Intrauterine System</td>
+      <td>18549.20</td>
+      <td>16875.20</td>
+      <td>12</td>
+      <td>222590.40</td>
+      <td>None</td>
+      <td>0178124d-72da-82d6-9023-a4028ac097c9</td>
+      <td>807283</td>
+      <td>2013-05-07T19:29:52Z</td>
+      <td>2014-05-06T14:11:18Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>99.28</td>
+      <td>69.28</td>
+      <td>1</td>
+      <td>99.28</td>
+      <td>Acute bronchitis (disorder)</td>
+      <td>13a69895-45bd-a47a-5094-c1b7bc8aca5b</td>
+      <td>313782</td>
+      <td>2013-08-19T10:03:36Z</td>
+      <td>2013-09-03T10:03:36Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Levora 0.15/30 28 Day Pack</td>
+      <td>636.37</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>7636.44</td>
+      <td>None</td>
+      <td>e373465b-7503-4e8f-f569-77dbc8554fbb</td>
+      <td>748879</td>
+      <td>2015-05-01T14:11:18Z</td>
+      <td>2016-04-25T14:11:18Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Yaz 28 Day Pack</td>
+      <td>589.89</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>7078.68</td>
+      <td>None</td>
+      <td>035e7b28-6d7c-0fee-a24c-505f522a1cb7</td>
+      <td>748856</td>
+      <td>2016-04-25T14:11:18Z</td>
+      <td>2017-04-20T14:11:18Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Naproxen sodium 220 MG Oral Tablet</td>
+      <td>229.91</td>
+      <td>0.00</td>
+      <td>170</td>
+      <td>39084.70</td>
+      <td>Osteoarthritis of hip</td>
+      <td>ccbe3bc6-a95e-ad27-9038-98697b4afbfe</td>
+      <td>849574</td>
+      <td>2008-12-25T19:20:27Z</td>
+      <td>None</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>239872002.0</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Ibuprofen 200 MG Oral Tablet</td>
+      <td>135.95</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>135.95</td>
+      <td>None</td>
+      <td>fba8d030-b84f-c968-35b5-adb2b1bc83a4</td>
+      <td>310965</td>
+      <td>2015-01-22T20:59:27Z</td>
+      <td>2015-03-02T20:59:27Z</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>25430.75</td>
+      <td>25280.75</td>
+      <td>3</td>
+      <td>76292.25</td>
+      <td>None</td>
+      <td>7c14bbc6-a42a-bc99-6071-abf73aee6283</td>
+      <td>856987</td>
+      <td>2015-02-20T00:28:23Z</td>
+      <td>2016-02-26T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>26149.08</td>
+      <td>25999.08</td>
+      <td>3</td>
+      <td>78447.24</td>
+      <td>None</td>
+      <td>018496fd-892b-23fb-b3f4-9c90dc2896e7</td>
+      <td>856987</td>
+      <td>2016-02-26T00:28:23Z</td>
+      <td>2017-03-03T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>1560.14</td>
+      <td>1510.14</td>
+      <td>3</td>
+      <td>4680.42</td>
+      <td>None</td>
+      <td>bb561567-71d0-6472-5659-137b152314f3</td>
+      <td>856987</td>
+      <td>2017-03-03T00:28:23Z</td>
+      <td>2018-03-09T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>NuvaRing 0.12/0.015 MG per 24HR 21 Day Vaginal Ring</td>
+      <td>520.57</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>6246.84</td>
+      <td>None</td>
+      <td>da10d570-47e9-5cdf-f12b-611a7e7e8ae9</td>
+      <td>1367439</td>
+      <td>2017-04-20T14:11:18Z</td>
+      <td>2018-04-15T14:11:18Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>9353.94</td>
+      <td>9203.94</td>
+      <td>3</td>
+      <td>28061.82</td>
+      <td>None</td>
+      <td>5ae876ea-951e-74e5-d7ee-4aa307f26823</td>
+      <td>856987</td>
+      <td>2018-03-09T00:28:23Z</td>
+      <td>2019-03-15T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Yaz 28 Day Pack</td>
+      <td>407.70</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>4892.40</td>
+      <td>None</td>
+      <td>688dc257-04c8-2098-9873-9efba2f14a5d</td>
+      <td>748856</td>
+      <td>2018-04-15T14:11:18Z</td>
+      <td>2019-04-10T14:11:18Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Seasonique 91 Day Pack</td>
+      <td>455.92</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>5471.04</td>
+      <td>None</td>
+      <td>afbf6535-feb1-9f46-c60a-d1b46ce0400a</td>
+      <td>749762</td>
+      <td>2019-04-10T14:11:18Z</td>
+      <td>2020-04-04T14:11:18Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>1 ML medroxyprogesterone acetate 150 MG/ML Injection</td>
+      <td>65.58</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>786.96</td>
+      <td>None</td>
+      <td>572bb103-3012-3a13-4180-a2382ab7e953</td>
+      <td>1000126</td>
+      <td>2020-04-04T14:11:18Z</td>
+      <td>2021-03-30T14:21:54Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>22268.08</td>
+      <td>22118.08</td>
+      <td>3</td>
+      <td>66804.24</td>
+      <td>None</td>
+      <td>4840cdc7-3560-9bd2-00d0-076230e6c91e</td>
+      <td>856987</td>
+      <td>2019-03-15T00:28:23Z</td>
+      <td>2020-03-20T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Naproxen sodium 220 MG Oral Tablet</td>
+      <td>65.16</td>
+      <td>35.16</td>
+      <td>1</td>
+      <td>65.16</td>
+      <td>None</td>
+      <td>68e54405-5d36-a495-fe89-3894f9f16954</td>
+      <td>849574</td>
+      <td>2021-05-25T18:58:19Z</td>
+      <td>2021-07-08T18:58:19Z</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet</td>
+      <td>970.52</td>
+      <td>489.75</td>
+      <td>1</td>
+      <td>970.52</td>
+      <td>Viral sinusitis (disorder)</td>
+      <td>f350c6b9-e53c-f397-ee7b-b435e9d2ac24</td>
+      <td>562251</td>
+      <td>2018-03-27T19:20:27Z</td>
+      <td>2018-04-17T19:20:27Z</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>444814009.0</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>8906.47</td>
+      <td>8756.47</td>
+      <td>3</td>
+      <td>26719.41</td>
+      <td>None</td>
+      <td>14c3c417-64af-d0a9-1441-b62523063c49</td>
+      <td>856987</td>
+      <td>2020-03-20T00:28:23Z</td>
+      <td>2021-03-26T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Penicillin V Potassium 500 MG Oral Tablet</td>
+      <td>445.79</td>
+      <td>295.79</td>
+      <td>1</td>
+      <td>445.79</td>
+      <td>Streptococcal sore throat (disorder)</td>
+      <td>63d0624f-7594-1906-917f-dee4746636ba</td>
+      <td>834102</td>
+      <td>2020-11-11T06:28:23Z</td>
+      <td>2020-11-20T20:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>43878008.0</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>17652.66</td>
+      <td>17602.66</td>
+      <td>3</td>
+      <td>52957.98</td>
+      <td>None</td>
+      <td>924447e1-4539-d79f-6d84-440745e125a5</td>
+      <td>856987</td>
+      <td>2021-03-26T00:28:23Z</td>
+      <td>2022-04-01T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>10401.40</td>
+      <td>10351.40</td>
+      <td>3</td>
+      <td>31204.20</td>
+      <td>None</td>
+      <td>4067233f-47b3-c2ce-3297-b9c1e0bbfac1</td>
+      <td>856987</td>
+      <td>2022-04-01T00:28:23Z</td>
+      <td>None</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>0.91</td>
+      <td>Hypertension</td>
+      <td>c2f9d9bc-ca00-a759-3078-5e21385946cc</td>
+      <td>314076</td>
+      <td>2018-08-21T19:20:27Z</td>
+      <td>2018-08-21T19:20:27Z</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>4</td>
+      <td>3.64</td>
+      <td>Hypertension</td>
+      <td>c2f9d9bc-ca00-a759-3078-5e21385946cc</td>
+      <td>314076</td>
+      <td>2018-08-21T19:20:27Z</td>
+      <td>2019-08-27T19:20:27Z</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>4</td>
+      <td>3.64</td>
+      <td>Hypertension</td>
+      <td>4dbccd7c-e87e-b9fc-ede7-5a7760b09df5</td>
+      <td>314076</td>
+      <td>2019-08-27T19:20:27Z</td>
+      <td>2020-09-01T19:20:27Z</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>4</td>
+      <td>3.64</td>
+      <td>Hypertension</td>
+      <td>3bb1915f-486f-6e34-b9b1-ea3f66bd67b9</td>
+      <td>314076</td>
+      <td>2020-09-01T19:20:27Z</td>
+      <td>2021-09-07T19:20:27Z</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>4</td>
+      <td>3.64</td>
+      <td>Hypertension</td>
+      <td>7566ab27-1f79-2d7c-7ead-b8b161ff6483</td>
+      <td>314076</td>
+      <td>2021-09-07T19:20:27Z</td>
+      <td>2022-09-13T19:20:27Z</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Penicillin V Potassium 500 MG Oral Tablet</td>
+      <td>101.65</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>101.65</td>
+      <td>Streptococcal sore throat (disorder)</td>
+      <td>d930276c-194f-e386-d094-85b5ee35302e</td>
+      <td>834102</td>
+      <td>2022-05-03T07:20:27Z</td>
+      <td>2022-05-15T01:20:27Z</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>43878008.0</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>0.91</td>
+      <td>Hypertension</td>
+      <td>183d9bf1-3bd7-d812-f5ff-27d584326300</td>
+      <td>314076</td>
+      <td>2022-09-13T19:20:27Z</td>
+      <td>None</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Trinessa 28 Day Pack</td>
+      <td>336.54</td>
+      <td>0.00</td>
+      <td>9</td>
+      <td>3028.86</td>
+      <td>None</td>
+      <td>c01fdbc3-58b3-2db4-c8d4-78b4ed6295fd</td>
+      <td>751905</td>
+      <td>2022-03-25T14:21:54Z</td>
+      <td>None</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Fexofenadine hydrochloride 30 MG Oral Tablet</td>
+      <td>278.62</td>
+      <td>228.62</td>
+      <td>266</td>
+      <td>74112.92</td>
+      <td>None</td>
+      <td>88bde367-23bf-dadb-f13d-c274e86d10c7</td>
+      <td>997488</td>
+      <td>2001-02-16T14:31:42Z</td>
+      <td>None</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>NDA020800 0.3 ML Epinephrine 1 MG/ML Auto-Injector</td>
+      <td>5610.80</td>
+      <td>5560.80</td>
+      <td>266</td>
+      <td>1492472.80</td>
+      <td>None</td>
+      <td>88bde367-23bf-dadb-f13d-c274e86d10c7</td>
+      <td>1870230</td>
+      <td>2001-02-16T14:31:42Z</td>
+      <td>None</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>budesonide 0.5 MG/ML Inhalation Suspension</td>
+      <td>129.94</td>
+      <td>94.94</td>
+      <td>1</td>
+      <td>129.94</td>
+      <td>Childhood asthma</td>
+      <td>d28f35dc-04e2-4748-9d70-8f48817d7f6f</td>
+      <td>252559</td>
+      <td>2004-09-04T05:01:55Z</td>
+      <td>2004-09-25T05:01:55Z</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>d18ef2e6-ef40-324c-be54-34a5ee865625</td>
+      <td>233678006.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>medication_description</th>
+      <th>unit_cost</th>
+      <th>payer_coverage_amount</th>
+      <th>dispense_count</th>
+      <th>total_cost</th>
+      <th>reason_description</th>
+      <th>encounter_id</th>
+      <th>medication_code</th>
+      <th>order_start_datetime</th>
+      <th>order_stop_datetime</th>
+      <th>patient_id</th>
+      <th>payer_id</th>
+      <th>reason_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Clopidogrel 75 MG Oral Tablet</td>
+      <td>631.42</td>
+      <td>0.00</td>
+      <td>162</td>
+      <td>102290.04</td>
+      <td>None</td>
+      <td>546912c2-aa40-a2e0-f148-af23fa171af0</td>
+      <td>309362</td>
+      <td>2009-09-02 12:00:39</td>
+      <td>NaT</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Simvastatin 20 MG Oral Tablet</td>
+      <td>323.20</td>
+      <td>29.40</td>
+      <td>162</td>
+      <td>52358.40</td>
+      <td>None</td>
+      <td>546912c2-aa40-a2e0-f148-af23fa171af0</td>
+      <td>312961</td>
+      <td>2009-09-02 12:00:39</td>
+      <td>NaT</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>24 HR metoprolol succinate 100 MG Extended Release Oral Tablet</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>162</td>
+      <td>21050.28</td>
+      <td>None</td>
+      <td>546912c2-aa40-a2e0-f148-af23fa171af0</td>
+      <td>866412</td>
+      <td>2009-09-02 12:00:39</td>
+      <td>NaT</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Nitroglycerin 0.4 MG/ACTUAT Mucosal Spray</td>
+      <td>702.61</td>
+      <td>672.61</td>
+      <td>162</td>
+      <td>113822.82</td>
+      <td>None</td>
+      <td>546912c2-aa40-a2e0-f148-af23fa171af0</td>
+      <td>705129</td>
+      <td>2009-09-02 12:00:39</td>
+      <td>NaT</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Ibuprofen 100 MG Oral Tablet</td>
+      <td>332.42</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>997.26</td>
+      <td>None</td>
+      <td>1600b01f-01b3-fd15-135f-c7c4a30d867f</td>
+      <td>198405</td>
+      <td>2016-04-11 04:55:57</td>
+      <td>2016-07-23 04:55:57</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Acetaminophen 160 MG Chewable Tablet</td>
+      <td>58.31</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>58.31</td>
+      <td>None</td>
+      <td>3c131d0c-6d15-7fe1-1372-a3d8316b6d82</td>
+      <td>313820</td>
+      <td>1988-04-27 22:13:31</td>
+      <td>1988-05-12 22:13:31</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>98.65</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>98.65</td>
+      <td>Acute bronchitis</td>
+      <td>d6df3fd6-e4a0-9b51-ebd5-c6394be154eb</td>
+      <td>313782</td>
+      <td>1989-09-03 18:35:49</td>
+      <td>1989-09-17 18:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Naproxen sodium 220 MG Oral Tablet</td>
+      <td>328.89</td>
+      <td>76.71</td>
+      <td>1</td>
+      <td>328.89</td>
+      <td>None</td>
+      <td>17d8fd78-be39-d2f7-6032-74d712972fa3</td>
+      <td>849574</td>
+      <td>2014-01-20 12:29:00</td>
+      <td>2014-02-03 12:29:00</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+      <td>a735bf55-83e9-331a-899d-a82a60b9f60c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Acetaminophen 160 MG Chewable Tablet</td>
+      <td>56.89</td>
+      <td>26.89</td>
+      <td>3</td>
+      <td>170.67</td>
+      <td>None</td>
+      <td>1cedec53-a362-320c-d52a-ddbc57fbce63</td>
+      <td>313820</td>
+      <td>2022-09-25 03:12:47</td>
+      <td>NaT</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+      <td>734afbd6-4794-363b-9bc0-6a3981533ed5</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Penicillin V Potassium 250 MG Oral Tablet</td>
+      <td>130.66</td>
+      <td>80.66</td>
+      <td>1</td>
+      <td>130.66</td>
+      <td>Streptococcal sore throat</td>
+      <td>b88a0319-f64e-4ccb-c70a-e91dfc8f94eb</td>
+      <td>834061</td>
+      <td>1990-01-11 06:35:49</td>
+      <td>1990-01-25 05:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>43878008.0</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Acetaminophen 160 MG Chewable Tablet</td>
+      <td>59.82</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>59.82</td>
+      <td>None</td>
+      <td>59f48dfd-f1f6-faa7-f378-150137d46be4</td>
+      <td>313820</td>
+      <td>1991-05-28 22:41:44</td>
+      <td>1991-07-16 22:41:44</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>86.00</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>86.00</td>
+      <td>Acute bronchitis</td>
+      <td>bcf78369-9e90-fe7c-894a-3accb1b2bfa3</td>
+      <td>313782</td>
+      <td>2019-05-19 04:05:00</td>
+      <td>2019-06-02 04:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>clonazePAM 0.25 MG Oral Tablet</td>
+      <td>11451.36</td>
+      <td>11301.36</td>
+      <td>13</td>
+      <td>148867.68</td>
+      <td>Seizure disorder</td>
+      <td>6b0584be-b199-b2c8-68a1-d9652af9e0a2</td>
+      <td>204892</td>
+      <td>1994-05-21 00:10:25</td>
+      <td>NaT</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>128613002.0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>diphenhydrAMINE Hydrochloride 25 MG Oral Tablet</td>
+      <td>126.44</td>
+      <td>101.15</td>
+      <td>574</td>
+      <td>72576.56</td>
+      <td>None</td>
+      <td>abab24f4-e849-9177-cca5-8036def51921</td>
+      <td>1049630</td>
+      <td>1975-10-21 17:35:55</td>
+      <td>NaT</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>a735bf55-83e9-331a-899d-a82a60b9f60c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>doxycycline hyclate 100 MG</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>556</td>
+      <td>72246.64</td>
+      <td>Viral sinusitis</td>
+      <td>d69c0fad-2dd2-fa5e-dd52-7355118a2f1b</td>
+      <td>1649987</td>
+      <td>1977-04-16 00:35:55</td>
+      <td>NaT</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>444814009.0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>75.99</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>75.99</td>
+      <td>None</td>
+      <td>e2363506-d56c-0d6f-ec1d-7d136aef363c</td>
+      <td>313782</td>
+      <td>2018-06-23 18:24:01</td>
+      <td>2018-07-20 18:24:01</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1 ML medroxyPROGESTERone acetate 150 MG/ML Injection</td>
+      <td>349.97</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>4199.64</td>
+      <td>None</td>
+      <td>99d22293-882f-827f-6368-340a3b548c26</td>
+      <td>1000126</td>
+      <td>2018-10-15 23:21:40</td>
+      <td>2019-10-10 23:37:15</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Naproxen sodium 220 MG Oral Tablet</td>
+      <td>224.67</td>
+      <td>74.67</td>
+      <td>2</td>
+      <td>449.34</td>
+      <td>None</td>
+      <td>8a77a82e-7d1b-0c61-ab7b-ca56d333490c</td>
+      <td>849574</td>
+      <td>2017-04-19 15:37:58</td>
+      <td>2017-06-25 15:37:58</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>7016.33</td>
+      <td>5342.33</td>
+      <td>3</td>
+      <td>21048.99</td>
+      <td>None</td>
+      <td>ce5a8ef3-f393-0d3e-b2dc-fcc03fe8cc3f</td>
+      <td>856987</td>
+      <td>2017-01-18 01:44:18</td>
+      <td>2017-02-06 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>93.32</td>
+      <td>63.32</td>
+      <td>1</td>
+      <td>93.32</td>
+      <td>Acute bronchitis</td>
+      <td>d2b96a32-694d-35ed-7a53-0a163704b3f9</td>
+      <td>313782</td>
+      <td>2020-10-21 22:50:09</td>
+      <td>2020-10-29 22:50:09</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>16541.50</td>
+      <td>16511.50</td>
+      <td>3</td>
+      <td>49624.50</td>
+      <td>None</td>
+      <td>f71dc354-1527-92b0-2ecf-39d3f99e4f72</td>
+      <td>856987</td>
+      <td>2017-02-06 01:44:18</td>
+      <td>2018-02-12 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>de095379-a3d2-1c46-0312-08424ac5a9d7</td>
+      <td>245134</td>
+      <td>2017-03-03 15:44:18</td>
+      <td>2018-02-12 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet</td>
+      <td>1165.77</td>
+      <td>1115.77</td>
+      <td>1</td>
+      <td>1165.77</td>
+      <td>Viral sinusitis</td>
+      <td>5c569178-7925-20d0-7c0f-353efcfc2e38</td>
+      <td>562251</td>
+      <td>2019-03-25 21:27:22</td>
+      <td>2019-04-18 21:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>444814009.0</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Jolivette 28 Day Pack</td>
+      <td>627.06</td>
+      <td>577.06</td>
+      <td>12</td>
+      <td>7524.72</td>
+      <td>None</td>
+      <td>169a3458-1703-1007-71d0-5412927a0bef</td>
+      <td>757594</td>
+      <td>2019-12-28 15:27:22</td>
+      <td>2020-12-22 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>88.14</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>88.14</td>
+      <td>None</td>
+      <td>f6fa799c-dd9b-7f5c-b855-80ad16ca61d6</td>
+      <td>313782</td>
+      <td>2022-07-27 15:58:41</td>
+      <td>2022-08-18 15:58:41</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Trinessa 28 Day Pack</td>
+      <td>643.69</td>
+      <td>613.69</td>
+      <td>12</td>
+      <td>7724.28</td>
+      <td>None</td>
+      <td>5109b1f2-33fe-5611-2a21-968236742cb3</td>
+      <td>751905</td>
+      <td>2021-10-03 11:20:42</td>
+      <td>2022-09-28 11:20:42</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Natazia 28 Day Pack</td>
+      <td>572.35</td>
+      <td>542.35</td>
+      <td>3</td>
+      <td>1717.05</td>
+      <td>None</td>
+      <td>2aa8f1f2-0457-aadb-829a-a6665281d376</td>
+      <td>978950</td>
+      <td>2022-09-28 11:20:42</td>
+      <td>NaT</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+      <td>0133f751-9229-3cfd-815f-b6d4979bdd6a</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Ibuprofen 100 MG Oral Tablet</td>
+      <td>150.90</td>
+      <td>0.00</td>
+      <td>2</td>
+      <td>301.80</td>
+      <td>None</td>
+      <td>a3f6aeb1-56b5-7e85-9f6f-8eb5ce364257</td>
+      <td>198405</td>
+      <td>2014-10-18 17:11:06</td>
+      <td>2015-01-09 17:11:06</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Penicillin V Potassium 250 MG Oral Tablet</td>
+      <td>110.56</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>110.56</td>
+      <td>Acute viral pharyngitis</td>
+      <td>f1b77487-991a-e982-f6bc-47c1247b2f8e</td>
+      <td>834061</td>
+      <td>2016-03-20 00:39:19</td>
+      <td>2016-03-28 13:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>195662009.0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>NuvaRing 0.12/0.015 MG per 24HR 21 Day Vaginal Ring</td>
+      <td>603.41</td>
+      <td>573.41</td>
+      <td>12</td>
+      <td>7240.92</td>
+      <td>None</td>
+      <td>835c84e3-958d-2e60-7892-5658954b599d</td>
+      <td>1367439</td>
+      <td>2012-10-29 07:10:25</td>
+      <td>2013-10-24 07:10:25</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Meperidine Hydrochloride 50 MG Oral Tablet</td>
+      <td>1691.91</td>
+      <td>1541.91</td>
+      <td>4</td>
+      <td>6767.64</td>
+      <td>None</td>
+      <td>0148026b-b4db-1663-19ed-a6a51d3c33b2</td>
+      <td>861467</td>
+      <td>2013-11-23 02:01:23</td>
+      <td>2014-01-21 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Etonogestrel 68 MG Drug Implant</td>
+      <td>8871.69</td>
+      <td>8841.69</td>
+      <td>12</td>
+      <td>106460.28</td>
+      <td>None</td>
+      <td>909ab863-bdf1-a363-5546-4ed4e579c087</td>
+      <td>389221</td>
+      <td>2013-10-24 07:10:25</td>
+      <td>2014-10-19 07:46:54</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>90.18</td>
+      <td>40.18</td>
+      <td>3</td>
+      <td>270.54</td>
+      <td>None</td>
+      <td>0148026b-b4db-1663-19ed-a6a51d3c33b2</td>
+      <td>313782</td>
+      <td>2013-11-23 02:01:23</td>
+      <td>2014-03-20 02:01:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>6818.87</td>
+      <td>6768.87</td>
+      <td>3</td>
+      <td>20456.61</td>
+      <td>None</td>
+      <td>c46618a4-e41c-acc2-14bf-5f7a2b343734</td>
+      <td>856987</td>
+      <td>2014-02-02 00:28:23</td>
+      <td>2014-02-14 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>168 HR Ethinyl Estradiol 0.00146 MG/HR / norelgestromin 0.00625 MG/HR Transdermal System</td>
+      <td>588.80</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>7065.60</td>
+      <td>None</td>
+      <td>72a14116-47c8-bfb9-5692-079db9227fa7</td>
+      <td>1534809</td>
+      <td>2014-10-19 07:46:54</td>
+      <td>2015-10-14 07:46:54</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>563.30</td>
+      <td>513.30</td>
+      <td>3</td>
+      <td>1689.90</td>
+      <td>None</td>
+      <td>31691852-4ee0-5b6f-714f-31ebc3762f3c</td>
+      <td>856987</td>
+      <td>2014-02-14 00:28:23</td>
+      <td>2015-02-20 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>916fd8eb-69fa-2ce9-4a25-4dfe618577dc</td>
+      <td>1860491</td>
+      <td>2017-05-02 15:44:18</td>
+      <td>2018-02-12 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>8eec4808-5544-3d72-22af-3aff29eec66f</td>
+      <td>245134</td>
+      <td>2018-02-12 01:44:18</td>
+      <td>2019-02-18 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>8eec4808-5544-3d72-22af-3aff29eec66f</td>
+      <td>1860491</td>
+      <td>2018-02-12 01:44:18</td>
+      <td>2019-02-18 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>2875.96</td>
+      <td>1557.33</td>
+      <td>3</td>
+      <td>8627.88</td>
+      <td>None</td>
+      <td>8eec4808-5544-3d72-22af-3aff29eec66f</td>
+      <td>856987</td>
+      <td>2018-02-12 01:44:18</td>
+      <td>2019-02-18 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>4daa28c7-e9d5-c8ce-a469-a9cfe75dfc75</td>
+      <td>245134</td>
+      <td>2019-02-18 01:44:18</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>4daa28c7-e9d5-c8ce-a469-a9cfe75dfc75</td>
+      <td>1860491</td>
+      <td>2019-02-18 01:44:18</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>33672.92</td>
+      <td>32198.80</td>
+      <td>3</td>
+      <td>101018.76</td>
+      <td>None</td>
+      <td>4daa28c7-e9d5-c8ce-a469-a9cfe75dfc75</td>
+      <td>856987</td>
+      <td>2019-02-18 01:44:18</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>0585729c-e96d-be8f-e474-61de1e40ca38</td>
+      <td>245134</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>0585729c-e96d-be8f-e474-61de1e40ca38</td>
+      <td>1860491</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>27930.52</td>
+      <td>26456.40</td>
+      <td>3</td>
+      <td>83791.56</td>
+      <td>None</td>
+      <td>0585729c-e96d-be8f-e474-61de1e40ca38</td>
+      <td>856987</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>94.47</td>
+      <td>64.47</td>
+      <td>1</td>
+      <td>94.47</td>
+      <td>Acute bronchitis</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>313782</td>
+      <td>2019-04-09 07:52:11</td>
+      <td>2019-04-21 07:52:11</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>245134</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>2020-02-24 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>1860491</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>2020-02-24 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>33096.33</td>
+      <td>33066.33</td>
+      <td>3</td>
+      <td>99288.99</td>
+      <td>None</td>
+      <td>c4ab8585-f1c9-6270-1c30-625118eebd06</td>
+      <td>856987</td>
+      <td>2019-04-15 01:44:18</td>
+      <td>2020-02-24 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>d1aeb5f1-0808-f4f3-daae-23e22ac1bfb7</td>
+      <td>245134</td>
+      <td>2020-02-24 01:44:18</td>
+      <td>2021-03-01 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>99.94</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>d1aeb5f1-0808-f4f3-daae-23e22ac1bfb7</td>
+      <td>1860491</td>
+      <td>2020-02-24 01:44:18</td>
+      <td>2021-03-01 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>29957.71</td>
+      <td>29927.71</td>
+      <td>3</td>
+      <td>89873.13</td>
+      <td>None</td>
+      <td>d1aeb5f1-0808-f4f3-daae-23e22ac1bfb7</td>
+      <td>856987</td>
+      <td>2020-02-24 01:44:18</td>
+      <td>2021-03-01 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>377c48cd-db36-6215-e7e8-6afbc2327c6e</td>
+      <td>245134</td>
+      <td>2021-03-01 01:44:18</td>
+      <td>2022-03-07 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>377c48cd-db36-6215-e7e8-6afbc2327c6e</td>
+      <td>1860491</td>
+      <td>2021-03-01 01:44:18</td>
+      <td>2022-03-07 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>9999.83</td>
+      <td>8525.71</td>
+      <td>3</td>
+      <td>29999.49</td>
+      <td>None</td>
+      <td>377c48cd-db36-6215-e7e8-6afbc2327c6e</td>
+      <td>856987</td>
+      <td>2021-03-01 01:44:18</td>
+      <td>2022-03-07 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>78.06</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>78.06</td>
+      <td>Acute bronchitis</td>
+      <td>3dd72519-2521-c203-e811-4282eb8e4bc1</td>
+      <td>313782</td>
+      <td>2020-10-22 13:58:27</td>
+      <td>2020-11-11 13:58:27</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Amoxicillin 250 MG Oral Capsule</td>
+      <td>198.45</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>198.45</td>
+      <td>None</td>
+      <td>4c0ff03e-bff7-81b5-fbd6-41d8d07a29d2</td>
+      <td>308182</td>
+      <td>2021-08-06 16:39:19</td>
+      <td>2021-08-20 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>105.54</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>105.54</td>
+      <td>None</td>
+      <td>4c0ff03e-bff7-81b5-fbd6-41d8d07a29d2</td>
+      <td>313782</td>
+      <td>2021-08-06 16:39:19</td>
+      <td>2021-08-20 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+      <td>b1c428d6-4f07-31e0-90f0-68ffa6ff8c76</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>72 HR Fentanyl 0.025 MG/HR Transdermal System</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>70885489-6780-39b8-becc-6e313fb0b05c</td>
+      <td>245134</td>
+      <td>2022-03-07 01:44:18</td>
+      <td>NaT</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>12 HR Hydrocodone Bitartrate 10 MG Extended Release Oral Capsule</td>
+      <td>129.94</td>
+      <td>0.00</td>
+      <td>3</td>
+      <td>389.82</td>
+      <td>None</td>
+      <td>70885489-6780-39b8-becc-6e313fb0b05c</td>
+      <td>1860491</td>
+      <td>2022-03-07 01:44:18</td>
+      <td>NaT</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Jolivette 28 Day Pack</td>
+      <td>417.53</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>5010.36</td>
+      <td>None</td>
+      <td>1f4c69df-4036-a342-6c7b-b8e87f3224ac</td>
+      <td>757594</td>
+      <td>2016-10-08 07:46:54</td>
+      <td>2017-10-03 07:46:54</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>9928.55</td>
+      <td>8951.59</td>
+      <td>3</td>
+      <td>29785.65</td>
+      <td>None</td>
+      <td>70885489-6780-39b8-becc-6e313fb0b05c</td>
+      <td>856987</td>
+      <td>2022-03-07 01:44:18</td>
+      <td>NaT</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+      <td>26aab0cd-6aba-3e1b-ac5b-05c8867e762c</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Jolivette 28 Day Pack</td>
+      <td>547.06</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>6564.72</td>
+      <td>None</td>
+      <td>3c331817-0a5b-c60d-7cfe-cfc6ccd0c853</td>
+      <td>757594</td>
+      <td>2017-10-03 07:46:54</td>
+      <td>2018-09-28 07:46:54</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>69.44</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>69.44</td>
+      <td>None</td>
+      <td>186658bc-2fc0-fcd3-9cb2-d8aeb00a2bfd</td>
+      <td>313782</td>
+      <td>2019-01-15 07:29:03</td>
+      <td>2019-02-16 07:29:03</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>1 ML medroxyprogesterone acetate 150 MG/ML Injection</td>
+      <td>28.90</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>346.80</td>
+      <td>None</td>
+      <td>6b2923c0-eb4a-c935-7148-5c09e471ceca</td>
+      <td>1000126</td>
+      <td>2021-09-12 07:46:54</td>
+      <td>2022-09-07 08:01:16</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Errin 28 Day Pack</td>
+      <td>698.47</td>
+      <td>668.47</td>
+      <td>4</td>
+      <td>2793.88</td>
+      <td>None</td>
+      <td>33b3ef57-461c-5fae-2fc6-efc358d05c65</td>
+      <td>831533</td>
+      <td>2022-09-07 08:01:16</td>
+      <td>NaT</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+      <td>8fa6c185-e44e-3e34-8bd8-39be8694f4ce</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Errin 28 Day Pack</td>
+      <td>457.33</td>
+      <td>201.88</td>
+      <td>12</td>
+      <td>5487.96</td>
+      <td>None</td>
+      <td>6607d3a9-d0de-f7c3-96ec-37ab90811f06</td>
+      <td>831533</td>
+      <td>2012-05-12 19:29:52</td>
+      <td>2013-05-07 19:29:52</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Mirena 52 MG Intrauterine System</td>
+      <td>18549.20</td>
+      <td>16875.20</td>
+      <td>12</td>
+      <td>222590.40</td>
+      <td>None</td>
+      <td>0178124d-72da-82d6-9023-a4028ac097c9</td>
+      <td>807283</td>
+      <td>2013-05-07 19:29:52</td>
+      <td>2014-05-06 14:11:18</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Acetaminophen 325 MG Oral Tablet</td>
+      <td>99.28</td>
+      <td>69.28</td>
+      <td>1</td>
+      <td>99.28</td>
+      <td>Acute bronchitis</td>
+      <td>13a69895-45bd-a47a-5094-c1b7bc8aca5b</td>
+      <td>313782</td>
+      <td>2013-08-19 10:03:36</td>
+      <td>2013-09-03 10:03:36</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>10509002.0</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Levora 0.15/30 28 Day Pack</td>
+      <td>636.37</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>7636.44</td>
+      <td>None</td>
+      <td>e373465b-7503-4e8f-f569-77dbc8554fbb</td>
+      <td>748879</td>
+      <td>2015-05-01 14:11:18</td>
+      <td>2016-04-25 14:11:18</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Yaz 28 Day Pack</td>
+      <td>589.89</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>7078.68</td>
+      <td>None</td>
+      <td>035e7b28-6d7c-0fee-a24c-505f522a1cb7</td>
+      <td>748856</td>
+      <td>2016-04-25 14:11:18</td>
+      <td>2017-04-20 14:11:18</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Naproxen sodium 220 MG Oral Tablet</td>
+      <td>229.91</td>
+      <td>0.00</td>
+      <td>170</td>
+      <td>39084.70</td>
+      <td>Osteoarthritis of hip</td>
+      <td>ccbe3bc6-a95e-ad27-9038-98697b4afbfe</td>
+      <td>849574</td>
+      <td>2008-12-25 19:20:27</td>
+      <td>NaT</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>239872002.0</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Ibuprofen 200 MG Oral Tablet</td>
+      <td>135.95</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>135.95</td>
+      <td>None</td>
+      <td>fba8d030-b84f-c968-35b5-adb2b1bc83a4</td>
+      <td>310965</td>
+      <td>2015-01-22 20:59:27</td>
+      <td>2015-03-02 20:59:27</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>25430.75</td>
+      <td>25280.75</td>
+      <td>3</td>
+      <td>76292.25</td>
+      <td>None</td>
+      <td>7c14bbc6-a42a-bc99-6071-abf73aee6283</td>
+      <td>856987</td>
+      <td>2015-02-20 00:28:23</td>
+      <td>2016-02-26 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>26149.08</td>
+      <td>25999.08</td>
+      <td>3</td>
+      <td>78447.24</td>
+      <td>None</td>
+      <td>018496fd-892b-23fb-b3f4-9c90dc2896e7</td>
+      <td>856987</td>
+      <td>2016-02-26 00:28:23</td>
+      <td>2017-03-03 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>1560.14</td>
+      <td>1510.14</td>
+      <td>3</td>
+      <td>4680.42</td>
+      <td>None</td>
+      <td>bb561567-71d0-6472-5659-137b152314f3</td>
+      <td>856987</td>
+      <td>2017-03-03 00:28:23</td>
+      <td>2018-03-09 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>NuvaRing 0.12/0.015 MG per 24HR 21 Day Vaginal Ring</td>
+      <td>520.57</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>6246.84</td>
+      <td>None</td>
+      <td>da10d570-47e9-5cdf-f12b-611a7e7e8ae9</td>
+      <td>1367439</td>
+      <td>2017-04-20 14:11:18</td>
+      <td>2018-04-15 14:11:18</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>9353.94</td>
+      <td>9203.94</td>
+      <td>3</td>
+      <td>28061.82</td>
+      <td>None</td>
+      <td>5ae876ea-951e-74e5-d7ee-4aa307f26823</td>
+      <td>856987</td>
+      <td>2018-03-09 00:28:23</td>
+      <td>2019-03-15 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Yaz 28 Day Pack</td>
+      <td>407.70</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>4892.40</td>
+      <td>None</td>
+      <td>688dc257-04c8-2098-9873-9efba2f14a5d</td>
+      <td>748856</td>
+      <td>2018-04-15 14:11:18</td>
+      <td>2019-04-10 14:11:18</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Seasonique 91 Day Pack</td>
+      <td>455.92</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>5471.04</td>
+      <td>None</td>
+      <td>afbf6535-feb1-9f46-c60a-d1b46ce0400a</td>
+      <td>749762</td>
+      <td>2019-04-10 14:11:18</td>
+      <td>2020-04-04 14:11:18</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>1 ML medroxyprogesterone acetate 150 MG/ML Injection</td>
+      <td>65.58</td>
+      <td>0.00</td>
+      <td>12</td>
+      <td>786.96</td>
+      <td>None</td>
+      <td>572bb103-3012-3a13-4180-a2382ab7e953</td>
+      <td>1000126</td>
+      <td>2020-04-04 14:11:18</td>
+      <td>2021-03-30 14:21:54</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>22268.08</td>
+      <td>22118.08</td>
+      <td>3</td>
+      <td>66804.24</td>
+      <td>None</td>
+      <td>4840cdc7-3560-9bd2-00d0-076230e6c91e</td>
+      <td>856987</td>
+      <td>2019-03-15 00:28:23</td>
+      <td>2020-03-20 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Naproxen sodium 220 MG Oral Tablet</td>
+      <td>65.16</td>
+      <td>35.16</td>
+      <td>1</td>
+      <td>65.16</td>
+      <td>None</td>
+      <td>68e54405-5d36-a495-fe89-3894f9f16954</td>
+      <td>849574</td>
+      <td>2021-05-25 18:58:19</td>
+      <td>2021-07-08 18:58:19</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet</td>
+      <td>970.52</td>
+      <td>489.75</td>
+      <td>1</td>
+      <td>970.52</td>
+      <td>Viral sinusitis</td>
+      <td>f350c6b9-e53c-f397-ee7b-b435e9d2ac24</td>
+      <td>562251</td>
+      <td>2018-03-27 19:20:27</td>
+      <td>2018-04-17 19:20:27</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>444814009.0</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>8906.47</td>
+      <td>8756.47</td>
+      <td>3</td>
+      <td>26719.41</td>
+      <td>None</td>
+      <td>14c3c417-64af-d0a9-1441-b62523063c49</td>
+      <td>856987</td>
+      <td>2020-03-20 00:28:23</td>
+      <td>2021-03-26 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Penicillin V Potassium 500 MG Oral Tablet</td>
+      <td>445.79</td>
+      <td>295.79</td>
+      <td>1</td>
+      <td>445.79</td>
+      <td>Streptococcal sore throat</td>
+      <td>63d0624f-7594-1906-917f-dee4746636ba</td>
+      <td>834102</td>
+      <td>2020-11-11 06:28:23</td>
+      <td>2020-11-20 20:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>43878008.0</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>17652.66</td>
+      <td>17602.66</td>
+      <td>3</td>
+      <td>52957.98</td>
+      <td>None</td>
+      <td>924447e1-4539-d79f-6d84-440745e125a5</td>
+      <td>856987</td>
+      <td>2021-03-26 00:28:23</td>
+      <td>2022-04-01 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Acetaminophen 300 MG / Hydrocodone Bitartrate 5 MG Oral Tablet</td>
+      <td>10401.40</td>
+      <td>10351.40</td>
+      <td>3</td>
+      <td>31204.20</td>
+      <td>None</td>
+      <td>4067233f-47b3-c2ce-3297-b9c1e0bbfac1</td>
+      <td>856987</td>
+      <td>2022-04-01 00:28:23</td>
+      <td>NaT</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>0.91</td>
+      <td>Hypertension</td>
+      <td>c2f9d9bc-ca00-a759-3078-5e21385946cc</td>
+      <td>314076</td>
+      <td>2018-08-21 19:20:27</td>
+      <td>2018-08-21 19:20:27</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>4</td>
+      <td>3.64</td>
+      <td>Hypertension</td>
+      <td>c2f9d9bc-ca00-a759-3078-5e21385946cc</td>
+      <td>314076</td>
+      <td>2018-08-21 19:20:27</td>
+      <td>2019-08-27 19:20:27</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>4</td>
+      <td>3.64</td>
+      <td>Hypertension</td>
+      <td>4dbccd7c-e87e-b9fc-ede7-5a7760b09df5</td>
+      <td>314076</td>
+      <td>2019-08-27 19:20:27</td>
+      <td>2020-09-01 19:20:27</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>4</td>
+      <td>3.64</td>
+      <td>Hypertension</td>
+      <td>3bb1915f-486f-6e34-b9b1-ea3f66bd67b9</td>
+      <td>314076</td>
+      <td>2020-09-01 19:20:27</td>
+      <td>2021-09-07 19:20:27</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>4</td>
+      <td>3.64</td>
+      <td>Hypertension</td>
+      <td>7566ab27-1f79-2d7c-7ead-b8b161ff6483</td>
+      <td>314076</td>
+      <td>2021-09-07 19:20:27</td>
+      <td>2022-09-13 19:20:27</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Penicillin V Potassium 500 MG Oral Tablet</td>
+      <td>101.65</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>101.65</td>
+      <td>Streptococcal sore throat</td>
+      <td>d930276c-194f-e386-d094-85b5ee35302e</td>
+      <td>834102</td>
+      <td>2022-05-03 07:20:27</td>
+      <td>2022-05-15 01:20:27</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>43878008.0</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>lisinopril 10 MG Oral Tablet</td>
+      <td>0.91</td>
+      <td>0.00</td>
+      <td>1</td>
+      <td>0.91</td>
+      <td>Hypertension</td>
+      <td>183d9bf1-3bd7-d812-f5ff-27d584326300</td>
+      <td>314076</td>
+      <td>2022-09-13 19:20:27</td>
+      <td>NaT</td>
+      <td>df6bcea7-a0c7-6ed0-e9e4-fd1dc33b76f7</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>59621000.0</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Trinessa 28 Day Pack</td>
+      <td>336.54</td>
+      <td>0.00</td>
+      <td>9</td>
+      <td>3028.86</td>
+      <td>None</td>
+      <td>c01fdbc3-58b3-2db4-c8d4-78b4ed6295fd</td>
+      <td>751905</td>
+      <td>2022-03-25 14:21:54</td>
+      <td>NaT</td>
+      <td>064ef124-22ef-af09-1940-0fec6c3574bc</td>
+      <td>b046940f-1664-3047-bca7-dfa76be352a4</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Fexofenadine hydrochloride 30 MG Oral Tablet</td>
+      <td>278.62</td>
+      <td>228.62</td>
+      <td>266</td>
+      <td>74112.92</td>
+      <td>None</td>
+      <td>88bde367-23bf-dadb-f13d-c274e86d10c7</td>
+      <td>997488</td>
+      <td>2001-02-16 14:31:42</td>
+      <td>NaT</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>NDA020800 0.3 ML Epinephrine 1 MG/ML Auto-Injector</td>
+      <td>5610.80</td>
+      <td>5560.80</td>
+      <td>266</td>
+      <td>1492472.80</td>
+      <td>None</td>
+      <td>88bde367-23bf-dadb-f13d-c274e86d10c7</td>
+      <td>1870230</td>
+      <td>2001-02-16 14:31:42</td>
+      <td>NaT</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>df166300-5a78-3502-a46a-832842197811</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>budesonide 0.5 MG/ML Inhalation Suspension</td>
+      <td>129.94</td>
+      <td>94.94</td>
+      <td>1</td>
+      <td>129.94</td>
+      <td>Asthma</td>
+      <td>d28f35dc-04e2-4748-9d70-8f48817d7f6f</td>
+      <td>252559</td>
+      <td>2004-09-04 05:01:55</td>
+      <td>2004-09-25 05:01:55</td>
+      <td>52f8df2b-25a8-fbba-af75-0e11f3a054d4</td>
+      <td>d18ef2e6-ef40-324c-be54-34a5ee865625</td>
+      <td>233678006.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">medication_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_medication_description"></div><b>📃 Summary:</b> Name and details of the medication<br><b>🎨 Patterns:</b><br><ul><li><code>^[A-Za-z\s-]+\s\d+(\.\d+)?\s(MG|MG/ML|UNT/ML)\s(Oral Tablet|Oral Capsule|Injection|Injectable Solution|Inhalation Solution)</code><br><i>Medication name followed by strength (in MG, MG/ML, etc.) and dosage form (Oral Tablet, Injection, etc.)</i></li><li><code>^\d+\sACTUAT\s[A-Za-z\s-]+\s\d+(\.\d+)?\s(MG|MG/ACTUAT)\s.*</code><br><i>Medication with ACTUAT (actuations) followed by drug name, strength, and type</i></li><li><code>^\d+\sHR\s[A-Za-z\s-]+\s\d+(\.\d+)?\sMG.*</code><br><i>Medication with time duration (HR) followed by drug name and details</i></li><li><code>^[A-Za-z]+\s\d+\sDay\sPack$</code><br><i>Brand name followed by day pack (e.g., "28 Day Pack")</i></li><li><code>^[A-Za-z0-9\s-]+(\s\d+(\.\d+)?\s(MG|MG/ML|UNT/ML|MG/ACTUAT))*\s[A-Za-z\s-]+(\[.+\])?$</code><br><i>Generic pattern capturing most entries (less strict)</i></li><li><code>.*\d+(?:\.\d+)?\s*(?:MG|ML|UNT)(?:/(?:ML|HR))?.*</code><br><i>General pattern for medication descriptions</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unit_cost</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_unit_cost"></div><b>📃 Summary:</b> Base cost of the medication per unit<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payer_coverage_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_payer_coverage_amount"></div><b>📃 Summary:</b> Amount covered by the payer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dispense_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_dispense_count"></div><b>📃 Summary:</b> Number of times the medication was dispensed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_cost</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_cost"></div><b>📃 Summary:</b> Total cost of the medication order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reason_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_reason_description"></div><b>📃 Summary:</b> Description of the reason for medication prescription<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encounter_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encounter_id"></div><b>📃 Summary:</b> Unique identifier for the healthcare encounter<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">medication_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_medication_code"></div><b>📃 Summary:</b> Unique identifier for the medication<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_start_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_order_start_datetime"></div><b>📃 Summary:</b> Start date and time of medication order<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">order_stop_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_order_stop_datetime"></div><b>📃 Summary:</b> Stop date and time of medication order<br><b>❓ Missing:</b> Ongoing medications don't have a stop date.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">patient_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_patient_id"></div><b>📃 Summary:</b> Unique identifier for the patient<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_payer_id"></div><b>📃 Summary:</b> Unique identifier for the insurance payer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reason_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_reason_code"></div><b>📃 Summary:</b> Code for the reason of medication prescription<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about medication orders for patients. It includes details like start/stop dates, patient and payer IDs, encounter ID, medication codes and descriptions, costs, coverage, number of dispenses, total cost, and reason codes. Each row represents a medication prescribed to a patient, with associated billing and administration information.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>13</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>START</td>
+      <td>Start date and time of medication order</td>
+      <td>order_start_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>STOP</td>
+      <td>Stop date and time of medication order</td>
+      <td>order_stop_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>PATIENT</td>
+      <td>Unique identifier for the patient</td>
+      <td>patient_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>PAYER</td>
+      <td>Unique identifier for the insurance payer</td>
+      <td>payer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>ENCOUNTER</td>
+      <td>Unique identifier for the healthcare encounter</td>
+      <td>encounter_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CODE</td>
+      <td>Unique identifier for the medication</td>
+      <td>medication_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>DESCRIPTION</td>
+      <td>Name and details of the medication</td>
+      <td>medication_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>BASE_COST</td>
+      <td>Base cost of the medication per unit</td>
+      <td>unit_cost</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>PAYER_COVERAGE</td>
+      <td>Amount covered by the payer</td>
+      <td>payer_coverage_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>DISPENSES</td>
+      <td>Number of times the medication was dispensed</td>
+      <td>dispense_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>TOTALCOST</td>
+      <td>Total cost of the medication order</td>
+      <td>total_cost</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>REASONCODE</td>
+      <td>Code for the reason of medication prescription</td>
+      <td>reason_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>REASONDESCRIPTION</td>
+      <td>Description of the reason for medication prescription</td>
+      <td>reason_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>reason_description</b>: Inconsistent use of '(disorder)' suffix and varying specificity levels (e.g., 'Asthma' vs 'Childhood asthma').<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Pulmonary emphysema (disorder)</td>
+      <td>Pulmonary emphysema</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Childhood asthma</td>
+      <td>Asthma</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Acute bronchitis (disorder)</td>
+      <td>Acute bronchitis</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Chronic congestive heart failure (disorder)</td>
+      <td>Chronic congestive heart failure</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Osteoporosis (disorder)</td>
+      <td>Osteoporosis</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Streptococcal sore throat (disorder)</td>
+      <td>Streptococcal sore throat</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Viral sinusitis (disorder)</td>
+      <td>Viral sinusitis</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Alzheimer's disease (disorder)</td>
+      <td>Alzheimer's disease</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Neoplasm of prostate</td>
+      <td>Prostate cancer</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Acute myeloid leukemia  disease (disorder)</td>
+      <td>Acute myeloid leukemia</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Acute viral pharyngitis (disorder)</td>
+      <td>Acute viral pharyngitis</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Child attention deficit disorder</td>
+      <td>Attention deficit disorder</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Localized  primary osteoarthritis of the hand</td>
+      <td>Osteoarthritis of hand</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Sinusitis (disorder)</td>
+      <td>Sinusitis</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                ✔️ <b>7</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>encounter_id</td>
+      <td>CASE\n    WHEN regexp_full_match("encounter_id", '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}') THEN CAST("encounter_id" AS UUID)\n    WHEN regexp_full_match("encounter_id", '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}') THEN CAST("encounter_id" AS UUID)\n    ELSE "encounter_id"\nEND</td>
+      <td>To transform the 'encounter_id' column from VARCHAR to UUID, we can use a simple CAST function in DuckDB. The given regex pattern and sample values confirm that the 'encounter_id' is already in a valid UUID format (version 4 UUID). Therefore, a straightforward cast to UUID will work without any additional preprocessing.\n\nTo transform the 'encounter_id' column from VARCHAR to UUID, we can use a simple CAST function in DuckDB. The current format of the 'encounter_id' values already matches the standard UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward cast should work without any additional formatting or manipulation.\n\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>medication_code</td>
+      <td>CAST("medication_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'medication_code' column from 'INT' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>order_start_datetime</td>
+      <td>CAST("order_start_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'order_start_datetime' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the datetime string matches ISO 8601 format, which is directly compatible with SQL TIMESTAMP type. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>order_stop_datetime</td>
+      <td>CAST("order_stop_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'order_stop_datetime' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the datetime strings matches the ISO 8601 standard, which is directly compatible with DuckDB's TIMESTAMP type. Therefore, we don't need to use the strptime function to parse the string; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>patient_id</td>
+      <td>CAST("patient_id" AS UUID)</td>
+      <td>To transform the 'patient_id' column from VARCHAR to UUID in DuckDB, we need to use a simple CAST function. The values provided are already in the standard UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward cast should work. DuckDB supports the UUID data type, which is designed to store Universally Unique Identifiers.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>payer_id</td>
+      <td>CAST("payer_id" AS UUID)</td>
+      <td>To transform the 'payer_id' column from VARCHAR to UUID, we need to use a simple CAST function. In DuckDB, the UUID data type is supported, and we can directly cast a properly formatted string to UUID. The values provided are already in the standard UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward CAST should work.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>reason_code</td>
+      <td>CAST("reason_code" AS VARCHAR)</td>
+      <td>To transform the 'reason_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                🔍 <b>3</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>order_stop_datetime</td>
+      <td>11.06</td>
+      <td>True</td>
+      <td>Ongoing medications don't have a stop date.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>reason_code</td>
+      <td>20.50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>reason_description</td>
+      <td>20.50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>reason_code</td>
+      <td>20.5</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>reason_description</td>
+      <td>20.5</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Hydrochlorothia...', 'value': 17.70949720670391}, {'label': 'lisinopril 10 M...', 'value': 16.70391061452514}, {'label': 'Simvastatin 10 ...', 'value': 9.608938547486034}, {'label': 'insulin human  ...', 'value': 6.815642458100559}, {'label': '60 ACTUAT Fluti...', 'value': 4.692737430167598}, {'label': 'Other values', 'value': 44.46927374301676}];
+    drawBarChart("bar_viz_medication_description", data);
+data = [{'x': 2429.1987499999996, 'y': 1671}, {'x': 7287.456249999999, 'y': 75}, {'x': 12145.713749999999, 'y': 27}, {'x': 17003.97125, 'y': 7}, {'x': 21862.22875, 'y': 2}, {'x': 26720.486249999998, 'y': 3}, {'x': 31578.743749999998, 'y': 4}, {'x': 36437.00125, 'y': 0}, {'x': 41295.25874999999, 'y': 0}, {'x': 46153.51625, 'y': 0}, {'x': 51011.77374999999, 'y': 0}, {'x': 55870.03125, 'y': 0}, {'x': 60728.28874999999, 'y': 0}, {'x': 65586.54625, 'y': 0}, {'x': 70444.80374999999, 'y': 0}, {'x': 75303.06125, 'y': 0}, {'x': 80161.31875, 'y': 0}, {'x': 85019.57625000001, 'y': 0}, {'x': 89877.83374999999, 'y': 0}, {'x': 94736.09125, 'y': 1}];
+    binWidth = 4858.2575;
+    drawHistogram("hist_viz_unit_cost", data, binWidth);
+data = [{'x': 2427.8805, 'y': 1692}, {'x': 7283.641500000001, 'y': 73}, {'x': 12139.4025, 'y': 10}, {'x': 16995.163500000002, 'y': 6}, {'x': 21850.9245, 'y': 1}, {'x': 26706.6855, 'y': 4}, {'x': 31562.446500000005, 'y': 3}, {'x': 36418.207500000004, 'y': 0}, {'x': 41273.9685, 'y': 0}, {'x': 46129.7295, 'y': 0}, {'x': 50985.4905, 'y': 0}, {'x': 55841.251500000006, 'y': 0}, {'x': 60697.012500000004, 'y': 0}, {'x': 65552.77350000001, 'y': 0}, {'x': 70408.53450000001, 'y': 0}, {'x': 75264.29550000001, 'y': 0}, {'x': 80120.0565, 'y': 0}, {'x': 84975.8175, 'y': 0}, {'x': 89831.5785, 'y': 0}, {'x': 94687.3395, 'y': 1}];
+    binWidth = 4855.761;
+    drawHistogram("hist_viz_payer_coverage_amount", data, binWidth);
+data = [{'x': 15.325, 'y': 1698}, {'x': 43.974999999999994, 'y': 20}, {'x': 72.625, 'y': 17}, {'x': 101.27499999999999, 'y': 7}, {'x': 129.925, 'y': 8}, {'x': 158.575, 'y': 11}, {'x': 187.22499999999997, 'y': 7}, {'x': 215.875, 'y': 2}, {'x': 244.52499999999998, 'y': 5}, {'x': 273.17499999999995, 'y': 3}, {'x': 301.825, 'y': 2}, {'x': 330.47499999999997, 'y': 1}, {'x': 359.125, 'y': 3}, {'x': 387.775, 'y': 0}, {'x': 416.42499999999995, 'y': 0}, {'x': 445.075, 'y': 1}, {'x': 473.72499999999997, 'y': 0}, {'x': 502.37499999999994, 'y': 0}, {'x': 531.025, 'y': 1}, {'x': 559.675, 'y': 4}];
+    binWidth = 28.65;
+    drawHistogram("hist_viz_dispense_count", data, binWidth);
+data = [{'x': 602424.4322500001, 'y': 1785}, {'x': 1807273.15675, 'y': 4}, {'x': 3012121.8812499996, 'y': 0}, {'x': 4216970.60575, 'y': 0}, {'x': 5421819.330250001, 'y': 0}, {'x': 6626668.054750001, 'y': 0}, {'x': 7831516.77925, 'y': 0}, {'x': 9036365.50375, 'y': 0}, {'x': 10241214.22825, 'y': 0}, {'x': 11446062.952750001, 'y': 0}, {'x': 12650911.677250002, 'y': 0}, {'x': 13855760.40175, 'y': 0}, {'x': 15060609.12625, 'y': 0}, {'x': 16265457.85075, 'y': 0}, {'x': 17470306.57525, 'y': 0}, {'x': 18675155.29975, 'y': 0}, {'x': 19880004.02425, 'y': 0}, {'x': 21084852.74875, 'y': 0}, {'x': 22289701.47325, 'y': 0}, {'x': 23494550.197750002, 'y': 1}];
+    binWidth = 1204848.7245;
+    drawHistogram("hist_viz_total_cost", data, binWidth);
+data = [{'label': 'Hypertension', 'value': 47.92691496837667}, {'label': 'Hyperlipidemia', 'value': 12.087139845397049}, {'label': 'Pulmonary emphy...', 'value': 11.806043569922698}, {'label': 'Asthma', 'value': 9.557273366127898}, {'label': 'Prediabetes', 'value': 8.573436401967674}, {'label': 'Other values', 'value': 10.049191848208011}];
+    drawBarChart("bar_viz_reason_description", data);
+data = [{'label': '861b39db-3308-3...', 'value': 0.5027932960893855}, {'label': '1abde286-5c47-3...', 'value': 0.5027932960893855}, {'label': 'b9048088-98cf-d...', 'value': 0.5027932960893855}, {'label': '93309c0e-2716-6...', 'value': 0.5027932960893855}, {'label': 'd5a0fd7c-492f-d...', 'value': 0.44692737430167595}, {'label': 'Other values', 'value': 97.54189944134079}];
+    drawBarChart("bar_viz_encounter_id", data);
+data = [{'label': '310798', 'value': 17.70949720670391}, {'label': '314076', 'value': 16.70391061452514}, {'label': '314231', 'value': 9.608938547486034}, {'label': '106892', 'value': 6.815642458100559}, {'label': '896209', 'value': 4.692737430167598}, {'label': 'Other values', 'value': 44.46927374301676}];
+    drawBarChart("bar_viz_medication_code", data);
+data = [{'label': '2020-03-20 19:4...', 'value': 0.44692737430167595}, {'label': '2003-06-22 03:4...', 'value': 0.44692737430167595}, {'label': '2014-04-08 19:0...', 'value': 0.33519553072625696}, {'label': '2019-04-15 01:4...', 'value': 0.33519553072625696}, {'label': '2007-10-06 12:3...', 'value': 0.33519553072625696}, {'label': 'Other values', 'value': 98.10055865921787}];
+    drawBarChart("bar_viz_order_start_datetime", data);
+data = [{'label': '2020-03-20 19:4...', 'value': 0.5025125628140703}, {'label': '2003-06-22 03:4...', 'value': 0.5025125628140703}, {'label': '2002-03-03 03:4...', 'value': 0.37688442211055273}, {'label': '2019-04-15 01:4...', 'value': 0.37688442211055273}, {'label': '2007-10-06 12:3...', 'value': 0.37688442211055273}, {'label': 'Other values', 'value': 97.8643216080402}];
+    drawBarChart("bar_viz_order_stop_datetime", data);
+data = [{'label': 'dd19ae3a-2f3a-a...', 'value': 13.631284916201118}, {'label': 'fa451eba-6815-0...', 'value': 10.949720670391061}, {'label': '561bc09a-56b9-8...', 'value': 7.932960893854749}, {'label': '0c603e3d-ff1b-9...', 'value': 6.759776536312849}, {'label': '9cfb6988-97da-c...', 'value': 6.201117318435754}, {'label': 'Other values', 'value': 54.52513966480447}];
+    drawBarChart("bar_viz_patient_id", data);
+data = [{'label': 'a735bf55-83e9-3...', 'value': 48.49162011173184}, {'label': '8fa6c185-e44e-3...', 'value': 10.670391061452515}, {'label': 'df166300-5a78-3...', 'value': 8.156424581005586}, {'label': 'b046940f-1664-3...', 'value': 6.815642458100559}, {'label': 'b1c428d6-4f07-3...', 'value': 6.70391061452514}, {'label': 'Other values', 'value': 19.162011173184357}];
+    drawBarChart("bar_viz_payer_id", data);
+data = [{'label': '59621000.0', 'value': 47.92691496837667}, {'label': '55822004.0', 'value': 12.087139845397049}, {'label': '87433001.0', 'value': 11.806043569922698}, {'label': '233678006.0', 'value': 8.854532677442025}, {'label': '15777000.0', 'value': 8.573436401967674}, {'label': 'Other values', 'value': 10.751932536893886}];
+    drawBarChart("bar_viz_reason_code", data);
+
+
+</script>
+</body>
+</html>

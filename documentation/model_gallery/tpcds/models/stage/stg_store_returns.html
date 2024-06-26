@@ -1,0 +1,6563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>store_returns</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>SS_ITEM_SK</th>
+      <th>SS_TICKET_NUMBER</th>
+      <th>SS_WHOLESALE_COST</th>
+      <th>SS_LIST_PRICE</th>
+      <th>SS_SALES_PRICE</th>
+      <th>SS_EXT_DISCOUNT_AMT</th>
+      <th>SS_EXT_SALES_PRICE</th>
+      <th>SS_EXT_WHOLESALE_COST</th>
+      <th>SS_EXT_LIST_PRICE</th>
+      <th>SS_EXT_TAX</th>
+      <th>SS_COUPON_AMT</th>
+      <th>SS_NET_PAID</th>
+      <th>SS_NET_PAID_INC_TAX</th>
+      <th>SS_NET_PROFIT</th>
+      <th>SS_ADDR_SK</th>
+      <th>SS_CDEMO_SK</th>
+      <th>SS_CUSTOMER_SK</th>
+      <th>SS_HDEMO_SK</th>
+      <th>SS_PROMO_SK</th>
+      <th>SS_QUANTITY</th>
+      <th>SS_SOLD_DATE_SK</th>
+      <th>SS_SOLD_TIME_SK</th>
+      <th>SS_STORE_SK</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>404</td>
+      <td>1</td>
+      <td>37.23</td>
+      <td>3.35</td>
+      <td>40.58</td>
+      <td>55.28</td>
+      <td>714.00</td>
+      <td>0.74</td>
+      <td>17.51</td>
+      <td>18.98</td>
+      <td>772.63</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>397.0</td>
+      <td>793022.0</td>
+      <td>6.0</td>
+      <td>4033.0</td>
+      <td>1.0</td>
+      <td>51.0</td>
+      <td>2451984.0</td>
+      <td>46418.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1813</td>
+      <td>1</td>
+      <td>4009.32</td>
+      <td>120.27</td>
+      <td>4129.59</td>
+      <td>28.23</td>
+      <td>0.00</td>
+      <td>3448.01</td>
+      <td>5.61</td>
+      <td>555.70</td>
+      <td>148.50</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>751.0</td>
+      <td>1082163.0</td>
+      <td>6.0</td>
+      <td>7157.0</td>
+      <td>1.0</td>
+      <td>43.0</td>
+      <td>2451822.0</td>
+      <td>47480.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1030</td>
+      <td>2</td>
+      <td>249.48</td>
+      <td>2.49</td>
+      <td>251.97</td>
+      <td>11.50</td>
+      <td>6.23</td>
+      <td>234.51</td>
+      <td>8.83</td>
+      <td>6.14</td>
+      <td>20.22</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>819.0</td>
+      <td>289468.0</td>
+      <td>284.0</td>
+      <td>3067.0</td>
+      <td>1.0</td>
+      <td>7.0</td>
+      <td>2451653.0</td>
+      <td>37700.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1719</td>
+      <td>3</td>
+      <td>227.37</td>
+      <td>6.82</td>
+      <td>234.19</td>
+      <td>9.23</td>
+      <td>33.42</td>
+      <td>125.05</td>
+      <td>51.16</td>
+      <td>51.16</td>
+      <td>49.47</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>663.0</td>
+      <td>793786.0</td>
+      <td>47.0</td>
+      <td>6401.0</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td>2452682.0</td>
+      <td>38957.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1063</td>
+      <td>3</td>
+      <td>1273.05</td>
+      <td>25.46</td>
+      <td>1298.51</td>
+      <td>46.15</td>
+      <td>406.18</td>
+      <td>954.78</td>
+      <td>57.28</td>
+      <td>260.99</td>
+      <td>477.79</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>152.0</td>
+      <td>193750.0</td>
+      <td>47.0</td>
+      <td>2351.0</td>
+      <td>1.0</td>
+      <td>23.0</td>
+      <td>2452682.0</td>
+      <td>41617.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1545</td>
+      <td>3</td>
+      <td>35.14</td>
+      <td>2.45</td>
+      <td>37.59</td>
+      <td>79.00</td>
+      <td>0.00</td>
+      <td>9.13</td>
+      <td>5.20</td>
+      <td>20.81</td>
+      <td>81.45</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>76.0</td>
+      <td>1047081.0</td>
+      <td>47.0</td>
+      <td>2455.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2452688.0</td>
+      <td>60645.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>397</td>
+      <td>4</td>
+      <td>63.54</td>
+      <td>1.27</td>
+      <td>64.81</td>
+      <td>1.26</td>
+      <td>10.80</td>
+      <td>33.67</td>
+      <td>2.68</td>
+      <td>27.19</td>
+      <td>13.33</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>164.0</td>
+      <td>722383.0</td>
+      <td>814.0</td>
+      <td>1497.0</td>
+      <td>1.0</td>
+      <td>18.0</td>
+      <td>2451598.0</td>
+      <td>40772.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>908</td>
+      <td>4</td>
+      <td>18.60</td>
+      <td>1.48</td>
+      <td>20.08</td>
+      <td>46.48</td>
+      <td>270.60</td>
+      <td>10.04</td>
+      <td>8.04</td>
+      <td>0.52</td>
+      <td>318.56</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>491.0</td>
+      <td>925501.0</td>
+      <td>814.0</td>
+      <td>3196.0</td>
+      <td>1.0</td>
+      <td>12.0</td>
+      <td>2451521.0</td>
+      <td>33881.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1790</td>
+      <td>5</td>
+      <td>347.42</td>
+      <td>6.94</td>
+      <td>354.36</td>
+      <td>97.98</td>
+      <td>331.18</td>
+      <td>107.70</td>
+      <td>14.38</td>
+      <td>225.34</td>
+      <td>436.10</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>935.0</td>
+      <td>1150235.0</td>
+      <td>246.0</td>
+      <td>3185.0</td>
+      <td>1.0</td>
+      <td>58.0</td>
+      <td>2451628.0</td>
+      <td>34073.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>151</td>
+      <td>6</td>
+      <td>61.81</td>
+      <td>3.70</td>
+      <td>65.51</td>
+      <td>68.44</td>
+      <td>44.79</td>
+      <td>54.39</td>
+      <td>0.14</td>
+      <td>7.28</td>
+      <td>116.93</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>724.0</td>
+      <td>492488.0</td>
+      <td>29.0</td>
+      <td>6806.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2452165.0</td>
+      <td>54713.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>543</td>
+      <td>7</td>
+      <td>809.28</td>
+      <td>24.27</td>
+      <td>833.55</td>
+      <td>88.17</td>
+      <td>51.12</td>
+      <td>194.22</td>
+      <td>442.84</td>
+      <td>172.22</td>
+      <td>163.56</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>299.0</td>
+      <td>1182421.0</td>
+      <td>954.0</td>
+      <td>560.0</td>
+      <td>1.0</td>
+      <td>72.0</td>
+      <td>2452319.0</td>
+      <td>50204.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>163</td>
+      <td>10</td>
+      <td>3960.48</td>
+      <td>0.00</td>
+      <td>3960.48</td>
+      <td>39.22</td>
+      <td>65.76</td>
+      <td>1980.24</td>
+      <td>1960.43</td>
+      <td>19.81</td>
+      <td>104.98</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>625.0</td>
+      <td>178772.0</td>
+      <td>451.0</td>
+      <td>175.0</td>
+      <td>1.0</td>
+      <td>48.0</td>
+      <td>2452065.0</td>
+      <td>40372.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>1639</td>
+      <td>11</td>
+      <td>1639.44</td>
+      <td>81.97</td>
+      <td>1721.41</td>
+      <td>96.21</td>
+      <td>712.80</td>
+      <td>147.54</td>
+      <td>1163.68</td>
+      <td>328.22</td>
+      <td>890.98</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>89.0</td>
+      <td>727030.0</td>
+      <td>900.0</td>
+      <td>4636.0</td>
+      <td>1.0</td>
+      <td>36.0</td>
+      <td>2452575.0</td>
+      <td>42311.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1196</td>
+      <td>12</td>
+      <td>417.42</td>
+      <td>4.17</td>
+      <td>421.59</td>
+      <td>62.17</td>
+      <td>2400.30</td>
+      <td>375.67</td>
+      <td>37.57</td>
+      <td>4.18</td>
+      <td>2466.64</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>714.0</td>
+      <td>201438.0</td>
+      <td>820.0</td>
+      <td>6076.0</td>
+      <td>1.0</td>
+      <td>27.0</td>
+      <td>2451378.0</td>
+      <td>48500.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>1495</td>
+      <td>12</td>
+      <td>1208.42</td>
+      <td>48.33</td>
+      <td>1256.75</td>
+      <td>69.04</td>
+      <td>887.80</td>
+      <td>96.67</td>
+      <td>355.76</td>
+      <td>755.99</td>
+      <td>1005.17</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>633.0</td>
+      <td>1351118.0</td>
+      <td>820.0</td>
+      <td>2652.0</td>
+      <td>1.0</td>
+      <td>46.0</td>
+      <td>2451329.0</td>
+      <td>44694.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>130</td>
+      <td>13</td>
+      <td>40.60</td>
+      <td>3.24</td>
+      <td>43.84</td>
+      <td>1.13</td>
+      <td>312.62</td>
+      <td>27.20</td>
+      <td>0.26</td>
+      <td>13.14</td>
+      <td>316.99</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>138.0</td>
+      <td>130689.0</td>
+      <td>588.0</td>
+      <td>2790.0</td>
+      <td>1.0</td>
+      <td>58.0</td>
+      <td>2451014.0</td>
+      <td>29493.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1591</td>
+      <td>13</td>
+      <td>83.51</td>
+      <td>7.51</td>
+      <td>91.02</td>
+      <td>81.26</td>
+      <td>20.31</td>
+      <td>73.48</td>
+      <td>8.42</td>
+      <td>1.61</td>
+      <td>109.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>400.0</td>
+      <td>541501.0</td>
+      <td>144.0</td>
+      <td>527.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2450926.0</td>
+      <td>48082.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2000</td>
+      <td>13</td>
+      <td>350.40</td>
+      <td>14.01</td>
+      <td>364.41</td>
+      <td>20.61</td>
+      <td>247.98</td>
+      <td>255.79</td>
+      <td>62.44</td>
+      <td>32.17</td>
+      <td>282.60</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>50.0</td>
+      <td>277151.0</td>
+      <td>144.0</td>
+      <td>1877.0</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>2450924.0</td>
+      <td>48257.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>935</td>
+      <td>14</td>
+      <td>708.18</td>
+      <td>49.57</td>
+      <td>757.75</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>559.46</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>829696.0</td>
+      <td>409.0</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>1100</td>
+      <td>15</td>
+      <td>9.43</td>
+      <td>0.75</td>
+      <td>10.18</td>
+      <td>35.62</td>
+      <td>48.33</td>
+      <td>8.48</td>
+      <td>0.61</td>
+      <td>0.34</td>
+      <td>84.70</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>446.0</td>
+      <td>747820.0</td>
+      <td>835.0</td>
+      <td>2733.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2451933.0</td>
+      <td>41472.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>1903</td>
+      <td>16</td>
+      <td>2406.00</td>
+      <td>72.18</td>
+      <td>2478.18</td>
+      <td>19.02</td>
+      <td>349.20</td>
+      <td>505.26</td>
+      <td>722.28</td>
+      <td>1178.46</td>
+      <td>440.40</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>411.0</td>
+      <td>1815885.0</td>
+      <td>222.0</td>
+      <td>5148.0</td>
+      <td>1.0</td>
+      <td>24.0</td>
+      <td>2450914.0</td>
+      <td>51589.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>1750</td>
+      <td>16</td>
+      <td>181.65</td>
+      <td>10.89</td>
+      <td>192.54</td>
+      <td>98.09</td>
+      <td>60.45</td>
+      <td>74.47</td>
+      <td>8.57</td>
+      <td>98.61</td>
+      <td>169.43</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>950.0</td>
+      <td>524921.0</td>
+      <td>139.0</td>
+      <td>3159.0</td>
+      <td>1.0</td>
+      <td>15.0</td>
+      <td>2450924.0</td>
+      <td>34013.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>1285</td>
+      <td>18</td>
+      <td>199.36</td>
+      <td>9.96</td>
+      <td>209.32</td>
+      <td>57.84</td>
+      <td>89.04</td>
+      <td>95.69</td>
+      <td>14.51</td>
+      <td>89.16</td>
+      <td>156.84</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>828.0</td>
+      <td>1532238.0</td>
+      <td>292.0</td>
+      <td>2533.0</td>
+      <td>1.0</td>
+      <td>56.0</td>
+      <td>2451547.0</td>
+      <td>44125.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>1100</td>
+      <td>18</td>
+      <td>419.25</td>
+      <td>12.57</td>
+      <td>431.82</td>
+      <td>58.46</td>
+      <td>226.72</td>
+      <td>37.73</td>
+      <td>343.36</td>
+      <td>38.16</td>
+      <td>297.75</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>424.0</td>
+      <td>187471.0</td>
+      <td>292.0</td>
+      <td>1924.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451491.0</td>
+      <td>44663.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>1294</td>
+      <td>19</td>
+      <td>359.24</td>
+      <td>32.33</td>
+      <td>391.57</td>
+      <td>13.77</td>
+      <td>517.30</td>
+      <td>283.79</td>
+      <td>45.27</td>
+      <td>30.18</td>
+      <td>563.40</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>312.0</td>
+      <td>1392417.0</td>
+      <td>104.0</td>
+      <td>1141.0</td>
+      <td>1.0</td>
+      <td>14.0</td>
+      <td>2451376.0</td>
+      <td>56165.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>1304</td>
+      <td>19</td>
+      <td>2391.48</td>
+      <td>47.82</td>
+      <td>2439.30</td>
+      <td>78.85</td>
+      <td>2602.86</td>
+      <td>2032.75</td>
+      <td>243.93</td>
+      <td>114.80</td>
+      <td>2729.53</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>856.0</td>
+      <td>1325860.0</td>
+      <td>762.0</td>
+      <td>758.0</td>
+      <td>1.0</td>
+      <td>78.0</td>
+      <td>2451493.0</td>
+      <td>50425.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>190</td>
+      <td>21</td>
+      <td>1778.76</td>
+      <td>53.36</td>
+      <td>1832.12</td>
+      <td>73.43</td>
+      <td>495.72</td>
+      <td>160.08</td>
+      <td>1068.32</td>
+      <td>550.36</td>
+      <td>622.51</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>305.0</td>
+      <td>854970.0</td>
+      <td>626.0</td>
+      <td>2561.0</td>
+      <td>1.0</td>
+      <td>27.0</td>
+      <td>2451280.0</td>
+      <td>33889.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>1051</td>
+      <td>22</td>
+      <td>35.02</td>
+      <td>0.00</td>
+      <td>35.02</td>
+      <td>22.87</td>
+      <td>195.16</td>
+      <td>14.35</td>
+      <td>2.68</td>
+      <td>17.99</td>
+      <td>218.03</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>494.0</td>
+      <td>1685822.0</td>
+      <td>935.0</td>
+      <td>6158.0</td>
+      <td>1.0</td>
+      <td>17.0</td>
+      <td>2451277.0</td>
+      <td>40485.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>475</td>
+      <td>22</td>
+      <td>113.94</td>
+      <td>9.11</td>
+      <td>123.05</td>
+      <td>66.52</td>
+      <td>53.40</td>
+      <td>37.60</td>
+      <td>57.25</td>
+      <td>19.09</td>
+      <td>129.03</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>555.0</td>
+      <td>1247881.0</td>
+      <td>935.0</td>
+      <td>5718.0</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>2451231.0</td>
+      <td>29254.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>1953</td>
+      <td>23</td>
+      <td>5883.20</td>
+      <td>294.16</td>
+      <td>6177.36</td>
+      <td>52.40</td>
+      <td>2848.80</td>
+      <td>4824.22</td>
+      <td>328.28</td>
+      <td>730.70</td>
+      <td>3195.36</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>30.0</td>
+      <td>1890707.0</td>
+      <td>669.0</td>
+      <td>5392.0</td>
+      <td>1.0</td>
+      <td>80.0</td>
+      <td>2452771.0</td>
+      <td>51900.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>1665</td>
+      <td>24</td>
+      <td>28.49</td>
+      <td>0.00</td>
+      <td>28.49</td>
+      <td>69.29</td>
+      <td>29.81</td>
+      <td>6.26</td>
+      <td>1.33</td>
+      <td>20.90</td>
+      <td>99.10</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>270.0</td>
+      <td>1359322.0</td>
+      <td>69.0</td>
+      <td>2796.0</td>
+      <td>1.0</td>
+      <td>11.0</td>
+      <td>2452213.0</td>
+      <td>40442.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>1483</td>
+      <td>24</td>
+      <td>1099.02</td>
+      <td>54.95</td>
+      <td>1153.97</td>
+      <td>27.69</td>
+      <td>328.38</td>
+      <td>1033.07</td>
+      <td>58.03</td>
+      <td>7.92</td>
+      <td>411.02</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>765.0</td>
+      <td>1553144.0</td>
+      <td>69.0</td>
+      <td>6578.0</td>
+      <td>1.0</td>
+      <td>78.0</td>
+      <td>2452305.0</td>
+      <td>60624.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>373</td>
+      <td>25</td>
+      <td>42.12</td>
+      <td>2.52</td>
+      <td>44.64</td>
+      <td>57.38</td>
+      <td>6.12</td>
+      <td>37.48</td>
+      <td>2.04</td>
+      <td>2.60</td>
+      <td>66.02</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>883.0</td>
+      <td>1564003.0</td>
+      <td>838.0</td>
+      <td>1743.0</td>
+      <td>1.0</td>
+      <td>18.0</td>
+      <td>2451053.0</td>
+      <td>35984.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>1304</td>
+      <td>25</td>
+      <td>772.59</td>
+      <td>46.35</td>
+      <td>818.94</td>
+      <td>28.93</td>
+      <td>178.23</td>
+      <td>347.66</td>
+      <td>50.99</td>
+      <td>373.94</td>
+      <td>253.51</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>932.0</td>
+      <td>77813.0</td>
+      <td>838.0</td>
+      <td>3196.0</td>
+      <td>1.0</td>
+      <td>39.0</td>
+      <td>2451079.0</td>
+      <td>50088.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>1085</td>
+      <td>27</td>
+      <td>382.20</td>
+      <td>0.00</td>
+      <td>382.20</td>
+      <td>97.85</td>
+      <td>154.56</td>
+      <td>259.89</td>
+      <td>13.45</td>
+      <td>108.86</td>
+      <td>252.41</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>590.0</td>
+      <td>637321.0</td>
+      <td>780.0</td>
+      <td>1532.0</td>
+      <td>1.0</td>
+      <td>84.0</td>
+      <td>2451966.0</td>
+      <td>49139.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>1935</td>
+      <td>27</td>
+      <td>59.84</td>
+      <td>1.79</td>
+      <td>61.63</td>
+      <td>38.22</td>
+      <td>137.72</td>
+      <td>43.68</td>
+      <td>6.62</td>
+      <td>9.54</td>
+      <td>177.73</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>896.0</td>
+      <td>178335.0</td>
+      <td>780.0</td>
+      <td>4892.0</td>
+      <td>1.0</td>
+      <td>22.0</td>
+      <td>2451964.0</td>
+      <td>49463.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>1334</td>
+      <td>29</td>
+      <td>5.04</td>
+      <td>0.45</td>
+      <td>5.49</td>
+      <td>85.50</td>
+      <td>15.96</td>
+      <td>3.83</td>
+      <td>0.03</td>
+      <td>1.18</td>
+      <td>101.91</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>868.0</td>
+      <td>1723855.0</td>
+      <td>631.0</td>
+      <td>885.0</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>2451259.0</td>
+      <td>35185.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>1234</td>
+      <td>29</td>
+      <td>41.80</td>
+      <td>3.76</td>
+      <td>45.56</td>
+      <td>18.82</td>
+      <td>985.16</td>
+      <td>17.13</td>
+      <td>24.17</td>
+      <td>0.50</td>
+      <td>1007.74</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>10.0</td>
+      <td>135738.0</td>
+      <td>631.0</td>
+      <td>5274.0</td>
+      <td>1.0</td>
+      <td>22.0</td>
+      <td>2451174.0</td>
+      <td>32214.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>205</td>
+      <td>32</td>
+      <td>2092.23</td>
+      <td>167.37</td>
+      <td>2259.60</td>
+      <td>14.26</td>
+      <td>987.28</td>
+      <td>941.50</td>
+      <td>149.59</td>
+      <td>1001.14</td>
+      <td>1168.91</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>125.0</td>
+      <td>222350.0</td>
+      <td>120.0</td>
+      <td>2461.0</td>
+      <td>1.0</td>
+      <td>41.0</td>
+      <td>2451983.0</td>
+      <td>33769.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>205</td>
+      <td>34</td>
+      <td>208.78</td>
+      <td>16.70</td>
+      <td>225.48</td>
+      <td>77.95</td>
+      <td>223.73</td>
+      <td>198.34</td>
+      <td>3.65</td>
+      <td>6.79</td>
+      <td>318.38</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>883.0</td>
+      <td>934775.0</td>
+      <td>971.0</td>
+      <td>429.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451392.0</td>
+      <td>48895.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>1537</td>
+      <td>35</td>
+      <td>144.00</td>
+      <td>0.00</td>
+      <td>144.00</td>
+      <td>36.15</td>
+      <td>2167.20</td>
+      <td>87.84</td>
+      <td>39.87</td>
+      <td>16.29</td>
+      <td>2203.35</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>107.0</td>
+      <td>539558.0</td>
+      <td>958.0</td>
+      <td>6809.0</td>
+      <td>1.0</td>
+      <td>60.0</td>
+      <td>2452196.0</td>
+      <td>33535.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>1117</td>
+      <td>36</td>
+      <td>999.45</td>
+      <td>79.95</td>
+      <td>1079.40</td>
+      <td>29.51</td>
+      <td>35.10</td>
+      <td>499.72</td>
+      <td>439.76</td>
+      <td>59.97</td>
+      <td>144.56</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>711.0</td>
+      <td>1243218.0</td>
+      <td>8.0</td>
+      <td>3988.0</td>
+      <td>1.0</td>
+      <td>45.0</td>
+      <td>2452306.0</td>
+      <td>40321.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>1705</td>
+      <td>36</td>
+      <td>NaN</td>
+      <td>3.49</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>7.49</td>
+      <td>13.58</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>882385.0</td>
+      <td>8.0</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>2452317.0</td>
+      <td>53999.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>631</td>
+      <td>36</td>
+      <td>541.31</td>
+      <td>43.30</td>
+      <td>584.61</td>
+      <td>71.10</td>
+      <td>241.36</td>
+      <td>519.65</td>
+      <td>10.18</td>
+      <td>11.48</td>
+      <td>355.76</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>735.0</td>
+      <td>465142.0</td>
+      <td>722.0</td>
+      <td>3315.0</td>
+      <td>1.0</td>
+      <td>7.0</td>
+      <td>2452279.0</td>
+      <td>41984.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>415</td>
+      <td>37</td>
+      <td>8562.90</td>
+      <td>513.77</td>
+      <td>9076.67</td>
+      <td>8.17</td>
+      <td>366.35</td>
+      <td>4195.82</td>
+      <td>3493.66</td>
+      <td>873.42</td>
+      <td>888.29</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>144.0</td>
+      <td>491912.0</td>
+      <td>252.0</td>
+      <td>5028.0</td>
+      <td>1.0</td>
+      <td>85.0</td>
+      <td>2452128.0</td>
+      <td>30131.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>1670</td>
+      <td>41</td>
+      <td>1327.36</td>
+      <td>79.64</td>
+      <td>1407.00</td>
+      <td>49.73</td>
+      <td>558.79</td>
+      <td>66.36</td>
+      <td>731.38</td>
+      <td>529.62</td>
+      <td>688.16</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>714.0</td>
+      <td>1681246.0</td>
+      <td>890.0</td>
+      <td>5780.0</td>
+      <td>1.0</td>
+      <td>17.0</td>
+      <td>2451271.0</td>
+      <td>44173.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>130</td>
+      <td>42</td>
+      <td>422.24</td>
+      <td>8.44</td>
+      <td>430.68</td>
+      <td>48.27</td>
+      <td>551.20</td>
+      <td>329.34</td>
+      <td>15.79</td>
+      <td>77.11</td>
+      <td>607.91</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>487.0</td>
+      <td>1577815.0</td>
+      <td>423.0</td>
+      <td>3651.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451092.0</td>
+      <td>43741.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>1219</td>
+      <td>42</td>
+      <td>1240.55</td>
+      <td>0.00</td>
+      <td>1240.55</td>
+      <td>86.84</td>
+      <td>68.80</td>
+      <td>719.51</td>
+      <td>359.51</td>
+      <td>161.53</td>
+      <td>155.64</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>912.0</td>
+      <td>1611739.0</td>
+      <td>229.0</td>
+      <td>3649.0</td>
+      <td>1.0</td>
+      <td>43.0</td>
+      <td>2451033.0</td>
+      <td>54994.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>1820</td>
+      <td>42</td>
+      <td>475.54</td>
+      <td>9.51</td>
+      <td>485.05</td>
+      <td>73.37</td>
+      <td>317.07</td>
+      <td>128.39</td>
+      <td>197.87</td>
+      <td>149.28</td>
+      <td>399.95</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>223.0</td>
+      <td>134560.0</td>
+      <td>152.0</td>
+      <td>4215.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451073.0</td>
+      <td>52318.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>597</td>
+      <td>45</td>
+      <td>2703.87</td>
+      <td>243.34</td>
+      <td>2947.21</td>
+      <td>59.97</td>
+      <td>386.10</td>
+      <td>1487.12</td>
+      <td>790.88</td>
+      <td>425.87</td>
+      <td>689.41</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>621.0</td>
+      <td>1581204.0</td>
+      <td>606.0</td>
+      <td>3389.0</td>
+      <td>1.0</td>
+      <td>39.0</td>
+      <td>2452295.0</td>
+      <td>39258.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>992</td>
+      <td>46</td>
+      <td>3742.14</td>
+      <td>149.68</td>
+      <td>3891.82</td>
+      <td>24.47</td>
+      <td>379.29</td>
+      <td>3442.76</td>
+      <td>59.87</td>
+      <td>239.51</td>
+      <td>553.44</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>832.0</td>
+      <td>194443.0</td>
+      <td>598.0</td>
+      <td>4161.0</td>
+      <td>1.0</td>
+      <td>47.0</td>
+      <td>2451354.0</td>
+      <td>60360.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>398</td>
+      <td>46</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>453.29</td>
+      <td>51.61</td>
+      <td>207.48</td>
+      <td>104.60</td>
+      <td>86.12</td>
+      <td>NaN</td>
+      <td>276.52</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>3068.0</td>
+      <td>NaN</td>
+      <td>38.0</td>
+      <td>NaN</td>
+      <td>59918.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>368</td>
+      <td>47</td>
+      <td>8.12</td>
+      <td>0.73</td>
+      <td>8.85</td>
+      <td>19.08</td>
+      <td>7.43</td>
+      <td>3.81</td>
+      <td>0.77</td>
+      <td>3.54</td>
+      <td>27.24</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>373.0</td>
+      <td>1256944.0</td>
+      <td>903.0</td>
+      <td>382.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2451177.0</td>
+      <td>58870.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>199</td>
+      <td>48</td>
+      <td>199.35</td>
+      <td>17.94</td>
+      <td>217.29</td>
+      <td>11.83</td>
+      <td>112.95</td>
+      <td>191.37</td>
+      <td>0.71</td>
+      <td>7.27</td>
+      <td>142.72</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>391.0</td>
+      <td>1862359.0</td>
+      <td>843.0</td>
+      <td>2275.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2452738.0</td>
+      <td>29363.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>1215</td>
+      <td>48</td>
+      <td>392.20</td>
+      <td>27.45</td>
+      <td>419.65</td>
+      <td>10.16</td>
+      <td>116.00</td>
+      <td>152.95</td>
+      <td>224.89</td>
+      <td>14.36</td>
+      <td>153.61</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>251.0</td>
+      <td>1047097.0</td>
+      <td>202.0</td>
+      <td>5374.0</td>
+      <td>1.0</td>
+      <td>10.0</td>
+      <td>2452745.0</td>
+      <td>44637.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>1592</td>
+      <td>49</td>
+      <td>496.23</td>
+      <td>29.77</td>
+      <td>526.00</td>
+      <td>48.23</td>
+      <td>31.92</td>
+      <td>282.85</td>
+      <td>142.96</td>
+      <td>70.42</td>
+      <td>109.92</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>91.0</td>
+      <td>103157.0</td>
+      <td>590.0</td>
+      <td>6724.0</td>
+      <td>1.0</td>
+      <td>21.0</td>
+      <td>2451892.0</td>
+      <td>35637.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>311</td>
+      <td>51</td>
+      <td>172.10</td>
+      <td>5.16</td>
+      <td>177.26</td>
+      <td>22.72</td>
+      <td>64.20</td>
+      <td>170.37</td>
+      <td>1.59</td>
+      <td>0.14</td>
+      <td>92.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>61.0</td>
+      <td>945253.0</td>
+      <td>517.0</td>
+      <td>3357.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2451769.0</td>
+      <td>38709.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>266</td>
+      <td>52</td>
+      <td>911.04</td>
+      <td>0.00</td>
+      <td>911.04</td>
+      <td>21.65</td>
+      <td>378.17</td>
+      <td>619.50</td>
+      <td>253.63</td>
+      <td>37.91</td>
+      <td>399.82</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>230.0</td>
+      <td>173053.0</td>
+      <td>831.0</td>
+      <td>4865.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451102.0</td>
+      <td>32082.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>514</td>
+      <td>52</td>
+      <td>113.50</td>
+      <td>1.13</td>
+      <td>114.63</td>
+      <td>62.63</td>
+      <td>125.50</td>
+      <td>30.64</td>
+      <td>25.68</td>
+      <td>57.18</td>
+      <td>189.26</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>196.0</td>
+      <td>1866272.0</td>
+      <td>810.0</td>
+      <td>3734.0</td>
+      <td>1.0</td>
+      <td>25.0</td>
+      <td>2451088.0</td>
+      <td>55568.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>1006</td>
+      <td>53</td>
+      <td>2.23</td>
+      <td>0.08</td>
+      <td>2.31</td>
+      <td>26.56</td>
+      <td>1.48</td>
+      <td>0.20</td>
+      <td>0.89</td>
+      <td>1.14</td>
+      <td>28.12</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>885.0</td>
+      <td>508248.0</td>
+      <td>672.0</td>
+      <td>5690.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2451573.0</td>
+      <td>36729.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>1707</td>
+      <td>54</td>
+      <td>95.48</td>
+      <td>3.81</td>
+      <td>99.29</td>
+      <td>93.36</td>
+      <td>8.36</td>
+      <td>34.37</td>
+      <td>36.05</td>
+      <td>25.06</td>
+      <td>105.53</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>162.0</td>
+      <td>1042828.0</td>
+      <td>157.0</td>
+      <td>4295.0</td>
+      <td>1.0</td>
+      <td>11.0</td>
+      <td>2452729.0</td>
+      <td>48880.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>350</td>
+      <td>55</td>
+      <td>252.67</td>
+      <td>12.63</td>
+      <td>265.30</td>
+      <td>20.45</td>
+      <td>63.14</td>
+      <td>194.55</td>
+      <td>42.42</td>
+      <td>15.70</td>
+      <td>96.22</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>463.0</td>
+      <td>869419.0</td>
+      <td>297.0</td>
+      <td>5541.0</td>
+      <td>1.0</td>
+      <td>11.0</td>
+      <td>2452040.0</td>
+      <td>43895.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>357</td>
+      <td>60</td>
+      <td>2733.90</td>
+      <td>54.67</td>
+      <td>2788.57</td>
+      <td>60.37</td>
+      <td>0.00</td>
+      <td>683.47</td>
+      <td>1558.32</td>
+      <td>492.11</td>
+      <td>115.04</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>82.0</td>
+      <td>972821.0</td>
+      <td>967.0</td>
+      <td>2228.0</td>
+      <td>1.0</td>
+      <td>78.0</td>
+      <td>2452339.0</td>
+      <td>46469.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>1113</td>
+      <td>62</td>
+      <td>446.76</td>
+      <td>26.80</td>
+      <td>473.56</td>
+      <td>67.62</td>
+      <td>213.66</td>
+      <td>58.07</td>
+      <td>15.54</td>
+      <td>373.15</td>
+      <td>308.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>703.0</td>
+      <td>1420275.0</td>
+      <td>197.0</td>
+      <td>5589.0</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>2452254.0</td>
+      <td>40433.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>1818</td>
+      <td>63</td>
+      <td>NaN</td>
+      <td>11.73</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>172.06</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>568.77</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>488.0</td>
+      <td>305648.0</td>
+      <td>129.0</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>2452701.0</td>
+      <td>35838.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>1831</td>
+      <td>63</td>
+      <td>78.56</td>
+      <td>0.00</td>
+      <td>78.56</td>
+      <td>96.23</td>
+      <td>49.60</td>
+      <td>43.99</td>
+      <td>21.43</td>
+      <td>13.14</td>
+      <td>145.83</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>302.0</td>
+      <td>1086498.0</td>
+      <td>129.0</td>
+      <td>2400.0</td>
+      <td>1.0</td>
+      <td>16.0</td>
+      <td>2452596.0</td>
+      <td>29520.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>1513</td>
+      <td>63</td>
+      <td>216.16</td>
+      <td>19.45</td>
+      <td>235.61</td>
+      <td>57.17</td>
+      <td>242.76</td>
+      <td>108.08</td>
+      <td>104.83</td>
+      <td>3.25</td>
+      <td>319.38</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>610.0</td>
+      <td>479318.0</td>
+      <td>129.0</td>
+      <td>1264.0</td>
+      <td>1.0</td>
+      <td>28.0</td>
+      <td>2452604.0</td>
+      <td>36240.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>723</td>
+      <td>64</td>
+      <td>583.49</td>
+      <td>40.84</td>
+      <td>624.33</td>
+      <td>54.92</td>
+      <td>392.35</td>
+      <td>280.07</td>
+      <td>203.29</td>
+      <td>100.13</td>
+      <td>488.11</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>782.0</td>
+      <td>145292.0</td>
+      <td>17.0</td>
+      <td>437.0</td>
+      <td>1.0</td>
+      <td>19.0</td>
+      <td>2452593.0</td>
+      <td>55466.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>913</td>
+      <td>64</td>
+      <td>2325.60</td>
+      <td>0.00</td>
+      <td>2325.60</td>
+      <td>57.60</td>
+      <td>1987.30</td>
+      <td>1046.52</td>
+      <td>575.58</td>
+      <td>703.50</td>
+      <td>2044.90</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>33.0</td>
+      <td>492805.0</td>
+      <td>17.0</td>
+      <td>2019.0</td>
+      <td>1.0</td>
+      <td>34.0</td>
+      <td>2452556.0</td>
+      <td>56489.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>1125</td>
+      <td>64</td>
+      <td>6903.60</td>
+      <td>0.00</td>
+      <td>6903.60</td>
+      <td>76.02</td>
+      <td>2987.82</td>
+      <td>6213.24</td>
+      <td>352.08</td>
+      <td>338.28</td>
+      <td>3063.84</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>193.0</td>
+      <td>569529.0</td>
+      <td>17.0</td>
+      <td>3161.0</td>
+      <td>1.0</td>
+      <td>66.0</td>
+      <td>2452437.0</td>
+      <td>54978.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>1629</td>
+      <td>66</td>
+      <td>630.75</td>
+      <td>25.23</td>
+      <td>655.98</td>
+      <td>2.26</td>
+      <td>336.30</td>
+      <td>491.98</td>
+      <td>80.48</td>
+      <td>58.29</td>
+      <td>363.79</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>465.0</td>
+      <td>1603765.0</td>
+      <td>766.0</td>
+      <td>4015.0</td>
+      <td>1.0</td>
+      <td>15.0</td>
+      <td>2452346.0</td>
+      <td>53160.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>1705</td>
+      <td>67</td>
+      <td>594.09</td>
+      <td>23.76</td>
+      <td>617.85</td>
+      <td>40.24</td>
+      <td>1063.54</td>
+      <td>160.40</td>
+      <td>56.37</td>
+      <td>377.32</td>
+      <td>1127.54</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>930.0</td>
+      <td>529565.0</td>
+      <td>624.0</td>
+      <td>2324.0</td>
+      <td>1.0</td>
+      <td>41.0</td>
+      <td>2452555.0</td>
+      <td>43088.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>481</td>
+      <td>68</td>
+      <td>178.50</td>
+      <td>5.35</td>
+      <td>183.85</td>
+      <td>96.73</td>
+      <td>53.76</td>
+      <td>82.11</td>
+      <td>75.18</td>
+      <td>21.21</td>
+      <td>155.84</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>205.0</td>
+      <td>496988.0</td>
+      <td>564.0</td>
+      <td>6773.0</td>
+      <td>1.0</td>
+      <td>21.0</td>
+      <td>2451258.0</td>
+      <td>43812.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>196</td>
+      <td>71</td>
+      <td>13.48</td>
+      <td>0.13</td>
+      <td>13.61</td>
+      <td>91.25</td>
+      <td>2.92</td>
+      <td>6.33</td>
+      <td>5.14</td>
+      <td>2.01</td>
+      <td>94.30</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>738.0</td>
+      <td>875823.0</td>
+      <td>942.0</td>
+      <td>2104.0</td>
+      <td>1.0</td>
+      <td>2.0</td>
+      <td>2451256.0</td>
+      <td>50305.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>205</td>
+      <td>71</td>
+      <td>188.00</td>
+      <td>16.92</td>
+      <td>204.92</td>
+      <td>44.05</td>
+      <td>51.25</td>
+      <td>150.40</td>
+      <td>6.39</td>
+      <td>31.21</td>
+      <td>112.22</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>1910912.0</td>
+      <td>239.0</td>
+      <td>233.0</td>
+      <td>1.0</td>
+      <td>25.0</td>
+      <td>2451294.0</td>
+      <td>44684.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>1225</td>
+      <td>71</td>
+      <td>164.65</td>
+      <td>1.64</td>
+      <td>166.29</td>
+      <td>75.66</td>
+      <td>205.80</td>
+      <td>74.09</td>
+      <td>12.67</td>
+      <td>77.89</td>
+      <td>283.10</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>146.0</td>
+      <td>195885.0</td>
+      <td>239.0</td>
+      <td>3539.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2451329.0</td>
+      <td>29997.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>521</td>
+      <td>72</td>
+      <td>166.41</td>
+      <td>1.66</td>
+      <td>168.07</td>
+      <td>1.14</td>
+      <td>64.92</td>
+      <td>59.90</td>
+      <td>62.84</td>
+      <td>43.67</td>
+      <td>67.72</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>468.0</td>
+      <td>1271817.0</td>
+      <td>602.0</td>
+      <td>6019.0</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td>2451829.0</td>
+      <td>50278.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>1540</td>
+      <td>74</td>
+      <td>36.32</td>
+      <td>0.00</td>
+      <td>36.32</td>
+      <td>38.54</td>
+      <td>42.96</td>
+      <td>12.71</td>
+      <td>6.13</td>
+      <td>17.48</td>
+      <td>81.50</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>886.0</td>
+      <td>767720.0</td>
+      <td>337.0</td>
+      <td>4103.0</td>
+      <td>1.0</td>
+      <td>4.0</td>
+      <td>2451174.0</td>
+      <td>57809.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>569</td>
+      <td>76</td>
+      <td>76.51</td>
+      <td>6.88</td>
+      <td>83.39</td>
+      <td>66.92</td>
+      <td>30.28</td>
+      <td>56.61</td>
+      <td>19.70</td>
+      <td>0.20</td>
+      <td>104.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>580.0</td>
+      <td>78088.0</td>
+      <td>531.0</td>
+      <td>234.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2452279.0</td>
+      <td>52274.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>1627</td>
+      <td>76</td>
+      <td>796.05</td>
+      <td>31.84</td>
+      <td>827.89</td>
+      <td>91.64</td>
+      <td>176.85</td>
+      <td>278.61</td>
+      <td>243.19</td>
+      <td>274.25</td>
+      <td>300.33</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>352.0</td>
+      <td>1630980.0</td>
+      <td>531.0</td>
+      <td>4166.0</td>
+      <td>1.0</td>
+      <td>15.0</td>
+      <td>2452242.0</td>
+      <td>52421.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>1856</td>
+      <td>77</td>
+      <td>569.40</td>
+      <td>45.55</td>
+      <td>614.95</td>
+      <td>45.00</td>
+      <td>621.20</td>
+      <td>529.54</td>
+      <td>19.93</td>
+      <td>19.93</td>
+      <td>711.75</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>43.0</td>
+      <td>622349.0</td>
+      <td>102.0</td>
+      <td>4796.0</td>
+      <td>1.0</td>
+      <td>10.0</td>
+      <td>2451201.0</td>
+      <td>32557.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>1741</td>
+      <td>78</td>
+      <td>1077.83</td>
+      <td>64.66</td>
+      <td>1142.49</td>
+      <td>77.87</td>
+      <td>576.81</td>
+      <td>506.58</td>
+      <td>457.00</td>
+      <td>114.25</td>
+      <td>719.34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>309.0</td>
+      <td>1758891.0</td>
+      <td>529.0</td>
+      <td>3500.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451155.0</td>
+      <td>53923.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>31</td>
+      <td>79</td>
+      <td>797.64</td>
+      <td>71.78</td>
+      <td>869.42</td>
+      <td>57.39</td>
+      <td>1296.08</td>
+      <td>71.78</td>
+      <td>79.84</td>
+      <td>646.02</td>
+      <td>1425.25</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>483.0</td>
+      <td>382863.0</td>
+      <td>17.0</td>
+      <td>6073.0</td>
+      <td>1.0</td>
+      <td>34.0</td>
+      <td>2452290.0</td>
+      <td>54248.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>13</td>
+      <td>80</td>
+      <td>6830.08</td>
+      <td>68.30</td>
+      <td>6898.38</td>
+      <td>85.70</td>
+      <td>148.48</td>
+      <td>6625.17</td>
+      <td>127.04</td>
+      <td>77.87</td>
+      <td>302.48</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>916.0</td>
+      <td>1254797.0</td>
+      <td>368.0</td>
+      <td>4380.0</td>
+      <td>1.0</td>
+      <td>64.0</td>
+      <td>2451154.0</td>
+      <td>51844.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>358</td>
+      <td>81</td>
+      <td>1416.58</td>
+      <td>42.49</td>
+      <td>1459.07</td>
+      <td>16.86</td>
+      <td>849.86</td>
+      <td>1388.24</td>
+      <td>23.52</td>
+      <td>4.82</td>
+      <td>909.21</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>915.0</td>
+      <td>459305.0</td>
+      <td>625.0</td>
+      <td>510.0</td>
+      <td>1.0</td>
+      <td>22.0</td>
+      <td>2451281.0</td>
+      <td>48144.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>1543</td>
+      <td>81</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>94.53</td>
+      <td>24.55</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>119.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>147.0</td>
+      <td>944226.0</td>
+      <td>625.0</td>
+      <td>463.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2451214.0</td>
+      <td>55537.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>1790</td>
+      <td>82</td>
+      <td>1491.00</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>545.30</td>
+      <td>NaN</td>
+      <td>735.06</td>
+      <td>NaN</td>
+      <td>707.47</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>512.0</td>
+      <td>3587.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2451369.0</td>
+      <td>NaN</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>1780</td>
+      <td>82</td>
+      <td>847.84</td>
+      <td>42.39</td>
+      <td>890.23</td>
+      <td>40.52</td>
+      <td>77.04</td>
+      <td>576.53</td>
+      <td>208.90</td>
+      <td>62.41</td>
+      <td>159.95</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>356.0</td>
+      <td>1082287.0</td>
+      <td>896.0</td>
+      <td>645.0</td>
+      <td>1.0</td>
+      <td>8.0</td>
+      <td>2451471.0</td>
+      <td>50769.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>1996</td>
+      <td>82</td>
+      <td>1399.65</td>
+      <td>55.98</td>
+      <td>1455.63</td>
+      <td>74.63</td>
+      <td>447.63</td>
+      <td>839.79</td>
+      <td>156.76</td>
+      <td>403.10</td>
+      <td>578.24</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>230.0</td>
+      <td>1427925.0</td>
+      <td>896.0</td>
+      <td>1401.0</td>
+      <td>1.0</td>
+      <td>43.0</td>
+      <td>2451533.0</td>
+      <td>34774.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>1671</td>
+      <td>83</td>
+      <td>1151.01</td>
+      <td>23.02</td>
+      <td>1174.03</td>
+      <td>28.22</td>
+      <td>146.16</td>
+      <td>115.10</td>
+      <td>973.75</td>
+      <td>62.16</td>
+      <td>197.40</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>175.0</td>
+      <td>842053.0</td>
+      <td>678.0</td>
+      <td>5314.0</td>
+      <td>1.0</td>
+      <td>21.0</td>
+      <td>2452677.0</td>
+      <td>50033.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>1951</td>
+      <td>84</td>
+      <td>323.00</td>
+      <td>19.38</td>
+      <td>342.38</td>
+      <td>5.27</td>
+      <td>171.25</td>
+      <td>261.63</td>
+      <td>43.57</td>
+      <td>17.80</td>
+      <td>195.90</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>165.0</td>
+      <td>1034463.0</td>
+      <td>91.0</td>
+      <td>114.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2452530.0</td>
+      <td>44806.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>1482</td>
+      <td>84</td>
+      <td>1733.76</td>
+      <td>156.03</td>
+      <td>1889.79</td>
+      <td>98.99</td>
+      <td>1155.42</td>
+      <td>208.05</td>
+      <td>671.31</td>
+      <td>854.40</td>
+      <td>1410.44</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>7.0</td>
+      <td>222509.0</td>
+      <td>91.0</td>
+      <td>5658.0</td>
+      <td>1.0</td>
+      <td>63.0</td>
+      <td>2452550.0</td>
+      <td>39316.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>984</td>
+      <td>84</td>
+      <td>112.84</td>
+      <td>0.00</td>
+      <td>112.84</td>
+      <td>47.55</td>
+      <td>130.00</td>
+      <td>44.00</td>
+      <td>68.84</td>
+      <td>0.00</td>
+      <td>177.55</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>818.0</td>
+      <td>1844056.0</td>
+      <td>91.0</td>
+      <td>137.0</td>
+      <td>1.0</td>
+      <td>52.0</td>
+      <td>2452550.0</td>
+      <td>56385.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>363</td>
+      <td>86</td>
+      <td>50.00</td>
+      <td>4.00</td>
+      <td>54.00</td>
+      <td>95.65</td>
+      <td>2.50</td>
+      <td>29.00</td>
+      <td>16.38</td>
+      <td>4.62</td>
+      <td>102.15</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>452.0</td>
+      <td>1435175.0</td>
+      <td>560.0</td>
+      <td>1237.0</td>
+      <td>1.0</td>
+      <td>25.0</td>
+      <td>2452743.0</td>
+      <td>53098.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>1039</td>
+      <td>86</td>
+      <td>100.44</td>
+      <td>3.01</td>
+      <td>103.45</td>
+      <td>81.54</td>
+      <td>343.32</td>
+      <td>50.22</td>
+      <td>6.52</td>
+      <td>43.70</td>
+      <td>427.87</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>430.0</td>
+      <td>705875.0</td>
+      <td>359.0</td>
+      <td>2076.0</td>
+      <td>1.0</td>
+      <td>12.0</td>
+      <td>2452805.0</td>
+      <td>37053.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>920</td>
+      <td>87</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>35.41</td>
+      <td>NaN</td>
+      <td>213.43</td>
+      <td>NaN</td>
+      <td>0.17</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1393955.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>17.0</td>
+      <td>2451604.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>1685</td>
+      <td>88</td>
+      <td>146.20</td>
+      <td>0.00</td>
+      <td>146.20</td>
+      <td>22.87</td>
+      <td>1376.66</td>
+      <td>86.25</td>
+      <td>23.38</td>
+      <td>36.57</td>
+      <td>1399.53</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>403.0</td>
+      <td>1361123.0</td>
+      <td>272.0</td>
+      <td>1963.0</td>
+      <td>1.0</td>
+      <td>34.0</td>
+      <td>2452317.0</td>
+      <td>32925.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>1679</td>
+      <td>88</td>
+      <td>1168.30</td>
+      <td>70.09</td>
+      <td>1238.39</td>
+      <td>37.61</td>
+      <td>1168.30</td>
+      <td>198.61</td>
+      <td>96.96</td>
+      <td>872.73</td>
+      <td>1276.00</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>372.0</td>
+      <td>341664.0</td>
+      <td>110.0</td>
+      <td>7018.0</td>
+      <td>1.0</td>
+      <td>70.0</td>
+      <td>2452260.0</td>
+      <td>58521.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>788</td>
+      <td>89</td>
+      <td>131.14</td>
+      <td>0.00</td>
+      <td>131.14</td>
+      <td>75.40</td>
+      <td>53.76</td>
+      <td>111.46</td>
+      <td>17.51</td>
+      <td>2.17</td>
+      <td>129.16</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>52.0</td>
+      <td>751267.0</td>
+      <td>994.0</td>
+      <td>6036.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2451907.0</td>
+      <td>56892.0</td>
+      <td>1.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>item_id</th>
+      <th>ticket_number</th>
+      <th>unit_wholesale_cost</th>
+      <th>unit_list_price</th>
+      <th>unit_sales_price</th>
+      <th>total_discount_amount</th>
+      <th>total_sales_price</th>
+      <th>total_wholesale_cost</th>
+      <th>total_list_price</th>
+      <th>total_tax_amount</th>
+      <th>coupon_amount</th>
+      <th>net_paid</th>
+      <th>net_paid_with_tax</th>
+      <th>net_profit</th>
+      <th>address_id</th>
+      <th>customer_demo_id</th>
+      <th>customer_id</th>
+      <th>household_demo_id</th>
+      <th>promotion_id</th>
+      <th>quantity</th>
+      <th>sale_date_id</th>
+      <th>sale_time_id</th>
+      <th>store_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>404</td>
+      <td>1</td>
+      <td>37.23</td>
+      <td>3.35</td>
+      <td>40.58</td>
+      <td>55.28</td>
+      <td>714.00</td>
+      <td>0.74</td>
+      <td>17.51</td>
+      <td>18.98</td>
+      <td>772.63</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>397.0</td>
+      <td>793022.0</td>
+      <td>6.0</td>
+      <td>4033.0</td>
+      <td>1.0</td>
+      <td>51.0</td>
+      <td>2451984.0</td>
+      <td>46418.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1813</td>
+      <td>1</td>
+      <td>4009.32</td>
+      <td>120.27</td>
+      <td>4129.59</td>
+      <td>28.23</td>
+      <td>0.00</td>
+      <td>3448.01</td>
+      <td>5.61</td>
+      <td>555.70</td>
+      <td>148.50</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>751.0</td>
+      <td>1082163.0</td>
+      <td>6.0</td>
+      <td>7157.0</td>
+      <td>1.0</td>
+      <td>43.0</td>
+      <td>2451822.0</td>
+      <td>47480.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1030</td>
+      <td>2</td>
+      <td>249.48</td>
+      <td>2.49</td>
+      <td>251.97</td>
+      <td>11.50</td>
+      <td>6.23</td>
+      <td>234.51</td>
+      <td>8.83</td>
+      <td>6.14</td>
+      <td>20.22</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>819.0</td>
+      <td>289468.0</td>
+      <td>284.0</td>
+      <td>3067.0</td>
+      <td>1.0</td>
+      <td>7.0</td>
+      <td>2451653.0</td>
+      <td>37700.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1719</td>
+      <td>3</td>
+      <td>227.37</td>
+      <td>6.82</td>
+      <td>234.19</td>
+      <td>9.23</td>
+      <td>33.42</td>
+      <td>125.05</td>
+      <td>51.16</td>
+      <td>51.16</td>
+      <td>49.47</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>663.0</td>
+      <td>793786.0</td>
+      <td>47.0</td>
+      <td>6401.0</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td>2452682.0</td>
+      <td>38957.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1063</td>
+      <td>3</td>
+      <td>1273.05</td>
+      <td>25.46</td>
+      <td>1298.51</td>
+      <td>46.15</td>
+      <td>406.18</td>
+      <td>954.78</td>
+      <td>57.28</td>
+      <td>260.99</td>
+      <td>477.79</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>152.0</td>
+      <td>193750.0</td>
+      <td>47.0</td>
+      <td>2351.0</td>
+      <td>1.0</td>
+      <td>23.0</td>
+      <td>2452682.0</td>
+      <td>41617.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1545</td>
+      <td>3</td>
+      <td>35.14</td>
+      <td>2.45</td>
+      <td>37.59</td>
+      <td>79.00</td>
+      <td>0.00</td>
+      <td>9.13</td>
+      <td>5.20</td>
+      <td>20.81</td>
+      <td>81.45</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>76.0</td>
+      <td>1047081.0</td>
+      <td>47.0</td>
+      <td>2455.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2452688.0</td>
+      <td>60645.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>397</td>
+      <td>4</td>
+      <td>63.54</td>
+      <td>1.27</td>
+      <td>64.81</td>
+      <td>1.26</td>
+      <td>10.80</td>
+      <td>33.67</td>
+      <td>2.68</td>
+      <td>27.19</td>
+      <td>13.33</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>164.0</td>
+      <td>722383.0</td>
+      <td>814.0</td>
+      <td>1497.0</td>
+      <td>1.0</td>
+      <td>18.0</td>
+      <td>2451598.0</td>
+      <td>40772.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>908</td>
+      <td>4</td>
+      <td>18.60</td>
+      <td>1.48</td>
+      <td>20.08</td>
+      <td>46.48</td>
+      <td>270.60</td>
+      <td>10.04</td>
+      <td>8.04</td>
+      <td>0.52</td>
+      <td>318.56</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>491.0</td>
+      <td>925501.0</td>
+      <td>814.0</td>
+      <td>3196.0</td>
+      <td>1.0</td>
+      <td>12.0</td>
+      <td>2451521.0</td>
+      <td>33881.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1790</td>
+      <td>5</td>
+      <td>347.42</td>
+      <td>6.94</td>
+      <td>354.36</td>
+      <td>97.98</td>
+      <td>331.18</td>
+      <td>107.70</td>
+      <td>14.38</td>
+      <td>225.34</td>
+      <td>436.10</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>935.0</td>
+      <td>1150235.0</td>
+      <td>246.0</td>
+      <td>3185.0</td>
+      <td>1.0</td>
+      <td>58.0</td>
+      <td>2451628.0</td>
+      <td>34073.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>151</td>
+      <td>6</td>
+      <td>61.81</td>
+      <td>3.70</td>
+      <td>65.51</td>
+      <td>68.44</td>
+      <td>44.79</td>
+      <td>54.39</td>
+      <td>0.14</td>
+      <td>7.28</td>
+      <td>116.93</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>724.0</td>
+      <td>492488.0</td>
+      <td>29.0</td>
+      <td>6806.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2452165.0</td>
+      <td>54713.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>543</td>
+      <td>7</td>
+      <td>809.28</td>
+      <td>24.27</td>
+      <td>833.55</td>
+      <td>88.17</td>
+      <td>51.12</td>
+      <td>194.22</td>
+      <td>442.84</td>
+      <td>172.22</td>
+      <td>163.56</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>299.0</td>
+      <td>1182421.0</td>
+      <td>954.0</td>
+      <td>560.0</td>
+      <td>1.0</td>
+      <td>72.0</td>
+      <td>2452319.0</td>
+      <td>50204.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>163</td>
+      <td>10</td>
+      <td>3960.48</td>
+      <td>0.00</td>
+      <td>3960.48</td>
+      <td>39.22</td>
+      <td>65.76</td>
+      <td>1980.24</td>
+      <td>1960.43</td>
+      <td>19.81</td>
+      <td>104.98</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>625.0</td>
+      <td>178772.0</td>
+      <td>451.0</td>
+      <td>175.0</td>
+      <td>1.0</td>
+      <td>48.0</td>
+      <td>2452065.0</td>
+      <td>40372.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>1639</td>
+      <td>11</td>
+      <td>1639.44</td>
+      <td>81.97</td>
+      <td>1721.41</td>
+      <td>96.21</td>
+      <td>712.80</td>
+      <td>147.54</td>
+      <td>1163.68</td>
+      <td>328.22</td>
+      <td>890.98</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>89.0</td>
+      <td>727030.0</td>
+      <td>900.0</td>
+      <td>4636.0</td>
+      <td>1.0</td>
+      <td>36.0</td>
+      <td>2452575.0</td>
+      <td>42311.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1196</td>
+      <td>12</td>
+      <td>417.42</td>
+      <td>4.17</td>
+      <td>421.59</td>
+      <td>62.17</td>
+      <td>2400.30</td>
+      <td>375.67</td>
+      <td>37.57</td>
+      <td>4.18</td>
+      <td>2466.64</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>714.0</td>
+      <td>201438.0</td>
+      <td>820.0</td>
+      <td>6076.0</td>
+      <td>1.0</td>
+      <td>27.0</td>
+      <td>2451378.0</td>
+      <td>48500.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>1495</td>
+      <td>12</td>
+      <td>1208.42</td>
+      <td>48.33</td>
+      <td>1256.75</td>
+      <td>69.04</td>
+      <td>887.80</td>
+      <td>96.67</td>
+      <td>355.76</td>
+      <td>755.99</td>
+      <td>1005.17</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>633.0</td>
+      <td>1351118.0</td>
+      <td>820.0</td>
+      <td>2652.0</td>
+      <td>1.0</td>
+      <td>46.0</td>
+      <td>2451329.0</td>
+      <td>44694.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>130</td>
+      <td>13</td>
+      <td>40.60</td>
+      <td>3.24</td>
+      <td>43.84</td>
+      <td>1.13</td>
+      <td>312.62</td>
+      <td>27.20</td>
+      <td>0.26</td>
+      <td>13.14</td>
+      <td>316.99</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>138.0</td>
+      <td>130689.0</td>
+      <td>588.0</td>
+      <td>2790.0</td>
+      <td>1.0</td>
+      <td>58.0</td>
+      <td>2451014.0</td>
+      <td>29493.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1591</td>
+      <td>13</td>
+      <td>83.51</td>
+      <td>7.51</td>
+      <td>91.02</td>
+      <td>81.26</td>
+      <td>20.31</td>
+      <td>73.48</td>
+      <td>8.42</td>
+      <td>1.61</td>
+      <td>109.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>400.0</td>
+      <td>541501.0</td>
+      <td>144.0</td>
+      <td>527.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2450926.0</td>
+      <td>48082.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2000</td>
+      <td>13</td>
+      <td>350.40</td>
+      <td>14.01</td>
+      <td>364.41</td>
+      <td>20.61</td>
+      <td>247.98</td>
+      <td>255.79</td>
+      <td>62.44</td>
+      <td>32.17</td>
+      <td>282.60</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>50.0</td>
+      <td>277151.0</td>
+      <td>144.0</td>
+      <td>1877.0</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>2450924.0</td>
+      <td>48257.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>935</td>
+      <td>14</td>
+      <td>708.18</td>
+      <td>49.57</td>
+      <td>757.75</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>559.46</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>829696.0</td>
+      <td>409.0</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>1100</td>
+      <td>15</td>
+      <td>9.43</td>
+      <td>0.75</td>
+      <td>10.18</td>
+      <td>35.62</td>
+      <td>48.33</td>
+      <td>8.48</td>
+      <td>0.61</td>
+      <td>0.34</td>
+      <td>84.70</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>446.0</td>
+      <td>747820.0</td>
+      <td>835.0</td>
+      <td>2733.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2451933.0</td>
+      <td>41472.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>1903</td>
+      <td>16</td>
+      <td>2406.00</td>
+      <td>72.18</td>
+      <td>2478.18</td>
+      <td>19.02</td>
+      <td>349.20</td>
+      <td>505.26</td>
+      <td>722.28</td>
+      <td>1178.46</td>
+      <td>440.40</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>411.0</td>
+      <td>1815885.0</td>
+      <td>222.0</td>
+      <td>5148.0</td>
+      <td>1.0</td>
+      <td>24.0</td>
+      <td>2450914.0</td>
+      <td>51589.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>1750</td>
+      <td>16</td>
+      <td>181.65</td>
+      <td>10.89</td>
+      <td>192.54</td>
+      <td>98.09</td>
+      <td>60.45</td>
+      <td>74.47</td>
+      <td>8.57</td>
+      <td>98.61</td>
+      <td>169.43</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>950.0</td>
+      <td>524921.0</td>
+      <td>139.0</td>
+      <td>3159.0</td>
+      <td>1.0</td>
+      <td>15.0</td>
+      <td>2450924.0</td>
+      <td>34013.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>1285</td>
+      <td>18</td>
+      <td>199.36</td>
+      <td>9.96</td>
+      <td>209.32</td>
+      <td>57.84</td>
+      <td>89.04</td>
+      <td>95.69</td>
+      <td>14.51</td>
+      <td>89.16</td>
+      <td>156.84</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>828.0</td>
+      <td>1532238.0</td>
+      <td>292.0</td>
+      <td>2533.0</td>
+      <td>1.0</td>
+      <td>56.0</td>
+      <td>2451547.0</td>
+      <td>44125.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>1100</td>
+      <td>18</td>
+      <td>419.25</td>
+      <td>12.57</td>
+      <td>431.82</td>
+      <td>58.46</td>
+      <td>226.72</td>
+      <td>37.73</td>
+      <td>343.36</td>
+      <td>38.16</td>
+      <td>297.75</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>424.0</td>
+      <td>187471.0</td>
+      <td>292.0</td>
+      <td>1924.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451491.0</td>
+      <td>44663.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>1294</td>
+      <td>19</td>
+      <td>359.24</td>
+      <td>32.33</td>
+      <td>391.57</td>
+      <td>13.77</td>
+      <td>517.30</td>
+      <td>283.79</td>
+      <td>45.27</td>
+      <td>30.18</td>
+      <td>563.40</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>312.0</td>
+      <td>1392417.0</td>
+      <td>104.0</td>
+      <td>1141.0</td>
+      <td>1.0</td>
+      <td>14.0</td>
+      <td>2451376.0</td>
+      <td>56165.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>1304</td>
+      <td>19</td>
+      <td>2391.48</td>
+      <td>47.82</td>
+      <td>2439.30</td>
+      <td>78.85</td>
+      <td>2602.86</td>
+      <td>2032.75</td>
+      <td>243.93</td>
+      <td>114.80</td>
+      <td>2729.53</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>856.0</td>
+      <td>1325860.0</td>
+      <td>762.0</td>
+      <td>758.0</td>
+      <td>1.0</td>
+      <td>78.0</td>
+      <td>2451493.0</td>
+      <td>50425.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>190</td>
+      <td>21</td>
+      <td>1778.76</td>
+      <td>53.36</td>
+      <td>1832.12</td>
+      <td>73.43</td>
+      <td>495.72</td>
+      <td>160.08</td>
+      <td>1068.32</td>
+      <td>550.36</td>
+      <td>622.51</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>305.0</td>
+      <td>854970.0</td>
+      <td>626.0</td>
+      <td>2561.0</td>
+      <td>1.0</td>
+      <td>27.0</td>
+      <td>2451280.0</td>
+      <td>33889.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>1051</td>
+      <td>22</td>
+      <td>35.02</td>
+      <td>0.00</td>
+      <td>35.02</td>
+      <td>22.87</td>
+      <td>195.16</td>
+      <td>14.35</td>
+      <td>2.68</td>
+      <td>17.99</td>
+      <td>218.03</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>494.0</td>
+      <td>1685822.0</td>
+      <td>935.0</td>
+      <td>6158.0</td>
+      <td>1.0</td>
+      <td>17.0</td>
+      <td>2451277.0</td>
+      <td>40485.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>475</td>
+      <td>22</td>
+      <td>113.94</td>
+      <td>9.11</td>
+      <td>123.05</td>
+      <td>66.52</td>
+      <td>53.40</td>
+      <td>37.60</td>
+      <td>57.25</td>
+      <td>19.09</td>
+      <td>129.03</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>555.0</td>
+      <td>1247881.0</td>
+      <td>935.0</td>
+      <td>5718.0</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>2451231.0</td>
+      <td>29254.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>1953</td>
+      <td>23</td>
+      <td>5883.20</td>
+      <td>294.16</td>
+      <td>6177.36</td>
+      <td>52.40</td>
+      <td>2848.80</td>
+      <td>4824.22</td>
+      <td>328.28</td>
+      <td>730.70</td>
+      <td>3195.36</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>30.0</td>
+      <td>1890707.0</td>
+      <td>669.0</td>
+      <td>5392.0</td>
+      <td>1.0</td>
+      <td>80.0</td>
+      <td>2452771.0</td>
+      <td>51900.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>1665</td>
+      <td>24</td>
+      <td>28.49</td>
+      <td>0.00</td>
+      <td>28.49</td>
+      <td>69.29</td>
+      <td>29.81</td>
+      <td>6.26</td>
+      <td>1.33</td>
+      <td>20.90</td>
+      <td>99.10</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>270.0</td>
+      <td>1359322.0</td>
+      <td>69.0</td>
+      <td>2796.0</td>
+      <td>1.0</td>
+      <td>11.0</td>
+      <td>2452213.0</td>
+      <td>40442.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>1483</td>
+      <td>24</td>
+      <td>1099.02</td>
+      <td>54.95</td>
+      <td>1153.97</td>
+      <td>27.69</td>
+      <td>328.38</td>
+      <td>1033.07</td>
+      <td>58.03</td>
+      <td>7.92</td>
+      <td>411.02</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>765.0</td>
+      <td>1553144.0</td>
+      <td>69.0</td>
+      <td>6578.0</td>
+      <td>1.0</td>
+      <td>78.0</td>
+      <td>2452305.0</td>
+      <td>60624.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>373</td>
+      <td>25</td>
+      <td>42.12</td>
+      <td>2.52</td>
+      <td>44.64</td>
+      <td>57.38</td>
+      <td>6.12</td>
+      <td>37.48</td>
+      <td>2.04</td>
+      <td>2.60</td>
+      <td>66.02</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>883.0</td>
+      <td>1564003.0</td>
+      <td>838.0</td>
+      <td>1743.0</td>
+      <td>1.0</td>
+      <td>18.0</td>
+      <td>2451053.0</td>
+      <td>35984.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>1304</td>
+      <td>25</td>
+      <td>772.59</td>
+      <td>46.35</td>
+      <td>818.94</td>
+      <td>28.93</td>
+      <td>178.23</td>
+      <td>347.66</td>
+      <td>50.99</td>
+      <td>373.94</td>
+      <td>253.51</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>932.0</td>
+      <td>77813.0</td>
+      <td>838.0</td>
+      <td>3196.0</td>
+      <td>1.0</td>
+      <td>39.0</td>
+      <td>2451079.0</td>
+      <td>50088.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>1085</td>
+      <td>27</td>
+      <td>382.20</td>
+      <td>0.00</td>
+      <td>382.20</td>
+      <td>97.85</td>
+      <td>154.56</td>
+      <td>259.89</td>
+      <td>13.45</td>
+      <td>108.86</td>
+      <td>252.41</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>590.0</td>
+      <td>637321.0</td>
+      <td>780.0</td>
+      <td>1532.0</td>
+      <td>1.0</td>
+      <td>84.0</td>
+      <td>2451966.0</td>
+      <td>49139.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>1935</td>
+      <td>27</td>
+      <td>59.84</td>
+      <td>1.79</td>
+      <td>61.63</td>
+      <td>38.22</td>
+      <td>137.72</td>
+      <td>43.68</td>
+      <td>6.62</td>
+      <td>9.54</td>
+      <td>177.73</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>896.0</td>
+      <td>178335.0</td>
+      <td>780.0</td>
+      <td>4892.0</td>
+      <td>1.0</td>
+      <td>22.0</td>
+      <td>2451964.0</td>
+      <td>49463.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>1334</td>
+      <td>29</td>
+      <td>5.04</td>
+      <td>0.45</td>
+      <td>5.49</td>
+      <td>85.50</td>
+      <td>15.96</td>
+      <td>3.83</td>
+      <td>0.03</td>
+      <td>1.18</td>
+      <td>101.91</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>868.0</td>
+      <td>1723855.0</td>
+      <td>631.0</td>
+      <td>885.0</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>2451259.0</td>
+      <td>35185.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>1234</td>
+      <td>29</td>
+      <td>41.80</td>
+      <td>3.76</td>
+      <td>45.56</td>
+      <td>18.82</td>
+      <td>985.16</td>
+      <td>17.13</td>
+      <td>24.17</td>
+      <td>0.50</td>
+      <td>1007.74</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>10.0</td>
+      <td>135738.0</td>
+      <td>631.0</td>
+      <td>5274.0</td>
+      <td>1.0</td>
+      <td>22.0</td>
+      <td>2451174.0</td>
+      <td>32214.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>205</td>
+      <td>32</td>
+      <td>2092.23</td>
+      <td>167.37</td>
+      <td>2259.60</td>
+      <td>14.26</td>
+      <td>987.28</td>
+      <td>941.50</td>
+      <td>149.59</td>
+      <td>1001.14</td>
+      <td>1168.91</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>125.0</td>
+      <td>222350.0</td>
+      <td>120.0</td>
+      <td>2461.0</td>
+      <td>1.0</td>
+      <td>41.0</td>
+      <td>2451983.0</td>
+      <td>33769.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>205</td>
+      <td>34</td>
+      <td>208.78</td>
+      <td>16.70</td>
+      <td>225.48</td>
+      <td>77.95</td>
+      <td>223.73</td>
+      <td>198.34</td>
+      <td>3.65</td>
+      <td>6.79</td>
+      <td>318.38</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>883.0</td>
+      <td>934775.0</td>
+      <td>971.0</td>
+      <td>429.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451392.0</td>
+      <td>48895.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>1537</td>
+      <td>35</td>
+      <td>144.00</td>
+      <td>0.00</td>
+      <td>144.00</td>
+      <td>36.15</td>
+      <td>2167.20</td>
+      <td>87.84</td>
+      <td>39.87</td>
+      <td>16.29</td>
+      <td>2203.35</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>107.0</td>
+      <td>539558.0</td>
+      <td>958.0</td>
+      <td>6809.0</td>
+      <td>1.0</td>
+      <td>60.0</td>
+      <td>2452196.0</td>
+      <td>33535.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>1117</td>
+      <td>36</td>
+      <td>999.45</td>
+      <td>79.95</td>
+      <td>1079.40</td>
+      <td>29.51</td>
+      <td>35.10</td>
+      <td>499.72</td>
+      <td>439.76</td>
+      <td>59.97</td>
+      <td>144.56</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>711.0</td>
+      <td>1243218.0</td>
+      <td>8.0</td>
+      <td>3988.0</td>
+      <td>1.0</td>
+      <td>45.0</td>
+      <td>2452306.0</td>
+      <td>40321.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>1705</td>
+      <td>36</td>
+      <td>NaN</td>
+      <td>3.49</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>7.49</td>
+      <td>13.58</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>882385.0</td>
+      <td>8.0</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>2452317.0</td>
+      <td>53999.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>631</td>
+      <td>36</td>
+      <td>541.31</td>
+      <td>43.30</td>
+      <td>584.61</td>
+      <td>71.10</td>
+      <td>241.36</td>
+      <td>519.65</td>
+      <td>10.18</td>
+      <td>11.48</td>
+      <td>355.76</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>735.0</td>
+      <td>465142.0</td>
+      <td>722.0</td>
+      <td>3315.0</td>
+      <td>1.0</td>
+      <td>7.0</td>
+      <td>2452279.0</td>
+      <td>41984.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>415</td>
+      <td>37</td>
+      <td>8562.90</td>
+      <td>513.77</td>
+      <td>9076.67</td>
+      <td>8.17</td>
+      <td>366.35</td>
+      <td>4195.82</td>
+      <td>3493.66</td>
+      <td>873.42</td>
+      <td>888.29</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>144.0</td>
+      <td>491912.0</td>
+      <td>252.0</td>
+      <td>5028.0</td>
+      <td>1.0</td>
+      <td>85.0</td>
+      <td>2452128.0</td>
+      <td>30131.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>1670</td>
+      <td>41</td>
+      <td>1327.36</td>
+      <td>79.64</td>
+      <td>1407.00</td>
+      <td>49.73</td>
+      <td>558.79</td>
+      <td>66.36</td>
+      <td>731.38</td>
+      <td>529.62</td>
+      <td>688.16</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>714.0</td>
+      <td>1681246.0</td>
+      <td>890.0</td>
+      <td>5780.0</td>
+      <td>1.0</td>
+      <td>17.0</td>
+      <td>2451271.0</td>
+      <td>44173.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>130</td>
+      <td>42</td>
+      <td>422.24</td>
+      <td>8.44</td>
+      <td>430.68</td>
+      <td>48.27</td>
+      <td>551.20</td>
+      <td>329.34</td>
+      <td>15.79</td>
+      <td>77.11</td>
+      <td>607.91</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>487.0</td>
+      <td>1577815.0</td>
+      <td>423.0</td>
+      <td>3651.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451092.0</td>
+      <td>43741.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>1219</td>
+      <td>42</td>
+      <td>1240.55</td>
+      <td>0.00</td>
+      <td>1240.55</td>
+      <td>86.84</td>
+      <td>68.80</td>
+      <td>719.51</td>
+      <td>359.51</td>
+      <td>161.53</td>
+      <td>155.64</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>912.0</td>
+      <td>1611739.0</td>
+      <td>229.0</td>
+      <td>3649.0</td>
+      <td>1.0</td>
+      <td>43.0</td>
+      <td>2451033.0</td>
+      <td>54994.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>1820</td>
+      <td>42</td>
+      <td>475.54</td>
+      <td>9.51</td>
+      <td>485.05</td>
+      <td>73.37</td>
+      <td>317.07</td>
+      <td>128.39</td>
+      <td>197.87</td>
+      <td>149.28</td>
+      <td>399.95</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>223.0</td>
+      <td>134560.0</td>
+      <td>152.0</td>
+      <td>4215.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451073.0</td>
+      <td>52318.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>597</td>
+      <td>45</td>
+      <td>2703.87</td>
+      <td>243.34</td>
+      <td>2947.21</td>
+      <td>59.97</td>
+      <td>386.10</td>
+      <td>1487.12</td>
+      <td>790.88</td>
+      <td>425.87</td>
+      <td>689.41</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>621.0</td>
+      <td>1581204.0</td>
+      <td>606.0</td>
+      <td>3389.0</td>
+      <td>1.0</td>
+      <td>39.0</td>
+      <td>2452295.0</td>
+      <td>39258.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>992</td>
+      <td>46</td>
+      <td>3742.14</td>
+      <td>149.68</td>
+      <td>3891.82</td>
+      <td>24.47</td>
+      <td>379.29</td>
+      <td>3442.76</td>
+      <td>59.87</td>
+      <td>239.51</td>
+      <td>553.44</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>832.0</td>
+      <td>194443.0</td>
+      <td>598.0</td>
+      <td>4161.0</td>
+      <td>1.0</td>
+      <td>47.0</td>
+      <td>2451354.0</td>
+      <td>60360.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>398</td>
+      <td>46</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>453.29</td>
+      <td>51.61</td>
+      <td>207.48</td>
+      <td>104.60</td>
+      <td>86.12</td>
+      <td>NaN</td>
+      <td>276.52</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>3068.0</td>
+      <td>NaN</td>
+      <td>38.0</td>
+      <td>NaN</td>
+      <td>59918.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>368</td>
+      <td>47</td>
+      <td>8.12</td>
+      <td>0.73</td>
+      <td>8.85</td>
+      <td>19.08</td>
+      <td>7.43</td>
+      <td>3.81</td>
+      <td>0.77</td>
+      <td>3.54</td>
+      <td>27.24</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>373.0</td>
+      <td>1256944.0</td>
+      <td>903.0</td>
+      <td>382.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2451177.0</td>
+      <td>58870.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>199</td>
+      <td>48</td>
+      <td>199.35</td>
+      <td>17.94</td>
+      <td>217.29</td>
+      <td>11.83</td>
+      <td>112.95</td>
+      <td>191.37</td>
+      <td>0.71</td>
+      <td>7.27</td>
+      <td>142.72</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>391.0</td>
+      <td>1862359.0</td>
+      <td>843.0</td>
+      <td>2275.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2452738.0</td>
+      <td>29363.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>1215</td>
+      <td>48</td>
+      <td>392.20</td>
+      <td>27.45</td>
+      <td>419.65</td>
+      <td>10.16</td>
+      <td>116.00</td>
+      <td>152.95</td>
+      <td>224.89</td>
+      <td>14.36</td>
+      <td>153.61</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>251.0</td>
+      <td>1047097.0</td>
+      <td>202.0</td>
+      <td>5374.0</td>
+      <td>1.0</td>
+      <td>10.0</td>
+      <td>2452745.0</td>
+      <td>44637.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>1592</td>
+      <td>49</td>
+      <td>496.23</td>
+      <td>29.77</td>
+      <td>526.00</td>
+      <td>48.23</td>
+      <td>31.92</td>
+      <td>282.85</td>
+      <td>142.96</td>
+      <td>70.42</td>
+      <td>109.92</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>91.0</td>
+      <td>103157.0</td>
+      <td>590.0</td>
+      <td>6724.0</td>
+      <td>1.0</td>
+      <td>21.0</td>
+      <td>2451892.0</td>
+      <td>35637.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>311</td>
+      <td>51</td>
+      <td>172.10</td>
+      <td>5.16</td>
+      <td>177.26</td>
+      <td>22.72</td>
+      <td>64.20</td>
+      <td>170.37</td>
+      <td>1.59</td>
+      <td>0.14</td>
+      <td>92.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>61.0</td>
+      <td>945253.0</td>
+      <td>517.0</td>
+      <td>3357.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2451769.0</td>
+      <td>38709.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>266</td>
+      <td>52</td>
+      <td>911.04</td>
+      <td>0.00</td>
+      <td>911.04</td>
+      <td>21.65</td>
+      <td>378.17</td>
+      <td>619.50</td>
+      <td>253.63</td>
+      <td>37.91</td>
+      <td>399.82</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>230.0</td>
+      <td>173053.0</td>
+      <td>831.0</td>
+      <td>4865.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451102.0</td>
+      <td>32082.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>514</td>
+      <td>52</td>
+      <td>113.50</td>
+      <td>1.13</td>
+      <td>114.63</td>
+      <td>62.63</td>
+      <td>125.50</td>
+      <td>30.64</td>
+      <td>25.68</td>
+      <td>57.18</td>
+      <td>189.26</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>196.0</td>
+      <td>1866272.0</td>
+      <td>810.0</td>
+      <td>3734.0</td>
+      <td>1.0</td>
+      <td>25.0</td>
+      <td>2451088.0</td>
+      <td>55568.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>1006</td>
+      <td>53</td>
+      <td>2.23</td>
+      <td>0.08</td>
+      <td>2.31</td>
+      <td>26.56</td>
+      <td>1.48</td>
+      <td>0.20</td>
+      <td>0.89</td>
+      <td>1.14</td>
+      <td>28.12</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>885.0</td>
+      <td>508248.0</td>
+      <td>672.0</td>
+      <td>5690.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2451573.0</td>
+      <td>36729.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>1707</td>
+      <td>54</td>
+      <td>95.48</td>
+      <td>3.81</td>
+      <td>99.29</td>
+      <td>93.36</td>
+      <td>8.36</td>
+      <td>34.37</td>
+      <td>36.05</td>
+      <td>25.06</td>
+      <td>105.53</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>162.0</td>
+      <td>1042828.0</td>
+      <td>157.0</td>
+      <td>4295.0</td>
+      <td>1.0</td>
+      <td>11.0</td>
+      <td>2452729.0</td>
+      <td>48880.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>350</td>
+      <td>55</td>
+      <td>252.67</td>
+      <td>12.63</td>
+      <td>265.30</td>
+      <td>20.45</td>
+      <td>63.14</td>
+      <td>194.55</td>
+      <td>42.42</td>
+      <td>15.70</td>
+      <td>96.22</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>463.0</td>
+      <td>869419.0</td>
+      <td>297.0</td>
+      <td>5541.0</td>
+      <td>1.0</td>
+      <td>11.0</td>
+      <td>2452040.0</td>
+      <td>43895.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>357</td>
+      <td>60</td>
+      <td>2733.90</td>
+      <td>54.67</td>
+      <td>2788.57</td>
+      <td>60.37</td>
+      <td>0.00</td>
+      <td>683.47</td>
+      <td>1558.32</td>
+      <td>492.11</td>
+      <td>115.04</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>82.0</td>
+      <td>972821.0</td>
+      <td>967.0</td>
+      <td>2228.0</td>
+      <td>1.0</td>
+      <td>78.0</td>
+      <td>2452339.0</td>
+      <td>46469.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>1113</td>
+      <td>62</td>
+      <td>446.76</td>
+      <td>26.80</td>
+      <td>473.56</td>
+      <td>67.62</td>
+      <td>213.66</td>
+      <td>58.07</td>
+      <td>15.54</td>
+      <td>373.15</td>
+      <td>308.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>703.0</td>
+      <td>1420275.0</td>
+      <td>197.0</td>
+      <td>5589.0</td>
+      <td>1.0</td>
+      <td>6.0</td>
+      <td>2452254.0</td>
+      <td>40433.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>1818</td>
+      <td>63</td>
+      <td>NaN</td>
+      <td>11.73</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>172.06</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>568.77</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>488.0</td>
+      <td>305648.0</td>
+      <td>129.0</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>NaN</td>
+      <td>2452701.0</td>
+      <td>35838.0</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>1831</td>
+      <td>63</td>
+      <td>78.56</td>
+      <td>0.00</td>
+      <td>78.56</td>
+      <td>96.23</td>
+      <td>49.60</td>
+      <td>43.99</td>
+      <td>21.43</td>
+      <td>13.14</td>
+      <td>145.83</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>302.0</td>
+      <td>1086498.0</td>
+      <td>129.0</td>
+      <td>2400.0</td>
+      <td>1.0</td>
+      <td>16.0</td>
+      <td>2452596.0</td>
+      <td>29520.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>1513</td>
+      <td>63</td>
+      <td>216.16</td>
+      <td>19.45</td>
+      <td>235.61</td>
+      <td>57.17</td>
+      <td>242.76</td>
+      <td>108.08</td>
+      <td>104.83</td>
+      <td>3.25</td>
+      <td>319.38</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>610.0</td>
+      <td>479318.0</td>
+      <td>129.0</td>
+      <td>1264.0</td>
+      <td>1.0</td>
+      <td>28.0</td>
+      <td>2452604.0</td>
+      <td>36240.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>723</td>
+      <td>64</td>
+      <td>583.49</td>
+      <td>40.84</td>
+      <td>624.33</td>
+      <td>54.92</td>
+      <td>392.35</td>
+      <td>280.07</td>
+      <td>203.29</td>
+      <td>100.13</td>
+      <td>488.11</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>782.0</td>
+      <td>145292.0</td>
+      <td>17.0</td>
+      <td>437.0</td>
+      <td>1.0</td>
+      <td>19.0</td>
+      <td>2452593.0</td>
+      <td>55466.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>913</td>
+      <td>64</td>
+      <td>2325.60</td>
+      <td>0.00</td>
+      <td>2325.60</td>
+      <td>57.60</td>
+      <td>1987.30</td>
+      <td>1046.52</td>
+      <td>575.58</td>
+      <td>703.50</td>
+      <td>2044.90</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>33.0</td>
+      <td>492805.0</td>
+      <td>17.0</td>
+      <td>2019.0</td>
+      <td>1.0</td>
+      <td>34.0</td>
+      <td>2452556.0</td>
+      <td>56489.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>1125</td>
+      <td>64</td>
+      <td>6903.60</td>
+      <td>0.00</td>
+      <td>6903.60</td>
+      <td>76.02</td>
+      <td>2987.82</td>
+      <td>6213.24</td>
+      <td>352.08</td>
+      <td>338.28</td>
+      <td>3063.84</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>193.0</td>
+      <td>569529.0</td>
+      <td>17.0</td>
+      <td>3161.0</td>
+      <td>1.0</td>
+      <td>66.0</td>
+      <td>2452437.0</td>
+      <td>54978.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>1629</td>
+      <td>66</td>
+      <td>630.75</td>
+      <td>25.23</td>
+      <td>655.98</td>
+      <td>2.26</td>
+      <td>336.30</td>
+      <td>491.98</td>
+      <td>80.48</td>
+      <td>58.29</td>
+      <td>363.79</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>465.0</td>
+      <td>1603765.0</td>
+      <td>766.0</td>
+      <td>4015.0</td>
+      <td>1.0</td>
+      <td>15.0</td>
+      <td>2452346.0</td>
+      <td>53160.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>1705</td>
+      <td>67</td>
+      <td>594.09</td>
+      <td>23.76</td>
+      <td>617.85</td>
+      <td>40.24</td>
+      <td>1063.54</td>
+      <td>160.40</td>
+      <td>56.37</td>
+      <td>377.32</td>
+      <td>1127.54</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>930.0</td>
+      <td>529565.0</td>
+      <td>624.0</td>
+      <td>2324.0</td>
+      <td>1.0</td>
+      <td>41.0</td>
+      <td>2452555.0</td>
+      <td>43088.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>481</td>
+      <td>68</td>
+      <td>178.50</td>
+      <td>5.35</td>
+      <td>183.85</td>
+      <td>96.73</td>
+      <td>53.76</td>
+      <td>82.11</td>
+      <td>75.18</td>
+      <td>21.21</td>
+      <td>155.84</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>205.0</td>
+      <td>496988.0</td>
+      <td>564.0</td>
+      <td>6773.0</td>
+      <td>1.0</td>
+      <td>21.0</td>
+      <td>2451258.0</td>
+      <td>43812.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>196</td>
+      <td>71</td>
+      <td>13.48</td>
+      <td>0.13</td>
+      <td>13.61</td>
+      <td>91.25</td>
+      <td>2.92</td>
+      <td>6.33</td>
+      <td>5.14</td>
+      <td>2.01</td>
+      <td>94.30</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>738.0</td>
+      <td>875823.0</td>
+      <td>942.0</td>
+      <td>2104.0</td>
+      <td>1.0</td>
+      <td>2.0</td>
+      <td>2451256.0</td>
+      <td>50305.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>205</td>
+      <td>71</td>
+      <td>188.00</td>
+      <td>16.92</td>
+      <td>204.92</td>
+      <td>44.05</td>
+      <td>51.25</td>
+      <td>150.40</td>
+      <td>6.39</td>
+      <td>31.21</td>
+      <td>112.22</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1.0</td>
+      <td>1910912.0</td>
+      <td>239.0</td>
+      <td>233.0</td>
+      <td>1.0</td>
+      <td>25.0</td>
+      <td>2451294.0</td>
+      <td>44684.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>1225</td>
+      <td>71</td>
+      <td>164.65</td>
+      <td>1.64</td>
+      <td>166.29</td>
+      <td>75.66</td>
+      <td>205.80</td>
+      <td>74.09</td>
+      <td>12.67</td>
+      <td>77.89</td>
+      <td>283.10</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>146.0</td>
+      <td>195885.0</td>
+      <td>239.0</td>
+      <td>3539.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2451329.0</td>
+      <td>29997.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>521</td>
+      <td>72</td>
+      <td>166.41</td>
+      <td>1.66</td>
+      <td>168.07</td>
+      <td>1.14</td>
+      <td>64.92</td>
+      <td>59.90</td>
+      <td>62.84</td>
+      <td>43.67</td>
+      <td>67.72</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>468.0</td>
+      <td>1271817.0</td>
+      <td>602.0</td>
+      <td>6019.0</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td>2451829.0</td>
+      <td>50278.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>1540</td>
+      <td>74</td>
+      <td>36.32</td>
+      <td>0.00</td>
+      <td>36.32</td>
+      <td>38.54</td>
+      <td>42.96</td>
+      <td>12.71</td>
+      <td>6.13</td>
+      <td>17.48</td>
+      <td>81.50</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>886.0</td>
+      <td>767720.0</td>
+      <td>337.0</td>
+      <td>4103.0</td>
+      <td>1.0</td>
+      <td>4.0</td>
+      <td>2451174.0</td>
+      <td>57809.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>569</td>
+      <td>76</td>
+      <td>76.51</td>
+      <td>6.88</td>
+      <td>83.39</td>
+      <td>66.92</td>
+      <td>30.28</td>
+      <td>56.61</td>
+      <td>19.70</td>
+      <td>0.20</td>
+      <td>104.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>580.0</td>
+      <td>78088.0</td>
+      <td>531.0</td>
+      <td>234.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2452279.0</td>
+      <td>52274.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>1627</td>
+      <td>76</td>
+      <td>796.05</td>
+      <td>31.84</td>
+      <td>827.89</td>
+      <td>91.64</td>
+      <td>176.85</td>
+      <td>278.61</td>
+      <td>243.19</td>
+      <td>274.25</td>
+      <td>300.33</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>352.0</td>
+      <td>1630980.0</td>
+      <td>531.0</td>
+      <td>4166.0</td>
+      <td>1.0</td>
+      <td>15.0</td>
+      <td>2452242.0</td>
+      <td>52421.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>1856</td>
+      <td>77</td>
+      <td>569.40</td>
+      <td>45.55</td>
+      <td>614.95</td>
+      <td>45.00</td>
+      <td>621.20</td>
+      <td>529.54</td>
+      <td>19.93</td>
+      <td>19.93</td>
+      <td>711.75</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>43.0</td>
+      <td>622349.0</td>
+      <td>102.0</td>
+      <td>4796.0</td>
+      <td>1.0</td>
+      <td>10.0</td>
+      <td>2451201.0</td>
+      <td>32557.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>1741</td>
+      <td>78</td>
+      <td>1077.83</td>
+      <td>64.66</td>
+      <td>1142.49</td>
+      <td>77.87</td>
+      <td>576.81</td>
+      <td>506.58</td>
+      <td>457.00</td>
+      <td>114.25</td>
+      <td>719.34</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>309.0</td>
+      <td>1758891.0</td>
+      <td>529.0</td>
+      <td>3500.0</td>
+      <td>1.0</td>
+      <td>13.0</td>
+      <td>2451155.0</td>
+      <td>53923.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>31</td>
+      <td>79</td>
+      <td>797.64</td>
+      <td>71.78</td>
+      <td>869.42</td>
+      <td>57.39</td>
+      <td>1296.08</td>
+      <td>71.78</td>
+      <td>79.84</td>
+      <td>646.02</td>
+      <td>1425.25</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>483.0</td>
+      <td>382863.0</td>
+      <td>17.0</td>
+      <td>6073.0</td>
+      <td>1.0</td>
+      <td>34.0</td>
+      <td>2452290.0</td>
+      <td>54248.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>13</td>
+      <td>80</td>
+      <td>6830.08</td>
+      <td>68.30</td>
+      <td>6898.38</td>
+      <td>85.70</td>
+      <td>148.48</td>
+      <td>6625.17</td>
+      <td>127.04</td>
+      <td>77.87</td>
+      <td>302.48</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>916.0</td>
+      <td>1254797.0</td>
+      <td>368.0</td>
+      <td>4380.0</td>
+      <td>1.0</td>
+      <td>64.0</td>
+      <td>2451154.0</td>
+      <td>51844.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>358</td>
+      <td>81</td>
+      <td>1416.58</td>
+      <td>42.49</td>
+      <td>1459.07</td>
+      <td>16.86</td>
+      <td>849.86</td>
+      <td>1388.24</td>
+      <td>23.52</td>
+      <td>4.82</td>
+      <td>909.21</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>915.0</td>
+      <td>459305.0</td>
+      <td>625.0</td>
+      <td>510.0</td>
+      <td>1.0</td>
+      <td>22.0</td>
+      <td>2451281.0</td>
+      <td>48144.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>1543</td>
+      <td>81</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>94.53</td>
+      <td>24.55</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>119.08</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>147.0</td>
+      <td>944226.0</td>
+      <td>625.0</td>
+      <td>463.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2451214.0</td>
+      <td>55537.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>1790</td>
+      <td>82</td>
+      <td>1491.00</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>545.30</td>
+      <td>NaN</td>
+      <td>735.06</td>
+      <td>NaN</td>
+      <td>707.47</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>512.0</td>
+      <td>3587.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2451369.0</td>
+      <td>NaN</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>1780</td>
+      <td>82</td>
+      <td>847.84</td>
+      <td>42.39</td>
+      <td>890.23</td>
+      <td>40.52</td>
+      <td>77.04</td>
+      <td>576.53</td>
+      <td>208.90</td>
+      <td>62.41</td>
+      <td>159.95</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>356.0</td>
+      <td>1082287.0</td>
+      <td>896.0</td>
+      <td>645.0</td>
+      <td>1.0</td>
+      <td>8.0</td>
+      <td>2451471.0</td>
+      <td>50769.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>1996</td>
+      <td>82</td>
+      <td>1399.65</td>
+      <td>55.98</td>
+      <td>1455.63</td>
+      <td>74.63</td>
+      <td>447.63</td>
+      <td>839.79</td>
+      <td>156.76</td>
+      <td>403.10</td>
+      <td>578.24</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>230.0</td>
+      <td>1427925.0</td>
+      <td>896.0</td>
+      <td>1401.0</td>
+      <td>1.0</td>
+      <td>43.0</td>
+      <td>2451533.0</td>
+      <td>34774.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>1671</td>
+      <td>83</td>
+      <td>1151.01</td>
+      <td>23.02</td>
+      <td>1174.03</td>
+      <td>28.22</td>
+      <td>146.16</td>
+      <td>115.10</td>
+      <td>973.75</td>
+      <td>62.16</td>
+      <td>197.40</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>175.0</td>
+      <td>842053.0</td>
+      <td>678.0</td>
+      <td>5314.0</td>
+      <td>1.0</td>
+      <td>21.0</td>
+      <td>2452677.0</td>
+      <td>50033.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>1951</td>
+      <td>84</td>
+      <td>323.00</td>
+      <td>19.38</td>
+      <td>342.38</td>
+      <td>5.27</td>
+      <td>171.25</td>
+      <td>261.63</td>
+      <td>43.57</td>
+      <td>17.80</td>
+      <td>195.90</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>165.0</td>
+      <td>1034463.0</td>
+      <td>91.0</td>
+      <td>114.0</td>
+      <td>1.0</td>
+      <td>5.0</td>
+      <td>2452530.0</td>
+      <td>44806.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>1482</td>
+      <td>84</td>
+      <td>1733.76</td>
+      <td>156.03</td>
+      <td>1889.79</td>
+      <td>98.99</td>
+      <td>1155.42</td>
+      <td>208.05</td>
+      <td>671.31</td>
+      <td>854.40</td>
+      <td>1410.44</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>7.0</td>
+      <td>222509.0</td>
+      <td>91.0</td>
+      <td>5658.0</td>
+      <td>1.0</td>
+      <td>63.0</td>
+      <td>2452550.0</td>
+      <td>39316.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>984</td>
+      <td>84</td>
+      <td>112.84</td>
+      <td>0.00</td>
+      <td>112.84</td>
+      <td>47.55</td>
+      <td>130.00</td>
+      <td>44.00</td>
+      <td>68.84</td>
+      <td>0.00</td>
+      <td>177.55</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>818.0</td>
+      <td>1844056.0</td>
+      <td>91.0</td>
+      <td>137.0</td>
+      <td>1.0</td>
+      <td>52.0</td>
+      <td>2452550.0</td>
+      <td>56385.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>363</td>
+      <td>86</td>
+      <td>50.00</td>
+      <td>4.00</td>
+      <td>54.00</td>
+      <td>95.65</td>
+      <td>2.50</td>
+      <td>29.00</td>
+      <td>16.38</td>
+      <td>4.62</td>
+      <td>102.15</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>452.0</td>
+      <td>1435175.0</td>
+      <td>560.0</td>
+      <td>1237.0</td>
+      <td>1.0</td>
+      <td>25.0</td>
+      <td>2452743.0</td>
+      <td>53098.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>1039</td>
+      <td>86</td>
+      <td>100.44</td>
+      <td>3.01</td>
+      <td>103.45</td>
+      <td>81.54</td>
+      <td>343.32</td>
+      <td>50.22</td>
+      <td>6.52</td>
+      <td>43.70</td>
+      <td>427.87</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>430.0</td>
+      <td>705875.0</td>
+      <td>359.0</td>
+      <td>2076.0</td>
+      <td>1.0</td>
+      <td>12.0</td>
+      <td>2452805.0</td>
+      <td>37053.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>920</td>
+      <td>87</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>35.41</td>
+      <td>NaN</td>
+      <td>213.43</td>
+      <td>NaN</td>
+      <td>0.17</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1393955.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>17.0</td>
+      <td>2451604.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>1685</td>
+      <td>88</td>
+      <td>146.20</td>
+      <td>0.00</td>
+      <td>146.20</td>
+      <td>22.87</td>
+      <td>1376.66</td>
+      <td>86.25</td>
+      <td>23.38</td>
+      <td>36.57</td>
+      <td>1399.53</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>403.0</td>
+      <td>1361123.0</td>
+      <td>272.0</td>
+      <td>1963.0</td>
+      <td>1.0</td>
+      <td>34.0</td>
+      <td>2452317.0</td>
+      <td>32925.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>1679</td>
+      <td>88</td>
+      <td>1168.30</td>
+      <td>70.09</td>
+      <td>1238.39</td>
+      <td>37.61</td>
+      <td>1168.30</td>
+      <td>198.61</td>
+      <td>96.96</td>
+      <td>872.73</td>
+      <td>1276.00</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>372.0</td>
+      <td>341664.0</td>
+      <td>110.0</td>
+      <td>7018.0</td>
+      <td>1.0</td>
+      <td>70.0</td>
+      <td>2452260.0</td>
+      <td>58521.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>788</td>
+      <td>89</td>
+      <td>131.14</td>
+      <td>0.00</td>
+      <td>131.14</td>
+      <td>75.40</td>
+      <td>53.76</td>
+      <td>111.46</td>
+      <td>17.51</td>
+      <td>2.17</td>
+      <td>129.16</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>52.0</td>
+      <td>751267.0</td>
+      <td>994.0</td>
+      <td>6036.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td>2451907.0</td>
+      <td>56892.0</td>
+      <td>1.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">item_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_item_id"></div><b>📃 Summary:</b> Item surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_ticket_number"></div><b>📃 Summary:</b> Ticket number for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unit_wholesale_cost</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_unit_wholesale_cost"></div><b>📃 Summary:</b> Wholesale cost per unit<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unit_list_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_unit_list_price"></div><b>📃 Summary:</b> List price per unit<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unit_sales_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_unit_sales_price"></div><b>📃 Summary:</b> Sales price per unit<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_discount_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_discount_amount"></div><b>📃 Summary:</b> Extended discount amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_sales_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_sales_price"></div><b>📃 Summary:</b> Extended sales price<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_wholesale_cost</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_wholesale_cost"></div><b>📃 Summary:</b> Extended wholesale cost<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_list_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_list_price"></div><b>📃 Summary:</b> Extended list price<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_tax_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_tax_amount"></div><b>📃 Summary:</b> Extended tax amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">coupon_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_coupon_amount"></div><b>📃 Summary:</b> Amount of coupon applied<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">net_paid</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_net_paid"></div><b>📃 Summary:</b> Net amount paid<br><b>❓ Missing:</b> Zero value when item is free or fully discounted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">net_paid_with_tax</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_net_paid_with_tax"></div><b>📃 Summary:</b> Net amount paid including tax<br><b>❓ Missing:</b> Zero value when item is free or fully discounted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">net_profit</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_net_profit"></div><b>📃 Summary:</b> Net profit<br><b>❓ Missing:</b> No profit calculation for free or fully discounted items<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">address_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_address_id"></div><b>📃 Summary:</b> Address surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_demo_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_customer_demo_id"></div><b>📃 Summary:</b> Customer demographics surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_customer_id"></div><b>📃 Summary:</b> Customer surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">household_demo_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_household_demo_id"></div><b>📃 Summary:</b> Household demographics surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">promotion_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_promotion_id"></div><b>📃 Summary:</b> Promotion surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">quantity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_quantity"></div><b>📃 Summary:</b> Quantity of items<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sale_date_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sale_date_id"></div><b>📃 Summary:</b> Date surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sale_time_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sale_time_id"></div><b>📃 Summary:</b> Time surrogate key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">store_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_store_id"></div><b>📃 Summary:</b> Store surrogate key<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about store returns. It includes details such as the date and time of the return, item and customer information, store and promotion details, quantities, costs, prices, discounts, and various financial calculations related to the return transaction. Each row represents a single item returned in a transaction.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>23</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>SS_SOLD_DATE_SK</td>
+      <td>Date surrogate key</td>
+      <td>sale_date_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>SS_SOLD_TIME_SK</td>
+      <td>Time surrogate key</td>
+      <td>sale_time_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>SS_ITEM_SK</td>
+      <td>Item surrogate key</td>
+      <td>item_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>SS_CUSTOMER_SK</td>
+      <td>Customer surrogate key</td>
+      <td>customer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>SS_CDEMO_SK</td>
+      <td>Customer demographics surrogate key</td>
+      <td>customer_demo_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>SS_HDEMO_SK</td>
+      <td>Household demographics surrogate key</td>
+      <td>household_demo_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>SS_ADDR_SK</td>
+      <td>Address surrogate key</td>
+      <td>address_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>SS_STORE_SK</td>
+      <td>Store surrogate key</td>
+      <td>store_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>SS_PROMO_SK</td>
+      <td>Promotion surrogate key</td>
+      <td>promotion_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>SS_TICKET_NUMBER</td>
+      <td>Ticket number for the transaction</td>
+      <td>ticket_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>SS_QUANTITY</td>
+      <td>Quantity of items</td>
+      <td>quantity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>SS_WHOLESALE_COST</td>
+      <td>Wholesale cost per unit</td>
+      <td>unit_wholesale_cost</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>SS_LIST_PRICE</td>
+      <td>List price per unit</td>
+      <td>unit_list_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>SS_SALES_PRICE</td>
+      <td>Sales price per unit</td>
+      <td>unit_sales_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>SS_EXT_DISCOUNT_AMT</td>
+      <td>Extended discount amount</td>
+      <td>total_discount_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>SS_EXT_SALES_PRICE</td>
+      <td>Extended sales price</td>
+      <td>total_sales_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>SS_EXT_WHOLESALE_COST</td>
+      <td>Extended wholesale cost</td>
+      <td>total_wholesale_cost</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>SS_EXT_LIST_PRICE</td>
+      <td>Extended list price</td>
+      <td>total_list_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>SS_EXT_TAX</td>
+      <td>Extended tax amount</td>
+      <td>total_tax_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>SS_COUPON_AMT</td>
+      <td>Amount of coupon applied</td>
+      <td>coupon_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>SS_NET_PAID</td>
+      <td>Net amount paid</td>
+      <td>net_paid</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>SS_NET_PAID_INC_TAX</td>
+      <td>Net amount paid including tax</td>
+      <td>net_paid_with_tax</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>SS_NET_PROFIT</td>
+      <td>Net profit</td>
+      <td>net_profit</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>9</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>address_id</td>
+      <td>CAST("address_id" AS INT)</td>
+      <td>To transform the data type of the 'address_id' column from DECIMAL to INT in DuckDB, we need to use a simple CAST function. The CAST function will convert each value in the column to an integer, effectively removing any decimal places. Since the given values are all whole numbers (even though they're stored as decimals), this conversion should not lose any information.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>customer_demo_id</td>
+      <td>CAST("customer_demo_id" AS INT)</td>
+      <td>To transform the data type of the 'customer_demo_id' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the values in the column are already whole numbers (despite being stored as DECIMAL), a straightforward cast to INT will work without losing any data precision.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>customer_id</td>
+      <td>CAST("customer_id" AS INT)</td>
+      <td>To transform the 'customer_id' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the current values are already whole numbers (even though they're stored as DECIMAL), a straightforward cast to INT will work without losing any information.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>household_demo_id</td>
+      <td>CAST("household_demo_id" AS INT)</td>
+      <td>To transform the data type of the 'household_demo_id' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the values are already whole numbers (despite being stored as DECIMAL), a straightforward cast to INT will work without losing any information.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>promotion_id</td>
+      <td>CAST("promotion_id" AS INT)</td>
+      <td>To transform the 'promotion_id' column from DECIMAL to INT, we need to use a simple CAST function. Since the values are already whole numbers (1.0), we can safely cast them to INT without losing any information. In DuckDB, the CAST function can be used to convert between data types.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>quantity</td>
+      <td>CAST("quantity" AS INTEGER)</td>
+      <td>To transform the 'quantity' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, we can directly cast the column to INTEGER type. This will round down any decimal values to the nearest integer.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>sale_date_id</td>
+      <td>CAST("sale_date_id" AS INT)</td>
+      <td>To transform the 'sale_date_id' column from DECIMAL to INT in DuckDB, we need to use a simple CAST function. The CAST function in DuckDB allows us to convert one data type to another. In this case, we're converting from DECIMAL to INT. The DECIMAL values appear to be whole numbers, so a straightforward cast to INT should work without losing any information.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>sale_time_id</td>
+      <td>CAST("sale_time_id" AS INT)</td>
+      <td>To transform the data type of the 'sale_time_id' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the values in the column are already whole numbers (despite being stored as DECIMAL), a straightforward cast to INT will work without losing any information.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>store_id</td>
+      <td>CAST("store_id" AS INT)</td>
+      <td>To transform the data type of the 'store_id' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the values in 'store_id' are already whole numbers (1.0 and 2.0), we can safely cast them to INT without losing any information.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>21</b> columns have missing values<br>
+                ✔️ <b>3</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>address_id</td>
+      <td>5.05</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>coupon_amount</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>customer_demo_id</td>
+      <td>2.02</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>customer_id</td>
+      <td>2.02</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>household_demo_id</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>net_paid</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Zero value when item is free or fully discounted</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>net_paid_with_tax</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Zero value when item is free or fully discounted</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>net_profit</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No profit calculation for free or fully discounted items</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>promotion_id</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>quantity</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>sale_date_id</td>
+      <td>2.02</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>sale_time_id</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>store_id</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>total_discount_amount</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>total_list_price</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>total_sales_price</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>total_tax_amount</td>
+      <td>5.05</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>total_wholesale_cost</td>
+      <td>1.01</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>unit_list_price</td>
+      <td>3.03</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>unit_sales_price</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>unit_wholesale_cost</td>
+      <td>4.04</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>address_id</td>
+      <td>5.05</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>coupon_amount</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>customer_demo_id</td>
+      <td>2.02</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>customer_id</td>
+      <td>2.02</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>household_demo_id</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>promotion_id</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>quantity</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>sale_date_id</td>
+      <td>2.02</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>sale_time_id</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>store_id</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>total_discount_amount</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>total_list_price</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>total_sales_price</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>total_tax_amount</td>
+      <td>5.05</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>total_wholesale_cost</td>
+      <td>1.01</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>unit_list_price</td>
+      <td>3.03</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>unit_sales_price</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>unit_wholesale_cost</td>
+      <td>4.04</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 62.675, 'y': 2}, {'x': 162.02499999999998, 'y': 10}, {'x': 261.375, 'y': 2}, {'x': 360.72499999999997, 'y': 9}, {'x': 460.075, 'y': 3}, {'x': 559.425, 'y': 5}, {'x': 658.7749999999999, 'y': 1}, {'x': 758.125, 'y': 2}, {'x': 857.4749999999999, 'y': 0}, {'x': 956.825, 'y': 7}, {'x': 1056.175, 'y': 7}, {'x': 1155.5249999999999, 'y': 4}, {'x': 1254.875, 'y': 8}, {'x': 1354.225, 'y': 1}, {'x': 1453.5749999999998, 'y': 3}, {'x': 1552.925, 'y': 7}, {'x': 1652.2749999999999, 'y': 8}, {'x': 1751.625, 'y': 9}, {'x': 1850.975, 'y': 5}, {'x': 1950.3249999999998, 'y': 6}];
+    binWidth = 99.35;
+    drawHistogram("hist_viz_item_id", data, binWidth);
+data = [{'x': 3.2, 'y': 9}, {'x': 7.6000000000000005, 'y': 2}, {'x': 12.0, 'y': 8}, {'x': 16.400000000000002, 'y': 5}, {'x': 20.8, 'y': 5}, {'x': 25.200000000000003, 'y': 7}, {'x': 29.6, 'y': 2}, {'x': 34.0, 'y': 6}, {'x': 38.400000000000006, 'y': 1}, {'x': 42.8, 'y': 4}, {'x': 47.2, 'y': 7}, {'x': 51.60000000000001, 'y': 4}, {'x': 56.0, 'y': 2}, {'x': 60.400000000000006, 'y': 2}, {'x': 64.80000000000001, 'y': 7}, {'x': 69.2, 'y': 5}, {'x': 73.60000000000001, 'y': 2}, {'x': 78.0, 'y': 6}, {'x': 82.4, 'y': 9}, {'x': 86.80000000000001, 'y': 6}];
+    binWidth = 4.4;
+    drawHistogram("hist_viz_ticket_number", data, binWidth);
+data = [{'x': 214.0725, 'y': 52}, {'x': 642.2175, 'y': 14}, {'x': 1070.3625, 'y': 9}, {'x': 1498.5075, 'y': 5}, {'x': 1926.6525, 'y': 3}, {'x': 2354.7974999999997, 'y': 3}, {'x': 2782.9425, 'y': 2}, {'x': 3211.0874999999996, 'y': 0}, {'x': 3639.2325, 'y': 1}, {'x': 4067.3774999999996, 'y': 2}, {'x': 4495.522499999999, 'y': 0}, {'x': 4923.6675, 'y': 0}, {'x': 5351.8125, 'y': 0}, {'x': 5779.9575, 'y': 1}, {'x': 6208.102499999999, 'y': 0}, {'x': 6636.2474999999995, 'y': 1}, {'x': 7064.3925, 'y': 1}, {'x': 7492.5375, 'y': 0}, {'x': 7920.682499999999, 'y': 0}, {'x': 8348.8275, 'y': 1}];
+    binWidth = 428.145;
+    drawHistogram("hist_viz_unit_wholesale_cost", data, binWidth);
+data = [{'x': 12.844249999999999, 'y': 63}, {'x': 38.53274999999999, 'y': 14}, {'x': 64.22125, 'y': 9}, {'x': 89.90974999999999, 'y': 3}, {'x': 115.59825, 'y': 1}, {'x': 141.28674999999998, 'y': 1}, {'x': 166.97524999999996, 'y': 2}, {'x': 192.66375, 'y': 0}, {'x': 218.35224999999997, 'y': 0}, {'x': 244.04075, 'y': 1}, {'x': 269.72925, 'y': 0}, {'x': 295.41774999999996, 'y': 1}, {'x': 321.10624999999993, 'y': 0}, {'x': 346.79474999999996, 'y': 0}, {'x': 372.48325, 'y': 0}, {'x': 398.17175, 'y': 0}, {'x': 423.86024999999995, 'y': 0}, {'x': 449.5487499999999, 'y': 0}, {'x': 475.23724999999996, 'y': 0}, {'x': 500.92575, 'y': 1}];
+    binWidth = 25.688499999999998;
+    drawHistogram("hist_viz_unit_list_price", data, binWidth);
+data = [{'x': 226.91675, 'y': 53}, {'x': 680.75025, 'y': 14}, {'x': 1134.58375, 'y': 9}, {'x': 1588.41725, 'y': 4}, {'x': 2042.2507500000002, 'y': 3}, {'x': 2496.08425, 'y': 3}, {'x': 2949.91775, 'y': 2}, {'x': 3403.7512500000003, 'y': 0}, {'x': 3857.58475, 'y': 2}, {'x': 4311.418250000001, 'y': 1}, {'x': 4765.251749999999, 'y': 0}, {'x': 5219.08525, 'y': 0}, {'x': 5672.918750000001, 'y': 0}, {'x': 6126.75225, 'y': 1}, {'x': 6580.58575, 'y': 0}, {'x': 7034.419250000001, 'y': 2}, {'x': 7488.25275, 'y': 0}, {'x': 7942.08625, 'y': 0}, {'x': 8395.919750000001, 'y': 0}, {'x': 8849.75325, 'y': 1}];
+    binWidth = 453.8335;
+    drawHistogram("hist_viz_unit_sales_price", data, binWidth);
+data = [{'x': 3.5765, 'y': 5}, {'x': 8.4695, 'y': 3}, {'x': 13.362499999999999, 'y': 4}, {'x': 18.255499999999998, 'y': 6}, {'x': 23.1485, 'y': 5}, {'x': 28.0415, 'y': 6}, {'x': 32.9345, 'y': 0}, {'x': 37.8275, 'y': 8}, {'x': 42.7205, 'y': 3}, {'x': 47.6135, 'y': 6}, {'x': 52.5065, 'y': 3}, {'x': 57.3995, 'y': 7}, {'x': 62.29249999999999, 'y': 4}, {'x': 67.18549999999999, 'y': 6}, {'x': 72.07849999999999, 'y': 3}, {'x': 76.97149999999999, 'y': 8}, {'x': 81.86449999999999, 'y': 2}, {'x': 86.7575, 'y': 4}, {'x': 91.6505, 'y': 3}, {'x': 96.5435, 'y': 9}];
+    binWidth = 4.893;
+    drawHistogram("hist_viz_total_discount_amount", data, binWidth);
+data = [{'x': 74.69550000000001, 'y': 43}, {'x': 224.08650000000003, 'y': 14}, {'x': 373.4775000000001, 'y': 14}, {'x': 522.8685, 'y': 6}, {'x': 672.2595000000001, 'y': 3}, {'x': 821.6505000000002, 'y': 2}, {'x': 971.0415, 'y': 2}, {'x': 1120.4325000000001, 'y': 3}, {'x': 1269.8235000000002, 'y': 1}, {'x': 1419.2145000000003, 'y': 1}, {'x': 1568.6055000000001, 'y': 0}, {'x': 1717.9965000000002, 'y': 0}, {'x': 1867.3875000000003, 'y': 0}, {'x': 2016.7785000000003, 'y': 1}, {'x': 2166.1695, 'y': 1}, {'x': 2315.5605000000005, 'y': 0}, {'x': 2464.9515, 'y': 1}, {'x': 2614.3425000000007, 'y': 1}, {'x': 2763.7335000000003, 'y': 0}, {'x': 2913.1245000000004, 'y': 2}];
+    binWidth = 149.39100000000002;
+    drawHistogram("hist_viz_total_sales_price", data, binWidth);
+data = [{'x': 165.62925, 'y': 70}, {'x': 496.88775000000004, 'y': 11}, {'x': 828.14625, 'y': 5}, {'x': 1159.4047500000001, 'y': 2}, {'x': 1490.66325, 'y': 2}, {'x': 1821.92175, 'y': 1}, {'x': 2153.1802500000003, 'y': 1}, {'x': 2484.4387500000003, 'y': 0}, {'x': 2815.69725, 'y': 0}, {'x': 3146.95575, 'y': 0}, {'x': 3478.21425, 'y': 2}, {'x': 3809.4727500000004, 'y': 0}, {'x': 4140.731250000001, 'y': 1}, {'x': 4471.989750000001, 'y': 0}, {'x': 4803.248250000001, 'y': 1}, {'x': 5134.5067500000005, 'y': 0}, {'x': 5465.76525, 'y': 0}, {'x': 5797.02375, 'y': 0}, {'x': 6128.28225, 'y': 1}, {'x': 6459.54075, 'y': 1}];
+    binWidth = 331.2585;
+    drawHistogram("hist_viz_total_wholesale_cost", data, binWidth);
+data = [{'x': 87.3415, 'y': 69}, {'x': 262.0245, 'y': 9}, {'x': 436.7075, 'y': 6}, {'x': 611.3905, 'y': 2}, {'x': 786.0735, 'y': 4}, {'x': 960.7565, 'y': 1}, {'x': 1135.4395, 'y': 2}, {'x': 1310.1225, 'y': 0}, {'x': 1484.8055, 'y': 1}, {'x': 1659.4885, 'y': 0}, {'x': 1834.1715, 'y': 0}, {'x': 2008.8545, 'y': 1}, {'x': 2183.5375, 'y': 0}, {'x': 2358.2205, 'y': 0}, {'x': 2532.9035, 'y': 0}, {'x': 2707.5865, 'y': 0}, {'x': 2882.2695, 'y': 0}, {'x': 3056.9525, 'y': 0}, {'x': 3231.6355, 'y': 0}, {'x': 3406.3185, 'y': 1}];
+    binWidth = 174.683;
+    drawHistogram("hist_viz_total_list_price", data, binWidth);
+data = [{'x': 29.4615, 'y': 54}, {'x': 88.3845, 'y': 13}, {'x': 147.3075, 'y': 3}, {'x': 206.2305, 'y': 1}, {'x': 265.1535, 'y': 3}, {'x': 324.0765, 'y': 2}, {'x': 382.9995, 'y': 4}, {'x': 441.9225, 'y': 1}, {'x': 500.8455, 'y': 2}, {'x': 559.7685, 'y': 2}, {'x': 618.6915, 'y': 1}, {'x': 677.6145, 'y': 1}, {'x': 736.5375, 'y': 2}, {'x': 795.4605, 'y': 0}, {'x': 854.3835, 'y': 3}, {'x': 913.3065, 'y': 0}, {'x': 972.2295, 'y': 1}, {'x': 1031.1525000000001, 'y': 0}, {'x': 1090.0755, 'y': 0}, {'x': 1148.9985000000001, 'y': 1}];
+    binWidth = 58.923;
+    drawHistogram("hist_viz_total_tax_amount", data, binWidth);
+data = [{'x': 92.88075000000002, 'y': 38}, {'x': 251.98225000000002, 'y': 19}, {'x': 411.08375, 'y': 10}, {'x': 570.1852500000001, 'y': 6}, {'x': 729.2867500000001, 'y': 6}, {'x': 888.3882500000002, 'y': 3}, {'x': 1047.4897500000002, 'y': 2}, {'x': 1206.59125, 'y': 3}, {'x': 1365.6927500000002, 'y': 3}, {'x': 1524.79425, 'y': 0}, {'x': 1683.8957500000001, 'y': 0}, {'x': 1842.9972500000001, 'y': 0}, {'x': 2002.09875, 'y': 1}, {'x': 2161.20025, 'y': 1}, {'x': 2320.30175, 'y': 0}, {'x': 2479.4032500000003, 'y': 1}, {'x': 2638.50475, 'y': 0}, {'x': 2797.6062500000003, 'y': 1}, {'x': 2956.7077500000005, 'y': 0}, {'x': 3115.8092500000002, 'y': 2}];
+    binWidth = 159.10150000000002;
+    drawHistogram("hist_viz_coupon_amount", data, binWidth);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_net_paid", data, binWidth);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_net_paid_with_tax", data, binWidth);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_net_profit", data, binWidth);
+data = [{'x': 24.725, 'y': 6}, {'x': 72.17500000000001, 'y': 7}, {'x': 119.62500000000001, 'y': 3}, {'x': 167.07500000000002, 'y': 8}, {'x': 214.525, 'y': 6}, {'x': 261.975, 'y': 2}, {'x': 309.42500000000007, 'y': 5}, {'x': 356.875, 'y': 4}, {'x': 404.32500000000005, 'y': 6}, {'x': 451.775, 'y': 6}, {'x': 499.225, 'y': 5}, {'x': 546.6750000000001, 'y': 1}, {'x': 594.125, 'y': 3}, {'x': 641.575, 'y': 4}, {'x': 689.0250000000001, 'y': 2}, {'x': 736.475, 'y': 6}, {'x': 783.9250000000001, 'y': 2}, {'x': 831.375, 'y': 4}, {'x': 878.825, 'y': 7}, {'x': 926.2750000000001, 'y': 7}];
+    binWidth = 47.45;
+    drawHistogram("hist_viz_address_id", data, binWidth);
+data = [{'x': 123640.475, 'y': 7}, {'x': 215295.425, 'y': 10}, {'x': 306950.375, 'y': 4}, {'x': 398605.32499999995, 'y': 1}, {'x': 490260.275, 'y': 10}, {'x': 581915.225, 'y': 4}, {'x': 673570.175, 'y': 2}, {'x': 765225.125, 'y': 7}, {'x': 856880.075, 'y': 6}, {'x': 948535.0249999999, 'y': 5}, {'x': 1040189.975, 'y': 6}, {'x': 1131844.9249999998, 'y': 2}, {'x': 1223499.875, 'y': 5}, {'x': 1315154.825, 'y': 4}, {'x': 1406809.775, 'y': 6}, {'x': 1498464.725, 'y': 1}, {'x': 1590119.6749999998, 'y': 7}, {'x': 1681774.625, 'y': 3}, {'x': 1773429.575, 'y': 2}, {'x': 1865084.525, 'y': 5}];
+    binWidth = 91654.95;
+    drawHistogram("hist_viz_customer_demo_id", data, binWidth);
+data = [{'x': 30.7, 'y': 12}, {'x': 80.1, 'y': 7}, {'x': 129.5, 'y': 9}, {'x': 178.89999999999998, 'y': 3}, {'x': 228.3, 'y': 6}, {'x': 277.7, 'y': 5}, {'x': 327.1, 'y': 1}, {'x': 376.5, 'y': 2}, {'x': 425.9, 'y': 2}, {'x': 475.29999999999995, 'y': 1}, {'x': 524.7, 'y': 5}, {'x': 574.0999999999999, 'y': 5}, {'x': 623.5, 'y': 8}, {'x': 672.9, 'y': 3}, {'x': 722.3, 'y': 1}, {'x': 771.7, 'y': 4}, {'x': 821.0999999999999, 'y': 10}, {'x': 870.5, 'y': 1}, {'x': 919.9, 'y': 7}, {'x': 969.3, 'y': 5}];
+    binWidth = 49.4;
+    drawHistogram("hist_viz_customer_id", data, binWidth);
+data = [{'x': 290.075, 'y': 9}, {'x': 642.2249999999999, 'y': 5}, {'x': 994.3749999999999, 'y': 2}, {'x': 1346.5249999999999, 'y': 4}, {'x': 1698.675, 'y': 2}, {'x': 2050.825, 'y': 6}, {'x': 2402.9749999999995, 'y': 9}, {'x': 2755.125, 'y': 4}, {'x': 3107.2749999999996, 'y': 7}, {'x': 3459.425, 'y': 6}, {'x': 3811.575, 'y': 3}, {'x': 4163.724999999999, 'y': 8}, {'x': 4515.875, 'y': 2}, {'x': 4868.025, 'y': 4}, {'x': 5220.174999999999, 'y': 5}, {'x': 5572.325, 'y': 5}, {'x': 5924.474999999999, 'y': 5}, {'x': 6276.625, 'y': 2}, {'x': 6628.775, 'y': 3}, {'x': 6980.924999999999, 'y': 4}];
+    binWidth = 352.15;
+    drawHistogram("hist_viz_household_demo_id", data, binWidth);
+data = [{'x': 1, 'y': 96}];
+    binWidth = 1;
+    drawHistogram("hist_viz_promotion_id", data, binWidth);
+data = [{'x': 3.1, 'y': 17}, {'x': 7.300000000000001, 'y': 7}, {'x': 11.5, 'y': 13}, {'x': 15.700000000000001, 'y': 8}, {'x': 19.9, 'y': 6}, {'x': 24.1, 'y': 8}, {'x': 28.300000000000004, 'y': 3}, {'x': 32.5, 'y': 3}, {'x': 36.7, 'y': 2}, {'x': 40.900000000000006, 'y': 4}, {'x': 45.1, 'y': 6}, {'x': 49.300000000000004, 'y': 2}, {'x': 53.5, 'y': 1}, {'x': 57.7, 'y': 3}, {'x': 61.900000000000006, 'y': 2}, {'x': 66.1, 'y': 2}, {'x': 70.30000000000001, 'y': 2}, {'x': 74.5, 'y': 0}, {'x': 78.7, 'y': 4}, {'x': 82.9, 'y': 2}];
+    binWidth = 4.2;
+    drawHistogram("hist_viz_quantity", data, binWidth);
+data = [{'x': 2450961.275, 'y': 4}, {'x': 2451055.825, 'y': 8}, {'x': 2451150.375, 'y': 5}, {'x': 2451244.925, 'y': 10}, {'x': 2451339.475, 'y': 7}, {'x': 2451434.025, 'y': 2}, {'x': 2451528.575, 'y': 6}, {'x': 2451623.125, 'y': 4}, {'x': 2451717.675, 'y': 0}, {'x': 2451812.225, 'y': 3}, {'x': 2451906.775, 'y': 3}, {'x': 2452001.325, 'y': 5}, {'x': 2452095.875, 'y': 2}, {'x': 2452190.425, 'y': 3}, {'x': 2452284.975, 'y': 12}, {'x': 2452379.525, 'y': 2}, {'x': 2452474.075, 'y': 1}, {'x': 2452568.625, 'y': 9}, {'x': 2452663.175, 'y': 5}, {'x': 2452757.725, 'y': 6}];
+    binWidth = 94.55;
+    drawHistogram("hist_viz_sale_date_id", data, binWidth);
+data = [{'x': 30038.775, 'y': 6}, {'x': 31608.324999999997, 'y': 2}, {'x': 33177.875, 'y': 6}, {'x': 34747.425, 'y': 4}, {'x': 36316.975, 'y': 6}, {'x': 37886.525, 'y': 1}, {'x': 39456.075, 'y': 4}, {'x': 41025.625, 'y': 8}, {'x': 42595.175, 'y': 3}, {'x': 44164.725, 'y': 10}, {'x': 45734.275, 'y': 2}, {'x': 47303.825, 'y': 2}, {'x': 48873.375, 'y': 7}, {'x': 50442.924999999996, 'y': 7}, {'x': 52012.475, 'y': 6}, {'x': 53582.025, 'y': 5}, {'x': 55151.575, 'y': 6}, {'x': 56721.125, 'y': 4}, {'x': 58290.674999999996, 'y': 3}, {'x': 59860.225, 'y': 4}];
+    binWidth = 1569.55;
+    drawHistogram("hist_viz_sale_time_id", data, binWidth);
+data = [{'x': 1.025, 'y': 48}, {'x': 1.0750000000000002, 'y': 0}, {'x': 1.125, 'y': 0}, {'x': 1.1749999999999998, 'y': 0}, {'x': 1.225, 'y': 0}, {'x': 1.275, 'y': 0}, {'x': 1.3250000000000002, 'y': 0}, {'x': 1.375, 'y': 0}, {'x': 1.4249999999999998, 'y': 0}, {'x': 1.475, 'y': 0}, {'x': 1.525, 'y': 0}, {'x': 1.5750000000000002, 'y': 0}, {'x': 1.625, 'y': 0}, {'x': 1.675, 'y': 0}, {'x': 1.725, 'y': 0}, {'x': 1.775, 'y': 0}, {'x': 1.8250000000000002, 'y': 0}, {'x': 1.875, 'y': 0}, {'x': 1.925, 'y': 0}, {'x': 1.975, 'y': 48}];
+    binWidth = 0.05;
+    drawHistogram("hist_viz_store_id", data, binWidth);
+
+
+</script>
+</body>
+</html>

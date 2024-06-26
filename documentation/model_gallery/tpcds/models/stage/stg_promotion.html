@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>promotion</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>P_CHANNEL_DETAILS</th>
+      <th>P_CHANNEL_PRESS</th>
+      <th>P_PURPOSE</th>
+      <th>P_PROMO_SK</th>
+      <th>P_CHANNEL_CATALOG</th>
+      <th>P_RESPONSE_TARGE</th>
+      <th>P_CHANNEL_EMAIL</th>
+      <th>P_COST</th>
+      <th>P_CHANNEL_DEMO</th>
+      <th>P_CHANNEL_DMAIL</th>
+      <th>P_PROMO_ID</th>
+      <th>P_ITEM_SK</th>
+      <th>P_CHANNEL_RADIO</th>
+      <th>P_CHANNEL_EVENT</th>
+      <th>P_DISCOUNT_ACTIVE</th>
+      <th>P_END_DATE_SK</th>
+      <th>P_START_DATE_SK</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Men will not say merely. Old, available</td>
+      <td>N</td>
+      <td>Unknown</td>
+      <td>1</td>
+      <td>N</td>
+      <td>1</td>
+      <td>N</td>
+      <td>1000.0</td>
+      <td>N</td>
+      <td>Y</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>686</td>
+      <td>N</td>
+      <td>N</td>
+      <td>N</td>
+      <td>2450185</td>
+      <td>2450164</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>So willing buildings coul</td>
+      <td>N</td>
+      <td>Unknown</td>
+      <td>2</td>
+      <td>N</td>
+      <td>1</td>
+      <td>N</td>
+      <td>1000.0</td>
+      <td>N</td>
+      <td>Y</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>1264</td>
+      <td>N</td>
+      <td>N</td>
+      <td>N</td>
+      <td>2450150</td>
+      <td>2450118</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Companies shall not pr</td>
+      <td>N</td>
+      <td>Unknown</td>
+      <td>3</td>
+      <td>N</td>
+      <td>1</td>
+      <td>N</td>
+      <td>1000.0</td>
+      <td>N</td>
+      <td>Y</td>
+      <td>AAAAAAAADAAAAAAA</td>
+      <td>1468</td>
+      <td>N</td>
+      <td>N</td>
+      <td>N</td>
+      <td>2450712</td>
+      <td>2450675</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>channel_details</th>
+      <th>press_channel</th>
+      <th>purpose</th>
+      <th>promotion_sku</th>
+      <th>catalog_channel</th>
+      <th>response_target</th>
+      <th>email_channel</th>
+      <th>promotion_cost</th>
+      <th>demo_channel</th>
+      <th>direct_mail_channel</th>
+      <th>promotion_id</th>
+      <th>item_sku</th>
+      <th>radio_channel</th>
+      <th>event_channel</th>
+      <th>discount_active</th>
+      <th>end_date</th>
+      <th>start_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>N</td>
+      <td>Unknown</td>
+      <td>1</td>
+      <td>N</td>
+      <td>1</td>
+      <td>N</td>
+      <td>1000.0</td>
+      <td>N</td>
+      <td>Y</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>686</td>
+      <td>N</td>
+      <td>N</td>
+      <td>N</td>
+      <td>1996-04-12</td>
+      <td>2450164.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>N</td>
+      <td>Unknown</td>
+      <td>2</td>
+      <td>N</td>
+      <td>1</td>
+      <td>N</td>
+      <td>1000.0</td>
+      <td>N</td>
+      <td>Y</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>1264</td>
+      <td>N</td>
+      <td>N</td>
+      <td>N</td>
+      <td>1996-03-08</td>
+      <td>2450118.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>None</td>
+      <td>N</td>
+      <td>Unknown</td>
+      <td>3</td>
+      <td>N</td>
+      <td>1</td>
+      <td>N</td>
+      <td>1000.0</td>
+      <td>N</td>
+      <td>Y</td>
+      <td>AAAAAAAADAAAAAAA</td>
+      <td>1468</td>
+      <td>N</td>
+      <td>N</td>
+      <td>N</td>
+      <td>1997-09-21</td>
+      <td>2450675.0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">channel_details</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_channel_details"></div><b>📃 Summary:</b> Additional details about the promotion channel<br><b>❓ Missing:</b> Not applicable when no specific channel is active.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">press_channel</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option></select></span><br><br><div id="bar_viz_press_channel"></div><b>📃 Summary:</b> Indicates if promotion is through press releases<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">purpose</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_purpose"></div><b>📃 Summary:</b> Purpose of the promotion<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">promotion_sku</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_promotion_sku"></div><b>📃 Summary:</b> Stock keeping unit for the promotion<br><b>🦄 Unique:</b> This column represents the stock keeping unit for the promotion. For this table, each row represents a unique promotion. The promotion_sku is likely to be unique across rows as it's designed to identify specific promotions.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">catalog_channel</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option></select></span><br><br><div id="bar_viz_catalog_channel"></div><b>📃 Summary:</b> Indicates if promotion is through catalog channel<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">response_target</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_response_target"></div><b>📃 Summary:</b> Target response rate for the promotion<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">email_channel</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option></select></span><br><br><div id="bar_viz_email_channel"></div><b>📃 Summary:</b> Indicates if promotion is through email<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">promotion_cost</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_promotion_cost"></div><b>📃 Summary:</b> Cost of the promotion<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">demo_channel</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option></select></span><br><br><div id="bar_viz_demo_channel"></div><b>📃 Summary:</b> Indicates if promotion includes product demonstrations<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">direct_mail_channel</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option></select></span><br><br><div id="bar_viz_direct_mail_channel"></div><b>📃 Summary:</b> Indicates if promotion is through direct mail<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">promotion_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_promotion_id"></div><b>📃 Summary:</b> Unique identifier for the promotion<br><b>🦄 Unique:</b> This column is explicitly described as a unique identifier for the promotion. For this table, where each row represents a unique promotion, the promotion_id should be unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">item_sku</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_item_sku"></div><b>📃 Summary:</b> Item stock keeping unit for the promotion<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">radio_channel</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option></select></span><br><br><div id="bar_viz_radio_channel"></div><b>📃 Summary:</b> Indicates if promotion is through radio<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">event_channel</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='N'>N</option><option value='Y'>Y</option></select></span><br><br><div id="bar_viz_event_channel"></div><b>📃 Summary:</b> Indicates if promotion is through events<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">discount_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option></select></span><br><br><div id="bar_viz_discount_active"></div><b>📃 Summary:</b> Indicates if a discount is active<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">end_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_end_date"></div><b>📃 Summary:</b> End date of the promotion<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">start_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_start_date"></div><b>📃 Summary:</b> Start date of the promotion<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about promotions. It includes details such as promotion ID, start and end dates, target item, cost, response target, promotion name, and various promotion channels (e.g., mail, email, TV). The table also specifies the promotion's purpose and whether a discount is active.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>19</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>P_PROMO_SK</td>
+      <td>Stock keeping unit for the promotion</td>
+      <td>promotion_sku</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>P_PROMO_ID</td>
+      <td>Unique identifier for the promotion</td>
+      <td>promotion_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>P_START_DATE_SK</td>
+      <td>Start date of the promotion</td>
+      <td>start_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>P_END_DATE_SK</td>
+      <td>End date of the promotion</td>
+      <td>end_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>P_ITEM_SK</td>
+      <td>Item stock keeping unit for the promotion</td>
+      <td>item_sku</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>P_COST</td>
+      <td>Cost of the promotion</td>
+      <td>promotion_cost</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>P_RESPONSE_TARGE</td>
+      <td>Target response rate for the promotion</td>
+      <td>response_target</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>P_PROMO_NAME</td>
+      <td>Name of the promotion</td>
+      <td>promotion_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>P_CHANNEL_DMAIL</td>
+      <td>Indicates if promotion is through direct mail</td>
+      <td>direct_mail_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>P_CHANNEL_EMAIL</td>
+      <td>Indicates if promotion is through email</td>
+      <td>email_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>P_CHANNEL_CATALOG</td>
+      <td>Indicates if promotion is through catalog channel</td>
+      <td>catalog_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>P_CHANNEL_TV</td>
+      <td>Indicates if promotion is through television</td>
+      <td>tv_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>P_CHANNEL_RADIO</td>
+      <td>Indicates if promotion is through radio</td>
+      <td>radio_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>P_CHANNEL_PRESS</td>
+      <td>Indicates if promotion is through press releases</td>
+      <td>press_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>P_CHANNEL_EVENT</td>
+      <td>Indicates if promotion is through events</td>
+      <td>event_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>P_CHANNEL_DEMO</td>
+      <td>Indicates if promotion includes product demonstrations</td>
+      <td>demo_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>P_CHANNEL_DETAILS</td>
+      <td>Additional details about the promotion channel</td>
+      <td>channel_details</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>P_PURPOSE</td>
+      <td>Purpose of the promotion</td>
+      <td>purpose</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>P_DISCOUNT_ACTIVE</td>
+      <td>Indicates if a discount is active</td>
+      <td>discount_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>✂️ 3. Leading and Trailing Whitespace</h2><br>
+                🔍 <b>1</b> columns have leading and trailing whitespace<br>
+                ✔️ <b>1</b> columns have been trimmed<br><br><br><h2>🚧 4. Erroneous Values</h2><br>
+            🔍 <b>3</b> columns have erroneous values<br><ol><li><b>promotion_name</b>: 'able', 'ought', and 'pri' are unusual because they're not clear or complete promotion names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>able</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ought</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>pri</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>tv_channel</b>: 'N' is unusual because it's a single letter, lacking clarity for a TV channel designation.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>N</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>channel_details</b>: All values are unusual because they are incomplete phrases that don't convey clear, distinct categories.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Companies shall not pr</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Men will not say merely. Old, available</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>So willing buildings coul</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 5. Disguised Missing Values</h2><br>
+                🔍 <b>3</b> columns have disguised missing values<br>
+                ✔️ <b>3</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>promotion_name</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>tv_channel</td>
+      <td>[None]</td>
+      <td>True</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>channel_details</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 6. Data Type</h2><br>
+                ✔️ <b>2</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>end_date</td>
+      <td>DATE '1858-11-17' + (CAST("end_date" AS INTEGER) - 2400000)</td>
+      <td>To transform the 'end_date' column from INT to DATE in DuckDB, we need to use the CAST function. The values in the 'end_date' column appear to be in Julian Date format, which DuckDB can automatically interpret as dates when cast to the DATE type. Unlike the example provided, we don't need to use strptime() or convert to VARCHAR first, as DuckDB can directly cast Julian dates to standard dates.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>start_date</td>
+      <td>julian(DATE '1858-11-17' + (CAST("start_date" - 2400001 AS INTEGER) * INTERVAL '1 day'))</td>
+      <td>To transform the 'start_date' column from INT to DATE, we need to use the CAST function. The given values appear to be Julian dates, which DuckDB can automatically convert to standard dates when casting to DATE type. Therefore, we can directly cast the integer values to DATE without any additional formatting or conversion steps.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 7. Missing Values</h2><br>
+                🔍 <b>3</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>channel_details</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable when no specific channel is active.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>promotion_name</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>tv_channel</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>promotion_name</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>tv_channel</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [];
+    drawBarChart("bar_viz_channel_details", data);
+data = [{'label': 'N', 'value': 100.0}];
+    drawBarChart("bar_viz_press_channel", data);
+data = [{'label': 'Unknown', 'value': 100.0}];
+    drawBarChart("bar_viz_purpose", data);
+data = [{'x': 1.05, 'y': 1}, {'x': 1.15, 'y': 0}, {'x': 1.25, 'y': 0}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_promotion_sku", data, binWidth);
+data = [{'label': 'N', 'value': 100.0}];
+    drawBarChart("bar_viz_catalog_channel", data);
+data = [{'x': 1, 'y': 3}];
+    binWidth = 1;
+    drawHistogram("hist_viz_response_target", data, binWidth);
+data = [{'label': 'N', 'value': 100.0}];
+    drawBarChart("bar_viz_email_channel", data);
+data = [{'x': 1000.0, 'y': 3}];
+    binWidth = 1000.0;
+    drawHistogram("hist_viz_promotion_cost", data, binWidth);
+data = [{'label': 'N', 'value': 100.0}];
+    drawBarChart("bar_viz_demo_channel", data);
+data = [{'label': 'Y', 'value': 100.0}];
+    drawBarChart("bar_viz_direct_mail_channel", data);
+data = [{'label': 'AAAAAAAADAAAAAA...', 'value': 33.33333333333333}, {'label': 'AAAAAAAABAAAAAA...', 'value': 33.33333333333333}, {'label': 'AAAAAAAACAAAAAA...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_promotion_id", data);
+data = [{'x': 705.55, 'y': 1}, {'x': 744.6500000000001, 'y': 0}, {'x': 783.75, 'y': 0}];
+    binWidth = 39.1;
+    drawHistogram("hist_viz_item_sku", data, binWidth);
+data = [{'label': 'N', 'value': 100.0}];
+    drawBarChart("bar_viz_radio_channel", data);
+data = [{'label': 'N', 'value': 100.0}];
+    drawBarChart("bar_viz_event_channel", data);
+data = [{'label': 'N', 'value': 100.0}];
+    drawBarChart("bar_viz_discount_active", data);
+data = [{'label': '1996-04-12 00:0...', 'value': 33.33333333333333}, {'label': '1996-03-08 00:0...', 'value': 33.33333333333333}, {'label': '1997-09-21 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_end_date", data);
+data = [{'x': 2450131.925, 'y': 1}, {'x': 2450159.7750000004, 'y': 1}, {'x': 2450187.625, 'y': 0}];
+    binWidth = 27.85;
+    drawHistogram("hist_viz_start_date", data, binWidth);
+
+
+</script>
+</body>
+</html>

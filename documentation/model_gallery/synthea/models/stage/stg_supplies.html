@@ -1,0 +1,2581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>supplies</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>DESCRIPTION</th>
+      <th>QUANTITY</th>
+      <th>ENCOUNTER</th>
+      <th>PATIENT</th>
+      <th>CODE</th>
+      <th>DATE_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>71154994-99cb-1859-da47-be6aefdc4632</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>1993-07-26</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>4e7c8052-dcb0-0b2d-76e9-42638068f34d</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>1999-08-02</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>f3905515-1215-b9dc-c4dd-e5113939678a</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2002-05-20</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>53550222-7920-d954-8131-bdc89637746d</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2004-05-24</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>027a6834-445b-9d67-f1a8-437d8c1af741</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2005-09-12</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>1fed0739-03fb-7b4c-d524-9b57fd84c761</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2005-09-26</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>76530141-ca06-a819-537e-73a498808c84</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2005-10-24</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>76530141-ca06-a819-537e-73a498808c84</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>1137596000</td>
+      <td>2005-10-24</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>8e270d61-b74f-08b7-b9f4-35e03b1a7bd3</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>1137596000</td>
+      <td>2006-10-02</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>ef40b35f-e95a-00e3-668e-24964590c8af</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2007-10-08</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>ef40b35f-e95a-00e3-668e-24964590c8af</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>1137596000</td>
+      <td>2007-10-08</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>12452396-df5e-e255-d34e-a71f058417fa</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2007-12-31</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>e46e3f29-51a3-9d87-d57d-9d317b179c16</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2008-10-13</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>e46e3f29-51a3-9d87-d57d-9d317b179c16</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2008-10-13</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>e46e3f29-51a3-9d87-d57d-9d317b179c16</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>1137596000</td>
+      <td>2008-10-13</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>c563ea20-ad9e-2001-a4c9-c00890842509</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2009-10-19</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>c563ea20-ad9e-2001-a4c9-c00890842509</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>1137596000</td>
+      <td>2009-10-19</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>4260ef60-9302-a36c-7cbe-97cff28cde85</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2011-10-31</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>8f32786d-026d-5119-4d8a-84d9f8eef311</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2012-11-05</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>c8e62551-765a-de49-e5cc-fd98f712ae73</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2014-11-17</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>c8e62551-765a-de49-e5cc-fd98f712ae73</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>1137596000</td>
+      <td>2014-11-17</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>06949a53-e39a-5580-b0b8-0ea5781afc42</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2015-07-13</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>2bf8ae5b-ff3d-ab87-09e5-74581c3cd750</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2003-06-12</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>2bf8ae5b-ff3d-ab87-09e5-74581c3cd750</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>1137596000</td>
+      <td>2003-06-12</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>72b7c76b-0ad3-3b35-8274-b2f6d3717b63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2005-06-16</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>2d66a212-7072-84e2-21df-673edee94fbb</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2009-05-28</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>658f7e45-9aed-2808-002b-c6c5c288fc8e</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2010-06-03</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>e19f5f46-8a65-6664-74a5-f75e4d6bf0ed</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2012-06-14</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>c2ae56ea-078a-4be5-6fe7-101013afcd87</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2014-05-29</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>c2ae56ea-078a-4be5-6fe7-101013afcd87</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2014-05-29</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>c2ae56ea-078a-4be5-6fe7-101013afcd87</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2014-05-29</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>c2ae56ea-078a-4be5-6fe7-101013afcd87</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2014-05-29</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>1137596000</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>387e9a5b-2ebb-e4e4-8bfe-a57548a39a63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>1137596000</td>
+      <td>2015-07-02</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>387e9a5b-2ebb-e4e4-8bfe-a57548a39a63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2015-07-02</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>387e9a5b-2ebb-e4e4-8bfe-a57548a39a63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2015-07-02</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>387e9a5b-2ebb-e4e4-8bfe-a57548a39a63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2015-07-02</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>387e9a5b-2ebb-e4e4-8bfe-a57548a39a63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2015-07-02</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>CPAP/BPAP oral mask (physical object)</td>
+      <td>1</td>
+      <td>acc2914e-9baf-ea63-6c0a-8234563ee3d6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>704718009</td>
+      <td>2016-03-31</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>acc2914e-9baf-ea63-6c0a-8234563ee3d6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2016-03-31</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>acc2914e-9baf-ea63-6c0a-8234563ee3d6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2016-03-31</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>acc2914e-9baf-ea63-6c0a-8234563ee3d6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2016-03-31</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>acc2914e-9baf-ea63-6c0a-8234563ee3d6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2016-03-31</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>acc2914e-9baf-ea63-6c0a-8234563ee3d6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>1137596000</td>
+      <td>2016-03-31</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>CPAP/BPAP oral mask (physical object)</td>
+      <td>1</td>
+      <td>34584fad-dc9b-5388-fe74-cc3deafbc1b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>704718009</td>
+      <td>2016-07-07</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>34584fad-dc9b-5388-fe74-cc3deafbc1b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2016-07-07</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>34584fad-dc9b-5388-fe74-cc3deafbc1b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2016-07-07</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>34584fad-dc9b-5388-fe74-cc3deafbc1b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2016-07-07</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>34584fad-dc9b-5388-fe74-cc3deafbc1b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2016-07-07</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>0c23382e-ebec-1fcc-d21d-d6847bb37abd</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2017-07-13</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>CPAP/BPAP oral mask (physical object)</td>
+      <td>1</td>
+      <td>0c23382e-ebec-1fcc-d21d-d6847bb37abd</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>704718009</td>
+      <td>2017-07-13</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>0c23382e-ebec-1fcc-d21d-d6847bb37abd</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2017-07-13</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>0c23382e-ebec-1fcc-d21d-d6847bb37abd</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2017-07-13</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>0c23382e-ebec-1fcc-d21d-d6847bb37abd</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2017-07-13</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>d7d17993-c8ff-44a1-65fc-f0945a681603</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2018-07-19</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>d7d17993-c8ff-44a1-65fc-f0945a681603</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2018-07-19</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>d7d17993-c8ff-44a1-65fc-f0945a681603</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2018-07-19</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>d7d17993-c8ff-44a1-65fc-f0945a681603</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2018-07-19</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>d7d17993-c8ff-44a1-65fc-f0945a681603</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2018-07-19</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>a4e67ab2-efe0-e0c1-9669-0a19106de030</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2018-08-09</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>CPAP/BPAP oral mask (physical object)</td>
+      <td>1</td>
+      <td>a4e67ab2-efe0-e0c1-9669-0a19106de030</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>704718009</td>
+      <td>2018-08-09</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>a4e67ab2-efe0-e0c1-9669-0a19106de030</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2018-08-09</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>a4e67ab2-efe0-e0c1-9669-0a19106de030</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2018-08-09</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>a4e67ab2-efe0-e0c1-9669-0a19106de030</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2018-08-09</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>6880e11c-1746-d4f1-c26b-ea2fe667454b</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2019-07-25</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>6880e11c-1746-d4f1-c26b-ea2fe667454b</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2019-07-25</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>6880e11c-1746-d4f1-c26b-ea2fe667454b</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2019-07-25</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>6880e11c-1746-d4f1-c26b-ea2fe667454b</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2019-07-25</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Solution (substance)</td>
+      <td>100</td>
+      <td>d7706130-ed17-84d3-d1e1-7ff1cf0e55a6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>8537005</td>
+      <td>2020-07-30</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>d7706130-ed17-84d3-d1e1-7ff1cf0e55a6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2020-07-30</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>d7706130-ed17-84d3-d1e1-7ff1cf0e55a6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2020-07-30</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>d7706130-ed17-84d3-d1e1-7ff1cf0e55a6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2020-07-30</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>d7706130-ed17-84d3-d1e1-7ff1cf0e55a6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2020-07-30</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>d6592d90-2bf6-1115-9d22-c430fb0d5178</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2005-12-19</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>d6592d90-2bf6-1115-9d22-c430fb0d5178</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>1137596000</td>
+      <td>2005-12-19</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>63d033da-1440-c6f5-798a-8b6ffb83796a</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2007-12-24</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>2d5545ff-53a6-e561-86cb-c676f2d33646</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2011-07-04</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>4df0113e-c6a0-0708-d2e4-98cd9b64b8a2</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2012-01-02</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>4df0113e-c6a0-0708-d2e4-98cd9b64b8a2</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2012-01-02</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>4df0113e-c6a0-0708-d2e4-98cd9b64b8a2</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>1137596000</td>
+      <td>2012-01-02</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>6bbe0683-499f-9b23-a81a-970db20499a0</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2014-12-15</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>06a07261-2526-2158-4a13-0e2a5f3a2007</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2015-12-21</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>06a07261-2526-2158-4a13-0e2a5f3a2007</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>1137596000</td>
+      <td>2015-12-21</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>fcd30d21-4d12-be3b-d06b-95444eb06802</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2016-12-26</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>fcd30d21-4d12-be3b-d06b-95444eb06802</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>1137596000</td>
+      <td>2016-12-26</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>9f364084-aea5-e656-e923-c6e55d1602b8</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2018-01-01</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>9bd04036-82e0-4da1-1b6d-d5cc7908c362</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2019-01-07</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>fa0aa36f-04e2-b518-b6c0-6082267d7b1d</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2020-01-13</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>e9c30d68-6e61-d5fb-1d29-788e455aa283</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2021-01-28</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>e9c30d68-6e61-d5fb-1d29-788e455aa283</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2021-01-28</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>e9c30d68-6e61-d5fb-1d29-788e455aa283</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2021-01-28</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>e9c30d68-6e61-d5fb-1d29-788e455aa283</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2021-01-28</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>fbf0ff9b-d04c-a37d-2635-e7bbb8600c6f</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2021-01-18</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>CPAP/BPAP oral mask (physical object)</td>
+      <td>1</td>
+      <td>e22421c6-7e03-a9dd-621a-21562e4f9aa3</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>704718009</td>
+      <td>2021-02-25</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Air filter  device (physical object)</td>
+      <td>5</td>
+      <td>e22421c6-7e03-a9dd-621a-21562e4f9aa3</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2021-02-25</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>supply_description</th>
+      <th>supply_quantity</th>
+      <th>encounter_id</th>
+      <th>patient_id</th>
+      <th>supply_code</th>
+      <th>supply_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>027a6834-445b-9d67-f1a8-437d8c1af741</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2005-09-12</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>76530141-ca06-a819-537e-73a498808c84</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2005-10-24</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>e46e3f29-51a3-9d87-d57d-9d317b179c16</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2008-10-13</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>c563ea20-ad9e-2001-a4c9-c00890842509</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2009-10-19</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>c8e62551-765a-de49-e5cc-fd98f712ae73</td>
+      <td>b3b71304-fe5b-bda4-6822-bd901b2836d1</td>
+      <td>337388004</td>
+      <td>2014-11-17</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>72b7c76b-0ad3-3b35-8274-b2f6d3717b63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2005-06-16</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>c2ae56ea-078a-4be5-6fe7-101013afcd87</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2014-05-29</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>1137596000</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>b84c05da-8fdd-837c-0a8b-3644b1f448ad</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2014-06-26</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>387e9a5b-2ebb-e4e4-8bfe-a57548a39a63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2015-07-02</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>387e9a5b-2ebb-e4e4-8bfe-a57548a39a63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2015-07-02</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>387e9a5b-2ebb-e4e4-8bfe-a57548a39a63</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2015-07-02</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>acc2914e-9baf-ea63-6c0a-8234563ee3d6</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2016-03-31</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>34584fad-dc9b-5388-fe74-cc3deafbc1b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2016-07-07</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>34584fad-dc9b-5388-fe74-cc3deafbc1b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2016-07-07</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure oral mask (physical object)</td>
+      <td>1</td>
+      <td>0c23382e-ebec-1fcc-d21d-d6847bb37abd</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>704718009</td>
+      <td>2017-07-13</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>0c23382e-ebec-1fcc-d21d-d6847bb37abd</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2017-07-13</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>0c23382e-ebec-1fcc-d21d-d6847bb37abd</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2017-07-13</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>a4e67ab2-efe0-e0c1-9669-0a19106de030</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>337388004</td>
+      <td>2018-08-09</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>6880e11c-1746-d4f1-c26b-ea2fe667454b</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>467645007</td>
+      <td>2019-07-25</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>6880e11c-1746-d4f1-c26b-ea2fe667454b</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2019-07-25</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>d6592d90-2bf6-1115-9d22-c430fb0d5178</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2005-12-19</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>4df0113e-c6a0-0708-d2e4-98cd9b64b8a2</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2012-01-02</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>fcd30d21-4d12-be3b-d06b-95444eb06802</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2016-12-26</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>9f364084-aea5-e656-e923-c6e55d1602b8</td>
+      <td>d89557ad-d741-8ea5-b542-c1226a781d83</td>
+      <td>337388004</td>
+      <td>2018-01-01</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>e9c30d68-6e61-d5fb-1d29-788e455aa283</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2021-01-28</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>751851e4-5de9-c749-30f2-f83b1e5dc9e2</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2021-09-23</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>e4f14f40-aa96-01cd-7f23-fef44aa39e3f</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>463659001</td>
+      <td>2021-12-23</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Solution (substance)</td>
+      <td>100</td>
+      <td>b07e7e70-ad78-8b9f-34b5-85e6f012891b</td>
+      <td>c8fbb10b-b54e-8182-d71c-c552bd1c58b1</td>
+      <td>8537005</td>
+      <td>2021-05-08</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure oral mask (physical object)</td>
+      <td>1</td>
+      <td>191e3a4b-bfda-a0e5-e1a0-90b6465e80b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>704718009</td>
+      <td>2022-08-11</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>191e3a4b-bfda-a0e5-e1a0-90b6465e80b8</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>706226000</td>
+      <td>2022-08-11</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure oral mask (physical object)</td>
+      <td>1</td>
+      <td>d4722a89-3586-1385-3a6d-81f059b3f281</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>704718009</td>
+      <td>2005-11-17</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>952d0f52-0cbb-f3c0-9dbc-5eb3b1a4d8ac</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>463659001</td>
+      <td>2007-02-27</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>952d0f52-0cbb-f3c0-9dbc-5eb3b1a4d8ac</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2007-02-27</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>ada8f978-6167-75be-7ac3-deeca0cd7f8b</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>467645007</td>
+      <td>2007-05-08</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>025d7ee8-6a9d-5440-fcda-210459f903f5</td>
+      <td>53534989-404e-cc7c-2859-1708edba296c</td>
+      <td>972002</td>
+      <td>2022-09-15</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>cedd7bc4-131d-bd07-a6e4-74ae4e9acf7d</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>972002</td>
+      <td>2007-12-04</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>48ce7f30-9bd3-1a96-d3ea-f79f9443b688</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>467645007</td>
+      <td>2008-01-29</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>48ce7f30-9bd3-1a96-d3ea-f79f9443b688</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2008-01-29</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>b39306d0-60ed-b651-2e03-0a507dce04a3</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>972002</td>
+      <td>2008-10-28</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>6d0c697a-0ce0-6f10-81e0-20aea7e80182</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>972002</td>
+      <td>2009-05-26</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>6d0c697a-0ce0-6f10-81e0-20aea7e80182</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>463659001</td>
+      <td>2009-05-26</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>46f585ea-ce77-8b6e-cdf4-d4a854b489e3</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>972002</td>
+      <td>2009-11-17</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>46f585ea-ce77-8b6e-cdf4-d4a854b489e3</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>463659001</td>
+      <td>2009-11-17</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>ad65848b-d4a8-b7b1-3539-4bcff7f5fb56</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>463659001</td>
+      <td>2010-12-14</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>b5696072-2f3b-089e-4521-527e2730c91d</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>467645007</td>
+      <td>2011-02-15</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Continuous positive airway pressure nasal oxygen cannula (physical object)</td>
+      <td>1</td>
+      <td>24c75909-c397-adf2-ee30-2fe3d0b53af9</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>467645007</td>
+      <td>2011-03-22</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure oral mask (physical object)</td>
+      <td>1</td>
+      <td>729dc3d6-2df5-f7bc-07fd-23c675879c26</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>704718009</td>
+      <td>2012-02-07</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>729dc3d6-2df5-f7bc-07fd-23c675879c26</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2012-02-07</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>a5d85d90-34e0-7eaf-972c-921ee0b6afdd</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2012-03-27</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>12f33234-6c0f-06b9-c77a-6727e9d0f6aa</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2012-10-02</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>4eb25471-a43a-ed8e-78fd-eb25d28c02fd</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>972002</td>
+      <td>2013-04-02</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Air filter device (physical object)</td>
+      <td>5</td>
+      <td>49a6ef95-8b49-d1bf-b59c-06bff4aa8c13</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>972002</td>
+      <td>2014-04-08</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>c6eea317-e8f6-2bef-ef6a-270153249a9e</td>
+      <td>548300bb-3152-531c-d895-d44fbf2ff1ba</td>
+      <td>337388004</td>
+      <td>2012-10-20</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>d24d13e9-c5ab-6fc4-191a-a730df4ccaa5</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>337388004</td>
+      <td>1989-09-26</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>5f13c79c-a43b-6943-6e18-bdb6a9ad9460</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>337388004</td>
+      <td>2008-05-20</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>79f1aacb-65da-7d83-db8f-a8a4f7fe41ff</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>337388004</td>
+      <td>2013-05-14</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>40f50d33-0958-9a12-e1ff-25ad37fa15cc</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2015-04-14</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>59d932f9-0649-2332-da01-028795126673</td>
+      <td>821960e1-9db8-7b56-a359-ac34d9228fbc</td>
+      <td>1137596000</td>
+      <td>2015-05-26</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>edad8ad7-3201-6afa-ac74-75b6d849b4b2</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2016-04-19</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>3b592c61-734c-23e7-ac45-2dc5d28beb76</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>463659001</td>
+      <td>2016-11-15</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>3b592c61-734c-23e7-ac45-2dc5d28beb76</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2016-11-15</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>1a3552c2-5b20-ac74-00a9-47798672c28f</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2017-10-10</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure mask (physical object)</td>
+      <td>1</td>
+      <td>4d24e5d7-8db9-12a6-0e75-14c6a5beeaa6</td>
+      <td>fa451eba-6815-0d99-fd91-02f5581d914b</td>
+      <td>706226000</td>
+      <td>2018-05-01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>72907f5c-4844-d965-d794-01c0283b65cf</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>337388004</td>
+      <td>1998-07-18</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>72907f5c-4844-d965-d794-01c0283b65cf</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>1137596000</td>
+      <td>1998-07-18</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>14eb83cf-0acf-4411-5084-2e193bbdec61</td>
+      <td>d4db8ae1-3354-d064-508d-834cfa214cb2</td>
+      <td>337388004</td>
+      <td>2015-08-22</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>e103e70f-c261-13ea-86fb-72d37908c7d8</td>
+      <td>87424a5e-7848-aed5-fd59-4c8a76c2ed36</td>
+      <td>337388004</td>
+      <td>2002-10-27</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>6cf0f467-8d3f-2504-cabd-9eb4b48b0386</td>
+      <td>87424a5e-7848-aed5-fd59-4c8a76c2ed36</td>
+      <td>1137596000</td>
+      <td>2007-08-19</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>e99d5a3f-775e-5a21-5712-264bcfa7913b</td>
+      <td>87424a5e-7848-aed5-fd59-4c8a76c2ed36</td>
+      <td>1137596000</td>
+      <td>2009-08-23</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>91dac823-cb8a-4868-1154-16282e052409</td>
+      <td>26a90721-54f3-b755-ecf4-a8aab978c01c</td>
+      <td>1137596000</td>
+      <td>2007-03-14</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>afdaf2f1-5829-c152-06e8-289ee3c85bc1</td>
+      <td>26a90721-54f3-b755-ecf4-a8aab978c01c</td>
+      <td>1137596000</td>
+      <td>2013-02-27</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>3af05845-8da4-0956-ae24-8ca9d43680bb</td>
+      <td>87424a5e-7848-aed5-fd59-4c8a76c2ed36</td>
+      <td>337388004</td>
+      <td>2015-08-09</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>e95b5c41-2200-1146-5547-e6ccf6493848</td>
+      <td>87424a5e-7848-aed5-fd59-4c8a76c2ed36</td>
+      <td>337388004</td>
+      <td>2016-08-14</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>b6e80406-f3b6-9d87-2081-2f815dda1a98</td>
+      <td>26a90721-54f3-b755-ecf4-a8aab978c01c</td>
+      <td>1137596000</td>
+      <td>2017-03-22</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>3b8c4f4d-b211-bbbe-2623-6275005e1479</td>
+      <td>f56c230b-3a7c-aca2-6363-fa3d46cf6596</td>
+      <td>337388004</td>
+      <td>2019-04-23</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>11c345fe-408d-8970-a443-a5510309eabc</td>
+      <td>37279a07-035d-e18b-bcd7-331dc3fe6304</td>
+      <td>337388004</td>
+      <td>2003-11-23</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Solution (substance)</td>
+      <td>100</td>
+      <td>b3dfc1f2-7c2b-67af-2b60-24d5cd6dc409</td>
+      <td>37279a07-035d-e18b-bcd7-331dc3fe6304</td>
+      <td>8537005</td>
+      <td>2013-01-13</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>9884c0e1-09d3-309b-2829-22af65240957</td>
+      <td>37279a07-035d-e18b-bcd7-331dc3fe6304</td>
+      <td>337388004</td>
+      <td>2014-01-19</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>24979a99-c57d-c374-8e7c-ca484ec5a937</td>
+      <td>37279a07-035d-e18b-bcd7-331dc3fe6304</td>
+      <td>1137596000</td>
+      <td>2019-02-17</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>6b578172-0d7e-c2c3-f55d-2281e69d448e</td>
+      <td>37279a07-035d-e18b-bcd7-331dc3fe6304</td>
+      <td>337388004</td>
+      <td>2021-02-28</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>2635bf94-e526-b081-439f-a16a49b149c9</td>
+      <td>37279a07-035d-e18b-bcd7-331dc3fe6304</td>
+      <td>337388004</td>
+      <td>2022-03-06</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>20ab7c70-56a8-e2b7-5968-f6f9cdfc8e63</td>
+      <td>2d5a8517-f25f-9f66-9ab8-0a69425145c7</td>
+      <td>1137596000</td>
+      <td>1989-11-20</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>39952d37-4382-cebf-bc9f-4b8facc18e3e</td>
+      <td>2d5a8517-f25f-9f66-9ab8-0a69425145c7</td>
+      <td>337388004</td>
+      <td>2006-05-15</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>141422ee-ab20-e2f3-57ae-7766c103d6a4</td>
+      <td>2d5a8517-f25f-9f66-9ab8-0a69425145c7</td>
+      <td>337388004</td>
+      <td>2010-04-26</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Medical air low pressure tubing (physical object)</td>
+      <td>1</td>
+      <td>495add21-66c3-4854-d5c6-59ff0dcf2c13</td>
+      <td>1666a800-a041-a2ca-4f9b-af668e740370</td>
+      <td>463659001</td>
+      <td>2022-07-27</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>e4fba7f4-b30e-a6ee-0149-fa1110131bbc</td>
+      <td>8762040e-69bb-6ac8-685c-1d63a3d4dfe2</td>
+      <td>1137596000</td>
+      <td>1988-05-05</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>cfca456d-d7ab-9b54-2254-889794451a02</td>
+      <td>8762040e-69bb-6ac8-685c-1d63a3d4dfe2</td>
+      <td>1137596000</td>
+      <td>1991-05-09</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>54ace8ec-df18-fc4f-b114-3e83407b3ae4</td>
+      <td>8762040e-69bb-6ac8-685c-1d63a3d4dfe2</td>
+      <td>337388004</td>
+      <td>2011-03-03</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>e75d4452-df39-249b-4acd-e155a92051b4</td>
+      <td>8762040e-69bb-6ac8-685c-1d63a3d4dfe2</td>
+      <td>337388004</td>
+      <td>2015-03-26</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>8fbbeddb-4a32-b5ca-1ed1-7fe7fc5dd9de</td>
+      <td>8762040e-69bb-6ac8-685c-1d63a3d4dfe2</td>
+      <td>1137596000</td>
+      <td>2018-04-12</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>022ba1c9-aee0-c9b9-7cb4-453f3b9e50a2</td>
+      <td>8762040e-69bb-6ac8-685c-1d63a3d4dfe2</td>
+      <td>337388004</td>
+      <td>2020-04-23</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>76dae46c-1409-40de-329e-b2183f52fe79</td>
+      <td>8762040e-69bb-6ac8-685c-1d63a3d4dfe2</td>
+      <td>1137596000</td>
+      <td>2021-04-29</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>bf33c709-5dee-1b82-7d71-66588d963c30</td>
+      <td>48334e94-64e7-91e8-d91b-1246110bf1ba</td>
+      <td>1137596000</td>
+      <td>1966-09-24</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>e7b6f475-70af-8163-0f66-ac8d2f0396f5</td>
+      <td>48334e94-64e7-91e8-d91b-1246110bf1ba</td>
+      <td>337388004</td>
+      <td>1972-07-15</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>c1d690ad-9834-7abf-d5dc-7087419f6505</td>
+      <td>48334e94-64e7-91e8-d91b-1246110bf1ba</td>
+      <td>337388004</td>
+      <td>1978-07-29</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Blood lancet (physical object)</td>
+      <td>100</td>
+      <td>5bc5cca0-9617-e79d-46e2-57ac7f86705f</td>
+      <td>48334e94-64e7-91e8-d91b-1246110bf1ba</td>
+      <td>1137596000</td>
+      <td>1984-07-21</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Blood glucose testing strips (physical object)</td>
+      <td>50</td>
+      <td>f4a7c735-d6f2-9728-ee7c-7741f960f2a2</td>
+      <td>48334e94-64e7-91e8-d91b-1246110bf1ba</td>
+      <td>337388004</td>
+      <td>1985-07-27</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">supply_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_supply_description"></div><b>📃 Summary:</b> Description of the medical supply<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">supply_quantity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_supply_quantity"></div><b>📃 Summary:</b> Number of units supplied<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encounter_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encounter_id"></div><b>📃 Summary:</b> Unique identifier for patient encounter<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">patient_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_patient_id"></div><b>📃 Summary:</b> Unique identifier for patient<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">supply_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_supply_code"></div><b>📃 Summary:</b> Medical supply identifier code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">supply_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_supply_date"></div><b>📃 Summary:</b> Date of supply provision<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about medical supplies provided to patients. It shows the date of supply, patient identifier, encounter identifier, supply code, description, and quantity. The example data focuses on blood glucose testing strips given to a single patient over multiple encounters from 1993 to 2005. Each supply event provides 50 testing strips.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>6</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>DATE_</td>
+      <td>Date of supply provision</td>
+      <td>supply_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>PATIENT</td>
+      <td>Unique identifier for patient</td>
+      <td>patient_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ENCOUNTER</td>
+      <td>Unique identifier for patient encounter</td>
+      <td>encounter_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CODE</td>
+      <td>Medical supply identifier code</td>
+      <td>supply_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>DESCRIPTION</td>
+      <td>Description of the medical supply</td>
+      <td>supply_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>QUANTITY</td>
+      <td>Number of units supplied</td>
+      <td>supply_quantity</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>👯‍♀️ 3. Duplicate</h2><br>
+                🔍 <b>7</b> duplicates have been detected<br>
+                ✔️ Duplicates have been removed<br><br><br><h2>🚧 4. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>supply_description</b>: Inconsistent spacing in 'Air filter  device'. Inconsistent use of CPAP/BPAP abbreviations across entries.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Air filter  device (physical object)</td>
+      <td>Air filter device (physical object)</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CPAP/BPAP oral mask (physical object)</td>
+      <td>Continuous positive airway pressure/Bilevel positive airway pressure oral mask (physical object)</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 5. Data Type</h2><br>
+                ✔️ <b>4</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>encounter_id</td>
+      <td>CAST("encounter_id" AS UUID)</td>
+      <td>To transform the 'encounter_id' column from VARCHAR to UUID, we can use a simple CAST function in DuckDB. The current values already conform to the UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward cast should work. DuckDB supports the UUID data type, which is perfect for this transformation.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>patient_id</td>
+      <td>CAST("patient_id" AS UUID)</td>
+      <td>To transform the 'patient_id' column from VARCHAR to UUID in DuckDB, we need to use a simple CAST function. The values provided are already in the standard UUID format (8-4-4-4-12 hexadecimal digits), so a straightforward cast should work. DuckDB supports UUID as a native data type, which makes this conversion straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>supply_code</td>
+      <td>CAST("supply_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'supply_code' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_data_type). In this case, we're casting the 'supply_code' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>supply_date</td>
+      <td>CAST("supply_date" AS DATE)</td>
+      <td>To transform the 'supply_date' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the date strings in the column ('YYYY-MM-DD') is already compatible with the standard SQL DATE format, so we don't need to use strptime() for parsing. A straightforward CAST will suffice.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Blood glucose t...', 'value': 29.148471615720524}, {'label': 'Medical air low...', 'value': 14.301310043668122}, {'label': 'Air filter devi...', 'value': 14.301310043668122}, {'label': 'Continuous posi...', 'value': 14.301310043668122}, {'label': 'Blood lancet (p...', 'value': 11.681222707423581}, {'label': 'Other values', 'value': 16.266375545851528}];
+    drawBarChart("bar_viz_supply_description", data);
+data = [{'x': 3.475, 'y': 531}, {'x': 8.425, 'y': 0}, {'x': 13.375, 'y': 0}, {'x': 18.325000000000003, 'y': 0}, {'x': 23.275, 'y': 0}, {'x': 28.225, 'y': 0}, {'x': 33.175, 'y': 0}, {'x': 38.125, 'y': 0}, {'x': 43.075, 'y': 0}, {'x': 48.025000000000006, 'y': 267}, {'x': 52.975, 'y': 0}, {'x': 57.925000000000004, 'y': 0}, {'x': 62.87500000000001, 'y': 0}, {'x': 67.825, 'y': 0}, {'x': 72.775, 'y': 0}, {'x': 77.725, 'y': 0}, {'x': 82.67500000000001, 'y': 0}, {'x': 87.625, 'y': 0}, {'x': 92.575, 'y': 0}, {'x': 97.525, 'y': 118}];
+    binWidth = 4.95;
+    drawHistogram("hist_viz_supply_quantity", data, binWidth);
+data = [{'label': 'acc2914e-9baf-e...', 'value': 0.6550218340611353}, {'label': 'c6de6015-2f2a-3...', 'value': 0.6550218340611353}, {'label': '0889e172-ebe4-b...', 'value': 0.6550218340611353}, {'label': 'b2938ab3-4dbc-8...', 'value': 0.6550218340611353}, {'label': '1296707d-ea2e-5...', 'value': 0.6550218340611353}, {'label': 'Other values', 'value': 96.72489082969432}];
+    drawBarChart("bar_viz_encounter_id", data);
+data = [{'label': 'dd19ae3a-2f3a-a...', 'value': 27.074235807860266}, {'label': 'fa451eba-6815-0...', 'value': 13.646288209606988}, {'label': '9cfb6988-97da-c...', 'value': 12.336244541484715}, {'label': '53534989-404e-c...', 'value': 10.480349344978166}, {'label': '561bc09a-56b9-8...', 'value': 4.912663755458515}, {'label': 'Other values', 'value': 31.55021834061135}];
+    drawBarChart("bar_viz_patient_id", data);
+data = [{'label': '337388004', 'value': 29.148471615720524}, {'label': '972002', 'value': 14.301310043668122}, {'label': '463659001', 'value': 14.301310043668122}, {'label': '706226000', 'value': 14.301310043668122}, {'label': '1137596000', 'value': 11.681222707423581}, {'label': 'Other values', 'value': 16.266375545851528}];
+    drawBarChart("bar_viz_supply_code", data);
+data = [{'label': '2002-03-03', 'value': 1.0917030567685588}, {'label': '2016-03-31', 'value': 0.7641921397379913}, {'label': '1989-12-24', 'value': 0.7641921397379913}, {'label': '1991-05-26', 'value': 0.6550218340611353}, {'label': '1996-01-14', 'value': 0.6550218340611353}, {'label': 'Other values', 'value': 96.06986899563319}];
+    drawBarChart("bar_viz_supply_date", data);
+
+
+</script>
+</body>
+</html>

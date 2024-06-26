@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>web_page</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>WP_WEB_PAGE_SK</th>
+      <th>WP_WEB_PAGE_ID</th>
+      <th>WP_CUSTOMER_SK</th>
+      <th>WP_URL</th>
+      <th>WP_TYPE</th>
+      <th>WP_CHAR_COUNT</th>
+      <th>WP_LINK_COUNT</th>
+      <th>WP_IMAGE_COUNT</th>
+      <th>WP_MAX_AD_COUNT</th>
+      <th>WP_CREATION_DATE_SK</th>
+      <th>WP_AUTOGEN_FLAG</th>
+      <th>WP_ACCESS_DATE_SK</th>
+      <th>WP_REC_END_DATE</th>
+      <th>WP_REC_START_DATE</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>539.0</td>
+      <td>http://www.foo.com</td>
+      <td>welcome</td>
+      <td>2531</td>
+      <td>8</td>
+      <td>3</td>
+      <td>4</td>
+      <td>2450810</td>
+      <td>Y</td>
+      <td>2452620</td>
+      <td>None</td>
+      <td>1997-09-03</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>NaN</td>
+      <td>http://www.foo.com</td>
+      <td>protected</td>
+      <td>1564</td>
+      <td>4</td>
+      <td>3</td>
+      <td>1</td>
+      <td>2450814</td>
+      <td>N</td>
+      <td>2452580</td>
+      <td>2000-09-02</td>
+      <td>1997-09-03</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>page_surrogate_key</th>
+      <th>page_id</th>
+      <th>customer_id</th>
+      <th>url</th>
+      <th>page_type</th>
+      <th>character_count</th>
+      <th>link_count</th>
+      <th>image_count</th>
+      <th>max_ad_count</th>
+      <th>creation_date</th>
+      <th>is_auto_generated</th>
+      <th>last_access_date</th>
+      <th>record_end_date</th>
+      <th>record_start_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>AAAAAAAABAAAAAAA</td>
+      <td>539.0</td>
+      <td>http://www.foo.com</td>
+      <td>welcome</td>
+      <td>2531</td>
+      <td>8</td>
+      <td>3</td>
+      <td>4</td>
+      <td>4850811.0</td>
+      <td>True</td>
+      <td>4893208.0</td>
+      <td>NaT</td>
+      <td>1997-09-03</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>AAAAAAAACAAAAAAA</td>
+      <td>NaN</td>
+      <td>http://www.foo.com</td>
+      <td>protected</td>
+      <td>1564</td>
+      <td>4</td>
+      <td>3</td>
+      <td>1</td>
+      <td>4850815.0</td>
+      <td>False</td>
+      <td>4893168.0</td>
+      <td>2000-09-02</td>
+      <td>1997-09-03</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">page_surrogate_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_page_surrogate_key"></div><b>📃 Summary:</b> Surrogate key for the web page<br><b>🦄 Unique:</b> This column appears to be a unique identifier for each row in the table. For this table, each row represents a specific version of a web page, and the page_surrogate_key seems to uniquely identify each record.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">page_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_page_id"></div><b>📃 Summary:</b> Unique identifier for the web page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_customer_id"></div><b>📃 Summary:</b> Customer identifier associated with the page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='http://www.foo.com'>http://www.foo.com</option><option value='https://www.foo.com'>https://www.foo.com</option><option value='www.foo.com'>www.foo.com</option></select></span><br><br><div id="bar_viz_url"></div><b>📃 Summary:</b> URL of the web page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">page_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_page_type"></div><b>📃 Summary:</b> Type or category of the web page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">character_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_character_count"></div><b>📃 Summary:</b> Number of characters in the web page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">link_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_link_count"></div><b>📃 Summary:</b> Number of links on the web page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">image_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_image_count"></div><b>📃 Summary:</b> Number of images on the web page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">max_ad_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_max_ad_count"></div><b>📃 Summary:</b> Maximum number of ads allowed on the page<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_creation_date"></div><b>📃 Summary:</b> Date when the web page was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_auto_generated</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_auto_generated"></div><b>📃 Summary:</b> Indicates if the page was automatically generated<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_access_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_last_access_date"></div><b>📃 Summary:</b> Date when the web page was last accessed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">record_end_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_record_end_date"></div><b>📃 Summary:</b> End date of the record's validity period<br><b>❓ Missing:</b> Not applicable for active or current records.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">record_start_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_record_start_date"></div><b>📃 Summary:</b> Start date of the record's validity period<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about web pages. It contains details like page ID, creation date, access date, URL, type, and various metrics such as character count, link count, image count, and maximum ad count. Some pages are associated with customers. The table tracks changes over time with start and end dates for each record.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>14</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>WP_WEB_PAGE_SK</td>
+      <td>Surrogate key for the web page</td>
+      <td>page_surrogate_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>WP_WEB_PAGE_ID</td>
+      <td>Unique identifier for the web page</td>
+      <td>page_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>WP_REC_START_DATE</td>
+      <td>Start date of the record's validity period</td>
+      <td>record_start_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>WP_REC_END_DATE</td>
+      <td>End date of the record's validity period</td>
+      <td>record_end_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>WP_CREATION_DATE_SK</td>
+      <td>Date when the web page was created</td>
+      <td>creation_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>WP_ACCESS_DATE_SK</td>
+      <td>Date when the web page was last accessed</td>
+      <td>last_access_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>WP_AUTOGEN_FLAG</td>
+      <td>Indicates if the page was automatically generated</td>
+      <td>is_auto_generated</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>WP_CUSTOMER_SK</td>
+      <td>Customer identifier associated with the page</td>
+      <td>customer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>WP_URL</td>
+      <td>URL of the web page</td>
+      <td>url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>WP_TYPE</td>
+      <td>Type or category of the web page</td>
+      <td>page_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>WP_CHAR_COUNT</td>
+      <td>Number of characters in the web page</td>
+      <td>character_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>WP_LINK_COUNT</td>
+      <td>Number of links on the web page</td>
+      <td>link_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>WP_IMAGE_COUNT</td>
+      <td>Number of images on the web page</td>
+      <td>image_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>WP_MAX_AD_COUNT</td>
+      <td>Maximum number of ads allowed on the page</td>
+      <td>max_ad_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>5</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>creation_date</td>
+      <td>julian(DATE '1858-11-17' + CAST("creation_date" AS INTEGER))</td>
+      <td>To transform the 'creation_date' column from INT to DATE in DuckDB, we need to use the CAST function. The integer values in the 'creation_date' column appear to be Julian dates, which DuckDB can automatically interpret as dates when cast to the DATE type. Therefore, we don't need to use the strptime function or any additional formatting.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>is_auto_generated</td>
+      <td>CAST("is_auto_generated" = 'Y' AS BOOLEAN)</td>
+      <td>To transform the 'is_auto_generated' column from VARCHAR to BOOLEAN, we need to: 1. Use the CAST function to change the data type. 2. Map 'Y' to TRUE and 'N' to FALSE. 3. In DuckDB, we can use the comparison operator '=' to achieve this mapping within the CAST function. 4. The expression 'is_auto_generated = 'Y'' will return TRUE for 'Y' and FALSE for any other value (including 'N').\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>last_access_date</td>
+      <td>julian(DATE '1970-01-01' + CAST("last_access_date" AS INTEGER))</td>
+      <td>To transform the 'last_access_date' column from INT to DATE, we need to use a simple CAST function. The values in the column appear to be in Julian date format, which DuckDB can automatically convert to a standard date when casting to DATE type. No additional formatting or conversion is needed beyond the basic CAST.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>record_end_date</td>
+      <td>CAST("record_end_date" AS DATE)</td>
+      <td>To transform the 'record_end_date' column from VARCHAR to DATE, we can use a simple CAST function. The date format in the given distinct value '2000-09-02' is already in the standard ISO format (YYYY-MM-DD), which is directly compatible with DuckDB's DATE type. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>record_start_date</td>
+      <td>CAST("record_start_date" AS DATE)</td>
+      <td>To transform the 'record_start_date' column from VARCHAR to DATE, we need to use a simple CAST function. The date format in the given example ('1997-09-03') is already in the standard ISO format (YYYY-MM-DD), which is directly compatible with DuckDB's DATE type. Therefore, we can use a straightforward CAST without needing to use strptime() for parsing.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>2</b> columns have missing values<br>
+                ✔️ <b>1</b> of them are acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>customer_id</td>
+      <td>50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>record_end_date</td>
+      <td>50</td>
+      <td>True</td>
+      <td>Not applicable for active or current records.</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>customer_id</td>
+      <td>50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 1.025, 'y': 1}, {'x': 1.0750000000000002, 'y': 0}];
+    binWidth = 0.05;
+    drawHistogram("hist_viz_page_surrogate_key", data, binWidth);
+data = [{'label': 'AAAAAAAABAAAAAA...', 'value': 50.0}, {'label': 'AAAAAAAACAAAAAA...', 'value': 50.0}];
+    drawBarChart("bar_viz_page_id", data);
+data = [{'x': 539.0, 'y': 1}];
+    binWidth = 539.0;
+    drawHistogram("hist_viz_customer_id", data, binWidth);
+data = [{'label': 'http://www.foo....', 'value': 100.0}];
+    drawBarChart("bar_viz_url", data);
+data = [{'label': 'protected', 'value': 50.0}, {'label': 'welcome', 'value': 50.0}];
+    drawBarChart("bar_viz_page_type", data);
+data = [{'x': 1588.175, 'y': 1}, {'x': 1636.525, 'y': 0}];
+    binWidth = 48.35;
+    drawHistogram("hist_viz_character_count", data, binWidth);
+data = [{'x': 4.1, 'y': 1}, {'x': 4.300000000000001, 'y': 0}];
+    binWidth = 0.2;
+    drawHistogram("hist_viz_link_count", data, binWidth);
+data = [{'x': 3, 'y': 2}];
+    binWidth = 3;
+    drawHistogram("hist_viz_image_count", data, binWidth);
+data = [{'x': 1.075, 'y': 1}, {'x': 1.225, 'y': 0}];
+    binWidth = 0.15;
+    drawHistogram("hist_viz_max_ad_count", data, binWidth);
+data = [{'x': 4850811.1, 'y': 1}, {'x': 4850811.300000001, 'y': 0}];
+    binWidth = 0.2;
+    drawHistogram("hist_viz_creation_date", data, binWidth);
+data = [{'label': 'True', 'value': 50.0}, {'label': 'False', 'value': 50.0}];
+    drawBarChart("bar_viz_is_auto_generated", data);
+data = [{'x': 4893169.0, 'y': 1}, {'x': 4893171.0, 'y': 0}];
+    binWidth = 2.0;
+    drawHistogram("hist_viz_last_access_date", data, binWidth);
+data = [{'label': '2000-09-02 00:0...', 'value': 100.0}];
+    drawBarChart("bar_viz_record_end_date", data);
+data = [{'label': '1997-09-03 00:0...', 'value': 100.0}];
+    drawBarChart("bar_viz_record_start_date", data);
+
+
+</script>
+</body>
+</html>

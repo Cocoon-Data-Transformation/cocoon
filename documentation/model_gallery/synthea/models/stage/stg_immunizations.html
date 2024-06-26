@@ -1,0 +1,2553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>immunizations</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>CODE</th>
+      <th>DESCRIPTION</th>
+      <th>BASE_COST</th>
+      <th>ENCOUNTER</th>
+      <th>DATE_</th>
+      <th>PATIENT</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8b80cac7-383e-b479-1a05-7d8a9de45d04</td>
+      <td>2013-01-13T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>07969a4d-f9f0-c63f-6a0e-ecb659a20571</td>
+      <td>1986-06-17T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>21</td>
+      <td>varicella</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>10</td>
+      <td>IPV</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>20</td>
+      <td>DTaP</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>3</td>
+      <td>MMR</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>508aea73-9c2b-3e37-2371-d0017eff81f4</td>
+      <td>2015-01-25T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>8</td>
+      <td>Hep B  adolescent or pediatric</td>
+      <td>136.0</td>
+      <td>79b413f6-c668-bf41-bce7-b403c40cf7a4</td>
+      <td>2021-09-23T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8a331fe2-8db7-a75a-ef9d-d785bec8aa72</td>
+      <td>2016-01-31T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>8</td>
+      <td>Hep B  adolescent or pediatric</td>
+      <td>136.0</td>
+      <td>a79858c9-a74e-8ca3-c9a0-b63897e8fc05</td>
+      <td>2021-10-28T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>49</td>
+      <td>Hib (PRP-OMP)</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>119</td>
+      <td>rotavirus  monovalent</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>10</td>
+      <td>IPV</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8016b7fa-4ef8-ec06-0ca5-e23c9234271f</td>
+      <td>1987-06-23T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>01001c59-210c-29b4-99d1-89185804406a</td>
+      <td>1988-06-28T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>afa466b5-efb2-1d87-c7a1-d06c52ea5c62</td>
+      <td>1989-07-04T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>20</td>
+      <td>DTaP</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>133</td>
+      <td>Pneumococcal conjugate PCV 13</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>49</td>
+      <td>Hib (PRP-OMP)</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>119</td>
+      <td>rotavirus  monovalent</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>10</td>
+      <td>IPV</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>20</td>
+      <td>DTaP</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>133</td>
+      <td>Pneumococcal conjugate PCV 13</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>10</td>
+      <td>IPV</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>20</td>
+      <td>DTaP</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>133</td>
+      <td>Pneumococcal conjugate PCV 13</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>8</td>
+      <td>Hep B  adolescent or pediatric</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>4a151785-6586-81e2-9c44-29f342b847ea</td>
+      <td>2017-02-05T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>49</td>
+      <td>Hib (PRP-OMP)</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>21</td>
+      <td>varicella</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>3</td>
+      <td>MMR</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>133</td>
+      <td>Pneumococcal conjugate PCV 13</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>83</td>
+      <td>Hep A  ped/adol  2 dose</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01T02:44:04Z</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>4c6ebc7c-b7be-d3a0-67ca-6d91d2929430</td>
+      <td>2018-02-11T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>40f931f5-1f1c-06e8-0bbf-e50424c58ab1</td>
+      <td>1990-07-10T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>1991-07-16T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>ee586a59-c876-4498-6f64-56c8ede79259</td>
+      <td>1992-07-21T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>dbf4873d-7818-30bc-fdba-b0989e9b45a0</td>
+      <td>2019-02-17T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>115</td>
+      <td>Tdap</td>
+      <td>136.0</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>2020-02-23T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>2020-02-23T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>2020-02-23T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>2020-02-23T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>2021-02-28T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>2021-02-28T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>2022-03-06T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>2022-03-06T01:05:00Z</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>d092a760-19fd-1464-84e9-87a4aae36ee2</td>
+      <td>1993-07-27T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>c65401b1-f095-b85a-ed51-f2143cee6ea0</td>
+      <td>1994-08-02T21:35:49Z</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>208</td>
+      <td>SARS-COV-2 (COVID-19) vaccine  mRNA  spike protein  LNP  preservative free  30 mcg/0.3mL dose</td>
+      <td>136.0</td>
+      <td>ecddb7a7-8b7d-3dd0-481b-2cfd625b3afa</td>
+      <td>2021-02-24T12:00:39Z</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>208</td>
+      <td>SARS-COV-2 (COVID-19) vaccine  mRNA  spike protein  LNP  preservative free  30 mcg/0.3mL dose</td>
+      <td>136.0</td>
+      <td>5d5ecfea-bd6d-7266-dd01-9e7045c7a1e5</td>
+      <td>2021-03-17T12:00:39Z</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>2013-06-06T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>52</td>
+      <td>Hep A  adult</td>
+      <td>136.0</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>2013-06-06T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>e28e58cd-003d-9b19-170c-6d0d351ba410</td>
+      <td>2013-01-21T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>ac2e0b61-a9d0-89f6-c184-20256487d762</td>
+      <td>2015-06-11T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>113</td>
+      <td>Td (adult) preservative free</td>
+      <td>136.0</td>
+      <td>ac2e0b61-a9d0-89f6-c184-20256487d762</td>
+      <td>2015-06-11T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>52</td>
+      <td>Hep A  adult</td>
+      <td>136.0</td>
+      <td>ac2e0b61-a9d0-89f6-c184-20256487d762</td>
+      <td>2015-06-11T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>115</td>
+      <td>Tdap</td>
+      <td>136.0</td>
+      <td>e14de161-ea1a-37e9-1870-2e72c8f42903</td>
+      <td>2014-01-27T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>e14de161-ea1a-37e9-1870-2e72c8f42903</td>
+      <td>2014-01-27T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>e14de161-ea1a-37e9-1870-2e72c8f42903</td>
+      <td>2014-01-27T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>e14de161-ea1a-37e9-1870-2e72c8f42903</td>
+      <td>2014-01-27T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>58b9cdfc-4279-b5ea-bfb7-87607d0a5ff5</td>
+      <td>2015-02-02T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>58b9cdfc-4279-b5ea-bfb7-87607d0a5ff5</td>
+      <td>2015-02-02T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>eb7570af-725f-5a5e-c09e-7ea82dd0cad9</td>
+      <td>2017-06-15T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>fa90c844-4c5b-7cdd-5709-1c35b29ad3b2</td>
+      <td>2016-02-08T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>fa90c844-4c5b-7cdd-5709-1c35b29ad3b2</td>
+      <td>2016-02-08T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>232b70a4-44ca-3eb4-04b1-acee8174204d</td>
+      <td>2013-01-14T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>128420a2-b95d-0d8d-fe45-48a15822d8f8</td>
+      <td>2017-02-13T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>f5fbc3de-700d-c794-4032-94cedac2cd4c</td>
+      <td>2014-01-20T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>cfc4518c-1a3d-cada-5a1c-21f2bff59cc5</td>
+      <td>2019-06-20T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>576a1611-7e3f-6f97-9814-591522108b42</td>
+      <td>2015-01-26T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>576a1611-7e3f-6f97-9814-591522108b42</td>
+      <td>2015-01-26T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>3e17405a-1df5-b3ff-392c-479374188584</td>
+      <td>2016-02-01T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>f9f26288-c170-ac77-6616-a7ad3ffe0eed</td>
+      <td>2020-11-05T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8652edfc-1d2c-2cea-a106-05061dd8c3ea</td>
+      <td>2018-02-19T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>f71dc354-1527-92b0-2ecf-39d3f99e4f72</td>
+      <td>2017-02-06T01:44:18Z</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>b6f39be4-38b5-4cb3-67b6-f294fb7e491e</td>
+      <td>2019-02-25T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>b6f39be4-38b5-4cb3-67b6-f294fb7e491e</td>
+      <td>2019-02-25T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>a94d93ce-4efb-020b-b652-a4c51a2825b3</td>
+      <td>2020-03-02T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>288b93e7-55d5-d0c5-d44b-911967fbc1cd</td>
+      <td>2021-03-08T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>208</td>
+      <td>SARS-COV-2 (COVID-19) vaccine  mRNA  spike protein  LNP  preservative free  30 mcg/0.3mL dose</td>
+      <td>136.0</td>
+      <td>71ec8aa7-6aeb-8e3d-f9af-f0c1e380a3cd</td>
+      <td>2021-03-29T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>208</td>
+      <td>SARS-COV-2 (COVID-19) vaccine  mRNA  spike protein  LNP  preservative free  30 mcg/0.3mL dose</td>
+      <td>136.0</td>
+      <td>8a4501b1-d130-c2a5-8fdd-777a56ca3083</td>
+      <td>2021-04-19T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>334ee708-8ab3-da72-b3f2-11f828c0fc22</td>
+      <td>2022-03-14T15:27:22Z</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>b44c9777-fbd2-ec20-2751-e910f00a235b</td>
+      <td>2021-06-24T17:35:55Z</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>519cde0a-5315-62e4-676f-74cfcbdc71f8</td>
+      <td>2013-02-28T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>577aa3cc-cfae-8d3d-eb78-f5b3ab8a184b</td>
+      <td>2014-03-06T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>3eb7f6ed-ae11-46d5-a969-6c9f92b101d8</td>
+      <td>2015-03-12T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>115</td>
+      <td>Tdap</td>
+      <td>136.0</td>
+      <td>ab95f1a4-def4-ce29-15e3-3381db9f2297</td>
+      <td>2016-03-17T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>ab95f1a4-def4-ce29-15e3-3381db9f2297</td>
+      <td>2016-03-17T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>ab95f1a4-def4-ce29-15e3-3381db9f2297</td>
+      <td>2016-03-17T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>ab95f1a4-def4-ce29-15e3-3381db9f2297</td>
+      <td>2016-03-17T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>c9a777ef-0f54-ed88-d52b-fa9b5cf9c0ca</td>
+      <td>2013-12-06T07:10:25Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>9bc7100f-dd9e-a15c-0dab-ea6df197dea9</td>
+      <td>2017-03-23T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>9bc7100f-dd9e-a15c-0dab-ea6df197dea9</td>
+      <td>2017-03-23T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>b75ffa13-2baa-5b43-0bda-17bf8a6b1072</td>
+      <td>2014-02-14T00:28:23Z</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>a579deab-3da5-9339-df22-ee7c50bb2f53</td>
+      <td>2014-12-12T07:10:25Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>a579deab-3da5-9339-df22-ee7c50bb2f53</td>
+      <td>2014-12-12T07:10:25Z</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>0b449415-7cb4-4ccd-91fa-78c9a984756c</td>
+      <td>2018-03-29T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>0b449415-7cb4-4ccd-91fa-78c9a984756c</td>
+      <td>2018-03-29T16:39:19Z</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>vaccine_code</th>
+      <th>vaccine_description</th>
+      <th>immunization_cost</th>
+      <th>encounter_id</th>
+      <th>immunization_datetime</th>
+      <th>patient_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8b80cac7-383e-b479-1a05-7d8a9de45d04</td>
+      <td>2013-01-13 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>07969a4d-f9f0-c63f-6a0e-ecb659a20571</td>
+      <td>1986-06-17 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>21</td>
+      <td>varicella</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>10</td>
+      <td>IPV</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>20</td>
+      <td>DTaP</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>3</td>
+      <td>MMR</td>
+      <td>136.0</td>
+      <td>8b1ef1fb-3297-bf02-8442-f68af013a64c</td>
+      <td>2014-01-19 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>508aea73-9c2b-3e37-2371-d0017eff81f4</td>
+      <td>2015-01-25 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>8</td>
+      <td>Hep B  adolescent or pediatric</td>
+      <td>136.0</td>
+      <td>79b413f6-c668-bf41-bce7-b403c40cf7a4</td>
+      <td>2021-09-23 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8a331fe2-8db7-a75a-ef9d-d785bec8aa72</td>
+      <td>2016-01-31 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>8</td>
+      <td>Hep B  adolescent or pediatric</td>
+      <td>136.0</td>
+      <td>a79858c9-a74e-8ca3-c9a0-b63897e8fc05</td>
+      <td>2021-10-28 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>49</td>
+      <td>Hib (PRP-OMP)</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>119</td>
+      <td>rotavirus  monovalent</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>10</td>
+      <td>IPV</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8016b7fa-4ef8-ec06-0ca5-e23c9234271f</td>
+      <td>1987-06-23 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>01001c59-210c-29b4-99d1-89185804406a</td>
+      <td>1988-06-28 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>afa466b5-efb2-1d87-c7a1-d06c52ea5c62</td>
+      <td>1989-07-04 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>20</td>
+      <td>DTaP</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>133</td>
+      <td>Pneumococcal conjugate PCV 13</td>
+      <td>136.0</td>
+      <td>391cd3c5-0378-3030-3053-3ac7e86f0005</td>
+      <td>2021-12-30 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>49</td>
+      <td>Hib (PRP-OMP)</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>119</td>
+      <td>rotavirus  monovalent</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>10</td>
+      <td>IPV</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>20</td>
+      <td>DTaP</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>133</td>
+      <td>Pneumococcal conjugate PCV 13</td>
+      <td>136.0</td>
+      <td>b3573bee-06d1-e750-8bd6-6351b7b3a67d</td>
+      <td>2022-03-03 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>10</td>
+      <td>IPV</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>20</td>
+      <td>DTaP</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>133</td>
+      <td>Pneumococcal conjugate PCV 13</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>8</td>
+      <td>Hep B  adolescent or pediatric</td>
+      <td>136.0</td>
+      <td>c961bff5-e9ce-42f0-f929-afc3cd07710d</td>
+      <td>2022-06-02 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>4a151785-6586-81e2-9c44-29f342b847ea</td>
+      <td>2017-02-05 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>49</td>
+      <td>Hib (PRP-OMP)</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>21</td>
+      <td>varicella</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>3</td>
+      <td>MMR</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>133</td>
+      <td>Pneumococcal conjugate PCV 13</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>83</td>
+      <td>Hep A  ped/adol  2 dose</td>
+      <td>136.0</td>
+      <td>ad75254d-c776-0328-9247-12dc1b843e85</td>
+      <td>2022-12-01 02:44:04</td>
+      <td>eb247227-e839-88d3-447d-b5972468f33b</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>4c6ebc7c-b7be-d3a0-67ca-6d91d2929430</td>
+      <td>2018-02-11 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>40f931f5-1f1c-06e8-0bbf-e50424c58ab1</td>
+      <td>1990-07-10 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>05f3f8e8-ec60-8f8d-22dc-58c35c528f2e</td>
+      <td>1991-07-16 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>ee586a59-c876-4498-6f64-56c8ede79259</td>
+      <td>1992-07-21 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>dbf4873d-7818-30bc-fdba-b0989e9b45a0</td>
+      <td>2019-02-17 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>115</td>
+      <td>Tdap</td>
+      <td>136.0</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>2020-02-23 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>2020-02-23 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>2020-02-23 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>5e46d3d4-c804-6f05-35b4-702dc454298d</td>
+      <td>2020-02-23 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>2021-02-28 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>64e81f87-29d1-2fc7-9c1a-c708b57aebef</td>
+      <td>2021-02-28 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>2022-03-06 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>3395b11f-0aaa-5942-7427-be2a39104948</td>
+      <td>2022-03-06 01:05:00</td>
+      <td>3dfb065a-67df-5b8a-3901-49bfd834bed1</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>d092a760-19fd-1464-84e9-87a4aae36ee2</td>
+      <td>1993-07-27 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>c65401b1-f095-b85a-ed51-f2143cee6ea0</td>
+      <td>1994-08-02 21:35:49</td>
+      <td>db80575b-5e9b-921b-fad9-1e3a20929dc7</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>208</td>
+      <td>SARS-COV-2 (COVID-19) vaccine  mRNA  spike protein  LNP  preservative free  30 mcg/0.3mL dose</td>
+      <td>136.0</td>
+      <td>ecddb7a7-8b7d-3dd0-481b-2cfd625b3afa</td>
+      <td>2021-02-24 12:00:39</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>208</td>
+      <td>SARS-COV-2 (COVID-19) vaccine  mRNA  spike protein  LNP  preservative free  30 mcg/0.3mL dose</td>
+      <td>136.0</td>
+      <td>5d5ecfea-bd6d-7266-dd01-9e7045c7a1e5</td>
+      <td>2021-03-17 12:00:39</td>
+      <td>2ffa361e-5858-877e-e022-ce81fe32da1b</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>2013-06-06 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>52</td>
+      <td>Hep A  adult</td>
+      <td>136.0</td>
+      <td>7cd29c8a-db64-a6a5-8ff3-b4492bdd28b0</td>
+      <td>2013-06-06 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>e28e58cd-003d-9b19-170c-6d0d351ba410</td>
+      <td>2013-01-21 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>ac2e0b61-a9d0-89f6-c184-20256487d762</td>
+      <td>2015-06-11 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>113</td>
+      <td>Td (adult) preservative free</td>
+      <td>136.0</td>
+      <td>ac2e0b61-a9d0-89f6-c184-20256487d762</td>
+      <td>2015-06-11 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>52</td>
+      <td>Hep A  adult</td>
+      <td>136.0</td>
+      <td>ac2e0b61-a9d0-89f6-c184-20256487d762</td>
+      <td>2015-06-11 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>115</td>
+      <td>Tdap</td>
+      <td>136.0</td>
+      <td>e14de161-ea1a-37e9-1870-2e72c8f42903</td>
+      <td>2014-01-27 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>e14de161-ea1a-37e9-1870-2e72c8f42903</td>
+      <td>2014-01-27 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>e14de161-ea1a-37e9-1870-2e72c8f42903</td>
+      <td>2014-01-27 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>e14de161-ea1a-37e9-1870-2e72c8f42903</td>
+      <td>2014-01-27 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>58b9cdfc-4279-b5ea-bfb7-87607d0a5ff5</td>
+      <td>2015-02-02 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>58b9cdfc-4279-b5ea-bfb7-87607d0a5ff5</td>
+      <td>2015-02-02 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>eb7570af-725f-5a5e-c09e-7ea82dd0cad9</td>
+      <td>2017-06-15 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>fa90c844-4c5b-7cdd-5709-1c35b29ad3b2</td>
+      <td>2016-02-08 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>fa90c844-4c5b-7cdd-5709-1c35b29ad3b2</td>
+      <td>2016-02-08 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>232b70a4-44ca-3eb4-04b1-acee8174204d</td>
+      <td>2013-01-14 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>128420a2-b95d-0d8d-fe45-48a15822d8f8</td>
+      <td>2017-02-13 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>f5fbc3de-700d-c794-4032-94cedac2cd4c</td>
+      <td>2014-01-20 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>cfc4518c-1a3d-cada-5a1c-21f2bff59cc5</td>
+      <td>2019-06-20 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>576a1611-7e3f-6f97-9814-591522108b42</td>
+      <td>2015-01-26 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>576a1611-7e3f-6f97-9814-591522108b42</td>
+      <td>2015-01-26 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>3e17405a-1df5-b3ff-392c-479374188584</td>
+      <td>2016-02-01 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>f9f26288-c170-ac77-6616-a7ad3ffe0eed</td>
+      <td>2020-11-05 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>8652edfc-1d2c-2cea-a106-05061dd8c3ea</td>
+      <td>2018-02-19 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>f71dc354-1527-92b0-2ecf-39d3f99e4f72</td>
+      <td>2017-02-06 01:44:18</td>
+      <td>79297a39-2d2d-d88d-5e47-7a521af1d69f</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>b6f39be4-38b5-4cb3-67b6-f294fb7e491e</td>
+      <td>2019-02-25 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>b6f39be4-38b5-4cb3-67b6-f294fb7e491e</td>
+      <td>2019-02-25 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>a94d93ce-4efb-020b-b652-a4c51a2825b3</td>
+      <td>2020-03-02 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>288b93e7-55d5-d0c5-d44b-911967fbc1cd</td>
+      <td>2021-03-08 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>208</td>
+      <td>SARS-COV-2 (COVID-19) vaccine  mRNA  spike protein  LNP  preservative free  30 mcg/0.3mL dose</td>
+      <td>136.0</td>
+      <td>71ec8aa7-6aeb-8e3d-f9af-f0c1e380a3cd</td>
+      <td>2021-03-29 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>208</td>
+      <td>SARS-COV-2 (COVID-19) vaccine  mRNA  spike protein  LNP  preservative free  30 mcg/0.3mL dose</td>
+      <td>136.0</td>
+      <td>8a4501b1-d130-c2a5-8fdd-777a56ca3083</td>
+      <td>2021-04-19 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>334ee708-8ab3-da72-b3f2-11f828c0fc22</td>
+      <td>2022-03-14 15:27:22</td>
+      <td>7ec76836-c039-d9bf-8bb9-fe488c66d452</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>b44c9777-fbd2-ec20-2751-e910f00a235b</td>
+      <td>2021-06-24 17:35:55</td>
+      <td>d84815a3-c5b3-8ca2-025f-6323a4ec59ef</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>519cde0a-5315-62e4-676f-74cfcbdc71f8</td>
+      <td>2013-02-28 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>577aa3cc-cfae-8d3d-eb78-f5b3ab8a184b</td>
+      <td>2014-03-06 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>3eb7f6ed-ae11-46d5-a969-6c9f92b101d8</td>
+      <td>2015-03-12 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>115</td>
+      <td>Tdap</td>
+      <td>136.0</td>
+      <td>ab95f1a4-def4-ce29-15e3-3381db9f2297</td>
+      <td>2016-03-17 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>ab95f1a4-def4-ce29-15e3-3381db9f2297</td>
+      <td>2016-03-17 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>ab95f1a4-def4-ce29-15e3-3381db9f2297</td>
+      <td>2016-03-17 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>ab95f1a4-def4-ce29-15e3-3381db9f2297</td>
+      <td>2016-03-17 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>c9a777ef-0f54-ed88-d52b-fa9b5cf9c0ca</td>
+      <td>2013-12-06 07:10:25</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>9bc7100f-dd9e-a15c-0dab-ea6df197dea9</td>
+      <td>2017-03-23 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>9bc7100f-dd9e-a15c-0dab-ea6df197dea9</td>
+      <td>2017-03-23 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>b75ffa13-2baa-5b43-0bda-17bf8a6b1072</td>
+      <td>2014-02-14 00:28:23</td>
+      <td>750cdaf4-c264-e967-e76b-53a5a61abcab</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>a579deab-3da5-9339-df22-ee7c50bb2f53</td>
+      <td>2014-12-12 07:10:25</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>114</td>
+      <td>meningococcal MCV4P</td>
+      <td>136.0</td>
+      <td>a579deab-3da5-9339-df22-ee7c50bb2f53</td>
+      <td>2014-12-12 07:10:25</td>
+      <td>285cba54-c91d-6db4-4d78-1ea35ba6b622</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>140</td>
+      <td>Influenza  seasonal  injectable  preservative free</td>
+      <td>136.0</td>
+      <td>0b449415-7cb4-4ccd-91fa-78c9a984756c</td>
+      <td>2018-03-29 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>62</td>
+      <td>HPV  quadrivalent</td>
+      <td>136.0</td>
+      <td>0b449415-7cb4-4ccd-91fa-78c9a984756c</td>
+      <td>2018-03-29 16:39:19</td>
+      <td>734e5f3c-e660-6cbe-7c26-c5264cbde68e</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">vaccine_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_vaccine_code"></div><b>📃 Summary:</b> Numeric code identifying the specific vaccine<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">vaccine_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_vaccine_description"></div><b>📃 Summary:</b> Brief description of the vaccine administered<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">immunization_cost</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_immunization_cost"></div><b>📃 Summary:</b> Base cost of the immunization in currency units<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">encounter_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_encounter_id"></div><b>📃 Summary:</b> Unique identifier for the healthcare encounter<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">immunization_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_immunization_datetime"></div><b>📃 Summary:</b> Date and time of the immunization<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">patient_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_patient_id"></div><b>📃 Summary:</b> Unique identifier for the patient<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about immunization records. It contains information on vaccination dates, patient IDs, encounter IDs, vaccine codes, descriptions, and base costs. Each row represents a single immunization event for a specific patient. The table tracks various types of vaccines administered, including influenza and varicella, with associated details like preservative-free formulations.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>6</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>DATE_</td>
+      <td>Date and time of the immunization</td>
+      <td>immunization_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>PATIENT</td>
+      <td>Unique identifier for the patient</td>
+      <td>patient_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ENCOUNTER</td>
+      <td>Unique identifier for the healthcare encounter</td>
+      <td>encounter_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CODE</td>
+      <td>Numeric code identifying the specific vaccine</td>
+      <td>vaccine_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>DESCRIPTION</td>
+      <td>Brief description of the vaccine administered</td>
+      <td>vaccine_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>BASE_COST</td>
+      <td>Base cost of the immunization in currency units</td>
+      <td>immunization_cost</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                ✔️ <b>3</b> columns have been casted<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>encounter_id</td>
+      <td>CAST("encounter_id" AS UUID)</td>
+      <td>To transform the 'encounter_id' column from VARCHAR to UUID, we can use a simple CAST function in DuckDB. The provided regex pattern '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' matches the standard UUID format, so a direct cast should work. DuckDB supports UUID as a native data type, making this transformation straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>immunization_datetime</td>
+      <td>CAST("immunization_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'immunization_datetime' column from VARCHAR to TIMESTAMP, we don't need to use the strptime function because the existing format of the datetime string already matches the ISO 8601 format, which is directly compatible with TIMESTAMP data type in most SQL databases, including DuckDB. We can simply use a CAST function to convert the VARCHAR to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>patient_id</td>
+      <td>CAST("patient_id" AS UUID)</td>
+      <td>To transform the 'patient_id' column from VARCHAR to UUID, we need to use a simple CAST function in DuckDB. The UUID data type is specifically designed to store Universally Unique Identifiers, which is what these patient_id values appear to be. The CAST function will convert the string representation of the UUID to the actual UUID data type.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 8.225, 'y': 16}, {'x': 18.674999999999997, 'y': 11}, {'x': 29.124999999999996, 'y': 5}, {'x': 39.574999999999996, 'y': 15}, {'x': 50.025, 'y': 16}, {'x': 60.474999999999994, 'y': 33}, {'x': 70.92499999999998, 'y': 0}, {'x': 81.375, 'y': 2}, {'x': 91.82499999999999, 'y': 0}, {'x': 102.275, 'y': 0}, {'x': 112.725, 'y': 80}, {'x': 123.17499999999998, 'y': 18}, {'x': 133.625, 'y': 8}, {'x': 144.075, 'y': 426}, {'x': 154.52499999999998, 'y': 0}, {'x': 164.975, 'y': 0}, {'x': 175.42499999999998, 'y': 0}, {'x': 185.875, 'y': 0}, {'x': 196.325, 'y': 0}, {'x': 206.77499999999998, 'y': 74}];
+    binWidth = 10.45;
+    drawHistogram("hist_viz_vaccine_code", data, binWidth);
+data = [{'label': 'Influenza  seas...', 'value': 60.51136363636363}, {'label': 'SARS-COV-2 (COV...', 'value': 5.3977272727272725}, {'label': 'Td (adult) pres...', 'value': 5.3977272727272725}, {'label': 'SARS-COV-2 (COV...', 'value': 4.829545454545454}, {'label': 'HPV  quadrivale...', 'value': 4.6875}, {'label': 'Other values', 'value': 19.176136363636363}];
+    drawBarChart("bar_viz_vaccine_description", data);
+data = [{'x': 136.0, 'y': 704}];
+    binWidth = 136.0;
+    drawHistogram("hist_viz_immunization_cost", data, binWidth);
+data = [{'label': 'b3573bee-06d1-e...', 'value': 0.7102272727272727}, {'label': '0ed21d15-58ea-2...', 'value': 0.7102272727272727}, {'label': '45e313f3-9523-9...', 'value': 0.7102272727272727}, {'label': '8b1ef1fb-3297-b...', 'value': 0.7102272727272727}, {'label': 'c961bff5-e9ce-4...', 'value': 0.7102272727272727}, {'label': 'Other values', 'value': 96.44886363636364}];
+    drawBarChart("bar_viz_encounter_id", data);
+data = [{'label': '2022-03-03 02:4...', 'value': 0.7102272727272727}, {'label': '2015-09-01 05:1...', 'value': 0.7102272727272727}, {'label': '2014-01-19 01:0...', 'value': 0.7102272727272727}, {'label': '2014-04-26 14:4...', 'value': 0.7102272727272727}, {'label': '2021-12-30 02:4...', 'value': 0.7102272727272727}, {'label': 'Other values', 'value': 96.44886363636364}];
+    drawBarChart("bar_viz_immunization_datetime", data);
+data = [{'label': 'eb247227-e839-8...', 'value': 3.125}, {'label': 'e8323f7c-6829-3...', 'value': 2.9829545454545454}, {'label': 'bc1efffb-0983-0...', 'value': 2.9829545454545454}, {'label': '3dfb065a-67df-5...', 'value': 2.6988636363636362}, {'label': 'b3f13b30-5802-e...', 'value': 2.556818181818182}, {'label': 'Other values', 'value': 85.6534090909091}];
+    drawBarChart("bar_viz_patient_id", data);
+
+
+</script>
+</body>
+</html>

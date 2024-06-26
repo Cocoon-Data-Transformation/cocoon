@@ -1,0 +1,3220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>customer_demographics</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>CD_EDUCATION_STATUS</th>
+      <th>CD_DEP_EMPLOYED_COUNT</th>
+      <th>CD_GENDER</th>
+      <th>CD_DEP_COUNT</th>
+      <th>CD_PURCHASE_ESTIMATE</th>
+      <th>CD_MARITAL_STATUS</th>
+      <th>CD_CREDIT_RATING</th>
+      <th>CD_DEMO_SK</th>
+      <th>CD_DEP_COLLEGE_COUNT</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>1</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>2</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>3</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>4</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>6</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>7</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>8</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>9</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>10</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>11</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>12</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>13</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>14</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>15</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>16</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>17</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>18</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>19</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>20</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>21</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>22</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>23</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>24</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>25</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>26</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>27</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>28</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>29</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>30</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>31</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>32</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>33</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>34</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>35</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>36</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>37</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>38</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>39</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>40</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>41</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>42</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>43</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>44</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>45</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>46</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>47</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>48</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>49</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>50</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>51</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>52</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>53</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>54</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>55</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>56</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>57</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>58</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>59</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>60</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>61</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>62</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>63</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>64</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>65</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>66</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>67</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>68</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>69</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Unknown</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>70</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>71</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>72</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>73</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>74</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>75</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>76</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>77</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>78</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>79</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>80</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>81</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>82</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>83</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>84</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>85</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>86</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>87</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>88</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>89</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>90</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>91</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>92</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>93</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>94</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>95</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>96</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>97</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>98</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>99</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>education_level</th>
+      <th>employed_dependents</th>
+      <th>gender</th>
+      <th>total_dependents</th>
+      <th>purchase_estimate</th>
+      <th>marital_status</th>
+      <th>credit_rating</th>
+      <th>demographic_id</th>
+      <th>dependents_in_college</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>1</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>2</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>3</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>4</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>6</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>7</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>8</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>9</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>10</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>11</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>12</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>13</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>14</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>15</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>16</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>17</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>18</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>19</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>20</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>21</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>22</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>23</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>24</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>25</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>26</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>27</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>28</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>29</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>30</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>31</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>32</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>33</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>34</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>35</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>36</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>37</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>38</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>39</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>2 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>40</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>41</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>42</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>43</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>44</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>45</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>46</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>47</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>48</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>49</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>4 yr Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>50</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>51</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>52</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>53</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>54</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>55</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>56</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>57</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>58</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>59</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Advanced Degree</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>60</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>None</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>61</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>None</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>62</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>None</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>63</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>None</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>64</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>None</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>65</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>None</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>66</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>None</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>67</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>None</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>68</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>None</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>69</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>None</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>500</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>70</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>71</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>72</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>73</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>74</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>75</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>76</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>77</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>78</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>79</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Primary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>80</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>81</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>82</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>83</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>84</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>85</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>86</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>87</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>88</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>89</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Secondary</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>90</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>91</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>M</td>
+      <td>Good</td>
+      <td>92</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>93</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>S</td>
+      <td>Good</td>
+      <td>94</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>95</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>D</td>
+      <td>Good</td>
+      <td>96</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>97</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>College</td>
+      <td>0</td>
+      <td>F</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>W</td>
+      <td>Good</td>
+      <td>98</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>College</td>
+      <td>0</td>
+      <td>M</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>U</td>
+      <td>Good</td>
+      <td>99</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">education_level</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='No Formal Education'>No Formal Education</option><option value='Primary'>Primary</option><option value='Secondary'>Secondary</option><option value='College'>College</option><option value='2 yr Degree'>2 yr Degree</option><option value='4 yr Degree'>4 yr Degree</option><option value='Advanced Degree'>Advanced Degree</option><option value='Vocational/Technical'>Vocational/Technical</option></select></span><br><br><div id="bar_viz_education_level"></div><b>📃 Summary:</b> Customer's highest level of education<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">employed_dependents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_employed_dependents"></div><b>📃 Summary:</b> Number of employed dependents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gender</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='M'>M</option><option value='F'>F</option><option value='O'>O</option></select></span><br><br><div id="bar_viz_gender"></div><b>📃 Summary:</b> Customer's gender<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">total_dependents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_total_dependents"></div><b>📃 Summary:</b> Total number of dependents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">purchase_estimate</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_purchase_estimate"></div><b>📃 Summary:</b> Estimated purchase amount for the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">marital_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='D'>D</option><option value='M'>M</option><option value='S'>S</option><option value='W'>W</option><option value='U'>U</option><option value='P'>P</option></select></span><br><br><div id="bar_viz_marital_status"></div><b>📃 Summary:</b> Customer's marital status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">credit_rating</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Excellent'>Excellent</option><option value='Good'>Good</option><option value='Fair'>Fair</option><option value='Poor'>Poor</option><option value='Very Poor'>Very Poor</option></select></span><br><br><div id="bar_viz_credit_rating"></div><b>📃 Summary:</b> Customer's credit rating<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">demographic_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_demographic_id"></div><b>📃 Summary:</b> Unique identifier for customer demographic profile<br><b>🦄 Unique:</b> This column is a unique identifier for customer demographic profile. For this table, each row represents a unique customer with a specific demographic profile. The demographic_id is unique across rows, as it's described as a "Unique identifier for customer demographic profile".<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dependents_in_college</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_dependents_in_college"></div><b>📃 Summary:</b> Number of dependents in college<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about customer demographics. It contains details such as gender, marital status, education level, purchase estimate, credit rating, and information about dependents. Each row represents a unique customer with a specific demographic profile identified by CD_DEMO_SK. The table provides insights into various characteristics of customers for analysis purposes.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                😎 <b>9</b> columns have been renamed<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>CD_DEMO_SK</td>
+      <td>Unique identifier for customer demographic profile</td>
+      <td>demographic_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CD_GENDER</td>
+      <td>Customer's gender</td>
+      <td>gender</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>CD_MARITAL_STATUS</td>
+      <td>Customer's marital status</td>
+      <td>marital_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CD_EDUCATION_STATUS</td>
+      <td>Customer's highest level of education</td>
+      <td>education_level</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CD_PURCHASE_ESTIMATE</td>
+      <td>Estimated purchase amount for the customer</td>
+      <td>purchase_estimate</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CD_CREDIT_RATING</td>
+      <td>Customer's credit rating</td>
+      <td>credit_rating</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>CD_DEP_COUNT</td>
+      <td>Total number of dependents</td>
+      <td>total_dependents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>CD_DEP_EMPLOYED_COUNT</td>
+      <td>Number of employed dependents</td>
+      <td>employed_dependents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>CD_DEP_COLLEGE_COUNT</td>
+      <td>Number of dependents in college</td>
+      <td>dependents_in_college</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🕵️‍♂️ 3. Disguised Missing Values</h2><br>
+                🔍 <b>1</b> columns have disguised missing values<br>
+                ✔️ <b>1</b> columns have been cleaned<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>education_level</td>
+      <td>[Unknown]</td>
+      <td>True</td>
+      <td>Unknown</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                🔍 <b>1</b> columns have missing values<br>
+                ❌ No missing value is acceptable<br>
+                <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>education_level</td>
+      <td>10.1</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>education_level</td>
+      <td>10.1</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Primary', 'value': 22.47191011235955}, {'label': 'Secondary', 'value': 22.47191011235955}, {'label': 'College', 'value': 21.34831460674157}, {'label': '4 yr Degree', 'value': 11.235955056179774}, {'label': '2 yr Degree', 'value': 11.235955056179774}, {'label': 'Advanced Degree', 'value': 11.235955056179774}];
+    drawBarChart("bar_viz_education_level", data);
+data = [{'x': 0, 'y': 99}];
+    binWidth = 0;
+    drawHistogram("hist_viz_employed_dependents", data, binWidth);
+data = [{'label': 'M', 'value': 50.505050505050505}, {'label': 'F', 'value': 49.494949494949495}];
+    drawBarChart("bar_viz_gender", data);
+data = [{'x': 0, 'y': 99}];
+    binWidth = 0;
+    drawHistogram("hist_viz_total_dependents", data, binWidth);
+data = [{'x': 512.5, 'y': 70}, {'x': 537.5, 'y': 0}, {'x': 562.5, 'y': 0}, {'x': 587.5, 'y': 0}, {'x': 612.5, 'y': 0}, {'x': 637.5, 'y': 0}, {'x': 662.5, 'y': 0}, {'x': 687.5, 'y': 0}, {'x': 712.5, 'y': 0}, {'x': 737.5, 'y': 0}, {'x': 762.5, 'y': 0}, {'x': 787.5, 'y': 0}, {'x': 812.5, 'y': 0}, {'x': 837.5, 'y': 0}, {'x': 862.5, 'y': 0}, {'x': 887.5, 'y': 0}, {'x': 912.5, 'y': 0}, {'x': 937.5, 'y': 0}, {'x': 962.5, 'y': 0}, {'x': 987.5, 'y': 29}];
+    binWidth = 25.0;
+    drawHistogram("hist_viz_purchase_estimate", data, binWidth);
+data = [{'label': 'D', 'value': 20.2020202020202}, {'label': 'M', 'value': 20.2020202020202}, {'label': 'S', 'value': 20.2020202020202}, {'label': 'W', 'value': 20.2020202020202}, {'label': 'U', 'value': 19.19191919191919}];
+    drawBarChart("bar_viz_marital_status", data);
+data = [{'label': 'Good', 'value': 100.0}];
+    drawBarChart("bar_viz_credit_rating", data);
+data = [{'x': 3.45, 'y': 5}, {'x': 8.350000000000001, 'y': 5}, {'x': 13.25, 'y': 5}, {'x': 18.150000000000002, 'y': 5}, {'x': 23.05, 'y': 5}, {'x': 27.950000000000003, 'y': 5}, {'x': 32.85, 'y': 5}, {'x': 37.75, 'y': 5}, {'x': 42.650000000000006, 'y': 5}, {'x': 47.55, 'y': 4}, {'x': 52.45, 'y': 5}, {'x': 57.35000000000001, 'y': 5}, {'x': 62.25, 'y': 5}, {'x': 67.15, 'y': 5}, {'x': 72.05000000000001, 'y': 5}, {'x': 76.95, 'y': 5}, {'x': 81.85000000000001, 'y': 5}, {'x': 86.75, 'y': 5}, {'x': 91.65, 'y': 5}, {'x': 96.55000000000001, 'y': 5}];
+    binWidth = 4.9;
+    drawHistogram("hist_viz_demographic_id", data, binWidth);
+data = [{'x': 0, 'y': 99}];
+    binWidth = 0;
+    drawHistogram("hist_viz_dependents_in_college", data, binWidth);
+
+
+</script>
+</body>
+</html>
