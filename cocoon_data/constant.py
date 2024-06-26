@@ -574,6 +574,60 @@ cocoon_html_share_block = """<p style="text-align: right">Share Cocoon with the 
 
 </div>"""
 
+small_table_style="""table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9em;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+th,
+td {
+    padding: 3px 4px;
+    text-align: left;
+    border-bottom: 1px solid #dddddd;
+    border-right: 1px solid #dddddd;
+}
+
+thead tr {
+    background-color: #464646;
+    /* Changed color for header */
+    color: #ffffff;
+    /* Changed text color for better contrast */
+    text-align: left;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+th {
+    top: 0;
+    background-color: #464646;
+    color: #ffffff;
+}
+
+tbody tr {
+    background-color: #f9f9f9;
+    /* Lighter color for content rows */
+    font-size: 10px
+}"""
+
+
+code_container_style = """.code_container {
+    max-height: calc(60vh);
+    overflow: auto;
+}
+
+.code_container pre[class*="language-"] {
+    border-radius: 4px;
+    padding: 1em;
+    margin: .5em 0;
+    overflow: auto;
+    font-size: 12px;
+}
+"""
+
 cocoon_table_style = """
 table {
   width: 100%;

@@ -44,6 +44,7 @@ if "OPENAI_GPT4_ENGINE" in os.environ:
 if "OPENAI_EMBED_ENGINE" in os.environ:
     openai.embed_engine = os.environ["OPENAI_EMBED_ENGINE"]
 
+AnthropicVertex_Model_Type = "claude-3-opus@20240229"
 
 def call_embed(input_string):
 
@@ -135,7 +136,7 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
         responses = client.messages.create(
             max_tokens=1024,
             messages=messages,
-            model="claude-3-opus@20240229",
+            model=AnthropicVertex_Model_Type,
         )
 
         response = convert_anthropicvertex_to_openai(responses)

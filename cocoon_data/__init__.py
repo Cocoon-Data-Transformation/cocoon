@@ -17026,9 +17026,10 @@ def check_column_uniqueness(con, table_name, column_name, allow_null=False):
     return distinct_count == total_count
 
 
-class DecideUnique(Node):
+class DecideUnique(ListNode):
     default_name = 'Decide Unique Columns'
     default_description = 'This node allows users to decide which columns should be unique.'
+    
 
     def extract(self, item):
         clear_output(wait=True)
@@ -17050,7 +17051,7 @@ class DecideUnique(Node):
 
         unique_columns = []
         highly_unique_columns = []
-        column_descs = ""
+        column_descs = {}
         for col in columns:
             distinct_count, total_count = compute_unique_ratio(con, table_name, col, allow_null=True)
             if total_count  == 0:
@@ -17058,7 +17059,7 @@ class DecideUnique(Node):
             if distinct_count/total_count > 0.9:
                 highly_unique_columns.append(col)
                 column_desc = table_object.column_desc.get(col, "")
-                column_descs = column_descs + f"{col}: {column_desc}\n"
+                column_descs[col] = f"{col}: {column_desc}"
                 
             if distinct_count == total_count:            
                 unique_columns.append(col)
@@ -17069,15 +17070,26 @@ class DecideUnique(Node):
         sample_df = run_sql_return_df(con, f'SELECT {all_columns} FROM "{table_name}" LIMIT {sample_size}')
         sample_df_str = sample_df.to_csv(index=False, quoting=1)    
 
-        return unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns
+        outputs = []
+        
+        for i in range(0, len(highly_unique_columns), 10):
+            outputs.append((unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns[i:i+10]))
+        
+        if len(outputs) == 0:
+            outputs.append((unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, []))
+        
+        return outputs
 
     def run(self, extract_output, use_cache=True):
         
         unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns = extract_output
         
         if len(highly_unique_columns) == 0:
-            return {"reasoning": "No single column that can be candidate key.", "candidate_key": {}}
+            return {"reasoning": "No single column that can be candidate key.", 
+                    "continuous_columns": [],
+                    "non_continuous_columns": {}}
         
+        column_descs_str = "\n".join([column_descs[col] for col in highly_unique_columns])
 
 
         template = f"""You have the following table: {table_desc}
@@ -17086,7 +17098,7 @@ Samples:
 {sample_df_str}
 
 The following columns may be candidate key: {highly_unique_columns}
-{column_descs}
+{column_descs_str}
 
 Identify the column that can actually be candidate key.
 First, identify continuous columns can't be candidate key (e.g., temperature)
@@ -17127,8 +17139,16 @@ non_continuous_columns:
 
         return summary
     
+    def merge_run_output(self, run_outputs):
+        continuous_columns = []
+        non_continuous_columns = {}
+        for run_output in run_outputs:
+            continuous_columns.extend(run_output["continuous_columns"])
+            non_continuous_columns.update(run_output["non_continuous_columns"])
+        return {"continuous_columns": continuous_columns, "non_continuous_columns": non_continuous_columns}
+    
     def run_but_fail(self, extract_output, use_cache=True):
-        unique_columns, sample_df_str, table_name, columns, highly_unique_columns = extract_output
+        unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns = extract_output
         return {"continuous_columns": [],
                 "non_continuous_columns": {col: 
                     {"reasoning": "Fail to run",
@@ -17139,7 +17159,12 @@ non_continuous_columns:
         
         self.progress.value += 1
         json_code = run_output
-        unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns = extract_output
+        
+        unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns = extract_output[0]
+        
+        for eo in extract_output[1:]:
+            _, _, _, _, _, _, huc = eo
+            highly_unique_columns.extend(huc)
         
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
@@ -20555,8 +20580,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
 
     
 
-def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_directory="./"):
-
+def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_directory="./", para={}):
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -20564,24 +20588,35 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
         "con": con,
         "query_widget": query_widget
     }
+    
+    workflow_para = {"data_project": DataProject(),
+                     "dbt_directory": dbt_directory}
+    
+    for key, value in para.items():
+        workflow_para[key] = value
 
     main_workflow = Workflow("Data Vault Workflow", 
                             item = item, 
                             description="A workflow to build data vault",
-                            para = {"data_project": DataProject(),
-                                    "dbt_directory": dbt_directory})
+                            para = workflow_para)
     
-    main_workflow.add_to_leaf(StartDisplaySteps())
-    main_workflow.add_to_leaf(SelectTables(viewer=True))
+    main_workflow.add_to_leaf(DBTProjectConfig())
+    main_workflow.add_to_leaf(SelectTables())
     main_workflow.add_to_leaf(StageForAll())
-    main_workflow.add_to_leaf(DecidePKforAll(viewer=True))
-    main_workflow.add_to_leaf(DecideFKForAll())
-    main_workflow.add_to_leaf(DisplayJoinGraph())
+
+    main_workflow.add_to_leaf(DecideSCDForAll())
+    main_workflow.add_to_leaf(PerformSCDForAll())
+    main_workflow.add_to_leaf(DecideKeysForAll())
     
+    main_workflow.add_to_leaf(ConnectPKFKTable())
+    main_workflow.add_to_leaf(DisplayJoinGraph())
+
     main_workflow.add_to_leaf(EntityUnderstanding())
     main_workflow.add_to_leaf(RelationUnderstandingForAll())
     main_workflow.add_to_leaf(ReorderRelationToStory())
     main_workflow.add_to_leaf(BuildERStory())
+    main_workflow.add_to_leaf(DocumentProject())
+
     return query_widget, main_workflow
 
 class DescribeColumnsList(ListNode):
@@ -20753,6 +20788,7 @@ Return in the following format:
                         print("Duplicated names have been reset to their original values.")
                     else:
                         return
+
 
                 new_table_name = f"{table_pipeline}_renamed"
                 comment = f"-- Rename: Renaming columns\n"
@@ -22706,7 +22742,28 @@ class SelectTables(Node):
                 table_name = tables[table_id]
                 table_names.append(table_name)
                 data_project.add_table(table_name, get_table_schema(con, table_name))
+            
+            
+            if "dbt_directory" in self.para:
+                yml_dict = OrderedDict()
+                yml_dict["version"] = 2
+                yml_dict["sources"] = []
+                yml_dict["sources"].append(OrderedDict({
+                    "name": "cocoon",
+                    "tables": table_names
+                }))
                 
+                yml_content = yaml.dump(yml_dict, default_flow_style=False)
+                labels = ["YAML"]
+                file_names = [os.path.join(self.para["dbt_directory"], "sources.yml")]
+                contents = [yml_content]
+                
+                if not os.path.exists(self.para["dbt_directory"]):
+                    os.makedirs(self.para["dbt_directory"])
+                
+                overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+                save_files_click(save_button)  
+            
             callback({"selected_tables": table_names})
                 
         next_button.on_click(on_button_click)
@@ -22715,7 +22772,7 @@ class SelectTables(Node):
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_click(next_button)
             return
-
+        
 class StageTablesForAll(MultipleNode):
     default_name = 'Stage Tables For All'
     default_description = 'This node stages the tables for all selected tables.'
@@ -25177,7 +25234,6 @@ def create_cocoon_profile_yml_workflow(con, query_widget=None, viewer=False, tab
     return query_widget, main_workflow
 
 
-
 class DisplayJoinGraph(Node):
     default_name = 'Display Join Graph'
     default_description = 'This displays the join graph'
@@ -25191,39 +25247,25 @@ class DisplayJoinGraph(Node):
         data_project = self.para["data_project"]
         
         data_project.construct_links_from_pk_fk()
-        data_project.display_graph()
+        data_project.display_graph_static()
         yml_content = data_project.join_graph_yaml()
         
-        border_style = """
-<style>
-.border-class {
-    border: 1px solid black;
-    padding: 10px;
-    margin: 10px;
-    font-size: 12px;
-}
-</style>
-"""
-        formatter = HtmlFormatter(style='default')
-        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+        highlighted_yml = highlight_yml(yml_content)
 
-        highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
-
-        bordered_content = f'<div class="border-class">{highlighted_yml}</div>'
-
-        combined_html = css_style + border_style + bordered_content
-
-        display(HTML(combined_html))
+        display(HTML(highlighted_yml))
         
         labels = ["YAML"]
-        file_names = ["cocoon_join_graph.yml"]
+        file_names = ["cocoon_join.yml"]
         contents = [yml_content]
         
         if "dbt_directory" in self.para:
-            file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
+            if not os.path.exists(os.path.join(self.para["dbt_directory"], "join")):
+                os.makedirs(os.path.join(self.para["dbt_directory"], "join"))
+            file_names = [os.path.join(self.para["dbt_directory"], "join", file_name) for file_name in file_names]
        
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
-
+        save_files_click(save_button) 
+        
         next_button = widgets.Button(description="Next", button_style='success', icon='check')
         
         def on_button_click(b):
@@ -25233,7 +25275,7 @@ class DisplayJoinGraph(Node):
         
         display(HTML("🎉 Next, we will model your data warehouses!"))
         display(next_button)
-        
+
 
 class StartDisplaySteps(Node):
     default_name = 'Product Steps'
@@ -25405,7 +25447,7 @@ Return in the following format:
         
         
 class EntityUnderstanding(Node):
-    default_name = 'Entity  Understand'
+    default_name = 'Entity Understand'
     default_description = 'This understands the entity of the tables'
 
     def extract(self, item):
@@ -25416,20 +25458,29 @@ class EntityUnderstanding(Node):
         self.progress = show_progress(1)
 
         data_project = self.para["data_project"]
+        pk_table_column_pairs = list(data_project.foreign_key.keys())
+        
+        pk_table_description = ""
+        for pk_table, pk in pk_table_column_pairs:
+            table_object = data_project.table_object[pk_table]
+            table_summary = table_object.table_summary
+            pk_summary = table_object.print_column_desc(columns=[pk])
+            pk_table_description += f"{pk_table}: {table_summary}\n   Its primary key is '{pk}': {pk_summary}\n"
 
-        return data_project.primary_key
+        return pk_table_column_pairs, pk_table_description
 
     def run(self, extract_output, use_cache=True):
-        primary_key = extract_output
-        table_pk_desc = "\n".join([f"{table}: {pk}" for table, pk in primary_key.items()])
-        
-        template = f"""You have the following table: primary_key
-{table_pk_desc}
+        pk_table_column_pairs, pk_table_description = extract_output
+
+        template = f"""You have the following tables with primary keys:
+{pk_table_description}
 
 Now, for each table with the primary key, choose the name of the entity (e.g., Customers, Orders, Products) that it represents.
 Return in the following format:
 ```yml
-{next(iter(primary_key))}: Customers
+{pk_table_column_pairs[0][0]}:
+    entity_name: ...
+    entity_description: ...
 ...
 ```"""
         messages = [{"role": "user", "content": template}]
@@ -25443,19 +25494,62 @@ Return in the following format:
         return summary
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        data_project = self.para["data_project"]
-        data_project.entities = run_output
-        callback(run_output)
+        pk_table_column_pairs, pk_table_description = extract_output
+        summary = run_output
+        
+        data = {
+            'Table': [],
+            'Primary Key': [],
+            'Entity Name': [],
+            'Entity Description': [],
+        }
+        
+        for  pk_table, pk in pk_table_column_pairs:
+            data['Table'].append(pk_table)
+            data['Primary Key'].append(pk)
+            data['Entity Name'].append(summary[pk_table]["entity_name"])
+            data['Entity Description'].append(summary[pk_table]["entity_description"])
+            
+            
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, False, True, True]
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset)
+        display(grid)
+        
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            df = grid_to_updated_dataframe(grid, reset=reset)
+            document = df.to_json(orient="split")
+            
+            entity_map = {}
+            for idx, row in df.iterrows():
+                entity_map[row['Table']] = row['Entity Name']
+            
+            data_project = self.para["data_project"]
+            data_project.entities = entity_map
+            
+            callback(document)
+        
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
 
 class RelationUnderstandingForAll(MultipleNode):
     default_name = 'Relation Understand For All'
     default_description = 'This understands the relation of the tables'
 
-    def construct_node(self, element_name, idx=0, total=0):
+    def construct_node(self, element_name, idx=0, total=0, entities=None):
+        if entities is None:
+            entities = []
+            
         para = self.para.copy()
         para["table_name"] = element_name
         para["table_idx"] = idx
         para["table_total"] = total
+        para["entities"] = entities
         
         node = RelationUnderstanding(para=para, id_para ="table_name")
         node.inherit(self)
@@ -25463,12 +25557,17 @@ class RelationUnderstandingForAll(MultipleNode):
         return node
 
     def extract(self, item):
-        pk_df = pd.read_json(self.get_sibling_document('Decide PK for All'), orient="split")
-        pk_df = pk_df[pk_df['Foreign Keys'].apply(lambda x: len(x) > 0)]
+        data_project = self.para["data_project"]
+
+        result = get_table_to_entities_mapping(data_project.foreign_key, data_project.entities)
+
+        for table in data_project.entities:
+            if len(result[table]) == 1:
+                del result[table]
         
-        self.elements = list(pk_df['Table'])
+        self.elements = list(result.keys())
         
-        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements), result[element])
                       for idx, element in enumerate(self.elements)}
     
     def display_after_finish_workflow(self, callback, document):
@@ -25476,55 +25575,29 @@ class RelationUnderstandingForAll(MultipleNode):
         create_progress_bar_with_numbers(3, model_steps)
         
         data_project = self.para["data_project"]
-        table_to_entity = data_project.entities
+        query_widget = self.item["query_widget"]
         
-        display(HTML(f"🧐 We have identified <b>entities</b>:"))
-        
-        data = {
-            'Table[PK]': [],
-            'Entity Name': [],
-        }
-        
-        for table in table_to_entity:
-            data['Table[PK]'].append(f"{table}[{data_project.primary_key[table]}]")
-            data['Entity Name'].append(table_to_entity[table])
-            
-        df = pd.DataFrame(data)
-        
-        editable_columns = [False, True]
-        reset = True
-        entity_grid = create_dataframe_grid(df, editable_columns, reset=reset)
-        
-        display(entity_grid)
-        
-        display(HTML(f"🧐 Based on the entities, we have identified <b>relations</b>:"))
+        dropdown = create_explore_button(query_widget,
+                                            table_name=list(data_project.table_object.keys()))
+    
+        display(HTML(f"🧐 We have identified <b>Relations</b>:"))
         
         data = {
-            'Table[PK, FK]': [],
+            'Table': [],
             'Entities': [],
             'Relation Name': [],
             'Relation Description': [],
         }
         
-        pk_df = pd.read_json(self.get_sibling_document('Decide PK for All'), orient="split")
-        pk_df = pk_df[pk_df['Foreign Keys'].apply(lambda x: len(x) > 0)]
-        
-        multiplicity = {}
-        participation = {}
-        
         if 'Relation Understand' in document:
             for table in document['Relation Understand']:
-                relation = document['Relation Understand'][table]
-                pk = data_project.primary_key[table]
-                fks = pk_df[pk_df['Table'] == table]['Foreign Keys'].values[0]
-                pk_fks = [pk] + fks
-                data['Table[PK, FK]'].append(f"{table}[{', '.join(pk_fks)}]")
-                data['Entities'].append(relation['entities'])
-                data['Relation Name'].append(relation['relation_name'])
-                data['Relation Description'].append(relation['relation_desc'])
+                summary = document['Relation Understand'][table]
+                data['Table'].append(table)
+                data['Entities'].append(summary['entities'])
+                data['Relation Name'].append(summary.get('relation_name', ""))
+                data['Relation Description'].append(summary['relation_desc'])
                 
-                multiplicity[relation['relation_name']] = relation['multiplicity']
-                participation[relation['relation_name']] = relation['participation']
+
         
         df = pd.DataFrame(data)
         
@@ -25538,26 +25611,26 @@ class RelationUnderstandingForAll(MultipleNode):
         next_button = widgets.Button(description="Next", button_style='success', icon='check')
         
         def on_button_click(b):
-            summary = {}
-            
-            entity_df = grid_to_updated_dataframe(entity_grid, reset=reset)
+
             relation_df = grid_to_updated_dataframe(relation_grid, reset=reset, lists=lists)
+            document = relation_df.to_json(orient="split")
+
+            relation_df = relation_df[relation_df['Relation Name'] != ""]
             
-            for idx, row in entity_df.iterrows():
-                table = row['Table[PK]'].split("[")[0]
-                entity = row['Entity Name']
-                data_project.entities[table] = entity
+            duplicate_names = relation_df['Relation Name'][relation_df['Relation Name'].duplicated()].tolist()
             
-            summary['entities'] = entity_df.to_json(orient="split")
-            summary['relations'] = relation_df.to_json(orient="split")
-            summary['multiplicity'] = multiplicity
-            summary['participation'] = participation
+            if duplicate_names:
+                display("Error: Duplicate relation names are not allowed")
+                display("Duplicate names found: " + ", ".join(duplicate_names))
+                return
+    
             
-            callback(summary)
+            callback(document)
             
         next_button.on_click(on_button_click)
         display(HTML("🎉 Next, we will build the ER diagram!"))
         display(next_button)
+
         
 
 
@@ -25596,10 +25669,14 @@ class ReorderRelationToStory(Node):
 
         self.input_item = item
         
-        relation_df = pd.read_json(self.get_sibling_document('Relation Understand For All')['relations'], orient="split")
+        relation_df = pd.read_json(self.get_sibling_document('Relation Understand For All'), orient="split")
+        relation_df = relation_df[relation_df['Relation Name'] != ""]
+        
         relation_desc = ""
         for idx, row in relation_df.iterrows():
-            relation_desc += f"'{row['Relation Name']}': {row['Relation Description']}\n"
+            relation_desc += f"""'{row['Relation Name']}': 
+    Entity: {', '.join(row['Entities'])}
+    Descriptions: {row['Relation Description']}"""
         
         return relation_desc
     
@@ -25610,11 +25687,15 @@ class ReorderRelationToStory(Node):
 {relation_desc}
 Now, tell a story using the relations. 
 First, reorder the relations based on the sequence of events. E.g., "Customer opens account" should come before "Customer deposits money".
-Then, modifidy the description to make the story coherent.
+Then, modifidy the description for each relation
+(1) Make the story coherent. 
+(2) Be clear about how the entities are related.
+(3) Avoid general terms (e.g., 'relates', 'has', etc)
 
 Return in the following format:
 ```yml
-reasoning: The tables are ... The sequence should be ...
+reasoning: >
+    The tables are ... The sequence should be ...
 story: # Reorder the relations
     -   relation_name: Relation Name
         relation_desc: short and simple SVO in < 10 words
@@ -25632,6 +25713,7 @@ story: # Reorder the relations
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output["story"])
+
 
 
 
@@ -25713,7 +25795,6 @@ def create_html_content_er_story(relation_map, relation_details, df_display=None
 
 
 
-class BuildERStory(Node):
     default_name = 'Build ER Story'
     default_description = 'This builds the ER story'
 
@@ -25723,157 +25804,50 @@ class BuildERStory(Node):
         
         data_project = self.para["data_project"]
         con = self.item["con"]
-        relation_df = pd.read_json(self.get_sibling_document('Relation Understand For All')['relations'], orient="split")
-        entity_df = pd.read_json(self.get_sibling_document('Relation Understand For All')['entities'], orient="split")
-        multiplicity = self.get_sibling_document('Relation Understand For All')['multiplicity']
-        participation = self.get_sibling_document('Relation Understand For All')['participation']
         
+        relation_df = pd.read_json(self.get_sibling_document('Relation Understand For All'), orient="split")
+        entity_df = pd.read_json(self.get_sibling_document('Entity Understand'), orient="split")
+        story_summary = self.get_sibling_document('Reorder Relation To Story')
         
-        labels = []
-        file_names = []
-        contents = []
-        tab_data = []
-        
-        yml_dict = {}
-        yml_dict['entities'] = []
-        yml_dict['relations'] = []
-        
-        for idx, row in entity_df.iterrows():
-            table = row['Table[PK]'].split("[")[0]
-            entity = row['Entity Name']
-            new_table_name = f"entity_{entity}"
-            
-            labels.append(new_table_name)
-            file_names.append(f"entity_{entity}.sql")
-            
-            pk = data_project.primary_key[table]
-            fks = data_project.foreign_key.get((table, pk), [])
-            
-            columns = data_project.table_object[table].columns
-            columns = [col for col in columns if col != pk and col not in fks]
-            columns += [f"{pk} AS {entity}_id"]
-            
-            selection_clause = ',\n'.join(columns)
-            sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table}"
-            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
-            step.run_codes()
-            contents.append(sql_query)
-            tab_data.append((f"entity_{entity}.sql", highlight_sql(sql_query)))
-            
-            yml_dict['entities'].append({'name': new_table_name, 'key': f"{entity}_id"})
-        
-        df_displays = {}
         relation_to_entities = {}
         for idx, row in relation_df.iterrows():
-            table_name = row['Table[PK, FK]'].split("[")[0]
-            relation_name = row['Relation Name']
-            table_entity = data_project.entities[table_name]
-            relation_desc = row['Relation Description']
-            new_table_name = f"relation_{relation_name}"
-            
-            labels.append(new_table_name)
-            file_names.append(f"relation_{relation_name}.sql")
-            
-            table_pk = data_project.primary_key[table_name]
-            fks = data_project.foreign_key.get((table, table_pk), [])
-            
-            fk_to_entity = {}
-            for pk_table_name, pk in data_project.foreign_key:
-                for fk_table_name, fk in data_project.foreign_key[(pk_table_name, pk)]:
-                    if fk_table_name == table_name:
-                        fk_to_entity[fk] = data_project.entities[pk_table_name]
-                        
-            columns = [f"{table_pk} AS {table_entity}_id"]
-            for fk, entity in fk_to_entity.items():
-                columns.append(f"{fk} AS {entity}_id")
-                
-            selection_clause = ',\n'.join(columns)
-            sql_query = f"SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_name}"
-            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
-            step.run_codes()
-            contents.append(sql_query)
-            tab_data.append((f"relation_{relation_name}.sql", highlight_sql(sql_query)))
-            relation_to_entities[relation_name] = [table_entity] + list(fk_to_entity.values())
-            
-            data = {
-                'Entity': [],
-                'Multiplicity': [],
-                'Participation': [],
-            }
-            
-            relation_multiplicity = multiplicity[relation_name]
-            multiplicity_cocoon_meta = relation_multiplicity['cocoon_meta']
-            relation_participation = participation[relation_name]
-            participation_cocoon_meta = relation_participation['cocoon_meta']
-            
-            relation_entry = {'name': new_table_name, 
-                              'description': relation_desc,
-                              'entities': []
-                              }
-            
-            for entity in [table_entity] + list(fk_to_entity.values()):
-                entity_entry = {'name': entity}
-                
-                data['Entity'].append(entity)
-                
-                multiplicity_desc = ""
-                if multiplicity_cocoon_meta[entity]:
-                    multiplicity_desc += f"👤 1-1: "
-                    entity_entry['multiple'] = False
-                else:
-                    multiplicity_desc += f"👥 1-M: "
-                    entity_entry['multiple'] = True
-                multiplicity_desc += relation_multiplicity[entity]
-                entity_entry['multiplicity_description'] = relation_multiplicity[entity]
-                data['Multiplicity'].append(multiplicity_desc)
-                
-                participation_desc = ""
-                if participation_cocoon_meta[entity]:
-                    participation_desc += f"🌕 Total: "
-                    entity_entry['total_participation'] = True
-                else:
-                    participation_desc += f"🌗 Partial: "
-                    entity_entry['total_participation'] = False
-                    
-                participation_desc += relation_participation[entity]
-                entity_entry['participation_description'] = relation_participation[entity]
-                data['Participation'].append(participation_desc)
-                
-                relation_entry['entities'].append(entity_entry)
-                
-            yml_dict['relations'].append(relation_entry)
-                
-            df = pd.DataFrame(data)
-            df_displays[relation_name] = df.to_html(index=False)
+            relation_to_entities[row['Relation Name']] = row['Entities']
         
-        new_tables = labels.copy()
-        query_widget = self.item["query_widget"]
-        dropdown =  create_explore_button(query_widget, table_name=new_tables)
+        relation_story = story_summary
         
         display(HTML(f"🥳 We have modeled your data warehouse (oval for entity, box for relation):"))
-        
-        relation_story = self.get_sibling_document('Reorder Relation To Story')
 
-        df_displays_ordered = [df_displays[entry['relation_name']] for entry in relation_story]
         display_pages(total_page=len(relation_story), 
-                      create_html_content=partial(create_html_content_er_story, relation_to_entities, relation_story, df_displays_ordered))
+                      create_html_content=partial(create_html_content_er_story, relation_to_entities, relation_story, None))
         
-        display(HTML("<hr> 💾 Please save the SQL and YML files:"))
         
-        tab_data.append(("YAML", highlight_yml(yaml.dump(yml_dict, default_flow_style=False))))
-        tabs = create_dropdown_with_content(tab_data)
-        display(tabs)
         
-        labels += ['YAML']
-        file_names += ["cocoon_er_diagram.yml"]
-        contents += [yaml.dump(yml_dict, default_flow_style=False)]
+        yml_dict = build_story_yml_dict(relation_df, entity_df, story_summary)
+        yml_content = yaml.dump(yml_dict, default_flow_style=False)
+        
+        highlighted_yml = highlight_yml(yml_content)
+
+        display(HTML(highlighted_yml))
+        
+        labels = ["YAML"]
+        file_names = ["cocoon_er.yml"]
+        contents = [yml_content]
         
         if "dbt_directory" in self.para:
-            file_names = [os.path.join(self.para["dbt_directory"], "model", file_name) for file_name in file_names]
+            if not os.path.exists(os.path.join(self.para["dbt_directory"], "er")):
+                os.makedirs(os.path.join(self.para["dbt_directory"], "er"))
+            file_names = [os.path.join(self.para["dbt_directory"], "er", file_name) for file_name in file_names]
        
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        save_files_click(save_button) 
         
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
         
+        def on_button_click(b):
+            callback({})
+            
+        next_button.on_click(on_button_click)
+        display(next_button)
 
 
 class DecideDataTypeForAll(MultipleNode):
@@ -26088,3 +26062,1277 @@ def build_column_viz(column_name, is_numeric=True, con=None, table_name=None):
 """  
     
     return html_output, javascript_output
+
+
+
+
+
+class DBTProjectConfig(Node):
+    default_name = 'DBT Project Configuration'
+    default_description = 'This step allows you to configure the DBT project.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        dbt_name_input = widgets.Text(
+            description='DBT Project Name:',
+            value=self.para.get("dbt_name", "dbt_project"),
+            style={'description_width': 'initial'}
+        )
+
+        dbt_directory_input = widgets.Text(
+            description='DBT Project Directory:',
+            value=self.para.get("dbt_directory", "./dbt_project"),
+            style={'description_width': 'initial'}
+        )
+
+        next_button = widgets.Button(description="Next", button_style='success')
+
+        def on_button_click(b):
+            dbt_name = dbt_name_input.value
+            dbt_directory = dbt_directory_input.value
+
+            self.para["dbt_name"] = dbt_name
+            self.para["dbt_directory"] = os.path.join(dbt_directory, "models")
+
+            callback({
+                "dbt_name": dbt_name,
+                "dbt_directory": dbt_directory
+            })
+
+        next_button.on_click(on_button_click)
+
+        display(HTML("<h3>🛠️ Configure your DBT Project</h3>"))
+        display(dbt_name_input)
+        display(dbt_directory_input)
+        display(next_button)
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if "dbt_name" in self.para and "dbt_directory" in self.para:
+                on_button_click(next_button)
+            
+
+        
+        
+class DecideSCDTable(Node):
+    default_name = 'Decide SCD Table'
+    default_description = 'This decide if the given table contains SCD'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        
+        table_name = self.para["element_name"]
+        
+        display(HTML(f"🤓 Identifying Slowly Changing Dimensions for <i>{table_name}</i> ..."))
+
+        idx = self.para["idx"]
+        total = self.para["total"]
+        self.progress = show_progress(max_value=total, value=idx)
+
+        
+        table_object =  self.para["data_project"].table_object[table_name]
+        table_desc = table_object.table_summary
+        
+        sample_size = 5
+        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+
+        return table_name, table_desc, sample_df
+
+    def run(self, extract_output, use_cache=True):
+        table_name, table_desc, sample_df = extract_output
+
+        template =  f"""You have table '{table_name}': {table_desc}
+        
+Here are its sample rows:
+{sample_df.to_csv(index=False, quoting=1)}
+
+Is the table a slowly changing dimension?
+SCD have different versions of rows to track changes over time
+It has to be a dimension, not a fact table that tracks aggregates over time.
+
+If so, what are the columns that
+(1) uniquely identify objects 
+(2) for each object, identify its timestamp/version
+Respond with the following format:
+```yml
+reasoning: >
+    The table is about ... It tracks the versions of ... It is a dimension/fact
+scd: true/false,
+# if scd is true, specify the following
+id_cols: ["col1", "col2"...]
+ver_cols: ["col1", "col2"...]
+```"""
+        messages = [{"role": "user", "content": template}]
+
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+
+        return summary
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+    
+class DecideSCDForAll(MultipleNode):
+    default_name = 'Decide SCD For All'
+    default_description = 'This decide if the given tables contain SCD'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["element_name"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        node = DecideSCDTable(para=para)
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        data_project = self.para["data_project"]
+        self.elements = list(data_project.tables.keys())
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+                      for idx, element in enumerate(self.elements)}
+        self.item = item
+
+    def display_after_finish_workflow(self, callback, document):
+
+        data_project = self.para["data_project"]
+        
+        query_widget = self.item["query_widget"]
+        
+        dropdown = create_explore_button(query_widget, 
+                                         table_name=list(data_project.table_object.keys()))
+        
+        display(HTML("🤓 We have identified slowly changing dimensions"))
+        
+        data = {
+            'Table': [],
+            'Is SCD': [],
+            'Version Columns': [],
+            'ID Columns': [],
+        }
+        
+        if "Decide SCD Table" in document:
+            for table in document["Decide SCD Table"]:
+                summary = document["Decide SCD Table"][table]
+                data['Table'].append(table)
+                data['Is SCD'].append(summary["scd"])
+                if summary["scd"]:
+                    data['Version Columns'].append(summary["ver_cols"])
+                    data['ID Columns'].append(summary["id_cols"])
+                else:
+                    data['Version Columns'].append([])
+                    data['ID Columns'].append([])
+                    
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, True, True, True]
+        reset = True
+        editable_list = {
+            'Version Columns': {},
+            'ID Columns':{}
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset,  editable_list=editable_list)
+        display(grid)
+        
+        
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+
+        def on_button_click(b):
+            df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            document = df.to_json(orient="split")
+            
+            callback(document)
+
+        next_button.on_click(on_button_click)
+
+        display(next_button)
+                
+class PerformSCDForAll(MultipleNode):
+    default_name = 'Perform SCD For All'
+    default_description = 'This perform SCD for the given tables'
+    
+    def construct_node(self, element_name, idx=0, total=0, version_columns = None, id_columns = None):
+        
+        para = self.para.copy()
+        para["element_name"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        para["version_columns"] = version_columns
+        para["id_columns"] = id_columns
+        
+        node = PerformSCDTable(para=para)
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        df = pd.read_json(self.get_sibling_document('Decide SCD For All'), orient="split")
+        
+        scd_tables = df[df['Is SCD'] == True]['Table'].tolist()
+         
+        self.elements = scd_tables
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements), 
+                                                   df[df["Table"] == element]["Version Columns"].iloc[0],
+                                                    df[df["Table"] == element]["ID Columns"].iloc[0])
+                      for idx, element in enumerate(self.elements)}
+        self.item = item
+
+class PerformSCDTable(Node):
+    default_name = 'Perform SCD Table'
+    default_description = 'This perform SCD for the given table'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        
+        table_name = self.para["element_name"]
+        
+        display(HTML(f"🤓 Performing Slowly Changing Dimensions for <i>{table_name}</i> ..."))
+
+        idx = self.para["idx"]
+        total = self.para["total"]
+        self.progress = show_progress(max_value=total, value=idx)
+        
+        version_columns = self.para["version_columns"]
+        id_columns = self.para["id_columns"]
+        
+        sample_size = 5
+        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        
+        data_project = self.para["data_project"]
+        table_object = data_project.table_object[table_name]
+        table_summary = table_object.table_summary
+
+        return table_name, version_columns, id_columns, sample_df, table_summary
+    
+    def run(self, extract_output, use_cache=True):
+        table_name, version_columns, id_columns, sample_df, table_summary = extract_output
+        
+        template =  f"""You have table '{table_name}' with the following sample rows:
+{sample_df.to_csv(index=False, quoting=1)}
+
+Its current summary:
+{table_summary}
+
+This is a slowly changing dimension table.
+The columns that uniquely identify objects are: {id_columns}
+The columns that identify version are: {version_columns}
+
+We are going to create a snapshot table from this table, where 
+(1) only the latest version of each object is kept
+(2) The version columns are removed
+
+Please update the summary of the new table, in short simple SVO sentences and < 500 chars
+Respond with the following format:
+```yml
+new_summary: The table is about ... It tracks the most recent version of ...
+```"""
+        messages = [{"role": "user", "content": template}]
+        
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        return summary
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        table_name, version_columns, id_columns, sample_df, table_summary = extract_output
+        
+        labels = []
+        file_names = []
+        contents = []
+        con = self.item["con"]
+        
+        new_table_name = "snapshot_" + table_name.replace("stg_", "")
+        data_project = self.para["data_project"]
+        table_object = data_project.table_object[table_name]
+        columns = table_object.columns
+        
+        version_column_string = ", ".join([f'"{col}"' for col in version_columns])
+        id_column_string = ", ".join([f'"{col}"' for col in id_columns])
+        columns_except_version_string = ",\n".join([f'"{col}"' for col in columns if col not in version_columns])
+        
+        comment = f"""-- Slowly Changing Dimension: Dimension keys are {id_column_string}
+-- Effective date columns are {version_column_string}
+-- We will create Type 1 SCD (latest snapshot)
+"""
+        sql_query = f"""SELECT 
+{indent_paragraph(columns_except_version_string)}
+FROM (
+     SELECT 
+{indent_paragraph(columns_except_version_string, spaces=12)},
+            ROW_NUMBER() OVER (
+                PARTITION BY {id_column_string} 
+                ORDER BY {version_column_string} 
+            DESC) AS "cocoon_rn"
+    FROM "{table_name}"
+) ranked
+WHERE "cocoon_rn" = 1"""
+        sql_query = comment + sql_query
+
+        print(sql_query)
+        labels.append("SQL")
+        file_names.append(f"{new_table_name}.sql")
+        contents.append(sql_query)
+
+        sql_step = SQLStep(table_name=table_name, con=con)
+        
+        table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+        step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+        step.run_codes()
+        table_pipeline.add_step_to_final(step)
+        
+        schema = table_pipeline.get_final_step().get_schema()
+        columns = list(schema.keys())
+        
+        table_object.columns = columns
+        table_object.table_name = new_table_name
+        table_object.table_summary = summary["new_summary"]
+        
+        if len(id_columns) == 1:
+            id_column = id_columns[0]
+            table_object.uniqueness[id_column] = "Unique dimension key, derived from the slowly changing dimension"
+        
+        yml_dict = table_object.create_dbt_schema_dict(table_cocoon_meta={"scd_base_table": table_name})
+        yml_content = yaml.dump(yml_dict, default_flow_style=False)
+        labels.append("YML")
+        file_names.append(f"{new_table_name}.yml")
+        contents.append(yml_content)
+
+        if "dbt_directory" in self.para:
+            if not os.path.exists(os.path.join(self.para["dbt_directory"], "snapshot")):
+                os.makedirs(os.path.join(self.para["dbt_directory"], "snapshot"))
+            file_names = [os.path.join(self.para["dbt_directory"], "snapshot", file_name) for file_name in file_names]
+       
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        overwrite_checkbox.value = True
+        save_files_click(save_button)  
+        
+        data_project.change_table_name(table_name, new_table_name)
+        callback({"sql": sql_query, "yml": yml_content})
+        
+
+class DecideKeysForAll(MultipleNode):
+    default_name = 'Decide Keys For All'
+    default_description = 'This decide keys for the given tables'
+    
+    def construct_node(self, element_name, idx=0, total=0):
+        
+        para = self.para.copy()
+        para["element_name"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        
+        node = DecideKeysTable(para=para)
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        data_project = self.para["data_project"]
+         
+        self.elements = list(data_project.tables.keys())
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+                      for idx, element in enumerate(self.elements)}
+        self.item = item
+        
+    def display_after_finish_workflow(self, callback, document):
+        
+        query_widget = self.item["query_widget"]
+        
+        dropdown = create_explore_button(query_widget, 
+                                         table_name=self.elements)
+        
+        display(HTML("🤓 We have identified keys for the tables"))
+        
+        data = {
+            'Table': [],
+            'Primary Key': [],
+            'Keys': [],
+        }
+        
+        if "Decide Keys Table" in document:
+            for table in document["Decide Keys Table"]:
+                summary = document["Decide Keys Table"][table]
+                data['Table'].append(table)
+                data['Keys'].append(summary["keys"])
+                if summary["pk"] is None:
+                    data['Primary Key'].append("")
+                else:
+                    data['Primary Key'].append(summary["pk"])
+                    
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, True, True]
+        reset = True
+        editable_list = {
+            'Keys': {}
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset,  editable_list=editable_list)
+        display(grid)
+        
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+
+        def on_button_click(b):
+            df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            document = df.to_json(orient="split")
+            
+            callback(document)
+
+        next_button.on_click(on_button_click)
+
+        display(next_button)
+        
+class DecideKeysTable(Node):
+    default_name = 'Decide Keys Table'
+    default_description = 'This decide keys for the given table'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        
+        table_name = self.para["element_name"]
+        
+        display(HTML(f"🤓 Identifying Keys for <i>{table_name}</i> ..."))
+
+        idx = self.para["idx"]
+        total = self.para["total"]
+        self.progress = show_progress(max_value=total, value=idx)
+        
+        sample_size = 5
+        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        
+        data_project = self.para["data_project"]
+        table_object = data_project.table_object[table_name]
+        table_summary = table_object.table_summary
+        column_desc = table_object.print_column_desc(show_category=True, show_unique=True, show_pattern=True)
+
+        return table_name, sample_df, table_summary, column_desc
+    
+    def run(self, extract_output, use_cache=True):
+        table_name, sample_df, table_summary, column_desc = extract_output
+        
+        template =  f"""You have table '{table_name}': {table_summary}
+        
+It has the following sample rows:
+{sample_df.to_csv(index=False, quoting=1)}
+
+Below are the summary of the columns:
+{column_desc}
+
+Task: First, identify the columns that represent keys or ids, potentially for primary or foreign keys.
+These columns could be integers, or strings with some patterns. Please exclude "Date" or "Location" columns.
+Then, identify if there is a primary key for this table, which is a key and unique for each row.
+
+Respond with the following format:
+```yml
+reasoning: >
+    The table is about ...
+keys: 
+    - col1
+    - col2
+pk: col1 # Leave empty if no primary key
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        return summary
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        callback(summary) 
+        
+        
+class ConnectPKFKTable(ListNode):
+    default_name = 'Connect PK FK Table'
+    default_description = 'This connect PK FK for the given table'
+
+    def extract(self, item):
+        clear_output(wait=True)
+    
+        display(HTML(f"🤓 Connecting PK FK ..."))
+        self.progress = show_progress(max_value=1, value=0)
+        
+        data_project = self.para["data_project"]
+        
+        query_widget = self.item["query_widget"]
+        
+        dropdown = create_explore_button(query_widget, 
+                                         table_name=list(data_project.table_object.keys()))
+
+        key_df = pd.read_json(self.get_sibling_document('Decide Keys For All'), orient="split")
+        database_desc = ""
+        
+        pk_tables = []
+        
+        for idx, row in key_df.iterrows():
+            table_name = row["Table"]
+            keys = row["Keys"]
+            pk = row["Primary Key"]
+            
+            table_object = data_project.table_object[table_name]
+            
+            if len(keys) == 0:
+                continue
+            
+            table_desc = ""
+            
+            if pk != "" and pk is not None:
+                column_desc = f"pk:\n" 
+
+                column_desc += indent_paragraph(table_object.print_column_desc(columns=[pk],
+                                                             show_category=True, 
+                                                             show_unique=False, 
+                                                             show_pattern=True))
+                table_desc += indent_paragraph(column_desc) + "\n"
+                pk_tables.append((pk, table_name))
+                
+            keys = [key for key in keys if key != pk]
+            if len(keys) > 0:
+                column_desc = f"fks:\n"
+                column_desc += indent_paragraph(table_object.print_column_desc(columns=keys,
+                                                             show_category=True, 
+                                                             show_unique=True, 
+                                                             show_pattern=True))
+                table_desc += indent_paragraph(column_desc) + "\n"
+            
+            table_desc = f"{table_name}:\n" + indent_paragraph(table_desc)
+            database_desc += table_desc + "\n"
+            
+        outputs = [(pk, table_name, database_desc) for pk, table_name in pk_tables]
+        return outputs
+
+    def run(self, extract_output, use_cache=True):
+        pk, table_name, database_desc = extract_output
+        
+        template =  f"""You have a database, with the following tables and pk/fk:
+{database_desc}
+
+For primary key '{pk}' in table '{table_name}', identify all the foreign keys that reference it.
+The foreign key should be in another table and the column name should be semantically similar. 
+The patterns should also be similar (but not necessarily the same).
+
+Now, respond with the following format:
+```yml
+reasoning: >-
+    The primary key is about ... The referenced foreign keys are ...
+fks:
+    - fk_table: fk_column
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        new_summary = {table_name: {
+            "pk": pk,
+            "fks": summary["fks"]
+        }}
+        
+        if new_summary[table_name]["fks"] is None or not isinstance(new_summary[table_name]["fks"], list):
+            new_summary[table_name]["fks"] = []
+            
+        new_summary[table_name]["fks"] = [fk for fk in new_summary[table_name]["fks"] if isinstance(fk, dict)]
+        
+        return new_summary
+    
+    def merge_run_output(self, run_outputs):
+        merged_output = {}
+        for run_output in run_outputs:
+            merged_output.update(run_output)
+        return merged_output
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        self.progress.value += 1
+        
+        summary = run_output
+        
+        data = {
+            'Table[PK]': [],
+            'Table[FK]': [],
+        }
+        
+        for table in summary:
+            data['Table[PK]'].append(f"{table}[{summary[table]['pk']}]")
+            
+            list_of_fks = []
+            if "fks" not in summary[table] or summary[table]["fks"] is None:
+                data['Table[FK]'].append([])
+                continue
+            
+            for fk in summary[table]["fks"]:
+                
+                if fk is None:
+                    continue
+                
+                fk_table = list(fk.keys())[0]
+                fk_column = fk[fk_table]
+                list_of_fks.append(f"{fk_table}[{fk_column}]")
+                
+            data['Table[FK]'].append(list_of_fks)
+            
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, True]
+        reset = True
+        editable_list = {
+            'Table[FK]': {}
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset,  editable_list=editable_list)
+        
+        display(grid)
+        
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            document = df.to_json(orient="split")
+            
+            data_project = self.para["data_project"]
+            
+            for idx, row in df.iterrows():
+                if row['Table[PK]'] == "":
+                    continue
+                
+                pk_table, pk_column = row['Table[PK]'].strip('[]').split('[')
+                
+                for fk in row['Table[FK]']:
+                    fk_table, fk_column = fk.strip('[]').split('[')
+                    data_project.add_foreign_key_to_primary_key(fk_table, fk_column, pk_table, pk_column)
+            
+            callback(document)
+        
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+        
+
+        
+
+
+def get_table_to_entities_mapping(pk_fk_map, primary_table_to_entity):
+    def get_entity_name(table):
+        return primary_table_to_entity.get(table, table)
+
+    table_to_entities = {table: [entity] for table, entity in primary_table_to_entity.items()}
+
+    for (pk_table, _), fk_list in pk_fk_map.items():
+        pk_entity = get_entity_name(pk_table)
+        
+        for (fk_table, _) in fk_list:
+            if fk_table not in table_to_entities:
+                table_to_entities[fk_table] = []
+            
+            if pk_entity not in table_to_entities[fk_table]:
+                table_to_entities[fk_table].append(pk_entity)
+
+    return table_to_entities
+
+
+
+
+class RelationUnderstanding(Node):
+    default_name = 'Relation Understand'
+    default_description = 'This understands the relation of the table'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        idx = self.para["table_idx"]
+        total = self.para["table_total"]
+        table_name = self.para["table_name"]
+        entities = self.para["entities"]
+        con = self.item["con"]
+
+        display(HTML(f"🔍 Reading relation in {table_name} ..."))
+        create_progress_bar_with_numbers(3, doc_steps)
+
+        self.input_item = item
+
+        show_progress(max_value=total, value=idx)
+
+        data_project = self.para["data_project"]
+       
+        table_object = data_project.table_object[table_name]
+        table_summary = table_object.table_summary
+        
+        sample_size = 5
+        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        
+        return table_name, entities, sample_df, table_summary
+    
+    def run(self, extract_output, use_cache=True):
+        table_name, entities, sample_df, table_summary = extract_output
+        
+        more_than_one_entity = len(entities) > 1
+
+        template = f"""You have a table '{table_name}': {table_summary}
+It has the following sample rows:
+{sample_df.to_csv(index=False, quoting=1)}
+
+It is about {len(entities)} entities: '{', '.join(entities)}'
+
+First, describe the relation between the entities:
+(1). Include all entities
+(2). Simple sentence about how they are related (<20 words)
+(3). Be descriptive and specific (not just 'relates', 'has', ...)
+{'Then, pick a name for the relation.' if more_than_one_entity else ''}
+
+Return in the following format:
+```yml
+relation_desc: >-
+    This stores the Items that are ordered by Customers
+{'relation_name: CustomerOrderItems' if more_than_one_entity else ''}
+```"""
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        summary['entities'] = entities
+        
+        return summary
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+        
+        
+
+
+
+def build_story_yml_dict(relation_df, entity_df, story_summary):
+    yml_dict = OrderedDict()
+
+    yml_dict['entities'] = [
+        OrderedDict([
+            ('entity_name', row['Entity Name']),
+            ('entity_description', row['Entity Description']),
+            ('table_name', row['Table']),
+            ('primary_key', row['Primary Key']),
+
+        ])
+        for _, row in entity_df.iterrows()
+    ]
+
+    yml_dict['relations'] = [
+        OrderedDict([
+            *([('relation_name', row['Relation Name'])] if pd.notna(row['Relation Name']) and row['Relation Name'] != '' else []),
+            ('relation_description', row['Relation Description']),
+            ('table_name', row['Table']),
+            ('entities', row['Entities']),
+
+        ])
+        for _, row in relation_df.iterrows()
+    ]
+
+    yml_dict['story'] = [
+        OrderedDict([
+            ('relation_name', item['relation_name']),
+            ('story_line', item['relation_desc'])
+        ])
+        for item in story_summary
+    ]
+
+    return yml_dict
+
+
+
+
+class DocumentProject(Node):
+    default_name = 'Document Project'
+    default_description = 'This documents the project'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        display(HTML(f"🥳 We have generated the report!"))
+        
+        dbt_directory = self.para["dbt_directory"]
+        dbt_project_name = self.para["dbt_name"]
+        con = self.item["con"]
+        side_list_idx = 1
+        side_list_html = ""
+        
+        source_tables = []
+        if os.path.exists(os.path.join(dbt_directory, "sources.yml")):
+            with open(os.path.join(dbt_directory, "sources.yml"), "r") as file:
+                sources_yml = yaml.load(file, Loader=yaml.FullLoader)
+            
+            sources = sources_yml["sources"]
+            for source in sources:
+                if source["name"] == "cocoon":
+                    source_tables = source["tables"]
+                    break
+
+        source_choice_html = ""
+        source_div_html = ""
+        if len(source_tables) > 0:
+            for idx, table in enumerate(source_tables):
+                source_choice_html += f'<a class="nav-link small {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_source_{table}">{table}</a>'
+
+            for idx, table in enumerate(source_tables):
+                df_html = run_sql_return_df(con, f"SELECT * FROM {table} LIMIT 100").to_html()
+                source_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_source_{table}">
+            <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
+            <div class="code_container mb-4 mx-4">{df_html}</div>
+            </div>"""
+            
+
+            side_list_html += f"""<a class="list-group-item list-group-item-action active" data-toggle="list" href="#cocoon_steps_source">
+                <div>
+                    <h6 class="mb-0">{side_list_idx}. Source</h6>
+                    <small>Initial tables from data warehouses</small>
+                </div>
+            </a>"""
+            side_list_idx += 1
+
+
+
+
+        stage_tables = []
+        if os.path.exists(os.path.join(dbt_directory, "stage")):
+            for file_name in os.listdir(os.path.join(dbt_directory, "stage")):
+                if file_name.endswith(".yml"):
+                    stage_tables.append(file_name[:-4])
+
+        stage_choice_html = ""
+        stage_div_html = ""
+        if len(stage_tables) > 0:
+            for idx, table in enumerate(stage_tables):
+                stage_choice_html += f'<a class="nav-link small {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_stage_{table}">{table}</a>'
+                
+            for idx, table in enumerate(stage_tables):
+                with open(os.path.join(dbt_directory, "stage", f"{table}.yml"), "r") as file:
+                    yml_content = file.read()
+                
+                with open(os.path.join(dbt_directory, "stage", f"{table}.sql"), "r") as file:
+                    sql_content = file.read()
+                
+                df_html = run_sql_return_df(con, f"SELECT * FROM {table} LIMIT 100").to_html()
+                
+                stage_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_stage_{table}">
+            <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
+            <div class="code_container mb-4 mx-4">{df_html}</div>
+            
+            <p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
+            <div class="code_container mb-4 mx-4">
+                <pre><code class="language-sql">{sql_content}</code></pre>
+            </div>
+            <p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
+            <div class="code_container mb-4 mx-4">
+                <pre><code class="language-yaml">{yml_content}</code></pre>
+            </div>
+        </div>"""
+            
+            side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_stage">
+            <div>
+                <h6 class="mb-0">{side_list_idx}. Stage</h6>
+                <small>Clean and document the tables</small>
+            </div>
+        </a>"""
+            side_list_idx += 1
+        
+
+
+
+        snapshot_tables = []
+        if os.path.exists(os.path.join(dbt_directory, "snapshot")):
+            for file_name in os.listdir(os.path.join(dbt_directory, "snapshot")):
+                if file_name.endswith(".yml"):
+                    snapshot_tables.append(file_name[:-4])
+                    
+        snapshot_choice_html = ""
+        snapshot_div_html = ""
+
+        if len(snapshot_tables) > 0:
+            for idx, table in enumerate(snapshot_tables):
+                snapshot_choice_html += f'<a class="nav-link small {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_snapshot_{table}">{table}</a>'
+            
+            for idx, table in enumerate(snapshot_tables):
+                with open(os.path.join(dbt_directory, "snapshot", f"{table}.yml"), "r") as file:
+                    yml_content = file.read()
+                
+                with open(os.path.join(dbt_directory, "snapshot", f"{table}.sql"), "r") as file:
+                    sql_content = file.read()
+                
+                df_html = run_sql_return_df(con, f"SELECT * FROM {table} LIMIT 100").to_html()
+                
+                snapshot_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_snapshot_{table}">
+            <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
+            <div class="code_container mb-4 mx-4">{df_html}</div>
+            
+            <p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
+            <div class="code_container mb-4 mx-4">
+                <pre><code class="language-sql">{sql_content}</code></pre>
+            </div>
+            <p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
+            <div class="code_container mb-4 mx-4">
+                <pre><code class="language-yaml">{yml_content}</code></pre>
+            </div>
+        </div>"""
+
+            side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_scd">
+            <div>
+                <h6 class="mb-0">{side_list_idx}. SCD Model</h6>
+                <small>Snapshot from the change events</small>
+            </div>
+        </a>"""
+            side_list_idx += 1
+
+
+
+        join_yml_content = ""
+        if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
+            with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r") as file:
+                join_yml_content = file.read()
+
+        join_yml_dict = yaml.load(join_yml_content, Loader=yaml.FullLoader)
+        foreign_key = reverse_join_graph(join_yml_dict)
+        nodes, edges = generate_nodes_edges(foreign_key)
+        join_graph_output = generate_workflow_html_multiple(nodes, edges, directional=True)
+
+        integration_div_html = f"""<p class="text-center">Join Graph <small class="text-muted">(FK to PK)</small></p>
+        <div class="container mb-4">{join_graph_output}</div>
+        <p class="text-center">cocoon_join.yml <small class="text-muted"> (Document the joins)</small></p>
+        <div class="code_container mb-4 mx-4">
+            <pre><code class="language-yaml">{join_yml_content}</code></pre>
+        </div>"""
+
+        side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_join">
+            <div>
+                <h6 class="mb-0">{side_list_idx}. Integration</h6>
+                <small>Join graph from PK/FK</small>
+            </div>
+        </a>"""
+        side_list_idx += 1
+
+
+
+        er_yml_content = ""
+        if os.path.exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
+            with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r") as file:
+                er_yml_content = file.read()
+
+        er_yml_dict = yaml.load(er_yml_content, Loader=yaml.FullLoader)
+        relation_map = {entry['relation_name']: entry['entities'] for entry in er_yml_dict['relations'] if 'relation_name' in entry}
+        relation_details = [{'relation_name': entry['relation_name'], 'relation_desc': entry['story_line']} for entry in er_yml_dict['story']]
+
+        er_list_html = "\n".join([f'<li data-target="#cocoon_er_story_carousel" data-slide-to="{idx}" class="{"" if idx == 0 else ""}"></li>' for idx in range(len(relation_details))])
+        er_carousel_html = "\n".join([f'<div class="carousel-item {"active" if idx == 0 else ""}" style="transition: none;">{create_html_content_er_story(relation_map, relation_details, page_no=idx)}</div>' for idx in range(len(relation_details))])
+        er_div_html = f"""<div class="container">
+            <div id="cocoon_er_story_carousel" class="carousel slide" data-interval="false">
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <a class="btn btn-secondary" href="#cocoon_er_story_carousel" role="button"
+                        data-slide="prev">
+                        Prev
+                    </a>
+                    <a class="btn btn-secondary" href="#cocoon_er_story_carousel" role="button"
+                        data-slide="next">
+                        Next
+                    </a>
+                </div>
+                <ol class="carousel-indicators" style="position: relative; bottom: 30px;">
+                    {er_list_html}
+                </ol>
+                <div class="carousel-inner">
+                    {er_carousel_html}
+                </div>
+            </div>
+        </div>
+        <p class="text-center">cocoon_er.yml <small class="text-muted"> (Document the ER model)</small></p>
+        <div class="code_container mb-4 mx-4">
+            <pre><code class="language-yaml">{er_yml_content}</code></pre>
+        </div>"""
+
+        side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_er">
+            <div>
+                <h6 class="mb-0">{side_list_idx}. ER Model</h6>
+                <small>Tell the story behind the tables</small>
+            </div>
+        </a>"""
+        side_list_idx += 1
+
+
+
+
+
+        model_html = f"""<!DOCTYPE html>
+        <html lang="en">
+
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Cocoon - Data Modeling</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+                integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+            <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+                integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+                crossorigin="anonymous"></script>
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
+                integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx"
+                crossorigin="anonymous"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-sql.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-yaml.min.js"></script>
+        </head>
+        <style>
+            /* for list-group-item highlight */
+            .list-group-item.active {{
+                background-color: #464646;
+                border-color: #f8f9fa;
+                color: #ffffff;
+            }}
+
+            .list-group-item.active:hover {{
+                background-color: #bebebe;
+                border-color: #e9ecef;
+                color: #ffffff;
+            }}
+
+            /* for nav-link highlight */
+            .nav-link {{
+                color: #6c757d !important;
+                /* Gray color for inactive links */
+            }}
+
+            .nav-link.active {{
+                color: #000 !important;
+                /* Black color for active link */
+            }}
+
+
+        {small_table_style}
+
+        {code_container_style}
+
+            .code_container {{
+                max-height: calc(60vh);
+                overflow: auto;
+            }}
+
+            .code_container pre[class*="language-"] {{
+                border-radius: 4px;
+                padding: 1em;
+                margin: .5em 0;
+                overflow: auto;
+                font-size: 12px;
+            }}
+
+
+            .carousel-indicators li {{
+                background-color: #808080;
+                /* Gray for inactive indicators */
+            }}
+
+            .carousel-indicators .active {{
+                background-color: #000000;
+                /* Black for active indicator */
+            }}
+        </style>
+
+        <body>
+
+
+            <div class="container mt-4">
+                <!-- New row for the header -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank"
+                            class="text-decoration-none text-dark">
+                            <div class="d-flex align-items-center">
+                                <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png"
+                                    alt="cocoon icon" width="40" class="mr-3">
+                                <div>
+                                    <h4 class="mb-0">Cocoon Data Model</h4>
+                                    <small class="mb-0">Note: Cocoon uses LLMs and can make mistakes</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center justify-content-end">
+                        <h2>{dbt_project_name}</h2>
+                    </div>
+                </div>
+
+
+                <div class="row">
+                    <div class="col-md-9">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="tab-content">
+                                    <div class="tab-pane fade show active" id="cocoon_steps_source">
+
+                                        <nav class="navbar navbar-light bg-light">
+                                            <span class="navbar-brand mb-0">
+                                                <h5 class="card-title mb-0">Source Table</h5>
+                                            </span>
+                                            <ul class="nav">
+                                                <li class="nav-item dropdown">
+                                                    <a class="nav-link dropdown-toggle active" href="#"
+                                                        id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
+                                                        aria-expanded="false">
+                                                        Select Table
+                                                    </a>
+                                                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                                        {source_choice_html}
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                        <div class="container">
+                                            <small class="text-muted">We display the source tables from the data warehouses to
+                                                model.</small>
+                                        </div>
+                                        <hr>
+                                        <div class="scroll-container overflow-auto">
+                                            <div class="tab-content mt-3">
+                                                {source_div_html}
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="tab-pane fade" id="cocoon_steps_stage">
+                                        <nav class="navbar navbar-light bg-light">
+                                            <span class="navbar-brand mb-0">
+                                                <h5 class="card-title mb-0">Stage Table</h5>
+                                            </span>
+                                            <ul class="nav">
+                                                <li class="nav-item dropdown">
+                                                    <a class="nav-link dropdown-toggle active" href="#"
+                                                        id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
+                                                        aria-expanded="false">
+                                                        Select Table
+                                                    </a>
+                                                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                                        {stage_choice_html}
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                        <div class="container">
+                                            <small class="text-muted">Source tables may have typos, unclear names, incorrect
+                                                column types, etc. We clean these tables.</small>
+                                        </div>
+                                        <hr>
+                                        <div class="scroll-container overflow-auto">
+                                            <div class="tab-content mt-3">
+                                            {stage_div_html}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tab-pane fade" id="cocoon_steps_scd">
+                                        <nav class="navbar navbar-light bg-light">
+                                            <span class="navbar-brand mb-0">
+                                                <h5 class="card-title mb-0">Slowly Changing Dimension Model</h5>
+                                            </span>
+                                            <ul class="nav">
+                                                <li class="nav-item dropdown">
+                                                    <a class="nav-link dropdown-toggle active" href="#"
+                                                        id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
+                                                        aria-expanded="false">
+                                                        Select Table
+                                                    </a>
+                                                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                                                        {snapshot_choice_html}
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </nav>
+
+                                        <div class="container">
+                                            <small class="text-muted">Some tables log change events, which may be redundant to
+                                                query. Instead, we take a snapshot of the latest.</small>
+                                        </div>
+                                        <hr>
+                                        <div class="scroll-container overflow-auto">
+                                            <div class="tab-content mt-3">
+                                                {snapshot_div_html}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tab-pane fade" id="cocoon_steps_join">
+                                        <nav class="navbar navbar-light bg-light">
+                                            <span class="navbar-brand mb-0">
+                                                <h5 class="card-title mb-0">Integration</h5>
+                                            </span>
+                                        </nav>
+
+                                        <div class="container">
+                                            <small class="text-muted">We identify the primary key (PK) and foreign key (FK) from
+                                                tables. We build a join graph that connects FK to PK.</small>
+                                        </div>
+                                        <hr>
+                                        {integration_div_html}
+                                    </div>
+
+                                    <div class="tab-pane fade" id="cocoon_steps_er">
+                                        <nav class="navbar navbar-light bg-light">
+                                            <span class="navbar-brand mb-0">
+                                                <h5 class="card-title mb-0">Entity–Relationship model</h5>
+                                            </span>
+                                        </nav>
+                                        <div class="container">
+                                            <small class="text-muted">We identify the entities and relationships behind the
+                                                tables, and tell the story among these relationships.</small>
+                                        </div>
+                                        <hr>
+                                        {er_div_html}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="col-md-3">
+                        <div class="list-group" id="myTab" role="tablist">
+                            {side_list_html}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+
+        </html>"""
+        
+        display(HTML(wrap_in_iframe(model_html, width=1200)))
+        labels = ["HTML"]
+        file_names = [os.path.join(dbt_directory, "model.html")]
+        contents = [model_html]
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        save_files_click(save_button) 
+        
