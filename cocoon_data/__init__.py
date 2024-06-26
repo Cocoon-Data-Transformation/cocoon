@@ -21288,7 +21288,7 @@ class CocoonBranchStep(Node):
         next_button.on_click(on_button_click)
         display(next_button)
         
-def create_cocoon_workflow(con):
+def create_cocoon_workflow(con, para = {}):
     
     item = {}
     query_widget = None
@@ -21306,12 +21306,12 @@ def create_cocoon_workflow(con):
     main_workflow.add_to_leaf(branch_node)
     
 
-    _, stage_workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget)
+    _, stage_workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget, para=para)
     _, profile_workflow = create_cocoon_profile_workflow(con=con, query_widget=query_widget)
     _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget)    
     dbt_explore_workflow = create_cocoon_dbt_explore_workflow()
     _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget)
-    _, data_vault_workflow = create_cocoon_data_vault_workflow(con=con, query_widget=query_widget)
+    _, data_vault_workflow = create_cocoon_data_vault_workflow(con=con, query_widget=query_widget, para=para)
     
     main_workflow.register(stage_workflow, parent=branch_node)
     main_workflow.register(profile_workflow, parent=branch_node)
