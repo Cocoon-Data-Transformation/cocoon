@@ -15228,7 +15228,11 @@ class DataProject:
         self.fks = {}
         
         self.entities = {}
-    
+        
+    def add_table_project(self, table_project):
+        table_name = table_project.table_name
+        self.table_object[table_name] = table_project
+
     def change_table_name(self, old_table_name, new_table_name):
         if old_table_name not in self.tables:
             raise KeyError(f"Table '{old_table_name}' does not exist.")
@@ -15307,7 +15311,13 @@ class DataProject:
         join_graph_dict = self.join_graph_dict()
         yml_content = yaml.dump(join_graph_dict, default_flow_style=False)
         return yml_content
-        
+    
+    def build_foreign_key_from_join_graph_yml(self, join_graph_yml):
+        if isinstance(join_graph_yml, str):
+            join_graph_yml = yaml.safe_load(join_graph_yml)
+            
+        foreign_key = reverse_join_graph(join_graph_yml)
+        self.foreign_key = foreign_key
     
     def add_foreign_key_to_primary_key(self, fk_table_name, fk, pk_table_name, pk):
         if (pk_table_name, pk) not in self.foreign_key:
@@ -25492,7 +25502,23 @@ Return in the following format:
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
 
+        for table, data in summary.items():
+            if not isinstance(data, dict):
+                raise TypeError(f"Data for table '{table}' must be a dictionary")
+            if 'entity_name' not in data or 'entity_description' not in data:
+                raise KeyError(f"Data for table '{table}' is missing 'entity_name' or 'entity_description'")
+            if not isinstance(data['entity_name'], str) or not isinstance(data['entity_description'], str):
+                raise TypeError(f"'entity_name' and 'entity_description' for table '{table}' must be strings")
+
+        missing_tables = set(pair[0] for pair in pk_table_column_pairs) - set(summary.keys())
+        if missing_tables:
+            raise ValueError(f"The following tables are missing from the LLM response: {missing_tables}")
+        
         return summary
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -25710,6 +25736,27 @@ story: # Reorder the relations
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
+
+        required_keys = ['reasoning', 'story']
+        for key in required_keys:
+            if key not in summary:
+                raise KeyError(f"summary is missing the '{key}' key")
+
+        if not isinstance(summary['reasoning'], str):
+            raise TypeError("summary['reasoning'] must be a string")
+        if not isinstance(summary['story'], list):
+            raise TypeError("summary['story'] must be a list")
+
+        for i, item in enumerate(summary['story']):
+            if not isinstance(item, dict):
+                raise TypeError(f"Item {i} in summary['story'] must be a dictionary")
+            if 'relation_name' not in item or 'relation_desc' not in item:
+                raise KeyError(f"Item {i} in summary['story'] is missing 'relation_name' or 'relation_desc'")
+            if not isinstance(item['relation_name'], str) or not isinstance(item['relation_desc'], str):
+                raise TypeError(f"'relation_name' and 'relation_desc' in item {i} of summary['story'] must be strings")
 
         return summary
     
@@ -26131,6 +26178,7 @@ class DecideSCDTable(Node):
 
         idx = self.para["idx"]
         total = self.para["total"]
+        con = self.item["con"]
         self.progress = show_progress(max_value=total, value=idx)
 
         
@@ -26161,7 +26209,7 @@ Respond with the following format:
 ```yml
 reasoning: >
     The table is about ... It tracks the versions of ... It is a dimension/fact
-scd: true/false,
+scd: true/false
 # if scd is true, specify the following
 id_cols: ["col1", "col2"...]
 ver_cols: ["col1", "col2"...]
@@ -26174,7 +26222,34 @@ ver_cols: ["col1", "col2"...]
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
 
+        required_keys = ['reasoning', 'scd']
+        for key in required_keys:
+            if key not in summary:
+                raise KeyError(f"summary is missing required key: {key}")
+
+        if not isinstance(summary['reasoning'], str):
+            raise TypeError("summary['reasoning'] must be a string")
+        if not isinstance(summary['scd'], bool):
+            raise TypeError("summary['scd'] must be a boolean")
+
+        if summary['scd']:
+            for key in ['id_cols', 'ver_cols']:
+                if key not in summary:
+                    raise KeyError(f"summary is missing required key for SCD: {key}")
+                if not isinstance(summary[key], list):
+                    raise TypeError(f"summary['{key}'] must be a list")
+                if not all(isinstance(col, str) for col in summary[key]):
+                    raise TypeError(f"All elements in summary['{key}'] must be strings")
+
+            all_cols = set(summary['id_cols'] + summary['ver_cols'])
+            missing_cols = all_cols - set(sample_df.columns)
+            if missing_cols:
+                raise ValueError(f"The following columns are missing from the DataFrame: {missing_cols}")
+            
         return summary
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -26302,6 +26377,7 @@ class PerformSCDTable(Node):
 
         idx = self.para["idx"]
         total = self.para["total"]
+        con = self.item["con"]
         self.progress = show_progress(max_value=total, value=idx)
         
         version_columns = self.para["version_columns"]
@@ -26347,6 +26423,13 @@ new_summary: The table is about ... It tracks the most recent version of ...
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
+        if 'new_summary' not in summary:
+            raise KeyError("summary is missing the 'new_summary' key")
+        if not isinstance(summary['new_summary'], str):
+            raise TypeError("summary['new_summary'] must be a string")
+        
         return summary
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -26385,7 +26468,6 @@ FROM (
 WHERE "cocoon_rn" = 1"""
         sql_query = comment + sql_query
 
-        print(sql_query)
         labels.append("SQL")
         file_names.append(f"{new_table_name}.sql")
         contents.append(sql_query)
@@ -26516,6 +26598,7 @@ class DecideKeysTable(Node):
 
         idx = self.para["idx"]
         total = self.para["total"]
+        con = self.item["con"]
         self.progress = show_progress(max_value=total, value=idx)
         
         sample_size = 5
@@ -26561,6 +26644,28 @@ pk: col1 # Leave empty if no primary key
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
+        
+        required_keys = ['reasoning', 'keys']
+        for key in required_keys:
+            if key not in summary:
+                raise KeyError(f"summary is missing the '{key}' key")
+        
+        if not isinstance(summary['reasoning'], str):
+            raise TypeError("summary['reasoning'] must be a string")
+        if not isinstance(summary['keys'], list):
+            raise TypeError("summary['keys'] must be a list")
+        if 'pk' in summary and not isinstance(summary['pk'], str) and summary['pk'] is not None:
+            raise TypeError("summary['pk'] must be a string or None")
+
+        for key in summary['keys']:
+            if key not in sample_df.columns:
+                raise ValueError(f"Key '{key}' is not a column in the provided DataFrame")
+
+        if 'pk' in summary and summary['pk'] and summary['pk'] not in sample_df.columns:
+            raise ValueError(f"Primary key '{summary['pk']}' is not a column in the provided DataFrame")
         
         return summary
     
@@ -26642,7 +26747,7 @@ Now, respond with the following format:
 ```yml
 reasoning: >-
     The primary key is about ... The referenced foreign keys are ...
-fks:
+fks: # a list of dicts, that maps table name to column name
     - fk_table: fk_column
 ```"""
 
@@ -26654,6 +26759,18 @@ fks:
         
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
+        
+        required_keys = ['reasoning', 'fks']
+        for key in required_keys:
+            if key not in summary:
+                raise KeyError(f"summary is missing the '{key}' key")
+        
+        if not isinstance(summary['reasoning'], str):
+            raise TypeError("summary['reasoning'] must be a string")
+    
         new_summary = {table_name: {
             "pk": pk,
             "fks": summary["fks"]
@@ -26663,6 +26780,14 @@ fks:
             new_summary[table_name]["fks"] = []
             
         new_summary[table_name]["fks"] = [fk for fk in new_summary[table_name]["fks"] if isinstance(fk, dict)]
+        
+        
+        for fk in new_summary[table_name]["fks"]:
+            if len(fk) != 1:
+                raise ValueError(f"Each foreign key should be a dictionary with exactly one key-value pair: {fk}")
+            fk_table, fk_column = next(iter(fk.items()))
+            if not isinstance(fk_table, str) or not isinstance(fk_column, str):
+                raise TypeError(f"Foreign key table and column must be strings: {fk}")
         
         return new_summary
     
@@ -26822,6 +26947,22 @@ relation_desc: >-
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        summary['entities'] = entities
+        
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
+
+        if 'relation_desc' not in summary:
+            raise KeyError("summary is missing the 'relation_desc' key")
+        if not isinstance(summary['relation_desc'], str):
+            raise TypeError("summary['relation_desc'] must be a string")
+
+        if more_than_one_entity:
+            if 'relation_name' not in summary:
+                raise KeyError("summary is missing the 'relation_name' key for multiple entities")
+            if not isinstance(summary['relation_name'], str):
+                raise TypeError("summary['relation_name'] must be a string")
+
         summary['entities'] = entities
         
         return summary
@@ -27339,3 +27480,79 @@ class DocumentProject(Node):
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
         save_files_click(save_button) 
         
+
+
+def read_data_project_from_dir(directory, con):
+    data_project = DataProject()
+    dbt_directory = os.path.join(directory, "models")
+
+
+    seeds_directory = os.path.join(directory, "seeds") 
+    files = os.listdir(seeds_directory)
+    tables = []
+
+    for file in files:
+        if file.endswith(".csv"):
+            file_path = f"{seeds_directory}/{file}"
+            table_name = file.split(".")[0]
+            table_name = clean_table_name(table_name)
+            df = pd.read_csv(file_path)
+            df.columns = [clean_column_name(col) for col in df.columns]
+            con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
+            tables.append(table_name)
+            
+    source_tables = []
+    if os.path.exists(os.path.join(dbt_directory, "sources.yml")):
+        with open(os.path.join(dbt_directory, "sources.yml"), "r") as file:
+            sources_yml = yaml.load(file, Loader=yaml.FullLoader)
+        
+        sources = sources_yml["sources"]
+        for source in sources:
+            if source["name"] == "cocoon":
+                source_tables = source["tables"]
+                break
+
+    stage_tables = []
+    if os.path.exists(os.path.join(dbt_directory, "stage")):
+        for file_name in os.listdir(os.path.join(dbt_directory, "stage")):
+            if file_name.endswith(".sql"):
+                stage_tables.append(file_name[:-4])
+                
+    for stage_table in stage_tables:
+        new_table_name = stage_table
+        with open(os.path.join(dbt_directory, "stage", f"{stage_table}.sql"), "r") as f:
+            sql_query = f.read()
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+        
+        with open(os.path.join(dbt_directory, "stage", f"{stage_table}.yml"), "r") as f:
+            table_object = Table()
+            yml_data = yaml.safe_load(f)
+            table_object.read_attributes_from_dbt_schema_yml(yml_data)
+            data_project.add_table_project(table_object)
+            
+    snapshot_tables = []
+    if os.path.exists(os.path.join(dbt_directory, "snapshot")):
+        for file_name in os.listdir(os.path.join(dbt_directory, "snapshot")):
+            if file_name.endswith(".yml"):
+                snapshot_tables.append(file_name[:-4])
+                
+    for snapshot_table in snapshot_tables:
+        new_table_name = snapshot_table
+        with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.sql"), "r") as f:
+            sql_query = f.read()
+            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+        
+        with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.yml"), "r") as f:
+            table_object = Table()
+            yml_data = yaml.safe_load(f)
+            table_object.read_attributes_from_dbt_schema_yml(yml_data)
+            data_project.add_table_project(table_object)
+
+    join_yml_content = ""
+    if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
+        with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r") as file:
+            join_yml_content = file.read()
+
+    data_project.build_foreign_key_from_join_graph_yml(join_yml_content)
+    return data_project
+

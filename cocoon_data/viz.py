@@ -696,8 +696,6 @@ def generate_workflow_image(nodes, edges, edge_labels=None, highlight_nodes_indi
     else:
         dot = Graph(format=format)
 
-    highlight_color = '#FFA500'
-
     if highlight_nodes_indices is None:
         highlight_nodes_indices = []
     if highlight_edges_indices is None:
@@ -774,7 +772,7 @@ def wrap_image_in_html(image_data, height=None, format='svg'):
         mime_type = f'image/{format}'
         scrollable_html = f"""
         <div style="m{height_str}overflow: auto; border: 1px solid #cccccc;">
-            <img src="data:{mime_type};base64,{encoded_image}" alt="Workflow Diagram" style="display: block; max-width: none; height: auto;">
+            <img src="data:{mime_type};base64,{encoded_image}" style="display: block; max-width: none; height: auto;">
         </div>
         """
     return scrollable_html
@@ -1030,3 +1028,43 @@ def wrap_in_scrollable_div(html_code, width='100%', height='200px'):
     scrollable_div = f'<div style="width: {width}; overflow: auto; max-height: {height};">{html_code}</div>'
 
     return scrollable_div
+
+def visualize_table_mapping(table1_name, table1_cols, table2_name, table2_cols, mappings):
+    dot = Digraph(format="svg")
+    dot.attr(rankdir='LR')
+    dot.attr(splines='ortho') 
+    dot.attr('node', shape='rectangle', fontname='Segoe UI', fontsize='10')
+    dot.attr('edge', penwidth='1')
+    dot.attr(bgcolor='transparent')
+    
+    dot.graph_attr['nodesep'] = '0.1'
+    dot.graph_attr['ranksep'] = '1.5'
+
+    with dot.subgraph(name='cluster_0') as c:
+        c.attr(style='filled')
+        c.node_attr.update(height='0.3', width='1.5')
+        c.attr(label=f'{table1_name}', fontname='Segoe UI', fontsize='14', margin='12')
+        for col in table1_cols:
+            c.node(f"{table1_name}_{col}", col, fontname='Segoe UI', color='#000000')
+
+    with dot.subgraph(name='cluster_1') as c:
+        c.attr(style='filled')
+        c.node_attr.update(height='0.3', width='1.5')
+        c.attr(label=f'{table2_name}', fontname='Segoe UI', fontsize='14', margin='12')
+        for col in table2_cols:
+            c.node(f"{table2_name}_{col}", col, fontname='Segoe UI', color='#000000')
+
+    for t1_col, t2_col in mappings:
+        dot.edge(f"{table1_name}_{t1_col}", f"{table2_name}_{t2_col}", arrowsize='0.6')
+
+    image_data = dot.pipe()
+    svg_content = image_data.decode('utf-8')
+    scrollable_html = f"""
+    <div style="overflow: auto; border: 1px solid #cccccc">
+        {svg_content}
+    </div>
+    """
+    return scrollable_html
+    
+
+

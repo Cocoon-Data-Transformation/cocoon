@@ -44,7 +44,8 @@ if "OPENAI_GPT4_ENGINE" in os.environ:
 if "OPENAI_EMBED_ENGINE" in os.environ:
     openai.embed_engine = os.environ["OPENAI_EMBED_ENGINE"]
 
-AnthropicVertex_Model_Type = "claude-3-opus@20240229"
+CLAUDE_MODEL_TYPE = "claude-3-opus-20240229"
+VERTEX_MODEL_TYPE = "claude-3-5-sonnet@20240620"
 
 def call_embed(input_string):
 
@@ -116,28 +117,27 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
             lru_cache.save_to_disk()
             return response
 
-    if openai.api_type == "claude":
+    if openai.api_type == 'claude':
         messages = convert_openai_to_claude(messages)
 
         client = anthropic.Anthropic()
         responses = client.messages.create(
-            model="claude-3-opus-20240229", max_tokens=1024, messages=messages
+            model=CLAUDE_MODEL_TYPE,
+            max_tokens=1024,
+            messages=messages
         )
 
         response = convert_claude_to_openai(responses)
-
-    elif openai.api_type == "AnthropicVertex":
+        
+    elif openai.api_type == 'AnthropicVertex':
         messages = convert_openai_to_claude(messages)
 
-        client = AnthropicVertex(
-            region=os.environ["AnthropicVertex_region"],
-            project_id=os.environ["AnthropicVertex_project_id"],
-        )
+        client = AnthropicVertex(region=os.environ['AnthropicVertex_region'] , project_id=os.environ['AnthropicVertex_project_id'])
         responses = client.messages.create(
             max_tokens=1024,
             messages=messages,
-            model=AnthropicVertex_Model_Type,
-        )
+            model=VERTEX_MODEL_TYPE,
+            )
 
         response = convert_anthropicvertex_to_openai(responses)
 
