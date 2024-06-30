@@ -66,6 +66,30 @@ def get_schema(con):
         
     else:
         return {}
+    
+def get_query_schema(con, query):
+    if isinstance(con, duckdb.DuckDBPyConnection):
+        describe_query = f"DESCRIBE ({query})"
+        schema_df = run_sql_return_df(con, describe_query)
+        return dict(zip(schema_df['column_name'], schema_df['column_type']))
+    
+    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+        cur = con.cursor()
+
+        cur.execute(query)
+
+        query_id = cur.sfqid
+
+        df = run_sql_return_df(con, f"DESCRIBE RESULT '{query_id}'; ")
+
+        cur.close()
+
+        return dict(zip(df['name'], df['type']))
+    
+    else:
+        return {}
+
+
 def get_table_schema(conn, table_name):
     if isinstance(conn, duckdb.DuckDBPyConnection):
         query = f'''
@@ -124,11 +148,14 @@ def get_table_names(conn):
     
 
 
-def generate_count_distinct_query(table_name, attributes):
+def generate_count_distinct_query(table_name, attributes, ratio=True):
     select_clauses = []
     
     for attribute in attributes:
-        select_clause = f'COUNT(DISTINCT "{attribute}")/COUNT(*) AS "{attribute}"'
+        if ratio:
+            select_clause = f'COUNT(DISTINCT "{attribute}")/COUNT(*) AS "{attribute}"'
+        else:
+            select_clause = f'COUNT(DISTINCT "{attribute}") AS "{attribute}"'
         select_clauses.append(select_clause)
     
     query = f'SELECT {", ".join(select_clauses)} \nFROM "{table_name}"'
@@ -234,7 +261,7 @@ def create_sample_distinct(con, table_name, column_name, sample_size):
 
     return sample_values
 
-def create_sample_distinct_query_regex(con, table_name, column_name, sample_size=None, regex_except_list=None, regex_list=None):
+def create_sample_distinct_query_regex(con, table_name, column_name, sample_size=None, regex_except_list=None, regex_list=None, with_context=""):
     if regex_list is None:
         regex_list = []
         
@@ -255,6 +282,8 @@ def create_sample_distinct_query_regex(con, table_name, column_name, sample_size
     
     if sample_size is not None:
         query += f" LIMIT {sample_size}"
+
+    query = with_context + "\n" + query
     
     sample_values = run_sql_return_df(con, query)
     return sample_values
@@ -268,31 +297,41 @@ def create_regex_match_clause(con, column_name, regex):
     else:
         raise ValueError(f"Connection type {type(con)} not supported")
 
-def find_duplicate_rows(con, table_name, sample_size=0):
+def find_duplicate_rows_result(con, table_name, sample_size=0, with_context = ""):
+    
     sql_query = f'''
 SELECT *, COUNT(*) as cocoon_count
 FROM "{table_name}"
 GROUP BY ALL
 HAVING COUNT(*) > 1'''
+        
     duplicate_count_sql = f'SELECT COUNT(*) from ({sql_query});'
+    duplicate_count_sql = with_context + "\n" + duplicate_count_sql
+        
     duplicate_count = run_sql_return_df(con, duplicate_count_sql).iloc[0, 0]
 
     sample_sql = sql_query
     if sample_size > 0:
         sample_sql += f" LIMIT {sample_size}"
-
+    
+    sample_sql = with_context + "\n" + sample_sql
     sample_duplicate_rows = run_sql_return_df(con, sample_sql)
     return duplicate_count, sample_duplicate_rows
 
 def where_clause_for_space(column_name):
     return f'"{column_name}" <> TRIM("{column_name}")'
 
+def construct_distinct_count_query(table_name, column_name):
+    query = f'SELECT COUNT(DISTINCT "{column_name}") FROM "{table_name}" WHERE "{column_name}" IS NOT NULL'
+    return query
 
 def count_total_distinct(con, table_name, column_name):
-    total_distinct_count = run_sql_return_df(con,f'SELECT COUNT(DISTINCT "{column_name}") FROM "{table_name}" WHERE "{column_name}" IS NOT NULL').iloc[0, 0]
+    query = construct_distinct_count_query(table_name, column_name)
+    result_df = run_sql_return_df(con, query)
+    total_distinct_count = result_df.iloc[0, 0]
     return total_distinct_count
 
-def compute_unique_ratio(con, table_name, column_name, allow_null=False):
+def compute_unique_ratio(con, table_name, column_name, allow_null=False, with_context=""):
     if not allow_null:
         query = f"""
         SELECT COUNT(DISTINCT "{column_name}") AS DISTINCT_COUNT,
@@ -306,6 +345,7 @@ def compute_unique_ratio(con, table_name, column_name, allow_null=False):
         FROM "{table_name}"
         """
 
+    query = with_context + "\n" + query
     result = run_sql_return_df(con, query)
     distinct_count = result.iloc[0]['DISTINCT_COUNT']
     

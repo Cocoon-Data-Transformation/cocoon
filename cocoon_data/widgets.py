@@ -15,6 +15,24 @@ textarea, input {
 :root {
     --jp-ui-font-size1: 12px;
 }
+
+.modern-textarea textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.modern-textarea textarea:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.modern-textarea textarea:disabled {
+    background-color: #e9e9e9;
+    cursor: not-allowed;
+}
 </style>
 """
 
