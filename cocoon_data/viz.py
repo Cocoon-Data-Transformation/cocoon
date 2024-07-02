@@ -14,6 +14,9 @@ from pygments.lexers import PythonLexer, SqlLexer, YamlLexer
 from pygments.formatters import Terminal256Formatter, HtmlFormatter
 import html
 
+
+
+
 def wrap_in_iframe(html_code, width=800, height=400):
 
     escaped_html = html_code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#039;")
@@ -777,7 +780,7 @@ def wrap_image_in_html(image_data, height=None, format='svg'):
         """
     return scrollable_html
 
-def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=None, format='svg'):
+def generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=None, format='svg'):
     image_data = generate_workflow_image(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, format)
     return wrap_image_in_html(image_data, height, format)
 
@@ -824,6 +827,37 @@ def generate_mermaid_code(nodes, edges, edge_labels=None, highlight_nodes_indice
     
     return mermaid_code
 
+
+def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=300):
+    mermaid_code = generate_mermaid_code(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional)
+    html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Diagram</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/9.3.0/mermaid.min.js"></script>
+</head>
+<body>
+    <div id="mermaid-diagram" style="height: {height}px;">
+        <pre class="mermaid">
+            %%{{init: {{'theme': 'neutral', 'themeVariables': {{ 'fontFamily': 'Segoe UI'}}}}}}%%
+            {chr(10).join(mermaid_code)}
+        </pre>
+    </div>
+    <script>
+        mermaid.initialize({{ 
+            startOnLoad: true,
+            flowchart: {{
+                curve: 'basis'
+            }}
+        }});
+    </script>
+</body>
+</html>
+"""
+    return wrap_in_iframe(html_content, height=height+20)
 
 
 

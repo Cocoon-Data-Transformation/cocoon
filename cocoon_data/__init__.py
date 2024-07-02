@@ -34,6 +34,7 @@ from datasketch import MinHash, MinHashLSH
 from bs4 import BeautifulSoup
 import time
 from collections import OrderedDict
+import warnings
 
 from .database import *
 from .llm import *
@@ -46,8 +47,6 @@ from .widgets import *
 
 
 try:
-    import openpyxl
-    import xlrd
     from pyproj import Transformer, CRS
     from rasterio.windows import from_bounds
     from rasterio.features import rasterize
@@ -57,7 +56,6 @@ try:
     from shapely.geometry import Polygon
     from shapely.ops import transform
     from rasterio.transform import array_bounds
-    import scipy
 except:
     pass
 
@@ -70,6 +68,8 @@ cocoon_comment_start = "-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK F
 cocoon_comment_end = "-- COCOON BLOCK END\n"
 sys.setrecursionlimit(50000)
 
+if not DEBUG_MODE:
+    warnings.filterwarnings("ignore")
 
 def yml_from_name(table_name):
 
@@ -81,7 +81,6 @@ def yml_from_name(table_name):
     }
 
     return yaml_dict
-
 
 class QueryWidget:
     def __init__(self, con):
@@ -15301,6 +15300,12 @@ class TransformationSQLPipeline(TransformationPipeline):
 
  
 class DataProject:
+    image_mode = "graphviz"
+    
+    @classmethod
+    def set_image_mode(cls, mode):
+        cls.image_mode = mode
+    
     def __init__(self):
         self.tables = {}
         
@@ -15521,7 +15526,11 @@ class DataProject:
 
     def display_graph_static(self):
         nodes, edges = self.generate_nodes_edges()
-        html_output = generate_workflow_html_multiple(nodes, edges, directional=True)
+        
+        if self.image_mode == "graphviz":
+            html_output = generate_workflow_html_multiple_graphviz(nodes, edges, directional=True)
+        else:
+            html_output = generate_workflow_html_multiple(nodes, edges, directional=True)
         display(HTML(html_output))
 
 
@@ -20300,7 +20309,7 @@ class WriteStageYMLCode(Node):
 </script>
 </body>
 </html>"""
-            html_tab = wrap_in_iframe(html_content, width="1000px")
+            html_tab = wrap_in_iframe(html_content, width="1000px", height="1000px")
             tab_data.append(("html", html_tab))
             
             labels.append("HTML")
@@ -25950,7 +25959,7 @@ class RelationUnderstandingForAll(MultipleNode):
             duplicate_names = relation_df['Relation Name'][relation_df['Relation Name'].duplicated()].tolist()
             
             if duplicate_names:
-                display(HTML("⚠️ Error: Duplicate relation names" + ", ".join(duplicate_names) + "<br> 😊 Please rename the relations to highlight the difference"))
+                display(HTML("⚠️ Error: Duplicate relation names: " + ", ".join(duplicate_names) + "<br> 😊 Please rename the relations to highlight the difference"))
                 return
             
             callback(document)
@@ -27809,7 +27818,7 @@ class DocumentProject(Node):
 
         </html>"""
         
-        display(HTML(wrap_in_iframe(model_html, width=1200)))
+        display(HTML(wrap_in_iframe(model_html, width=1200, height=1200)))
         labels = ["HTML"]
         file_names = [os.path.join(dbt_directory, "model.html")]
         contents = [model_html]
