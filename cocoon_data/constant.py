@@ -4,7 +4,6 @@ cocoon_icon_64 = 'iVBORw0KGgoAAAANSUhEUgAAAaMAAAJSCAYAAABus6rVAAAABGdBTUEAALGPC/
 
 
 
-
 spinner_value = "Running..."
 
 END = '\033[0m'

@@ -619,7 +619,7 @@ def create_column_selector(columns, default=False, except_columns=None):
 
 
 
-def create_column_selector_(columns, default=False):
+def create_column_selector_(columns, default=False, selected=None):
     multi_select = widgets.SelectMultiple(
         options=[(column, i) for i, column in enumerate(columns)],
         disabled=False,
@@ -651,7 +651,6 @@ def create_column_selector_(columns, default=False):
         new_selection = tuple(all_indices - current_selection)
         multi_select.value = new_selection
     
-    
     select_all_button.on_click(select_all)
     deselect_all_button.on_click(deselect_all)
     reverse_selection_button.on_click(reverse_selection)
@@ -660,7 +659,10 @@ def create_column_selector_(columns, default=False):
     ui = widgets.VBox([instructions, multi_select, buttons])
     display(ui)
     
-    if default:
+    if selected is not None:
+        selected_indices = [i for i, column in enumerate(columns) if column in selected]
+        multi_select.value = tuple(selected_indices)
+    elif default:
         multi_select.value = tuple(range(len(columns)))
         
     return multi_select
@@ -800,3 +802,7 @@ def create_df_strings(initial_df, can_be_empty=[]):
 
 
 
+
+
+
+running_spinner_html = '<i class="fa fa-spinner fa-spin" style="font-size:24px"></i>'

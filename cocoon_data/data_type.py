@@ -26,10 +26,7 @@ data_types_database = {
         "DATE": ["DATE", "DATETIME"],
         "TIME": ["TIME"],
         "TIMESTAMP": ["TIMESTAMP", "TIMESTAMPT_TZ", "TIMESTAMP_LTZ", "TIMESTAMP_NTZ", "TIMESTAMP_TZ"],
-        "JSON": ["JSON"],
-        "VARIANT": ["VARIANT"],
-        "OBJECT": ["OBJECT"],
-        "ARRAY": ["ARRAY"],
+        "VARIANT": ["VARIANT", "OBJECT", "ARRAY"],
         "GEOGRAPHY": ["GEOGRAPHY"],
         "GEOMETRY": ["GEOMETRY"]
     },
@@ -81,6 +78,11 @@ TO_TIMESTAMP('Monday, 2 March 1992 - 08:32:45 PM', 'DY, D MONTH YYYY - HH12:MI:S
 CASE WHEN col = 'no' THEN false ELSE true END""",
             "Snowflake": """Example Clause:
 CASE WHEN col = 'no' THEN false ELSE true END""",
+        },
+        'VARIANT': {
+            "Snowflake": """Example Clause:
+PARSE_JSON('["Apple", "Pear","Chicken"]')
+SPLIT('127.0.0.1', '.')""",
         },
         'ARRAY': {
             "DuckDB": """Example Clause:
@@ -162,9 +164,11 @@ def is_type_numeric(data_type):
     
     
 def get_reverse_type(data_type, database):
+    data_type = data_type.upper().replace(" ", "")
+
     if database == "Snowflake":
-        if data_type.upper().startswith("NUMBER"):
-            if data_type.upper().endswith(", 0)"):
+        if data_type.startswith("NUMBER"):
+            if data_type.endswith(",0)") or data_type.endswith(",0"):
                 return "INT"
             else:
                 return "DECIMAL"

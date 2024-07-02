@@ -103,7 +103,7 @@ class QueryWidget:
                                               disabled=False,
                                               layout={'width': '96%', 'height': '100px'})
         else:
-            self.sql_input = widgets.Textarea(value='SELECT * FROM your_table_name',
+            self.sql_input = widgets.Textarea(value='SELECT * FROM "your_table_name"',
                                               disabled=False,
                                               layout={'width': '96%', 'height': '100px'})
         
@@ -12723,7 +12723,7 @@ class BasicStage(Node):
         self.progress = show_progress(max_value=total, value=idx)
 
         table_name = self.para["element_name"]
-        stg_table_name = table_name.replace("src", "stg")
+        stg_table_name = rename_for_stg(table_name)
         doc_df = item["table_document"][table_name]
         basic_description = doc_df.get_basic_description()
 
@@ -12993,7 +12993,7 @@ class PerformCRUD(Node):
         doc_df = item["table_document"][table_name]
         
         con = item["con"]
-        stg_table_name = table_name.replace("src", "stg")
+        stg_table_name = rename_for_stg(table_name)
         df = run_sql_return_df(con, f"select * from {stg_table_name}")
         doc_df.table_name = stg_table_name
 
@@ -15239,6 +15239,20 @@ class TransformationSQLPipeline(TransformationPipeline):
             
             return codes
 
+        if mode == "WITH_TABLE":
+            dbt_codes = self.get_codes(mode="dbt")
+            last_step_name = self.steps[sorted_step_idx[-1]].name
+            final_codes = f"CREATE OR REPLACE TABLE \"{last_step_name}\" AS\n{indent_paragraph(dbt_codes)}"
+            
+            return final_codes
+
+        if mode == "WITH_VIEW":
+            dbt_codes = self.get_codes(mode="dbt")
+            last_step_name = self.steps[sorted_step_idx[-1]].name
+            final_codes = f"CREATE OR REPLACE VIEW \"{last_step_name}\" AS\n{indent_paragraph(dbt_codes)}"
+            
+            return final_codes
+        
         if mode == "TABLE":
             
             table_clauses = []
@@ -15769,7 +15783,7 @@ class DecideProjection(Node):
         table_pipeline = self.para["table_pipeline"]
         schema = get_table_schema(con, table_pipeline)
 
-        display(HTML(f"🔍 Exploring table <i>{table_pipeline}</i>..."))
+        display(HTML(f"{running_spinner_html} Exploring table <i>{table_pipeline}</i>..."))
         query_widget = self.item["query_widget"]
         create_explore_button(query_widget, table_pipeline)
 
@@ -16151,7 +16165,7 @@ class DecideDuplicate(Node):
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
-        print("🔍 Checking duplicated rows ...")
+        display(HTML("🔍 Checking duplicated rows ..."))
         
         create_progress_bar_with_numbers(0, doc_steps)
         self.progress = show_progress(1)
@@ -16247,7 +16261,7 @@ class DecideRegex(Node):
         column_name = self.para["column_name"]
         with_context = table_pipeline.get_codes(mode="WITH")
         
-        display(HTML(f"🔍 Reading regex pattern for <i>{table_pipeline}[{column_name}]</i>..."))
+        display(HTML(f"{running_spinner_html} Reading regex pattern for <i>{table_pipeline}[{column_name}]</i>..."))
         create_progress_bar_with_numbers(2, doc_steps)
         show_progress(max_value=total, value=idx)
 
@@ -16430,7 +16444,7 @@ class DecideUnusual(Node):
         table_pipeline = self.para["table_pipeline"]
         column_name = self.para["column_name"]
         
-        display(HTML(f"🔍 Understanding unusual values for <i>{table_pipeline}[{column_name}]</i>"))
+        display(HTML(f"{running_spinner_html} Understanding unusual values for <i>{table_pipeline}[{column_name}]</i>"))
         create_progress_bar_with_numbers(3, doc_steps)
         show_progress(max_value=total, value=idx)
         
@@ -16928,7 +16942,7 @@ class DecideDMV(Node):
         table_pipeline = self.para["table_pipeline"]
         column_name = self.para["column_name"]
         
-        display(HTML(f"🔍 Understanding disguised missing values <i>{table_pipeline}[{column_name}]</i>"))
+        display(HTML(f"{running_spinner_html} Understanding disguised missing values <i>{table_pipeline}[{column_name}]</i>"))
         create_progress_bar_with_numbers(3, doc_steps)
         show_progress(max_value=total, value=idx)
         
@@ -17153,7 +17167,7 @@ class DecideUnique(ListNode):
         with_context = table_pipeline.get_codes(mode="WITH")
 
 
-        display(HTML(f"🔍 Checking uniqueness for <i>{table_name}</i>..."))
+        display(HTML(f"{running_spinner_html} Checking uniqueness for <i>{table_name}</i>..."))
         create_progress_bar_with_numbers(3, doc_steps)
         self.progress = show_progress(1)
 
@@ -18655,7 +18669,7 @@ class CleanUnusual(ListNode):
 
         column_name = self.para["column_name"]
         
-        display(HTML(f"🧹 Cleaning unusual values for <i>{table_pipeline}[{column_name}]</i>..."))
+        display(HTML(f"{running_spinner_html} Cleaning unusual values for <i>{table_pipeline}[{column_name}]</i>..."))
         create_progress_bar_with_numbers(3, doc_steps)
         show_progress(max_value=total, value=idx)
         
@@ -19270,7 +19284,7 @@ class TransformType(ListNode):
         idx = self.para["column_idx"]
         total = self.para["total_columns"]
 
-        display(HTML(f"🔍 Transforming type for <i>{table_pipeline}[{column_name}]</i>..."))
+        display(HTML(f"{running_spinner_html} Transforming type for <i>{table_pipeline}[{column_name}]</i>..."))
         create_progress_bar_with_numbers(1, doc_steps)
         show_progress(max_value=total, value=idx)
 
@@ -19796,7 +19810,7 @@ class DecideStringUnusual(Node):
         table_pipeline = self.para["table_pipeline"]
         column_name = self.para["column_name"]
         
-        display(HTML(f"🔍 Understanding unusual values for <i>{table_pipeline}[{column_name}]</i>"))
+        display(HTML(f"{running_spinner_html} Understanding unusual values for <i>{table_pipeline}[{column_name}]</i>"))
         create_progress_bar_with_numbers(3, doc_steps)
         show_progress(max_value=total, value=idx)
         
@@ -20010,7 +20024,7 @@ class WriteStageYMLCode(Node):
         contents = []
         table_pipeline = self.para["table_pipeline"]
         old_table_name = table_pipeline.get_source_step().name
-        new_table_name = "stg_" + old_table_name.replace("src_", "")
+        new_table_name = rename_for_stg(old_table_name)
         
         table_name = new_table_name
         con = self.item["con"]
@@ -20383,7 +20397,7 @@ class CreateShortTableSummary(Node):
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         
-        display(HTML(f"📝 Generating table summary for <i>{table_pipeline}</i>..."))
+        display(HTML(f"{running_spinner_html} Generating table summary for <i>{table_pipeline}</i>..."))
         create_progress_bar_with_numbers(0, doc_steps)
         self.progress = show_progress(1)
         
@@ -20746,6 +20760,9 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
     
     main_workflow.add_to_leaf(DecideRegexForAll())
     main_workflow.add_to_leaf(TransformTypeForAll())
+    
+    main_workflow.add_to_leaf(DecideVariantTypes())
+    
     main_workflow.add_to_leaf(DecideMissingList())
     main_workflow.add_to_leaf(HandleMissing())
     main_workflow.add_to_leaf(DecideUnique())
@@ -20759,10 +20776,9 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
 
 
 
-
     
 
-def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_directory="./", para={}):
+def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_directory="./dbt_directory", para={}):
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -20789,6 +20805,7 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
     main_workflow.add_to_leaf(DecideSCDForAll())
     main_workflow.add_to_leaf(PerformSCDForAll())
     main_workflow.add_to_leaf(DecideKeysForAll())
+    main_workflow.add_to_leaf(RefinePK())
     
     main_workflow.add_to_leaf(ConnectPKFKTable())
     main_workflow.add_to_leaf(DisplayJoinGraph())
@@ -20810,7 +20827,7 @@ class DescribeColumnsList(ListNode):
 
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
-        display(HTML(f"🔍 Checking columns for <i>{table_pipeline}</i>..."))
+        display(HTML(f"{running_spinner_html} Checking columns for <i>{table_pipeline}</i>..."))
         
         create_progress_bar_with_numbers(0, doc_steps)
         self.progress = show_progress(1)
@@ -21020,7 +21037,7 @@ class DecideMissingList(ListNode):
         table_pipeline = self.para["table_pipeline"]
         table_name = table_pipeline.get_final_step().name
 
-        display(HTML(f"🔍 Checking missing values for <i>{table_name}</i>..."))
+        display(HTML(f"{running_spinner_html} Checking missing values for <i>{table_name}</i>..."))
         create_progress_bar_with_numbers(2, doc_steps)
         self.progress = show_progress(1)
 
@@ -21196,7 +21213,7 @@ class DecideDataTypeList(ListNode):
         
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
-        display(HTML(f"🔍 Checking data types for <i>{table_pipeline}</i>..."))
+        display(HTML(f"{running_spinner_html} Checking data types for <i>{table_pipeline}</i>..."))
         create_progress_bar_with_numbers(1, doc_steps)
         self.progress = show_progress(1)
 
@@ -21463,6 +21480,11 @@ class CocoonBranchStep(Node):
         
         def on_button_click(b):
             selected_index = get_selected_index(checkboxes)
+            
+            if selected_index is None:
+                print("⚠️ Please select one option")
+                return
+            
             callback({"next_node": next_nodes[selected_index]})
 
         next_button.on_click(on_button_click)
@@ -22128,7 +22150,7 @@ class CreateShortSourceTableSummary(CreateShortTableSummary):
         source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
         sample_size = 5
 
-        sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
+        sample_df = run_sql_return_df(con, f'SELECT * FROM "{source_table}" LIMIT {sample_size}')
         table_desc = sample_df.to_csv(index=False, quoting=1)
         
         self.sample_df = sample_df
@@ -22150,7 +22172,7 @@ class CreateShortTargetTableSummary(CreateShortTableSummary):
         target_table = self.get_sibling_document('Select Source and Target Table')["target_table"]
         sample_size = 5
 
-        sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
+        sample_df = run_sql_return_df(con, f'SELECT * FROM "{target_table}" LIMIT {sample_size}')
         table_desc = sample_df.to_csv(index=False, quoting=1)
 
         self.sample_df = sample_df
@@ -22184,10 +22206,10 @@ class UnderstandSourceToTargetTransform(Node):
         source_table = source_table_object.table_name
         target_table = target_table_object.table_name
 
-        source_sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
+        source_sample_df = run_sql_return_df(con, f'SELECT * FROM "{source_table}" LIMIT {sample_size}')
         source_table_desc = source_sample_df.to_csv(index=False, quoting=1)
         
-        target_sample_df = run_sql_return_df(con, f"SELECT * FROM {target_table} LIMIT {sample_size}")
+        target_sample_df = run_sql_return_df(con, f'SELECT * FROM "{target_table}" LIMIT {sample_size}')
         target_table_desc = target_sample_df.to_csv(index=False, quoting=1)
         
         source_column_desc = source_table_object.print_column_desc()
@@ -22339,10 +22361,10 @@ class WriteCode(Node):
         source_table = source_table_object.table_name
         target_table = target_table_object.table_name
 
-        source_sample_df = run_sql_return_df(con, f"SELECT * FROM {source_table} LIMIT {sample_size}")
+        source_sample_df = run_sql_return_df(con, f'SELECT * FROM "{source_table}" LIMIT {sample_size}')
         source_table_sample = source_sample_df.to_csv(index=False, quoting=1)
         
-        target_sample_df = run_sql_return_df(con, f"SELECT {', '.join(target_columns)} FROM {target_table} LIMIT {sample_size}")
+        target_sample_df = run_sql_return_df(con, f"""SELECT {', '.join(f'"{col}"' for col in target_columns)} FROM "{target_table}" LIMIT {sample_size}""")
         target_table_sample = target_sample_df.to_csv(index=False, quoting=1)    
         
         source_column_desc = source_table_object.print_column_desc()
@@ -22428,7 +22450,7 @@ class DebugCode(Node):
     def extract(self, input_item):
         clear_output(wait=True)
         create_progress_bar_with_numbers(1, transform_steps)
-        display(HTML("🐞 Debugging the code..."))
+        display(HTML(f"{running_spinner_html} Debugging the code..."))
         self.progress = show_progress(1)
         
         con = self.item["con"]
@@ -22789,7 +22811,7 @@ class DecideStringCategorical(Node):
         column_name = self.para["column_name"]
         column_desc = table_object.column_desc.get(column_name, "")
         
-        display(HTML(f"🔍 Detecting category for <i>{table_pipeline}[{column_name}]</i>..."))
+        display(HTML(f"{running_spinner_html} Detecting category for <i>{table_pipeline}[{column_name}]</i>..."))
         create_progress_bar_with_numbers(3, doc_steps)
 
         idx = self.para["column_idx"]
@@ -22918,12 +22940,35 @@ class SelectTables(Node):
         query_widget = self.item["query_widget"]
         
         tables = get_table_names(con)
+        selected = None
+        
+        if "dbt_directory" in self.para:
+            try:
+                dbt_directory = self.para["dbt_directory"]
+                sources_file = os.path.join(dbt_directory, "sources.yml")
+                
+                if os.path.exists(sources_file):
+                    with open(sources_file, 'r') as file:
+                        yml_content = yaml.safe_load(file)
+                        
+                    if yml_content and 'sources' in yml_content:
+                        for source in yml_content['sources']:
+                            if 'tables' in source:
+                                selected = source['tables']
+                                break
+                
+                if selected:
+                    print(f"🤓 Found {len(selected)} previously selected tables in sources.yml")
+                    
+            except Exception as e:
+                print(f"Error reading sources.yml: {str(e)}. No tables pre-selected.")
+                selected = None
         
         print(f"🧐 There are {len(tables)} tables in your database. You can explore them:")
         dropdown = create_explore_button(query_widget, table_name=tables)
         
         print(f"🤓 Please select the tables:")
-        multi_select = create_column_selector_(columns=tables, default=True)
+        multi_select = create_column_selector_(columns=tables, default=False, selected=selected)
         
         next_button = widgets.Button(description="Next", button_style='success')
 
@@ -22955,6 +23000,7 @@ class SelectTables(Node):
                     os.makedirs(self.para["dbt_directory"])
                 
                 overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+                overwrite_checkbox.value = True
                 save_files_click(save_button)  
             
             callback({"selected_tables": table_names})
@@ -23481,7 +23527,7 @@ class DecideTableHubRelation(Node):
         hubs = hub_df["Hub"].tolist()
         
         sample_size = 5
-        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        sample_df = run_sql_return_df(con, f'SELECT * FROM "{table_name}" LIMIT {sample_size}')
         table_desc = sample_df.to_csv(index=False, quoting=1)
 
         return table_name, table_desc, hub_desc, hubs
@@ -24055,7 +24101,7 @@ class DecideFunctionalDependency(Node):
         all_columns = list(table_pipeline.get_final_step().get_schema().keys())
         table_summary = self.get_multi_node_parent_sibling_document("Create Short Table Summary")
         
-        display(HTML(f"🔍 Detecting functional dependencies for <i>{column_name}</i>..."))
+        display(HTML(f"{running_spinner_html} Detecting functional dependencies for <i>{column_name}</i>..."))
         show_progress(max_value=total, value=idx)
 
         decide_column_candidates = []
@@ -24236,7 +24282,7 @@ class SourceProjectStoryUnderstanding(Node):
         clear_output(wait=True)
 
         create_progress_bar_with_numbers(0, model_steps)
-        display(HTML(f"🤓 Generating the story of the project ..."))
+        display(HTML(f"{running_spinner_html} Generating the story of the project ..."))
         self.progress = show_progress(1)
 
         data_project = self.para["data_project"]
@@ -24322,7 +24368,7 @@ class SourceTableUnderstand(Node):
         self.input_item = item
         create_progress_bar_with_numbers(0, model_steps)
 
-        print("🤓 Understanding the database ...")
+        print(f"{running_spinner_html} Understanding the database ...")
         self.progress = show_progress(1)
 
         data_project = self.para["data_project"]
@@ -24397,7 +24443,7 @@ Return in the following format:
             selected_table = dropdown.value
 
             print("😎 Query submitted. Check out the data widget!")
-            query_widget.run_query(f"SELECT * FROM {selected_table}")
+            query_widget.run_query(f'SELECT * FROM "{selected_table}"')
 
         explore_button.on_click(on_explore_button_clicked)
 
@@ -24474,7 +24520,8 @@ Return in the following format:
         
 
 class Table:
-    def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_acceptable=None, unusualness=None, category=None, uniqueness=None, patterns=None):
+    def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_acceptable=None, unusualness=None, 
+                 category=None, uniqueness=None, patterns=None, variant=None):
         self.table_name = table_name
         self.table_summary = table_summary
         self.columns = columns or []
@@ -24484,7 +24531,8 @@ class Table:
         self.category = category or {}
         self.uniqueness = uniqueness or {}
         self.patterns = patterns or {}
-    
+        self.variant = variant or {}
+        
     def print_category(self):
         category_string = ""
         for column, categories in self.category.items():
@@ -24576,6 +24624,12 @@ class Table:
                 patterns = self.patterns[patterns_key]
                 if patterns:
                     cocoon_meta["patterns"] = patterns
+                    
+            variant_key = next((key for key in self.variant if key.lower() == column.lower()), None)
+            if variant_key:
+                variant_info = self.variant[variant_key]
+                if variant_info:
+                    cocoon_meta["variant"] = variant_info
 
             column_data = OrderedDict([
                 ("name", column),
@@ -24636,6 +24690,8 @@ class Table:
                     self.uniqueness[column_name] = cocoon_meta['uniqueness']
                 if 'patterns' in cocoon_meta:
                     self.patterns[column_name] = cocoon_meta['patterns']
+                if 'variant' in cocoon_meta:
+                    self.variant[column_name] = cocoon_meta['variant']
                     
                     
     def add_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
@@ -24948,7 +25004,7 @@ class StageProgress(Node):
             
         def skip_this_workflow():
             table_name = self.para["table_name"]
-            new_table_name = "stg_" + table_name.replace("src_", "")
+            new_table_name = rename_for_stg(table_name)
             
             file_names = [f"{new_table_name}.sql",  f"{new_table_name}.yml",]
             
@@ -24960,8 +25016,11 @@ class StageProgress(Node):
                 with open(file_names[0], "r") as f:
                     sql_query = f.read()
                     con = self.item["con"]
+                    source_step = SQLStep(table_name=table_name, con=con)
                     sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
-                    sql_step.run_codes()
+                    table_pipeline = TransformationSQLPipeline(steps = [source_step], edges=[])
+                    table_pipeline.add_step_to_final(sql_step)
+                    self.para["table_pipeline"] = table_pipeline
                     
                 
                 with open(file_names[1], "r") as f:
@@ -25060,7 +25119,7 @@ class StageSourceTargetProgress(Node):
             
         def skip_this_workflow():
             table_name = self.para["table_name"]
-            new_table_name = "stg_" + table_name.replace("src_", "")
+            new_table_name = rename_for_stg(table_name)
             
             file_names = [f"{new_table_name}.sql",  f"{new_table_name}.yml",]
             
@@ -25072,7 +25131,8 @@ class StageSourceTargetProgress(Node):
                     sql_query = f.read()
                     con = self.item["con"]
                     sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
-                    sql_step.run_codes()
+                    table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+                    self.para["table_pipeline"] = table_pipeline
                     
                 
                 with open(file_names[1], "r") as f:
@@ -25163,33 +25223,48 @@ class StageForAll(MultipleNode):
         df["status"] = "✅"
         display(df)
         
-        display(HTML("💯 All the tables are clean! Next, we will integrate the tables ..."))
+        display(HTML("💯 All the tables are clean! Next, we will integrate the tables ... <br> ⚠️ You need to materialize the tables before proceeding."))
 
-        submit_button = widgets.Button(description="Next",
-                                       button_style='success',
-                                       icon='check')
-        
+        view_button = widgets.Button(description="As View", button_style='info', icon='eye')
+        table_button = widgets.Button(description="As Table", button_style='info', icon='table')
         
         data_project = self.para["data_project"]
         data_project.tables = {}
         tables = []
+        
         for node in self.nodes.values():
             table_object = node.para["table_object"]
             table_name = table_object.table_name
             data_project.table_object[table_name] = table_object
             tables.append(table_name)
+        
+        def on_materialize_click(b, mode):
+            display(HTML(f'{running_spinner_html}</i> Creating {mode[5:].lower()}s.'))
+            self.progress = show_progress(len(self.nodes))
             
-        con = self.item["con"]
-        data_project.add_tables_with_con(tables, con)
+            con = self.item["con"]
+            for node in self.nodes.values():
+                table_pipeline = node.para["table_pipeline"]
+                table_pipeline.run_codes(con=con, mode=mode)
+                self.progress.value += 1
+            
+            display(HTML(f"Tables materialized as {mode[5:].lower()}s."))
+        
+        view_button.on_click(lambda b: on_materialize_click(b, "WITH_VIEW"))
+        table_button.on_click(lambda b: on_materialize_click(b, "WITH_TABLE"))
+        
+        display(widgets.HBox([view_button, table_button]))
+        
+        submit_button = widgets.Button(description="Next", button_style='success', icon='check')
         
         def on_submit_button_click(b):
-            with self.output_context():
-                callback({})
+            con = self.item["con"] 
+            data_project.add_tables_with_con(tables, con)
+            callback({})
         
         submit_button.on_click(on_submit_button_click)
         display(submit_button)
-
-
+        
 
 
 
@@ -25718,6 +25793,14 @@ Return in the following format:
         
         return summary
     
+    def run_but_fail(self, extract_output, use_cache=True):
+        pk_table_column_pairs, pk_table_description = extract_output
+        
+        result = {}
+        for pk_table, pk in pk_table_column_pairs:
+            result[pk_table] = {"entity_name": pk, "entity_description": pk}
+        return result        
+
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         pk_table_column_pairs, pk_table_description = extract_output
         summary = run_output
@@ -25903,10 +25986,10 @@ class ReorderRelationToStory(Node):
     Entity: {', '.join(row['Entities'])}
     Descriptions: {row['Relation Description']}"""
         
-        return relation_desc
+        return relation_df, relation_desc
     
     def run(self, extract_output, use_cache=True):
-        relation_desc = extract_output
+        relation_df, relation_desc = extract_output
 
         template = f"""For a database, you have the following 'Relation Name': 'Relation Description'
 {relation_desc}
@@ -25957,6 +26040,13 @@ story: # Reorder the relations
 
         return summary
     
+    def run_but_fail(self, extract_output, use_cache=True):
+        relation_df, relation_desc = extract_output
+        story_list = []
+        for idx, row in relation_df.iterrows():
+            story_list.append({"relation_name": row['Relation Name'], "relation_desc": row['Relation Description']})
+        return {"reasoning": "Fail to run", "story": story_list}
+                
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output["story"])
 
@@ -26326,13 +26416,13 @@ class DBTProjectConfig(Node):
         clear_output(wait=True)
 
         dbt_name_input = widgets.Text(
-            description='DBT Project Name:',
-            value=self.para.get("dbt_name", "dbt_project"),
+            description='Project Name:',
+            value=self.para.get("dbt_name", "My Project"),
             style={'description_width': 'initial'}
         )
 
         dbt_directory_input = widgets.Text(
-            description='DBT Project Directory:',
+            description='Project Directory:',
             value=self.para.get("dbt_directory", "./dbt_project"),
             style={'description_width': 'initial'}
         )
@@ -26353,9 +26443,8 @@ class DBTProjectConfig(Node):
 
         next_button.on_click(on_button_click)
 
-        display(HTML("<h3>🛠️ Configure your DBT Project</h3>"))
-        display(dbt_name_input)
-        display(dbt_directory_input)
+        display(HTML("<h3>🛠️ Configure your project</h3>"))
+        display(VBox([dbt_name_input, dbt_directory_input]))
         display(next_button)
 
         if viewer or ("viewer" in self.para and self.para["viewer"]):
@@ -26363,8 +26452,6 @@ class DBTProjectConfig(Node):
                 on_button_click(next_button)
             
 
-        
-        
 class DecideSCDTable(Node):
     default_name = 'Decide SCD Table'
     default_description = 'This decide if the given table contains SCD'
@@ -26375,7 +26462,7 @@ class DecideSCDTable(Node):
         
         table_name = self.para["element_name"]
         
-        display(HTML(f"🤓 Identifying Slowly Changing Dimensions for <i>{table_name}</i> ..."))
+        display(HTML(f'{running_spinner_html} Identifying Slowly Changing Dimensions for <i>{table_name}</i> ...'))
 
         idx = self.para["idx"]
         total = self.para["total"]
@@ -26387,7 +26474,7 @@ class DecideSCDTable(Node):
         table_desc = table_object.table_summary
         
         sample_size = 5
-        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        sample_df = run_sql_return_df(con, f'SELECT * FROM "{table_name}" LIMIT {sample_size}')
 
         return table_name, table_desc, sample_df
 
@@ -26400,20 +26487,21 @@ Here are its sample rows:
 {sample_df.to_csv(index=False, quoting=1)}
 
 Is the table a slowly changing dimension?
-SCD have different versions of rows to track changes over time
+SCD have different versions of rows to track dimension element changes over time
 It has to be a dimension, not a fact table that tracks aggregates over time.
 
 If so, what are the columns that
-(1) uniquely identify objects 
-(2) for each object, identify its timestamp/version
+(1) uniquely identify each dimension element
+(2) for each element, identify columns that track its update timestamp/version
 Respond with the following format:
 ```yml
-reasoning: >
-    The table is about ... It tracks the versions of ... It is a dimension/fact
+reasoning: >-
+    The table is about ... It is a dimension/fact ...
+    It tracks the versions of ... The columns that track the update timestamp/version are ...
 scd: true/false
 # if scd is true, specify the following
 id_cols: ["col1", "col2"...]
-ver_cols: ["col1", "col2"...]
+update_timestamp_cols: ["col1", "col2"...] # preferably, only update time stamp; valid_to is also fine
 ```"""
         messages = [{"role": "user", "content": template}]
 
@@ -26438,7 +26526,7 @@ ver_cols: ["col1", "col2"...]
             raise TypeError("summary['scd'] must be a boolean")
 
         if summary['scd']:
-            for key in ['id_cols', 'ver_cols']:
+            for key in ['id_cols', 'update_timestamp_cols']:
                 if key not in summary:
                     raise KeyError(f"summary is missing required key for SCD: {key}")
                 if not isinstance(summary[key], list):
@@ -26446,15 +26534,23 @@ ver_cols: ["col1", "col2"...]
                 if not all(isinstance(col, str) for col in summary[key]):
                     raise TypeError(f"All elements in summary['{key}'] must be strings")
 
-            all_cols = set(summary['id_cols'] + summary['ver_cols'])
+            all_cols = set(summary['id_cols'] + summary['update_timestamp_cols'])
             missing_cols = all_cols - set(sample_df.columns)
             if missing_cols:
                 raise ValueError(f"The following columns are missing from the DataFrame: {missing_cols}")
             
         return summary
-
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {
+            "reasoning": "Fail to decide",
+            "scd": False
+        }
+    
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
+        
+        
     
 class DecideSCDForAll(MultipleNode):
     default_name = 'Decide SCD For All'
@@ -26485,7 +26581,7 @@ class DecideSCDForAll(MultipleNode):
         dropdown = create_explore_button(query_widget, 
                                          table_name=list(data_project.table_object.keys()))
         
-        display(HTML("🤓 We have identified slowly changing dimensions"))
+        display(HTML("🤓 We have identified slowly changing dimensions. <br> 😎 Slowly changing dimensions are hard to model, so we will get the latest snapshot"))
         
         data = {
             'Table': [],
@@ -26500,7 +26596,7 @@ class DecideSCDForAll(MultipleNode):
                 data['Table'].append(table)
                 data['Is SCD'].append(summary["scd"])
                 if summary["scd"]:
-                    data['Version Columns'].append(summary["ver_cols"])
+                    data['Version Columns'].append(summary["update_timestamp_cols"])
                     data['ID Columns'].append(summary["id_cols"])
                 else:
                     data['Version Columns'].append([])
@@ -26532,7 +26628,7 @@ class DecideSCDForAll(MultipleNode):
             callback(document)
 
         next_button.on_click(on_button_click)
-
+                
         display(next_button)
                 
 class PerformSCDForAll(MultipleNode):
@@ -26574,7 +26670,7 @@ class PerformSCDTable(Node):
         
         table_name = self.para["element_name"]
         
-        display(HTML(f"🤓 Performing Slowly Changing Dimensions for <i>{table_name}</i> ..."))
+        display(HTML(f'{running_spinner_html} Performing Slowly Changing Dimensions for <i>{table_name}</i> ...'))
 
         idx = self.para["idx"]
         total = self.para["total"]
@@ -26585,7 +26681,7 @@ class PerformSCDTable(Node):
         id_columns = self.para["id_columns"]
         
         sample_size = 5
-        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        sample_df = run_sql_return_df(con, f'SELECT * FROM "{table_name}" LIMIT {sample_size}')
         
         data_project = self.para["data_project"]
         table_object = data_project.table_object[table_name]
@@ -26632,6 +26728,10 @@ new_summary: The table is about ... It tracks the most recent version of ...
             raise TypeError("summary['new_summary'] must be a string")
         
         return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        table_name, version_columns, id_columns, sample_df, table_summary = extract_output
+        return {"new_summary": table_summary}
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         summary = run_output
@@ -26740,8 +26840,6 @@ class DecideKeysForAll(MultipleNode):
         dropdown = create_explore_button(query_widget, 
                                          table_name=self.elements)
         
-        display(HTML("🤓 We have identified keys for the tables"))
-        
         data = {
             'Table': [],
             'Primary Key': [],
@@ -26771,19 +26869,20 @@ class DecideKeysForAll(MultipleNode):
         }
         
         grid = create_dataframe_grid(df, editable_columns, reset=reset,  editable_list=editable_list)
-        display(grid)
+        
         
         next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
             document = df.to_json(orient="split")
-            
             callback(document)
 
         next_button.on_click(on_button_click)
+        
+        on_button_click(next_button)
+        
 
-        display(next_button)
         
 class DecideKeysTable(Node):
     default_name = 'Decide Keys Table'
@@ -26795,7 +26894,7 @@ class DecideKeysTable(Node):
         
         table_name = self.para["element_name"]
         
-        display(HTML(f"🤓 Identifying Keys for <i>{table_name}</i> ..."))
+        display(HTML(f'{running_spinner_html} Identifying Keys for <i>{table_name}</i> ...'))
 
         idx = self.para["idx"]
         total = self.para["total"]
@@ -26803,7 +26902,7 @@ class DecideKeysTable(Node):
         self.progress = show_progress(max_value=total, value=idx)
         
         sample_size = 5
-        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        sample_df = run_sql_return_df(con, f'SELECT * FROM "{table_name}" LIMIT {sample_size}')
         
         data_project = self.para["data_project"]
         table_object = data_project.table_object[table_name]
@@ -26870,6 +26969,14 @@ pk: col1 # Leave empty if no primary key
         
         return summary
     
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        table_name, sample_df, table_summary, column_desc = extract_output
+        
+        return {"reasoning": "fail to identify keys",
+                "keys": [],
+                "pk": None }
+    
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         summary = run_output
         callback(summary) 
@@ -26882,17 +26989,12 @@ class ConnectPKFKTable(ListNode):
     def extract(self, item):
         clear_output(wait=True)
     
-        display(HTML(f"🤓 Connecting PK FK ..."))
-        self.progress = show_progress(max_value=1, value=0)
+        display(HTML(f'{running_spinner_html}</i>  Connecting PK FK ...'))
+        
         
         data_project = self.para["data_project"]
-        
-        query_widget = self.item["query_widget"]
-        
-        dropdown = create_explore_button(query_widget, 
-                                         table_name=list(data_project.table_object.keys()))
 
-        key_df = pd.read_json(self.get_sibling_document('Decide Keys For All'), orient="split")
+        key_df = pd.read_json(self.get_sibling_document('Refine Primary Key'), orient="split")
         database_desc = ""
         
         pk_tables = []
@@ -26931,6 +27033,7 @@ class ConnectPKFKTable(ListNode):
             table_desc = f"{table_name}:\n" + indent_paragraph(table_desc)
             database_desc += table_desc + "\n"
             
+        self.progress = show_progress(max_value=len(pk_tables), value=0)
         outputs = [(pk, table_name, database_desc) for pk, table_name in pk_tables]
         return outputs
 
@@ -26989,9 +27092,16 @@ fks: # a list of dicts, that maps table name to column name
             fk_table, fk_column = next(iter(fk.items()))
             if not isinstance(fk_table, str) or not isinstance(fk_column, str):
                 raise TypeError(f"Foreign key table and column must be strings: {fk}")
+            
+        self.progress.value += 1
         
         return new_summary
     
+    def run_but_fail(self, extract_output, use_cache=True):
+        pk, table_name, database_desc = extract_output
+        return {"reasoning": "Fail to run",
+                "fk": []}
+
     def merge_run_output(self, run_outputs):
         merged_output = {}
         for run_output in run_outputs:
@@ -27000,6 +27110,12 @@ fks: # a list of dicts, that maps table name to column name
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         self.progress.value += 1
+        data_project = self.para["data_project"]
+        
+        query_widget = self.item["query_widget"]
+        
+        dropdown = create_explore_button(query_widget, 
+                                         table_name=list(data_project.table_object.keys()))
         
         summary = run_output
         
@@ -27045,8 +27161,6 @@ fks: # a list of dicts, that maps table name to column name
             df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
             document = df.to_json(orient="split")
             
-            data_project = self.para["data_project"]
-            
             for idx, row in df.iterrows():
                 if row['Table[PK]'] == "":
                     continue
@@ -27063,9 +27177,6 @@ fks: # a list of dicts, that maps table name to column name
         display(next_button)
         
         
-
-        
-
 
 def get_table_to_entities_mapping(pk_fk_map, primary_table_to_entity):
     def get_entity_name(table):
@@ -27101,7 +27212,7 @@ class RelationUnderstanding(Node):
         entities = self.para["entities"]
         con = self.item["con"]
 
-        display(HTML(f"🔍 Reading relation in {table_name} ..."))
+        display(HTML(f'{running_spinner_html} Reading relation in {table_name} ...'))
         create_progress_bar_with_numbers(3, doc_steps)
 
         self.input_item = item
@@ -27114,7 +27225,7 @@ class RelationUnderstanding(Node):
         table_summary = table_object.table_summary
         
         sample_size = 5
-        sample_df = run_sql_return_df(con, f"SELECT * FROM {table_name} LIMIT {sample_size}")
+        sample_df = run_sql_return_df(con, f'SELECT * FROM "{table_name}" LIMIT {sample_size}')
         
         return table_name, entities, sample_df, table_summary
     
@@ -27168,11 +27279,14 @@ relation_desc: >-
         
         return summary
     
+    def run_but_fail(self, extract_output, use_cache=True):
+        table_name, entities, sample_df, table_summary = extract_output
+        return {"relation_desc": table_summary,
+                "relation_name": "".join(entities)}
+
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         callback(run_output)
         
-        
-
 
 
 def build_story_yml_dict(relation_df, entity_df, story_summary):
@@ -27246,7 +27360,7 @@ class DocumentProject(Node):
                 source_choice_html += f'<a class="nav-link small {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_source_{table}">{table}</a>'
 
             for idx, table in enumerate(source_tables):
-                df_html = run_sql_return_df(con, f"SELECT * FROM {table} LIMIT 100").to_html()
+                df_html = run_sql_return_df(con, f'SELECT * FROM "{table}" LIMIT 100').to_html()
                 source_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_source_{table}">
             <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
             <div class="code_container mb-4 mx-4">{df_html}</div>
@@ -27265,6 +27379,7 @@ class DocumentProject(Node):
 
 
         stage_tables = []
+        
         if os.path.exists(os.path.join(dbt_directory, "stage")):
             for file_name in os.listdir(os.path.join(dbt_directory, "stage")):
                 if file_name.endswith(".yml"):
@@ -27283,7 +27398,7 @@ class DocumentProject(Node):
                 with open(os.path.join(dbt_directory, "stage", f"{table}.sql"), "r") as file:
                     sql_content = file.read()
                 
-                df_html = run_sql_return_df(con, f"SELECT * FROM {table} LIMIT 100").to_html()
+                df_html = run_sql_return_df(con, f'SELECT * FROM "{table}" LIMIT 100').to_html()
                 
                 stage_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_stage_{table}">
             <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
@@ -27330,7 +27445,7 @@ class DocumentProject(Node):
                 with open(os.path.join(dbt_directory, "snapshot", f"{table}.sql"), "r") as file:
                     sql_content = file.read()
                 
-                df_html = run_sql_return_df(con, f"SELECT * FROM {table} LIMIT 100").to_html()
+                df_html = run_sql_return_df(con, f'SELECT * FROM "{table}" LIMIT 100').to_html()
                 
                 snapshot_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_snapshot_{table}">
             <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
@@ -27757,3 +27872,199 @@ def read_data_project_from_dir(directory, con):
     data_project.build_foreign_key_from_join_graph_yml(join_yml_content)
     return data_project
 
+
+class DecideVariantTypes(Node):
+    default_name = 'Decide Variant Types'
+    default_description = 'This allows users to analyze and decide how to handle VARIANT data types in Snowflake.'
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        display(HTML('{running_spinner_html}</i> Analyzing VARIANT data types ...'))
+        
+        create_progress_bar_with_numbers(0, doc_steps)
+        self.progress = show_progress(1)
+        con = self.item["con"]
+        table_pipeline = self.para["table_pipeline"]
+        database_name = get_database_name(con)
+        if database_name != "Snowflake":
+            callback({})
+        schema = table_pipeline.get_schema(con)
+        columns = list(schema.keys())
+        variant_columns = []
+        
+        for col in columns:
+            if get_reverse_type(schema[col], database_name) == 'VARIANT':
+                variant_columns.append(col)
+        if not variant_columns:
+            callback({})
+            
+        document = {}
+        with_context = table_pipeline.get_codes(mode="WITH")
+        
+        for col in variant_columns:
+            document[col] = OrderedDict()
+            
+            query = f"""
+            SELECT 
+                TYPEOF(t."{col}") as DATA_TYPE,
+                COUNT(*) as TYPE_COUNT
+            FROM 
+                "{table_pipeline}" t
+            GROUP BY 
+                TYPEOF(t."{col}")
+            ORDER BY 
+                TYPE_COUNT DESC"""
+            
+            query = with_context + query
+            result_df = run_sql_return_df(con, query)
+            document[col]["variant_types"] = result_df['DATA_TYPE'].tolist()
+            
+            if 'OBJECT' in document[col]["variant_types"]:
+                unique_keys_query = f"""
+                SELECT COUNT(DISTINCT f.VALUE) AS UNIQUE_KEY_COUNT
+                FROM "{table_pipeline}" t,
+                LATERAL FLATTEN(OBJECT_KEYS(t."{col}")) f
+                WHERE IS_OBJECT(t."{col}")
+                """
+                unique_keys_query = with_context + unique_keys_query
+                unique_keys_result = run_sql_return_df(con, unique_keys_query)
+                unique_key_count = unique_keys_result['UNIQUE_KEY_COUNT'].iloc[0]
+                
+                if unique_key_count <= 100:
+                    keys_query = f"""
+                    SELECT DISTINCT f.VALUE::VARCHAR as KEY
+                    FROM "{table_pipeline}" t,
+                    LATERAL FLATTEN(OBJECT_KEYS(t."{col}")) f
+                    WHERE IS_OBJECT(t."{col}")
+                    """
+                    keys_query = with_context + keys_query
+                    keys_result = run_sql_return_df(con, keys_query)
+                    
+                    document[col]["object_keys"] = keys_result['KEY'].tolist()
+        
+        table_object = self.para["table_object"]
+        table_object.variant = document
+        callback(document)
+        
+def rename_for_stg(old_table_name):
+    return "stg_" + old_table_name.replace("src_", "")
+
+
+
+
+class RefinePK(Node):
+    default_name = 'Refine Primary Key'
+    default_description = 'This node refines the primary key for the given table'
+    
+    def extract(self, item):
+        clear_output(wait=True)
+
+        create_progress_bar_with_numbers(2, model_steps)
+        display(HTML(f'{running_spinner_html} Identifying Keys ...'))
+        
+        key_df = pd.read_json(self.get_sibling_document('Decide Keys For All'), orient="split")
+        
+        pk_df = key_df[key_df['Primary Key'] != ""]
+
+        data_project = self.para["data_project"]
+        
+        pk_table_description = ""
+        for idx, row in pk_df.iterrows():
+            table = row['Table']
+            pk = row['Primary Key']
+            table_object = data_project.table_object[table]
+            table_summary = table_object.table_summary
+            pk_table_description += f"{table}: {table_summary}\n   Potential primary key: '{pk}'\n"
+        
+        return key_df, pk_table_description
+    
+    def run(self, extract_output, use_cache=True):
+        _, pk_table_description = extract_output
+        
+        template = f"""You have the following tables with potential primary keys:
+{pk_table_description}
+
+Now, identify duplicated primary keys between tables.
+Duplicated primary keys are those with similar names.
+E.g., 'UserInformation' and 'UserAddress' can both have 'UserID' as primary key.
+In such cases, choose only the most important table to be the primary key table (e.g., 'UserInformation').
+And make the rest keys in other tables foreign key to the primary key.
+
+Return in the following format:
+```yml
+reasoning: >-
+    The primary keys of X are duplicated... Only the 
+
+pk_mapping:
+    table_name: primary_key # leave empty if not primary key
+    ...
+```"""
+        messages = [{"role": "user", "content": template}]
+        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        key_df, pk_table_description = extract_output
+        
+        mapping = {}
+        for idx, row in pk_df.iterrows():
+            table = row['Table']
+            pk = row['Primary Key']
+            mapping[table] = pk
+        
+        return {"reasoning": "Fail to run.",
+                "pk_mapping": mapping}
+
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        df = extract_output[0]
+        summary = run_output
+              
+        data_project = self.para["data_project"]
+        
+        query_widget = self.item["query_widget"]
+        
+        dropdown = create_explore_button(query_widget, 
+                                         table_name=list(data_project.table_object.keys()))
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        df['Primary Key'] = ""
+        for table, pk in summary['pk_mapping'].items():
+            if pk != "" and pk is not None:
+                df.loc[df['Table'] == table, 'Primary Key'] = pk
+        
+        editable_columns = [False, True, True]
+        reset = True
+        editable_list = {
+            'Keys': {}
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset,  editable_list=editable_list)
+        
+        
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+
+        def on_button_click(b):
+            df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+            document = df.to_json(orient="split")
+            
+            callback(document)
+
+        next_button.on_click(on_button_click)
+        
+        
+        display(HTML("🤓 We have identified keys for the tables"))
+        display(grid)
+        display(next_button)
