@@ -1,0 +1,2987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>completedacct</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>account_id</th>
+      <th>district_id</th>
+      <th>frequency</th>
+      <th>year_</th>
+      <th>month_</th>
+      <th>day_</th>
+      <th>parseddate</th>
+      <th>date_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>A00000576</td>
+      <td>55</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>A00003818</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>A00000704</td>
+      <td>55</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>A00000793</td>
+      <td>47</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>A00002484</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>A00001695</td>
+      <td>76</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>A00001726</td>
+      <td>48</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>A00002881</td>
+      <td>70</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>4</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>A00002357</td>
+      <td>19</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>4</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>A00002177</td>
+      <td>62</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>4</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>A00000485</td>
+      <td>6</td>
+      <td>Issuance After Transaction</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>4</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>A00002378</td>
+      <td>16</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>A00002632</td>
+      <td>24</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>A00001972</td>
+      <td>77</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>A00001539</td>
+      <td>1</td>
+      <td>Issuance After Transaction</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>A00000652</td>
+      <td>21</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>5</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>A00009635</td>
+      <td>70</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>5</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>A00001844</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>6</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>A00001926</td>
+      <td>37</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>6</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>A00002393</td>
+      <td>10</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>7</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>A00003510</td>
+      <td>41</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>7</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>A00001276</td>
+      <td>36</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>7</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>A00001637</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>A00003871</td>
+      <td>26</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>A00000192</td>
+      <td>55</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>A00000764</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>A00002087</td>
+      <td>7</td>
+      <td>Weekly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>A00002122</td>
+      <td>68</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>A00003592</td>
+      <td>54</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>A00003487</td>
+      <td>41</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>A00000435</td>
+      <td>38</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>A00001730</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>9</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>A00001493</td>
+      <td>41</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>9</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>A00000374</td>
+      <td>38</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>9</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>A00002925</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>A00000866</td>
+      <td>9</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>A00001628</td>
+      <td>60</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>A00002379</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>A00001979</td>
+      <td>26</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>A00000346</td>
+      <td>37</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>A00001338</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>A00001909</td>
+      <td>14</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>A00002099</td>
+      <td>3</td>
+      <td>Weekly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>A00003760</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>A00005270</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>A00001699</td>
+      <td>53</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>A00003909</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>A00002926</td>
+      <td>50</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>A00001731</td>
+      <td>33</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>A00011265</td>
+      <td>15</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>A00002519</td>
+      <td>4</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>15</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>A00010364</td>
+      <td>55</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>A00001481</td>
+      <td>15</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>A00000401</td>
+      <td>32</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>A00004034</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>A00002330</td>
+      <td>54</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>A00001806</td>
+      <td>40</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>A00003834</td>
+      <td>54</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>A00001222</td>
+      <td>66</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>20</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>A00000212</td>
+      <td>27</td>
+      <td>Weekly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>20</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>A00000456</td>
+      <td>49</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>A00000459</td>
+      <td>47</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>A00000772</td>
+      <td>45</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>A00001019</td>
+      <td>52</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>A00011295</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>A00002970</td>
+      <td>60</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>A00002676</td>
+      <td>73</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>A00001536</td>
+      <td>41</td>
+      <td>Weekly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>A00001179</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>23</td>
+      <td>2013-01-23</td>
+      <td>2013-01-23</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>A00000280</td>
+      <td>25</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>23</td>
+      <td>2013-01-23</td>
+      <td>2013-01-23</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>A00002425</td>
+      <td>41</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>23</td>
+      <td>2013-01-23</td>
+      <td>2013-01-23</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>A00009307</td>
+      <td>68</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2013-01-24</td>
+      <td>2013-01-24</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>A00004055</td>
+      <td>23</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2013-01-24</td>
+      <td>2013-01-24</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>A00005065</td>
+      <td>66</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2013-01-24</td>
+      <td>2013-01-24</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>A00003704</td>
+      <td>75</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2013-01-24</td>
+      <td>2013-01-24</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>A00000477</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>25</td>
+      <td>2013-01-25</td>
+      <td>2013-01-25</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>A00005891</td>
+      <td>54</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>25</td>
+      <td>2013-01-25</td>
+      <td>2013-01-25</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>A00001000</td>
+      <td>77</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>25</td>
+      <td>2013-01-25</td>
+      <td>2013-01-25</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>A00001750</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>26</td>
+      <td>2013-01-26</td>
+      <td>2013-01-26</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>A00002023</td>
+      <td>68</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>26</td>
+      <td>2013-01-26</td>
+      <td>2013-01-26</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>A00006473</td>
+      <td>12</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>26</td>
+      <td>2013-01-26</td>
+      <td>2013-01-26</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>A00001649</td>
+      <td>46</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>26</td>
+      <td>2013-01-26</td>
+      <td>2013-01-26</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>A00002670</td>
+      <td>13</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>A00001127</td>
+      <td>27</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>A00000163</td>
+      <td>30</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>A00002566</td>
+      <td>48</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>A00000009</td>
+      <td>70</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>A00001144</td>
+      <td>59</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>28</td>
+      <td>2013-01-28</td>
+      <td>2013-01-28</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>A00002902</td>
+      <td>32</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>28</td>
+      <td>2013-01-28</td>
+      <td>2013-01-28</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>A00004296</td>
+      <td>63</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>28</td>
+      <td>2013-01-28</td>
+      <td>2013-01-28</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>A00000443</td>
+      <td>64</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>28</td>
+      <td>2013-01-28</td>
+      <td>2013-01-28</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>A00003693</td>
+      <td>61</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>29</td>
+      <td>2013-01-29</td>
+      <td>2013-01-29</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>A00002070</td>
+      <td>72</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>29</td>
+      <td>2013-01-29</td>
+      <td>2013-01-29</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>A00001843</td>
+      <td>12</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>30</td>
+      <td>2013-01-30</td>
+      <td>2013-01-30</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>A00002714</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>30</td>
+      <td>2013-01-30</td>
+      <td>2013-01-30</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>A00004078</td>
+      <td>40</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>30</td>
+      <td>2013-01-30</td>
+      <td>2013-01-30</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>A00001675</td>
+      <td>36</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>2</td>
+      <td>1</td>
+      <td>2013-02-01</td>
+      <td>2013-02-01</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>A00005868</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2013-02-02</td>
+      <td>2013-02-02</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>A00001805</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2013-02-02</td>
+      <td>2013-02-02</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>A00002434</td>
+      <td>17</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2013-02-02</td>
+      <td>2013-02-02</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>account_id</th>
+      <th>district_id</th>
+      <th>transaction_frequency</th>
+      <th>year_</th>
+      <th>month_number</th>
+      <th>day_of_month</th>
+      <th>parsed_date</th>
+      <th>transaction_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>A00000576</td>
+      <td>55</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>A00003818</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>A00000704</td>
+      <td>55</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>A00000793</td>
+      <td>47</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>A00002484</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>A00001695</td>
+      <td>76</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>A00001726</td>
+      <td>48</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>A00002881</td>
+      <td>70</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>4</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>A00002357</td>
+      <td>19</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>4</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>A00002177</td>
+      <td>62</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>4</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>A00000485</td>
+      <td>6</td>
+      <td>Issuance After Transaction</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>4</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>A00002378</td>
+      <td>16</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>A00002632</td>
+      <td>24</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>A00001972</td>
+      <td>77</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>A00001539</td>
+      <td>1</td>
+      <td>Issuance After Transaction</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>3</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>A00000652</td>
+      <td>21</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>5</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>A00009635</td>
+      <td>70</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>5</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>A00001844</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>6</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>A00001926</td>
+      <td>37</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>6</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>A00002393</td>
+      <td>10</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>7</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>A00003510</td>
+      <td>41</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>7</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>A00001276</td>
+      <td>36</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>7</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>A00001637</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>A00003871</td>
+      <td>26</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>A00000192</td>
+      <td>55</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>A00000764</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>A00002087</td>
+      <td>7</td>
+      <td>Weekly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>A00002122</td>
+      <td>68</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>A00003592</td>
+      <td>54</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>A00003487</td>
+      <td>41</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>A00000435</td>
+      <td>38</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>A00001730</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>9</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>A00001493</td>
+      <td>41</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>9</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>A00000374</td>
+      <td>38</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>9</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>A00002925</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>A00000866</td>
+      <td>9</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>A00001628</td>
+      <td>60</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>A00002379</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>A00001979</td>
+      <td>26</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>A00000346</td>
+      <td>37</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>A00001338</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>A00001909</td>
+      <td>14</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>A00002099</td>
+      <td>3</td>
+      <td>Weekly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>A00003760</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>A00005270</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>A00001699</td>
+      <td>53</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>A00003909</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>A00002926</td>
+      <td>50</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>A00001731</td>
+      <td>33</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>A00011265</td>
+      <td>15</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>A00002519</td>
+      <td>4</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>15</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>A00010364</td>
+      <td>55</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>A00001481</td>
+      <td>15</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>A00000401</td>
+      <td>32</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>A00004034</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>A00002330</td>
+      <td>54</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>A00001806</td>
+      <td>40</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>A00003834</td>
+      <td>54</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>A00001222</td>
+      <td>66</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>20</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>A00000212</td>
+      <td>27</td>
+      <td>Weekly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>20</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>A00000456</td>
+      <td>49</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>A00000459</td>
+      <td>47</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>A00000772</td>
+      <td>45</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>A00001019</td>
+      <td>52</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>A00011295</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>A00002970</td>
+      <td>60</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>A00002676</td>
+      <td>73</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>A00001536</td>
+      <td>41</td>
+      <td>Weekly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>A00001179</td>
+      <td>74</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>23</td>
+      <td>2013-01-23</td>
+      <td>2013-01-23</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>A00000280</td>
+      <td>25</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>23</td>
+      <td>2013-01-23</td>
+      <td>2013-01-23</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>A00002425</td>
+      <td>41</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>23</td>
+      <td>2013-01-23</td>
+      <td>2013-01-23</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>A00009307</td>
+      <td>68</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2013-01-24</td>
+      <td>2013-01-24</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>A00004055</td>
+      <td>23</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2013-01-24</td>
+      <td>2013-01-24</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>A00005065</td>
+      <td>66</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2013-01-24</td>
+      <td>2013-01-24</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>A00003704</td>
+      <td>75</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2013-01-24</td>
+      <td>2013-01-24</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>A00000477</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>25</td>
+      <td>2013-01-25</td>
+      <td>2013-01-25</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>A00005891</td>
+      <td>54</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>25</td>
+      <td>2013-01-25</td>
+      <td>2013-01-25</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>A00001000</td>
+      <td>77</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>25</td>
+      <td>2013-01-25</td>
+      <td>2013-01-25</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>A00001750</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>26</td>
+      <td>2013-01-26</td>
+      <td>2013-01-26</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>A00002023</td>
+      <td>68</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>26</td>
+      <td>2013-01-26</td>
+      <td>2013-01-26</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>A00006473</td>
+      <td>12</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>26</td>
+      <td>2013-01-26</td>
+      <td>2013-01-26</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>A00001649</td>
+      <td>46</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>26</td>
+      <td>2013-01-26</td>
+      <td>2013-01-26</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>A00002670</td>
+      <td>13</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>A00001127</td>
+      <td>27</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>A00000163</td>
+      <td>30</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>A00002566</td>
+      <td>48</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>A00000009</td>
+      <td>70</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2013-01-27</td>
+      <td>2013-01-27</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>A00001144</td>
+      <td>59</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>28</td>
+      <td>2013-01-28</td>
+      <td>2013-01-28</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>A00002902</td>
+      <td>32</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>28</td>
+      <td>2013-01-28</td>
+      <td>2013-01-28</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>A00004296</td>
+      <td>63</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>28</td>
+      <td>2013-01-28</td>
+      <td>2013-01-28</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>A00000443</td>
+      <td>64</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>28</td>
+      <td>2013-01-28</td>
+      <td>2013-01-28</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>A00003693</td>
+      <td>61</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>29</td>
+      <td>2013-01-29</td>
+      <td>2013-01-29</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>A00002070</td>
+      <td>72</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>29</td>
+      <td>2013-01-29</td>
+      <td>2013-01-29</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>A00001843</td>
+      <td>12</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>30</td>
+      <td>2013-01-30</td>
+      <td>2013-01-30</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>A00002714</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>30</td>
+      <td>2013-01-30</td>
+      <td>2013-01-30</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>A00004078</td>
+      <td>40</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>1</td>
+      <td>30</td>
+      <td>2013-01-30</td>
+      <td>2013-01-30</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>A00001675</td>
+      <td>36</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>2</td>
+      <td>1</td>
+      <td>2013-02-01</td>
+      <td>2013-02-01</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>A00005868</td>
+      <td>44</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2013-02-02</td>
+      <td>2013-02-02</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>A00001805</td>
+      <td>1</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2013-02-02</td>
+      <td>2013-02-02</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>A00002434</td>
+      <td>17</td>
+      <td>Monthly Issuance</td>
+      <td>2013</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2013-02-02</td>
+      <td>2013-02-02</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_account_id"></div><b>📃 Summary:</b> Unique identifier for bank accounts<br><b>🦄 Unique:</b> This column represents a unique identifier for bank accounts. For this table, each row appears to be a specific transaction or statement for a bank account. The account_id is likely to be unique across rows as it's designed to uniquely identify each account.<br><b>🎨 Patterns:</b><br><ul><li><code>A\d{8}</code><br><i>Account IDs starting with 'A' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">district_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_district_id"></div><b>📃 Summary:</b> Identifier for the bank district<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_frequency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Monthly Issuance'>Monthly Issuance</option><option value='Weekly Issuance'>Weekly Issuance</option><option value='Issuance After Transaction'>Issuance After Transaction</option><option value='Daily Issuance'>Daily Issuance</option><option value='Bi-Weekly Issuance'>Bi-Weekly Issuance</option><option value='Quarterly Issuance'>Quarterly Issuance</option><option value='Annual Issuance'>Annual Issuance</option><option value='Semi-Annual Issuance'>Semi-Annual Issuance</option><option value='On-Demand Issuance'>On-Demand Issuance</option></select></span><br><br><div id="bar_viz_transaction_frequency"></div><b>📃 Summary:</b> Frequency of account activity or statements<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">year_</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_year_"></div><b>📃 Summary:</b> Year of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">month_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_month_number"></div><b>📃 Summary:</b> Month of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">day_of_month</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_day_of_month"></div><b>📃 Summary:</b> Day of the month for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">parsed_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_parsed_date"></div><b>📃 Summary:</b> Parsed full date of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_date"></div><b>📃 Summary:</b> Full date of the transaction or statement<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about bank accounts. It contains details of account IDs, district IDs, frequency of transactions, and dates. The dates are parsed into separate columns for year, month, and day. The frequency column shows "Monthly Issuance" for all samples, suggesting these are recurring transactions or statements.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>5</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_id</td>
+      <td>Unique identifier for bank accounts</td>
+      <td>account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>district_id</td>
+      <td>Identifier for the bank district</td>
+      <td>district_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>frequency</td>
+      <td>Frequency of account activity or statements</td>
+      <td>transaction_frequency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>parseddate</td>
+      <td>Parsed full date of the transaction</td>
+      <td>parsed_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>year_</td>
+      <td>Year of the transaction</td>
+      <td>year_</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>month_</td>
+      <td>Month of the transaction</td>
+      <td>month_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>day_</td>
+      <td>Day of the month for the transaction</td>
+      <td>day_of_month</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>date_</td>
+      <td>Full date of the transaction or statement</td>
+      <td>transaction_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>2</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>parsed_date</td>
+      <td>CAST("parsed_date" AS DATE)</td>
+      <td>To transform the 'parsed_date' column from VARCHAR to DATE in Snowflake, we can use a simple CAST function. The data is already in a format that Snowflake recognizes as a valid date (YYYY-MM-DD), so we don't need to use TO_DATE or specify a format string. A straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>transaction_date</td>
+      <td>CAST("transaction_date" AS DATE)</td>
+      <td>To transform the 'transaction_date' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the date strings ('YYYY-MM-DD') is already compatible with Snowflake's default date parsing, so we don't need to specify a format string. Snowflake will automatically recognize and convert this ISO date format.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'A00001861', 'value': 0.1}, {'label': 'A00002741', 'value': 0.1}, {'label': 'A00005129', 'value': 0.1}, {'label': 'A00003713', 'value': 0.1}, {'label': 'A00001990', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_account_id", data);
+data = [{'x': 2.9, 'y': 148}, {'x': 6.699999999999999, 'y': 47}, {'x': 10.5, 'y': 45}, {'x': 14.299999999999999, 'y': 37}, {'x': 18.1, 'y': 19}, {'x': 21.9, 'y': 41}, {'x': 25.699999999999996, 'y': 31}, {'x': 29.5, 'y': 45}, {'x': 33.3, 'y': 36}, {'x': 37.099999999999994, 'y': 30}, {'x': 40.9, 'y': 41}, {'x': 44.699999999999996, 'y': 45}, {'x': 48.5, 'y': 46}, {'x': 52.3, 'y': 54}, {'x': 56.099999999999994, 'y': 33}, {'x': 59.9, 'y': 42}, {'x': 63.699999999999996, 'y': 44}, {'x': 67.5, 'y': 59}, {'x': 71.3, 'y': 86}, {'x': 75.1, 'y': 71}];
+    binWidth = 3.8;
+    drawHistogram("hist_viz_district_id", data, binWidth);
+data = [{'label': 'Monthly Issuanc...', 'value': 92.5}, {'label': 'Weekly Issuance', 'value': 5.7}, {'label': 'Issuance After ...', 'value': 1.7999999999999998}];
+    drawBarChart("bar_viz_transaction_frequency", data);
+data = [{'x': 2013, 'y': 1000}];
+    binWidth = 2013;
+    drawHistogram("hist_viz_year_", data, binWidth);
+data = [{'x': 1.25, 'y': 96}, {'x': 1.75, 'y': 0}, {'x': 2.25, 'y': 98}, {'x': 2.75, 'y': 0}, {'x': 3.25, 'y': 104}, {'x': 3.75, 'y': 0}, {'x': 4.25, 'y': 77}, {'x': 4.75, 'y': 0}, {'x': 5.25, 'y': 91}, {'x': 5.75, 'y': 0}, {'x': 6.25, 'y': 88}, {'x': 6.75, 'y': 0}, {'x': 7.25, 'y': 99}, {'x': 7.75, 'y': 0}, {'x': 8.25, 'y': 102}, {'x': 8.75, 'y': 0}, {'x': 9.25, 'y': 103}, {'x': 9.75, 'y': 0}, {'x': 10.25, 'y': 75}, {'x': 10.75, 'y': 67}];
+    binWidth = 0.5;
+    drawHistogram("hist_viz_month_number", data, binWidth);
+data = [{'x': 1.725, 'y': 65}, {'x': 3.175, 'y': 37}, {'x': 4.625, 'y': 75}, {'x': 6.074999999999999, 'y': 31}, {'x': 7.525, 'y': 114}, {'x': 8.975, 'y': 30}, {'x': 10.425, 'y': 74}, {'x': 11.875, 'y': 32}, {'x': 13.325, 'y': 68}, {'x': 14.774999999999999, 'y': 30}, {'x': 16.225, 'y': 34}, {'x': 17.674999999999997, 'y': 51}, {'x': 19.125, 'y': 28}, {'x': 20.575, 'y': 62}, {'x': 22.025, 'y': 29}, {'x': 23.475, 'y': 63}, {'x': 24.924999999999997, 'y': 41}, {'x': 26.375, 'y': 75}, {'x': 27.825, 'y': 27}, {'x': 29.275, 'y': 34}];
+    binWidth = 1.45;
+    drawHistogram("hist_viz_day_of_month", data, binWidth);
+data = [{'label': '2013-02-08', 'value': 1.3}, {'label': '2013-10-08', 'value': 1.2}, {'label': '2013-02-27', 'value': 1.0}, {'label': '2013-06-08', 'value': 1.0}, {'label': '2013-03-08', 'value': 0.8999999999999999}, {'label': 'Other values', 'value': 94.6}];
+    drawBarChart("bar_viz_parsed_date", data);
+data = [{'label': '2013-02-08', 'value': 1.3}, {'label': '2013-10-08', 'value': 1.2}, {'label': '2013-02-27', 'value': 1.0}, {'label': '2013-06-08', 'value': 1.0}, {'label': '2013-03-08', 'value': 0.8999999999999999}, {'label': 'Other values', 'value': 94.6}];
+    drawBarChart("bar_viz_transaction_date", data);
+
+
+</script>
+</body>
+</html>

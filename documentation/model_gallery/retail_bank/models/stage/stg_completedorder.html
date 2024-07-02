@@ -1,0 +1,2567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>completedorder</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>account_id</th>
+      <th>bank_to</th>
+      <th>amount</th>
+      <th>k_symbol</th>
+      <th>account_to</th>
+      <th>order_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>A00000001</td>
+      <td>YZ</td>
+      <td>2452.0</td>
+      <td>Household Payment</td>
+      <td>87144583</td>
+      <td>29401</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>A00000002</td>
+      <td>ST</td>
+      <td>3372.7</td>
+      <td>Loan Payment</td>
+      <td>89597016</td>
+      <td>29402</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>A00000002</td>
+      <td>QR</td>
+      <td>7266.0</td>
+      <td>Household Payment</td>
+      <td>13943797</td>
+      <td>29403</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>A00000003</td>
+      <td>WX</td>
+      <td>1135.0</td>
+      <td>Household Payment</td>
+      <td>83084338</td>
+      <td>29404</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>A00000003</td>
+      <td>CD</td>
+      <td>327.0</td>
+      <td>None</td>
+      <td>24485939</td>
+      <td>29405</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>A00000003</td>
+      <td>AB</td>
+      <td>3539.0</td>
+      <td>Insurance Payment</td>
+      <td>59972357</td>
+      <td>29406</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>A00000004</td>
+      <td>UV</td>
+      <td>2078.0</td>
+      <td>Household Payment</td>
+      <td>26693541</td>
+      <td>29407</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>A00000004</td>
+      <td>UV</td>
+      <td>1285.0</td>
+      <td>Household Payment</td>
+      <td>5848086</td>
+      <td>29408</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>A00000005</td>
+      <td>GH</td>
+      <td>2668.0</td>
+      <td>Household Payment</td>
+      <td>37390208</td>
+      <td>29409</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>A00000006</td>
+      <td>AB</td>
+      <td>3954.0</td>
+      <td>Household Payment</td>
+      <td>44486999</td>
+      <td>29410</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>A00000007</td>
+      <td>IJ</td>
+      <td>4880.0</td>
+      <td>Household Payment</td>
+      <td>34452903</td>
+      <td>29411</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>A00000008</td>
+      <td>UV</td>
+      <td>2612.0</td>
+      <td>Household Payment</td>
+      <td>12510681</td>
+      <td>29412</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>A00000008</td>
+      <td>IJ</td>
+      <td>6712.0</td>
+      <td>None</td>
+      <td>93210345</td>
+      <td>29413</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>A00000010</td>
+      <td>UV</td>
+      <td>7033.0</td>
+      <td>Household Payment</td>
+      <td>18686104</td>
+      <td>29414</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>A00000010</td>
+      <td>QR</td>
+      <td>1344.0</td>
+      <td>Leasing Payment</td>
+      <td>93182509</td>
+      <td>29415</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>A00000025</td>
+      <td>AB</td>
+      <td>1110.0</td>
+      <td>None</td>
+      <td>79838293</td>
+      <td>29433</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>A00000025</td>
+      <td>WX</td>
+      <td>164.0</td>
+      <td>Insurance Payment</td>
+      <td>52864879</td>
+      <td>29434</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>A00000026</td>
+      <td>EF</td>
+      <td>10387.0</td>
+      <td>Household Payment</td>
+      <td>12891853</td>
+      <td>29435</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>A00000027</td>
+      <td>CD</td>
+      <td>4054.0</td>
+      <td>Household Payment</td>
+      <td>28175699</td>
+      <td>29436</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>A00000029</td>
+      <td>ST</td>
+      <td>6871.0</td>
+      <td>Household Payment</td>
+      <td>32924878</td>
+      <td>29439</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>A00000029</td>
+      <td>MN</td>
+      <td>829.0</td>
+      <td>None</td>
+      <td>93088209</td>
+      <td>29440</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>A00000029</td>
+      <td>UV</td>
+      <td>8.0</td>
+      <td>Insurance Payment</td>
+      <td>41335338</td>
+      <td>29441</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>A00000030</td>
+      <td>EF</td>
+      <td>2480.2</td>
+      <td>Leasing Payment</td>
+      <td>66168540</td>
+      <td>29442</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>A00000031</td>
+      <td>ST</td>
+      <td>10202.0</td>
+      <td>Household Payment</td>
+      <td>42430687</td>
+      <td>29443</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>A00000033</td>
+      <td>KL</td>
+      <td>3892.0</td>
+      <td>Household Payment</td>
+      <td>33047658</td>
+      <td>29444</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>A00000034</td>
+      <td>WX</td>
+      <td>1479.0</td>
+      <td>Leasing Payment</td>
+      <td>21845197</td>
+      <td>29445</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>A00000034</td>
+      <td>GH</td>
+      <td>502.0</td>
+      <td>Household Payment</td>
+      <td>19993174</td>
+      <td>29446</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>A00000034</td>
+      <td>IJ</td>
+      <td>6070.0</td>
+      <td>None</td>
+      <td>58999049</td>
+      <td>29447</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>A00000035</td>
+      <td>MN</td>
+      <td>1022.0</td>
+      <td>Household Payment</td>
+      <td>56788617</td>
+      <td>29448</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>A00000035</td>
+      <td>MN</td>
+      <td>1362.0</td>
+      <td>Household Payment</td>
+      <td>99848401</td>
+      <td>29449</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>A00000036</td>
+      <td>CD</td>
+      <td>4069.0</td>
+      <td>Household Payment</td>
+      <td>80693810</td>
+      <td>29450</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>A00000037</td>
+      <td>QR</td>
+      <td>5307.5</td>
+      <td>Loan Payment</td>
+      <td>71644407</td>
+      <td>29451</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>A00000037</td>
+      <td>IJ</td>
+      <td>2317.0</td>
+      <td>Household Payment</td>
+      <td>29728555</td>
+      <td>29452</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>A00000037</td>
+      <td>OP</td>
+      <td>2584.0</td>
+      <td>None</td>
+      <td>23782724</td>
+      <td>29453</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>A00000037</td>
+      <td>YZ</td>
+      <td>97.0</td>
+      <td>Insurance Payment</td>
+      <td>89609831</td>
+      <td>29454</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>A00000038</td>
+      <td>QR</td>
+      <td>2306.8</td>
+      <td>Loan Payment</td>
+      <td>79067885</td>
+      <td>29455</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>A00000038</td>
+      <td>EF</td>
+      <td>6901.0</td>
+      <td>Household Payment</td>
+      <td>2692229</td>
+      <td>29456</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>A00000038</td>
+      <td>KL</td>
+      <td>231.0</td>
+      <td>None</td>
+      <td>83435654</td>
+      <td>29457</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>A00000038</td>
+      <td>OP</td>
+      <td>228.0</td>
+      <td>Insurance Payment</td>
+      <td>64685678</td>
+      <td>29458</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>A00000039</td>
+      <td>CD</td>
+      <td>145.0</td>
+      <td>Household Payment</td>
+      <td>77015351</td>
+      <td>29459</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>A00000039</td>
+      <td>WX</td>
+      <td>2970.0</td>
+      <td>Household Payment</td>
+      <td>949460</td>
+      <td>29460</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>A00000040</td>
+      <td>ST</td>
+      <td>33.0</td>
+      <td>Household Payment</td>
+      <td>31161588</td>
+      <td>29461</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>A00000040</td>
+      <td>MN</td>
+      <td>4301.0</td>
+      <td>None</td>
+      <td>96111678</td>
+      <td>29462</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>A00000042</td>
+      <td>CD</td>
+      <td>4239.0</td>
+      <td>Household Payment</td>
+      <td>1007766</td>
+      <td>29463</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>A00000042</td>
+      <td>KL</td>
+      <td>239.0</td>
+      <td>None</td>
+      <td>55873340</td>
+      <td>29464</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>A00000042</td>
+      <td>YZ</td>
+      <td>1592.0</td>
+      <td>Insurance Payment</td>
+      <td>38318204</td>
+      <td>29465</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>A00000043</td>
+      <td>CD</td>
+      <td>6589.0</td>
+      <td>Household Payment</td>
+      <td>89718746</td>
+      <td>29466</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>A00000011</td>
+      <td>ST</td>
+      <td>2132.0</td>
+      <td>Household Payment</td>
+      <td>38470870</td>
+      <td>29416</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>A00000012</td>
+      <td>CD</td>
+      <td>297.0</td>
+      <td>Household Payment</td>
+      <td>23010808</td>
+      <td>29417</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>A00000012</td>
+      <td>KL</td>
+      <td>3295.0</td>
+      <td>Household Payment</td>
+      <td>63607060</td>
+      <td>29418</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>A00000013</td>
+      <td>EF</td>
+      <td>2444.0</td>
+      <td>Household Payment</td>
+      <td>35443323</td>
+      <td>29419</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>A00000014</td>
+      <td>WX</td>
+      <td>3629.0</td>
+      <td>Household Payment</td>
+      <td>11793136</td>
+      <td>29420</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>A00000015</td>
+      <td>KL</td>
+      <td>3072.0</td>
+      <td>Household Payment</td>
+      <td>24265569</td>
+      <td>29421</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>A00000017</td>
+      <td>EF</td>
+      <td>4032.0</td>
+      <td>Household Payment</td>
+      <td>15076423</td>
+      <td>29422</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>A00000019</td>
+      <td>QR</td>
+      <td>2523.2</td>
+      <td>Loan Payment</td>
+      <td>14132368</td>
+      <td>29423</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>A00000020</td>
+      <td>AB</td>
+      <td>2003.0</td>
+      <td>Household Payment</td>
+      <td>3399968</td>
+      <td>29425</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>A00000021</td>
+      <td>YZ</td>
+      <td>6276.0</td>
+      <td>Household Payment</td>
+      <td>60152441</td>
+      <td>29426</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>A00000022</td>
+      <td>ST</td>
+      <td>6352.0</td>
+      <td>Household Payment</td>
+      <td>34691494</td>
+      <td>29427</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>A00000023</td>
+      <td>MN</td>
+      <td>5807.0</td>
+      <td>Household Payment</td>
+      <td>20774019</td>
+      <td>29428</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>A00000024</td>
+      <td>IJ</td>
+      <td>221.0</td>
+      <td>Household Payment</td>
+      <td>50810194</td>
+      <td>29429</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>A00000024</td>
+      <td>QR</td>
+      <td>7641.0</td>
+      <td>None</td>
+      <td>46086388</td>
+      <td>29430</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>A00000025</td>
+      <td>YZ</td>
+      <td>2523.2</td>
+      <td>Loan Payment</td>
+      <td>1301700</td>
+      <td>29431</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>A00000025</td>
+      <td>IJ</td>
+      <td>6817.0</td>
+      <td>Household Payment</td>
+      <td>4896235</td>
+      <td>29432</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>A00000044</td>
+      <td>GH</td>
+      <td>2344.0</td>
+      <td>Household Payment</td>
+      <td>11344862</td>
+      <td>29467</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>A00000047</td>
+      <td>KL</td>
+      <td>6940.0</td>
+      <td>Household Payment</td>
+      <td>76620852</td>
+      <td>29470</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>A00000047</td>
+      <td>KL</td>
+      <td>174.0</td>
+      <td>None</td>
+      <td>37438374</td>
+      <td>29471</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>A00000047</td>
+      <td>EF</td>
+      <td>141.0</td>
+      <td>Insurance Payment</td>
+      <td>83359431</td>
+      <td>29472</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>A00000047</td>
+      <td>UV</td>
+      <td>9.0</td>
+      <td>None</td>
+      <td>30289006</td>
+      <td>29473</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>A00000048</td>
+      <td>AB</td>
+      <td>6268.0</td>
+      <td>Household Payment</td>
+      <td>50218236</td>
+      <td>29474</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>A00000048</td>
+      <td>ST</td>
+      <td>1029.0</td>
+      <td>None</td>
+      <td>2071685</td>
+      <td>29475</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>A00000049</td>
+      <td>CD</td>
+      <td>3102.0</td>
+      <td>Household Payment</td>
+      <td>83233099</td>
+      <td>29476</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>A00000050</td>
+      <td>WX</td>
+      <td>269.0</td>
+      <td>Household Payment</td>
+      <td>75148117</td>
+      <td>29477</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>A00000050</td>
+      <td>UV</td>
+      <td>7024.0</td>
+      <td>None</td>
+      <td>17270559</td>
+      <td>29478</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>A00000051</td>
+      <td>KL</td>
+      <td>2074.0</td>
+      <td>Household Payment</td>
+      <td>71050131</td>
+      <td>29479</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>A00000051</td>
+      <td>KL</td>
+      <td>2057.0</td>
+      <td>None</td>
+      <td>74449389</td>
+      <td>29480</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>A00000052</td>
+      <td>EF</td>
+      <td>560.0</td>
+      <td>Household Payment</td>
+      <td>6008005</td>
+      <td>29481</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>A00000052</td>
+      <td>QR</td>
+      <td>3723.0</td>
+      <td>None</td>
+      <td>85721850</td>
+      <td>29482</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>A00000053</td>
+      <td>MN</td>
+      <td>2851.0</td>
+      <td>Household Payment</td>
+      <td>81024360</td>
+      <td>29483</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>A00000054</td>
+      <td>IJ</td>
+      <td>2280.0</td>
+      <td>Household Payment</td>
+      <td>90659772</td>
+      <td>29484</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>A00000055</td>
+      <td>EF</td>
+      <td>3086.0</td>
+      <td>Household Payment</td>
+      <td>53077900</td>
+      <td>29485</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>A00000056</td>
+      <td>KL</td>
+      <td>8080.0</td>
+      <td>Household Payment</td>
+      <td>73539948</td>
+      <td>29486</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>A00000057</td>
+      <td>YZ</td>
+      <td>4107.0</td>
+      <td>Household Payment</td>
+      <td>55066728</td>
+      <td>29487</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>A00000059</td>
+      <td>IJ</td>
+      <td>695.0</td>
+      <td>Household Payment</td>
+      <td>38201576</td>
+      <td>29489</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>A00000059</td>
+      <td>ST</td>
+      <td>6190.0</td>
+      <td>None</td>
+      <td>65394794</td>
+      <td>29490</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>A00000061</td>
+      <td>EF</td>
+      <td>1645.0</td>
+      <td>Household Payment</td>
+      <td>20533621</td>
+      <td>29493</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>A00000061</td>
+      <td>IJ</td>
+      <td>668.0</td>
+      <td>Household Payment</td>
+      <td>20426410</td>
+      <td>29494</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>A00000062</td>
+      <td>EF</td>
+      <td>2273.0</td>
+      <td>Household Payment</td>
+      <td>80010622</td>
+      <td>29495</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>A00000063</td>
+      <td>CD</td>
+      <td>2237.0</td>
+      <td>Household Payment</td>
+      <td>85474604</td>
+      <td>29496</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>A00000063</td>
+      <td>EF</td>
+      <td>157.0</td>
+      <td>Household Payment</td>
+      <td>8346772</td>
+      <td>29497</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>A00000065</td>
+      <td>YZ</td>
+      <td>686.0</td>
+      <td>Household Payment</td>
+      <td>74934333</td>
+      <td>29498</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>A00000065</td>
+      <td>CD</td>
+      <td>3315.0</td>
+      <td>None</td>
+      <td>20976132</td>
+      <td>29499</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>A00000065</td>
+      <td>GH</td>
+      <td>3401.0</td>
+      <td>Insurance Payment</td>
+      <td>7764506</td>
+      <td>29500</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>A00000066</td>
+      <td>GH</td>
+      <td>4471.3</td>
+      <td>Leasing Payment</td>
+      <td>17993182</td>
+      <td>29501</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>A00000067</td>
+      <td>YZ</td>
+      <td>6915.0</td>
+      <td>Loan Payment</td>
+      <td>45128363</td>
+      <td>29502</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>A00000067</td>
+      <td>YZ</td>
+      <td>6393.0</td>
+      <td>Household Payment</td>
+      <td>57342255</td>
+      <td>29503</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>A00000067</td>
+      <td>UV</td>
+      <td>445.0</td>
+      <td>None</td>
+      <td>59079301</td>
+      <td>29504</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>A00000068</td>
+      <td>WX</td>
+      <td>1705.0</td>
+      <td>Household Payment</td>
+      <td>86834001</td>
+      <td>29505</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>A00000068</td>
+      <td>IJ</td>
+      <td>1186.0</td>
+      <td>None</td>
+      <td>8292192</td>
+      <td>29506</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>A00000068</td>
+      <td>ST</td>
+      <td>137.0</td>
+      <td>Insurance Payment</td>
+      <td>34692824</td>
+      <td>29507</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>A00000068</td>
+      <td>MN</td>
+      <td>61.0</td>
+      <td>None</td>
+      <td>92248808</td>
+      <td>29508</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>customer_account_id</th>
+      <th>recipient_bank_code</th>
+      <th>transaction_amount</th>
+      <th>payment_type</th>
+      <th>recipient_account_number</th>
+      <th>transaction_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>A00000001</td>
+      <td>YZ</td>
+      <td>2452.0</td>
+      <td>Household Payment</td>
+      <td>87144583</td>
+      <td>29401</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>A00000002</td>
+      <td>ST</td>
+      <td>3372.7</td>
+      <td>Loan Payment</td>
+      <td>89597016</td>
+      <td>29402</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>A00000002</td>
+      <td>QR</td>
+      <td>7266.0</td>
+      <td>Household Payment</td>
+      <td>13943797</td>
+      <td>29403</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>A00000003</td>
+      <td>WX</td>
+      <td>1135.0</td>
+      <td>Household Payment</td>
+      <td>83084338</td>
+      <td>29404</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>A00000003</td>
+      <td>CD</td>
+      <td>327.0</td>
+      <td>None</td>
+      <td>24485939</td>
+      <td>29405</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>A00000003</td>
+      <td>AB</td>
+      <td>3539.0</td>
+      <td>Insurance Payment</td>
+      <td>59972357</td>
+      <td>29406</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>A00000004</td>
+      <td>UV</td>
+      <td>2078.0</td>
+      <td>Household Payment</td>
+      <td>26693541</td>
+      <td>29407</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>A00000004</td>
+      <td>UV</td>
+      <td>1285.0</td>
+      <td>Household Payment</td>
+      <td>5848086</td>
+      <td>29408</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>A00000005</td>
+      <td>GH</td>
+      <td>2668.0</td>
+      <td>Household Payment</td>
+      <td>37390208</td>
+      <td>29409</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>A00000006</td>
+      <td>AB</td>
+      <td>3954.0</td>
+      <td>Household Payment</td>
+      <td>44486999</td>
+      <td>29410</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>A00000007</td>
+      <td>IJ</td>
+      <td>4880.0</td>
+      <td>Household Payment</td>
+      <td>34452903</td>
+      <td>29411</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>A00000008</td>
+      <td>UV</td>
+      <td>2612.0</td>
+      <td>Household Payment</td>
+      <td>12510681</td>
+      <td>29412</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>A00000008</td>
+      <td>IJ</td>
+      <td>6712.0</td>
+      <td>None</td>
+      <td>93210345</td>
+      <td>29413</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>A00000010</td>
+      <td>UV</td>
+      <td>7033.0</td>
+      <td>Household Payment</td>
+      <td>18686104</td>
+      <td>29414</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>A00000010</td>
+      <td>QR</td>
+      <td>1344.0</td>
+      <td>Leasing Payment</td>
+      <td>93182509</td>
+      <td>29415</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>A00000025</td>
+      <td>AB</td>
+      <td>1110.0</td>
+      <td>None</td>
+      <td>79838293</td>
+      <td>29433</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>A00000025</td>
+      <td>WX</td>
+      <td>164.0</td>
+      <td>Insurance Payment</td>
+      <td>52864879</td>
+      <td>29434</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>A00000026</td>
+      <td>EF</td>
+      <td>10387.0</td>
+      <td>Household Payment</td>
+      <td>12891853</td>
+      <td>29435</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>A00000027</td>
+      <td>CD</td>
+      <td>4054.0</td>
+      <td>Household Payment</td>
+      <td>28175699</td>
+      <td>29436</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>A00000029</td>
+      <td>ST</td>
+      <td>6871.0</td>
+      <td>Household Payment</td>
+      <td>32924878</td>
+      <td>29439</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>A00000029</td>
+      <td>MN</td>
+      <td>829.0</td>
+      <td>None</td>
+      <td>93088209</td>
+      <td>29440</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>A00000029</td>
+      <td>UV</td>
+      <td>8.0</td>
+      <td>Insurance Payment</td>
+      <td>41335338</td>
+      <td>29441</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>A00000030</td>
+      <td>EF</td>
+      <td>2480.2</td>
+      <td>Leasing Payment</td>
+      <td>66168540</td>
+      <td>29442</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>A00000031</td>
+      <td>ST</td>
+      <td>10202.0</td>
+      <td>Household Payment</td>
+      <td>42430687</td>
+      <td>29443</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>A00000033</td>
+      <td>KL</td>
+      <td>3892.0</td>
+      <td>Household Payment</td>
+      <td>33047658</td>
+      <td>29444</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>A00000034</td>
+      <td>WX</td>
+      <td>1479.0</td>
+      <td>Leasing Payment</td>
+      <td>21845197</td>
+      <td>29445</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>A00000034</td>
+      <td>GH</td>
+      <td>502.0</td>
+      <td>Household Payment</td>
+      <td>19993174</td>
+      <td>29446</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>A00000034</td>
+      <td>IJ</td>
+      <td>6070.0</td>
+      <td>None</td>
+      <td>58999049</td>
+      <td>29447</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>A00000035</td>
+      <td>MN</td>
+      <td>1022.0</td>
+      <td>Household Payment</td>
+      <td>56788617</td>
+      <td>29448</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>A00000035</td>
+      <td>MN</td>
+      <td>1362.0</td>
+      <td>Household Payment</td>
+      <td>99848401</td>
+      <td>29449</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>A00000036</td>
+      <td>CD</td>
+      <td>4069.0</td>
+      <td>Household Payment</td>
+      <td>80693810</td>
+      <td>29450</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>A00000037</td>
+      <td>QR</td>
+      <td>5307.5</td>
+      <td>Loan Payment</td>
+      <td>71644407</td>
+      <td>29451</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>A00000037</td>
+      <td>IJ</td>
+      <td>2317.0</td>
+      <td>Household Payment</td>
+      <td>29728555</td>
+      <td>29452</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>A00000037</td>
+      <td>OP</td>
+      <td>2584.0</td>
+      <td>None</td>
+      <td>23782724</td>
+      <td>29453</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>A00000037</td>
+      <td>YZ</td>
+      <td>97.0</td>
+      <td>Insurance Payment</td>
+      <td>89609831</td>
+      <td>29454</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>A00000038</td>
+      <td>QR</td>
+      <td>2306.8</td>
+      <td>Loan Payment</td>
+      <td>79067885</td>
+      <td>29455</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>A00000038</td>
+      <td>EF</td>
+      <td>6901.0</td>
+      <td>Household Payment</td>
+      <td>2692229</td>
+      <td>29456</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>A00000038</td>
+      <td>KL</td>
+      <td>231.0</td>
+      <td>None</td>
+      <td>83435654</td>
+      <td>29457</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>A00000038</td>
+      <td>OP</td>
+      <td>228.0</td>
+      <td>Insurance Payment</td>
+      <td>64685678</td>
+      <td>29458</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>A00000039</td>
+      <td>CD</td>
+      <td>145.0</td>
+      <td>Household Payment</td>
+      <td>77015351</td>
+      <td>29459</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>A00000039</td>
+      <td>WX</td>
+      <td>2970.0</td>
+      <td>Household Payment</td>
+      <td>949460</td>
+      <td>29460</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>A00000040</td>
+      <td>ST</td>
+      <td>33.0</td>
+      <td>Household Payment</td>
+      <td>31161588</td>
+      <td>29461</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>A00000040</td>
+      <td>MN</td>
+      <td>4301.0</td>
+      <td>None</td>
+      <td>96111678</td>
+      <td>29462</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>A00000042</td>
+      <td>CD</td>
+      <td>4239.0</td>
+      <td>Household Payment</td>
+      <td>1007766</td>
+      <td>29463</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>A00000042</td>
+      <td>KL</td>
+      <td>239.0</td>
+      <td>None</td>
+      <td>55873340</td>
+      <td>29464</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>A00000042</td>
+      <td>YZ</td>
+      <td>1592.0</td>
+      <td>Insurance Payment</td>
+      <td>38318204</td>
+      <td>29465</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>A00000043</td>
+      <td>CD</td>
+      <td>6589.0</td>
+      <td>Household Payment</td>
+      <td>89718746</td>
+      <td>29466</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>A00000011</td>
+      <td>ST</td>
+      <td>2132.0</td>
+      <td>Household Payment</td>
+      <td>38470870</td>
+      <td>29416</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>A00000012</td>
+      <td>CD</td>
+      <td>297.0</td>
+      <td>Household Payment</td>
+      <td>23010808</td>
+      <td>29417</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>A00000012</td>
+      <td>KL</td>
+      <td>3295.0</td>
+      <td>Household Payment</td>
+      <td>63607060</td>
+      <td>29418</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>A00000013</td>
+      <td>EF</td>
+      <td>2444.0</td>
+      <td>Household Payment</td>
+      <td>35443323</td>
+      <td>29419</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>A00000014</td>
+      <td>WX</td>
+      <td>3629.0</td>
+      <td>Household Payment</td>
+      <td>11793136</td>
+      <td>29420</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>A00000015</td>
+      <td>KL</td>
+      <td>3072.0</td>
+      <td>Household Payment</td>
+      <td>24265569</td>
+      <td>29421</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>A00000017</td>
+      <td>EF</td>
+      <td>4032.0</td>
+      <td>Household Payment</td>
+      <td>15076423</td>
+      <td>29422</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>A00000019</td>
+      <td>QR</td>
+      <td>2523.2</td>
+      <td>Loan Payment</td>
+      <td>14132368</td>
+      <td>29423</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>A00000020</td>
+      <td>AB</td>
+      <td>2003.0</td>
+      <td>Household Payment</td>
+      <td>3399968</td>
+      <td>29425</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>A00000021</td>
+      <td>YZ</td>
+      <td>6276.0</td>
+      <td>Household Payment</td>
+      <td>60152441</td>
+      <td>29426</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>A00000022</td>
+      <td>ST</td>
+      <td>6352.0</td>
+      <td>Household Payment</td>
+      <td>34691494</td>
+      <td>29427</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>A00000023</td>
+      <td>MN</td>
+      <td>5807.0</td>
+      <td>Household Payment</td>
+      <td>20774019</td>
+      <td>29428</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>A00000024</td>
+      <td>IJ</td>
+      <td>221.0</td>
+      <td>Household Payment</td>
+      <td>50810194</td>
+      <td>29429</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>A00000024</td>
+      <td>QR</td>
+      <td>7641.0</td>
+      <td>None</td>
+      <td>46086388</td>
+      <td>29430</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>A00000025</td>
+      <td>YZ</td>
+      <td>2523.2</td>
+      <td>Loan Payment</td>
+      <td>1301700</td>
+      <td>29431</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>A00000025</td>
+      <td>IJ</td>
+      <td>6817.0</td>
+      <td>Household Payment</td>
+      <td>4896235</td>
+      <td>29432</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>A00000044</td>
+      <td>GH</td>
+      <td>2344.0</td>
+      <td>Household Payment</td>
+      <td>11344862</td>
+      <td>29467</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>A00000047</td>
+      <td>KL</td>
+      <td>6940.0</td>
+      <td>Household Payment</td>
+      <td>76620852</td>
+      <td>29470</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>A00000047</td>
+      <td>KL</td>
+      <td>174.0</td>
+      <td>None</td>
+      <td>37438374</td>
+      <td>29471</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>A00000047</td>
+      <td>EF</td>
+      <td>141.0</td>
+      <td>Insurance Payment</td>
+      <td>83359431</td>
+      <td>29472</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>A00000047</td>
+      <td>UV</td>
+      <td>9.0</td>
+      <td>None</td>
+      <td>30289006</td>
+      <td>29473</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>A00000048</td>
+      <td>AB</td>
+      <td>6268.0</td>
+      <td>Household Payment</td>
+      <td>50218236</td>
+      <td>29474</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>A00000048</td>
+      <td>ST</td>
+      <td>1029.0</td>
+      <td>None</td>
+      <td>2071685</td>
+      <td>29475</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>A00000049</td>
+      <td>CD</td>
+      <td>3102.0</td>
+      <td>Household Payment</td>
+      <td>83233099</td>
+      <td>29476</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>A00000050</td>
+      <td>WX</td>
+      <td>269.0</td>
+      <td>Household Payment</td>
+      <td>75148117</td>
+      <td>29477</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>A00000050</td>
+      <td>UV</td>
+      <td>7024.0</td>
+      <td>None</td>
+      <td>17270559</td>
+      <td>29478</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>A00000051</td>
+      <td>KL</td>
+      <td>2074.0</td>
+      <td>Household Payment</td>
+      <td>71050131</td>
+      <td>29479</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>A00000051</td>
+      <td>KL</td>
+      <td>2057.0</td>
+      <td>None</td>
+      <td>74449389</td>
+      <td>29480</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>A00000052</td>
+      <td>EF</td>
+      <td>560.0</td>
+      <td>Household Payment</td>
+      <td>6008005</td>
+      <td>29481</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>A00000052</td>
+      <td>QR</td>
+      <td>3723.0</td>
+      <td>None</td>
+      <td>85721850</td>
+      <td>29482</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>A00000053</td>
+      <td>MN</td>
+      <td>2851.0</td>
+      <td>Household Payment</td>
+      <td>81024360</td>
+      <td>29483</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>A00000054</td>
+      <td>IJ</td>
+      <td>2280.0</td>
+      <td>Household Payment</td>
+      <td>90659772</td>
+      <td>29484</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>A00000055</td>
+      <td>EF</td>
+      <td>3086.0</td>
+      <td>Household Payment</td>
+      <td>53077900</td>
+      <td>29485</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>A00000056</td>
+      <td>KL</td>
+      <td>8080.0</td>
+      <td>Household Payment</td>
+      <td>73539948</td>
+      <td>29486</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>A00000057</td>
+      <td>YZ</td>
+      <td>4107.0</td>
+      <td>Household Payment</td>
+      <td>55066728</td>
+      <td>29487</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>A00000059</td>
+      <td>IJ</td>
+      <td>695.0</td>
+      <td>Household Payment</td>
+      <td>38201576</td>
+      <td>29489</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>A00000059</td>
+      <td>ST</td>
+      <td>6190.0</td>
+      <td>None</td>
+      <td>65394794</td>
+      <td>29490</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>A00000061</td>
+      <td>EF</td>
+      <td>1645.0</td>
+      <td>Household Payment</td>
+      <td>20533621</td>
+      <td>29493</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>A00000061</td>
+      <td>IJ</td>
+      <td>668.0</td>
+      <td>Household Payment</td>
+      <td>20426410</td>
+      <td>29494</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>A00000062</td>
+      <td>EF</td>
+      <td>2273.0</td>
+      <td>Household Payment</td>
+      <td>80010622</td>
+      <td>29495</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>A00000063</td>
+      <td>CD</td>
+      <td>2237.0</td>
+      <td>Household Payment</td>
+      <td>85474604</td>
+      <td>29496</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>A00000063</td>
+      <td>EF</td>
+      <td>157.0</td>
+      <td>Household Payment</td>
+      <td>8346772</td>
+      <td>29497</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>A00000065</td>
+      <td>YZ</td>
+      <td>686.0</td>
+      <td>Household Payment</td>
+      <td>74934333</td>
+      <td>29498</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>A00000065</td>
+      <td>CD</td>
+      <td>3315.0</td>
+      <td>None</td>
+      <td>20976132</td>
+      <td>29499</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>A00000065</td>
+      <td>GH</td>
+      <td>3401.0</td>
+      <td>Insurance Payment</td>
+      <td>7764506</td>
+      <td>29500</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>A00000066</td>
+      <td>GH</td>
+      <td>4471.3</td>
+      <td>Leasing Payment</td>
+      <td>17993182</td>
+      <td>29501</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>A00000067</td>
+      <td>YZ</td>
+      <td>6915.0</td>
+      <td>Loan Payment</td>
+      <td>45128363</td>
+      <td>29502</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>A00000067</td>
+      <td>YZ</td>
+      <td>6393.0</td>
+      <td>Household Payment</td>
+      <td>57342255</td>
+      <td>29503</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>A00000067</td>
+      <td>UV</td>
+      <td>445.0</td>
+      <td>None</td>
+      <td>59079301</td>
+      <td>29504</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>A00000068</td>
+      <td>WX</td>
+      <td>1705.0</td>
+      <td>Household Payment</td>
+      <td>86834001</td>
+      <td>29505</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>A00000068</td>
+      <td>IJ</td>
+      <td>1186.0</td>
+      <td>None</td>
+      <td>8292192</td>
+      <td>29506</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>A00000068</td>
+      <td>ST</td>
+      <td>137.0</td>
+      <td>Insurance Payment</td>
+      <td>34692824</td>
+      <td>29507</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>A00000068</td>
+      <td>MN</td>
+      <td>61.0</td>
+      <td>None</td>
+      <td>92248808</td>
+      <td>29508</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_customer_account_id"></div><b>📃 Summary:</b> Customer's unique account identifier<br><b>🎨 Patterns:</b><br><ul><li><code>A\d{8}</code><br><i>Customer account IDs starting with 'A' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">recipient_bank_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='AB'>AB</option><option value='CD'>CD</option><option value='EF'>EF</option><option value='GH'>GH</option><option value='IJ'>IJ</option><option value='KL'>KL</option><option value='MN'>MN</option><option value='OP'>OP</option><option value='QR'>QR</option><option value='ST'>ST</option><option value='UV'>UV</option><option value='WX'>WX</option><option value='YZ'>YZ</option><option value='AA'>AA</option><option value='BB'>BB</option><option value='CC'>CC</option><option value='DD'>DD</option><option value='EE'>EE</option><option value='FF'>FF</option><option value='GG'>GG</option><option value='HH'>HH</option><option value='II'>II</option><option value='JJ'>JJ</option><option value='KK'>KK</option><option value='LL'>LL</option><option value='MM'>MM</option></select></span><br><br><div id="bar_viz_recipient_bank_code"></div><b>📃 Summary:</b> Recipient's bank code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_amount"></div><b>📃 Summary:</b> Transaction amount in currency units<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payment_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Household Payment'>Household Payment</option><option value='Insurance Payment'>Insurance Payment</option><option value='Leasing Payment'>Leasing Payment</option><option value='Loan Payment'>Loan Payment</option><option value='Mortgage Payment'>Mortgage Payment</option><option value='Rent Payment'>Rent Payment</option><option value='Utility Payment'>Utility Payment</option><option value='Credit Card Payment'>Credit Card Payment</option><option value='Tax Payment'>Tax Payment</option><option value='Subscription Payment'>Subscription Payment</option><option value='Medical Payment'>Medical Payment</option><option value='Education Payment'>Education Payment</option><option value='Investment Payment'>Investment Payment</option><option value='Charitable Donation'>Charitable Donation</option><option value='Legal Fee Payment'>Legal Fee Payment</option><option value='Business Expense'>Business Expense</option><option value='Travel Expense'>Travel Expense</option><option value='Entertainment Expense'>Entertainment Expense</option><option value='Grocery Payment'>Grocery Payment</option><option value='Transportation Payment'>Transportation Payment</option></select></span><br><br><div id="bar_viz_payment_type"></div><b>📃 Summary:</b> Type or purpose of the payment<br><b>❓ Missing:</b> Transactions without a specific payment category.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">recipient_account_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_recipient_account_number"></div><b>📃 Summary:</b> Recipient's account number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_transaction_id"></div><b>📃 Summary:</b> Unique identifier for the transaction order<br><b>🦄 Unique:</b> This column is described as a unique identifier for the transaction order. For this table, each row represents a single completed order. As it's explicitly stated to be a unique identifier, it should be unique across all rows.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about completed orders. It includes details such as order ID, account ID of the customer, recipient bank and account, transaction amount, and payment type. Each row represents a single completed order with its specific details. The table tracks financial transactions and their purposes, like household or loan payments.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>6</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>order_id</td>
+      <td>Unique identifier for the transaction order</td>
+      <td>transaction_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>account_id</td>
+      <td>Customer's unique account identifier</td>
+      <td>customer_account_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>bank_to</td>
+      <td>Recipient's bank code</td>
+      <td>recipient_bank_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>account_to</td>
+      <td>Recipient's account number</td>
+      <td>recipient_account_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>amount</td>
+      <td>Transaction amount in currency units</td>
+      <td>transaction_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>k_symbol</td>
+      <td>Type or purpose of the payment</td>
+      <td>payment_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>2</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>recipient_account_number</td>
+      <td>CAST("recipient_account_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'recipient_account_number' column from INT to VARCHAR in Snowflake, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a variable-length character string type. The CAST function in Snowflake automatically determines the appropriate length for the VARCHAR based on the input data.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>transaction_id</td>
+      <td>CAST("transaction_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'transaction_id' column from INT to VARCHAR in Snowflake, we need to use a simple CAST function. This will convert each integer value to its string representation. In Snowflake, VARCHAR is a valid data type and is often used interchangeably with STRING.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>1</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>payment_type</td>
+      <td>21.2</td>
+      <td>True</td>
+      <td>Transactions without a specific payment category.</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'A00000173', 'value': 0.5}, {'label': 'A00000311', 'value': 0.5}, {'label': 'A00000097', 'value': 0.5}, {'label': 'A00000378', 'value': 0.5}, {'label': 'A00000096', 'value': 0.5}, {'label': 'Other values', 'value': 97.5}];
+    drawBarChart("bar_viz_customer_account_id", data);
+data = [{'label': 'KL', 'value': 9.2}, {'label': 'GH', 'value': 9.1}, {'label': 'IJ', 'value': 8.3}, {'label': 'CD', 'value': 8.200000000000001}, {'label': 'WX', 'value': 8.0}, {'label': 'Other values', 'value': 57.199999999999996}];
+    drawBarChart("bar_viz_recipient_bank_code", data);
+data = [{'label': '2629.6', 'value': 0.4}, {'label': '1788', 'value': 0.3}, {'label': '3847.2', 'value': 0.3}, {'label': '67', 'value': 0.3}, {'label': '72', 'value': 0.3}, {'label': 'Other values', 'value': 98.4}];
+    drawBarChart("bar_viz_transaction_amount", data);
+data = [{'label': 'Household Payme...', 'value': 76.52284263959392}, {'label': 'Insurance Payme...', 'value': 10.532994923857867}, {'label': 'Leasing Payment', 'value': 7.741116751269035}, {'label': 'Loan Payment', 'value': 5.203045685279188}];
+    drawBarChart("bar_viz_payment_type", data);
+data = [{'label': '88319682', 'value': 0.1}, {'label': '58655077', 'value': 0.1}, {'label': '62039023', 'value': 0.1}, {'label': '27518320', 'value': 0.1}, {'label': '34156501', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_recipient_account_number", data);
+data = [{'label': '30413', 'value': 0.1}, {'label': '30334', 'value': 0.1}, {'label': '30340', 'value': 0.1}, {'label': '30341', 'value': 0.1}, {'label': '30342', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_transaction_id", data);
+
+
+</script>
+</body>
+</html>
