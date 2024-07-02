@@ -25243,12 +25243,22 @@ class StageForAll(MultipleNode):
             self.progress = show_progress(len(self.nodes))
             
             con = self.item["con"]
-            for node in self.nodes.values():
-                table_pipeline = node.para["table_pipeline"]
-                table_pipeline.run_codes(con=con, mode=mode)
-                self.progress.value += 1
+            errors = []
+
+            for node_id, node in self.nodes.items():
+                try:
+                    table_pipeline = node.para["table_pipeline"]
+                    table_pipeline.run_codes(con=con, mode=mode)
+                except Exception as e:
+                    error_msg = f"Error processing tadd_tables_with_conable {node.para['table_name']}"
+                    print(error_msg)
+                    traceback.print_exc()
+                finally:
+                    self.progress.value += 1
             
             display(HTML(f"Tables materialized as {mode[5:].lower()}s."))
+            
+
         
         view_button.on_click(lambda b: on_materialize_click(b, "WITH_VIEW"))
         table_button.on_click(lambda b: on_materialize_click(b, "WITH_TABLE"))
@@ -25259,6 +25269,18 @@ class StageForAll(MultipleNode):
         
         def on_submit_button_click(b):
             con = self.item["con"] 
+            
+            for table_name in tables:
+                try:
+                    schema = get_table_schema(con, table_name)
+                    if not schema:
+                        print(f"⚠️ Can't read {table_name}")
+                        return
+                    
+                except Exception as e:
+                    print(f"⚠️ Error reading {table_name}: {str(e)}")
+                    return
+                                        
             data_project.add_tables_with_con(tables, con)
             callback({})
         
@@ -25928,10 +25950,8 @@ class RelationUnderstandingForAll(MultipleNode):
             duplicate_names = relation_df['Relation Name'][relation_df['Relation Name'].duplicated()].tolist()
             
             if duplicate_names:
-                display("Error: Duplicate relation names are not allowed")
-                display("Duplicate names found: " + ", ".join(duplicate_names))
+                display(HTML("⚠️ Error: Duplicate relation names" + ", ".join(duplicate_names) + "<br> 😊 Please rename the relations to highlight the difference"))
                 return
-    
             
             callback(document)
             
