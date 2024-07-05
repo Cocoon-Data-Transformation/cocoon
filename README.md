@@ -46,10 +46,10 @@ query_widget, cocoon_workflow = create_cocoon_workflow(con)
 query_widget.display()
 
 # the main panel to interact with Cocoon
-cocoon_workflow.start_workflow()
+cocoon_workflow.start()
 ```
 
 🎉 You shall see the following on a notebook:
 <div align="center">
-<kbd><img src="./images/notebook.png" alt="" width="500"></kbd>
+<kbd><img src="./images/notebook.png" alt=""></kbd>
 </div>
