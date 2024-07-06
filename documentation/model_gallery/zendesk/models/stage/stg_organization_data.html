@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>organization_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>name</th>
+      <th>shared_comments</th>
+      <th>shared_tickets</th>
+      <th>url</th>
+      <th>created_at</th>
+      <th>updated_at</th>
+      <th>id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>name1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326104793.json</td>
+      <td>2020-02-13 22:45:02</td>
+      <td>2020-02-13 22:45:02</td>
+      <td>370326104793</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>name2</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326181493.json</td>
+      <td>2020-02-13 22:50:18</td>
+      <td>2020-02-13 22:50:18</td>
+      <td>370326181493</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>name3</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370325990093.json</td>
+      <td>2020-02-13 22:19:31</td>
+      <td>2020-02-13 22:19:31</td>
+      <td>370325990093</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>name4</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370557178694.json</td>
+      <td>2020-11-18 21:11:48</td>
+      <td>2020-11-18 21:59:43</td>
+      <td>370557178694</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>name5</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326279253.json</td>
+      <td>2020-02-13 23:01:03</td>
+      <td>2020-02-13 23:01:03</td>
+      <td>370326279253</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>name6</td>
+      <td>True</td>
+      <td>True</td>
+      <td>https://zendesk.com/api/v2/organizations/370324281773.json</td>
+      <td>2020-02-11 05:51:37</td>
+      <td>2020-06-11 21:41:32</td>
+      <td>370324281773</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>name7</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370325960473.json</td>
+      <td>2020-02-13 21:25:16</td>
+      <td>2020-02-13 21:25:16</td>
+      <td>370325960473</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>name8</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326052813.json</td>
+      <td>2020-02-13 22:31:14</td>
+      <td>2020-02-13 22:31:14</td>
+      <td>370326052813</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>name9</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326014913.json</td>
+      <td>2020-02-13 22:26:05</td>
+      <td>2020-02-13 22:26:05</td>
+      <td>370326014913</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>name10</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370301409353.json</td>
+      <td>2019-12-16 23:28:32</td>
+      <td>2019-12-16 23:28:32</td>
+      <td>370301409353</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>organization_name</th>
+      <th>has_shared_comments</th>
+      <th>has_shared_tickets</th>
+      <th>api_url</th>
+      <th>creation_date</th>
+      <th>last_updated_date</th>
+      <th>organization_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>name1</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326104793.json</td>
+      <td>2020-02-13 22:45:02</td>
+      <td>2020-02-13 22:45:02</td>
+      <td>370326104793</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>name2</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326181493.json</td>
+      <td>2020-02-13 22:50:18</td>
+      <td>2020-02-13 22:50:18</td>
+      <td>370326181493</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>name3</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370325990093.json</td>
+      <td>2020-02-13 22:19:31</td>
+      <td>2020-02-13 22:19:31</td>
+      <td>370325990093</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>name4</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370557178694.json</td>
+      <td>2020-11-18 21:11:48</td>
+      <td>2020-11-18 21:59:43</td>
+      <td>370557178694</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>name5</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326279253.json</td>
+      <td>2020-02-13 23:01:03</td>
+      <td>2020-02-13 23:01:03</td>
+      <td>370326279253</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>name6</td>
+      <td>True</td>
+      <td>True</td>
+      <td>https://zendesk.com/api/v2/organizations/370324281773.json</td>
+      <td>2020-02-11 05:51:37</td>
+      <td>2020-06-11 21:41:32</td>
+      <td>370324281773</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>name7</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370325960473.json</td>
+      <td>2020-02-13 21:25:16</td>
+      <td>2020-02-13 21:25:16</td>
+      <td>370325960473</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>name8</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326052813.json</td>
+      <td>2020-02-13 22:31:14</td>
+      <td>2020-02-13 22:31:14</td>
+      <td>370326052813</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>name9</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370326014913.json</td>
+      <td>2020-02-13 22:26:05</td>
+      <td>2020-02-13 22:26:05</td>
+      <td>370326014913</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>name10</td>
+      <td>False</td>
+      <td>False</td>
+      <td>https://zendesk.com/api/v2/organizations/370301409353.json</td>
+      <td>2019-12-16 23:28:32</td>
+      <td>2019-12-16 23:28:32</td>
+      <td>370301409353</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">organization_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_organization_name"></div><b>📃 Summary:</b> Name of the organization<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_shared_comments</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_shared_comments"></div><b>📃 Summary:</b> Whether the organization has shared comments<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_shared_tickets</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_shared_tickets"></div><b>📃 Summary:</b> Whether the organization has shared tickets<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">api_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_api_url"></div><b>📃 Summary:</b> API URL for the organization<br><b>🦄 Unique:</b> This column contains the API URL for each organization. For this table, each row is for a unique organization. The API URL appears to be unique for each organization as it includes the organization_id in its structure.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_date"></div><b>📃 Summary:</b> Date and time the organization was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_updated_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_updated_date"></div><b>📃 Summary:</b> Date and time the organization was last updated<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">organization_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_organization_id"></div><b>📃 Summary:</b> Unique identifier for the organization<br><b>🦄 Unique:</b> This column contains a unique identifier for each organization. For this table, each row is for a unique organization. The organization_id is designed to be unique across all organizations.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about organizations. It contains basic details for each organization including an ID, name, creation date, and URL. The table also tracks whether the organization has shared comments or tickets. Each organization has a unique external ID and can belong to a group. The 'details' and 'notes' fields allow for additional information storage. The 'updated_at' field shows when the organization's information was last modified.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>9</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the organization</td>
+      <td>organization_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>created_at</td>
+      <td>Date and time the organization was created</td>
+      <td>creation_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>details</td>
+      <td>Additional details about the organization</td>
+      <td>organization_details</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>external_id</td>
+      <td>External identifier for the organization</td>
+      <td>external_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>group_id</td>
+      <td>ID of the group the organization belongs to</td>
+      <td>group_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>name</td>
+      <td>Name of the organization</td>
+      <td>organization_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>notes</td>
+      <td>Additional notes about the organization</td>
+      <td>organization_notes</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>shared_comments</td>
+      <td>Whether the organization has shared comments</td>
+      <td>has_shared_comments</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>shared_tickets</td>
+      <td>Whether the organization has shared tickets</td>
+      <td>has_shared_tickets</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>updated_at</td>
+      <td>Date and time the organization was last updated</td>
+      <td>last_updated_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>url</td>
+      <td>API URL for the organization</td>
+      <td>api_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>7</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>creation_date</td>
+      <td>CAST("creation_date" AS TIMESTAMP)</td>
+      <td>To transform the 'creation_date' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given examples is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). The format appears to be 'YYYY-MM-DD HH:MM:SS', which is a default format that most SQL databases, including DuckDB, can automatically recognize and convert.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>external_id</td>
+      <td>CAST("external_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'external_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the current distinct values are empty, this cast will ensure that any future decimal values in this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>group_id</td>
+      <td>CAST("group_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'group_id' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each value in the column to its string representation. Since the column 'group_id' has no distinct values (it's an empty list), this transformation will work without any issues for all potential future values.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>last_updated_date</td>
+      <td>CAST("last_updated_date" AS TIMESTAMP)</td>
+      <td>To transform the 'last_updated_date' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The date format in the given values is already in a standard format that can be directly interpreted as a timestamp (YYYY-MM-DD HH:MM:SS). Therefore, we don't need to use the strptime function for parsing. A straightforward CAST to TIMESTAMP will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>organization_details</td>
+      <td>CAST("organization_details" AS VARCHAR)</td>
+      <td>To transform the data type of the 'organization_details' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>organization_id</td>
+      <td>CAST("organization_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'organization_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>organization_notes</td>
+      <td>CAST("organization_notes" AS VARCHAR)</td>
+      <td>To transform the data type of the 'organization_notes' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>4</b> columns have missing values<br>
+                    ❌ No missing value is acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>external_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>group_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>organization_details</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>organization_notes</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>external_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>group_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>organization_details</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>organization_notes</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'name5', 'value': 10.0}, {'label': 'name7', 'value': 10.0}, {'label': 'name9', 'value': 10.0}, {'label': 'name3', 'value': 10.0}, {'label': 'name1', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_organization_name", data);
+data = [{'label': 'False', 'value': 90.0}, {'label': 'True', 'value': 10.0}];
+    drawBarChart("bar_viz_has_shared_comments", data);
+data = [{'label': 'False', 'value': 90.0}, {'label': 'True', 'value': 10.0}];
+    drawBarChart("bar_viz_has_shared_tickets", data);
+data = [{'label': 'https://zendesk...', 'value': 10.0}, {'label': 'https://zendesk...', 'value': 10.0}, {'label': 'https://zendesk...', 'value': 10.0}, {'label': 'https://zendesk...', 'value': 10.0}, {'label': 'https://zendesk...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_api_url", data);
+data = [{'label': '2020-02-13 22:4...', 'value': 10.0}, {'label': '2020-11-18 21:1...', 'value': 10.0}, {'label': '2020-02-13 23:0...', 'value': 10.0}, {'label': '2019-12-16 23:2...', 'value': 10.0}, {'label': '2020-02-13 22:5...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_creation_date", data);
+data = [{'label': '2020-02-13 22:4...', 'value': 10.0}, {'label': '2020-11-18 21:5...', 'value': 10.0}, {'label': '2020-06-11 21:4...', 'value': 10.0}, {'label': '2020-02-13 22:3...', 'value': 10.0}, {'label': '2020-02-13 22:5...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_last_updated_date", data);
+data = [{'label': '370326104793', 'value': 10.0}, {'label': '370326052813', 'value': 10.0}, {'label': '370326181493', 'value': 10.0}, {'label': '370326014913', 'value': 10.0}, {'label': '370326279253', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_organization_id", data);
+
+
+</script>
+</body>
+</html>

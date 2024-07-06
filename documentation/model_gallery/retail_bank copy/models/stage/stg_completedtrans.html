@@ -1,0 +1,5087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>completedtrans</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>k_symbol</th>
+      <th>balance</th>
+      <th>year_</th>
+      <th>amount</th>
+      <th>operation</th>
+      <th>account_id</th>
+      <th>trans_id</th>
+      <th>bank</th>
+      <th>day_</th>
+      <th>month_</th>
+      <th>column_a</th>
+      <th>type</th>
+      <th>account</th>
+      <th>fulldate</th>
+      <th>date_</th>
+      <th>fulldatewithtime</th>
+      <th>fulltime</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002378</td>
+      <td>T00695247</td>
+      <td>None</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01T11:02:40</td>
+      <td>11:02:40</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>900.0</td>
+      <td>2013</td>
+      <td>900.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000576</td>
+      <td>T00171812</td>
+      <td>None</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01T08:23:33</td>
+      <td>08:23:33</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000704</td>
+      <td>T00207264</td>
+      <td>None</td>
+      <td>1</td>
+      <td>1</td>
+      <td>3</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01T15:19:21</td>
+      <td>15:19:21</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003818</td>
+      <td>T01117247</td>
+      <td>None</td>
+      <td>1</td>
+      <td>1</td>
+      <td>4</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01T10:42:35</td>
+      <td>10:42:35</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001972</td>
+      <td>T00579373</td>
+      <td>None</td>
+      <td>2</td>
+      <td>1</td>
+      <td>5</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02T11:39:25</td>
+      <td>11:39:25</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002632</td>
+      <td>T00771035</td>
+      <td>None</td>
+      <td>2</td>
+      <td>1</td>
+      <td>6</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02T15:15:12</td>
+      <td>15:15:12</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001539</td>
+      <td>T00452728</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>7</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03T09:34:29</td>
+      <td>09:34:29</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002484</td>
+      <td>T00725751</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>8</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03T09:36:35</td>
+      <td>09:36:35</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001695</td>
+      <td>T00497211</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>9</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03T15:22:23</td>
+      <td>15:22:23</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000793</td>
+      <td>T00232960</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>10</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03T15:08:16</td>
+      <td>15:08:16</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001726</td>
+      <td>T00505240</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>11</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03T13:54:49</td>
+      <td>13:54:49</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000485</td>
+      <td>T00144541</td>
+      <td>None</td>
+      <td>4</td>
+      <td>1</td>
+      <td>12</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04T16:40:53</td>
+      <td>16:40:53</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002177</td>
+      <td>T00637741</td>
+      <td>None</td>
+      <td>4</td>
+      <td>1</td>
+      <td>13</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04T10:30:59</td>
+      <td>10:30:59</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002357</td>
+      <td>T00689827</td>
+      <td>None</td>
+      <td>4</td>
+      <td>1</td>
+      <td>14</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04T16:29:16</td>
+      <td>16:29:16</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002881</td>
+      <td>T00846006</td>
+      <td>None</td>
+      <td>4</td>
+      <td>1</td>
+      <td>15</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04T09:29:01</td>
+      <td>09:29:01</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Old Age Pension</td>
+      <td>5923.0</td>
+      <td>2013</td>
+      <td>5123.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00002177</td>
+      <td>T00637742</td>
+      <td>State Street Corp.</td>
+      <td>5</td>
+      <td>1</td>
+      <td>16</td>
+      <td>Credit</td>
+      <td>62457513.0</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05T16:44:42</td>
+      <td>16:44:42</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00009635</td>
+      <td>T02908688</td>
+      <td>None</td>
+      <td>5</td>
+      <td>1</td>
+      <td>17</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05T13:32:11</td>
+      <td>13:32:11</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>None</td>
+      <td>4201.0</td>
+      <td>2013</td>
+      <td>3401.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00000793</td>
+      <td>T00232961</td>
+      <td>Goldman Sachs</td>
+      <td>5</td>
+      <td>1</td>
+      <td>18</td>
+      <td>Credit</td>
+      <td>6149286.0</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05T11:56:11</td>
+      <td>11:56:11</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000652</td>
+      <td>T00192096</td>
+      <td>None</td>
+      <td>5</td>
+      <td>1</td>
+      <td>19</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05T09:28:49</td>
+      <td>09:28:49</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001844</td>
+      <td>T00542215</td>
+      <td>None</td>
+      <td>6</td>
+      <td>1</td>
+      <td>20</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06T14:38:54</td>
+      <td>14:38:54</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001926</td>
+      <td>T00565654</td>
+      <td>None</td>
+      <td>6</td>
+      <td>1</td>
+      <td>21</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06T11:41:28</td>
+      <td>11:41:28</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>None</td>
+      <td>3742.0</td>
+      <td>2013</td>
+      <td>3242.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001844</td>
+      <td>T00542216</td>
+      <td>Capital One</td>
+      <td>7</td>
+      <td>1</td>
+      <td>22</td>
+      <td>Credit</td>
+      <td>42988401.0</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07T10:11:45</td>
+      <td>10:11:45</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003510</td>
+      <td>T01027725</td>
+      <td>None</td>
+      <td>7</td>
+      <td>1</td>
+      <td>23</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07T08:59:48</td>
+      <td>08:59:48</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001276</td>
+      <td>T00374589</td>
+      <td>None</td>
+      <td>7</td>
+      <td>1</td>
+      <td>24</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07T13:53:48</td>
+      <td>13:53:48</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Old Age Pension</td>
+      <td>5698.0</td>
+      <td>2013</td>
+      <td>5298.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001972</td>
+      <td>T00579374</td>
+      <td>Bank of New York Mellon Corp.</td>
+      <td>7</td>
+      <td>1</td>
+      <td>25</td>
+      <td>Credit</td>
+      <td>14132887.0</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07T08:09:01</td>
+      <td>08:09:01</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>None</td>
+      <td>900.0</td>
+      <td>2013</td>
+      <td>900.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002393</td>
+      <td>T00699220</td>
+      <td>None</td>
+      <td>7</td>
+      <td>1</td>
+      <td>26</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07T09:44:19</td>
+      <td>09:44:19</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000435</td>
+      <td>T00129502</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>27</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T11:33:46</td>
+      <td>11:33:46</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>None</td>
+      <td>7174.0</td>
+      <td>2013</td>
+      <td>6774.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001276</td>
+      <td>T00374590</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>28</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T10:41:24</td>
+      <td>10:41:24</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000192</td>
+      <td>T00057433</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>29</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T11:27:40</td>
+      <td>11:27:40</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>None</td>
+      <td>12032.0</td>
+      <td>2013</td>
+      <td>11832.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001695</td>
+      <td>T00497212</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>30</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T11:42:14</td>
+      <td>11:42:14</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002122</td>
+      <td>T00621760</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>31</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T13:23:47</td>
+      <td>13:23:47</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001637</td>
+      <td>T00480214</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>32</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T14:01:07</td>
+      <td>14:01:07</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002087</td>
+      <td>T00612392</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>33</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T13:21:14</td>
+      <td>13:21:14</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000764</td>
+      <td>T00224342</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>34</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T10:25:46</td>
+      <td>10:25:46</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003592</td>
+      <td>T01049881</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>35</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T13:49:31</td>
+      <td>13:49:31</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003871</td>
+      <td>T01132662</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>36</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T14:07:56</td>
+      <td>14:07:56</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003487</td>
+      <td>T01021120</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>37</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08T08:08:38</td>
+      <td>08:08:38</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001493</td>
+      <td>T00439035</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>38</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09T09:39:13</td>
+      <td>09:39:13</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000374</td>
+      <td>T00110534</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>39</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09T09:09:09</td>
+      <td>09:09:09</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>None</td>
+      <td>15364.0</td>
+      <td>2013</td>
+      <td>14264.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002632</td>
+      <td>T00771036</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>40</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09T09:27:45</td>
+      <td>09:27:45</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>None</td>
+      <td>900.0</td>
+      <td>2013</td>
+      <td>900.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001730</td>
+      <td>T00506450</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>41</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09T11:42:16</td>
+      <td>11:42:16</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>None</td>
+      <td>14551.0</td>
+      <td>2013</td>
+      <td>13851.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000652</td>
+      <td>T00192097</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>42</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09T16:46:01</td>
+      <td>16:46:01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>None</td>
+      <td>17966.0</td>
+      <td>2013</td>
+      <td>17366.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003818</td>
+      <td>T01117248</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>43</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09T08:09:03</td>
+      <td>08:09:03</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002379</td>
+      <td>T00695720</td>
+      <td>None</td>
+      <td>10</td>
+      <td>1</td>
+      <td>44</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10T15:55:39</td>
+      <td>15:55:39</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002925</td>
+      <td>T00857973</td>
+      <td>None</td>
+      <td>10</td>
+      <td>1</td>
+      <td>45</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10T12:19:11</td>
+      <td>12:19:11</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001628</td>
+      <td>T00477638</td>
+      <td>None</td>
+      <td>10</td>
+      <td>1</td>
+      <td>46</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10T08:10:26</td>
+      <td>08:10:26</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Old Age Pension</td>
+      <td>6607.0</td>
+      <td>2013</td>
+      <td>6007.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00003592</td>
+      <td>T01049882</td>
+      <td>U.S. Bancorp</td>
+      <td>10</td>
+      <td>1</td>
+      <td>47</td>
+      <td>Credit</td>
+      <td>73166322.0</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10T09:02:13</td>
+      <td>09:02:13</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000866</td>
+      <td>T00252644</td>
+      <td>None</td>
+      <td>10</td>
+      <td>1</td>
+      <td>48</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10T10:45:25</td>
+      <td>10:45:25</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001338</td>
+      <td>T00393505</td>
+      <td>None</td>
+      <td>11</td>
+      <td>1</td>
+      <td>49</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11T08:34:56</td>
+      <td>08:34:56</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Old Age Pension</td>
+      <td>7107.0</td>
+      <td>2013</td>
+      <td>6207.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00000576</td>
+      <td>T00171813</td>
+      <td>State Street Corp.</td>
+      <td>11</td>
+      <td>1</td>
+      <td>50</td>
+      <td>Credit</td>
+      <td>30300313.0</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11T16:36:38</td>
+      <td>16:36:38</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>None</td>
+      <td>900.0</td>
+      <td>2013</td>
+      <td>900.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001979</td>
+      <td>T00581699</td>
+      <td>None</td>
+      <td>11</td>
+      <td>1</td>
+      <td>51</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11T12:20:47</td>
+      <td>12:20:47</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>None</td>
+      <td>13144.0</td>
+      <td>2013</td>
+      <td>12644.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000866</td>
+      <td>T00252645</td>
+      <td>None</td>
+      <td>11</td>
+      <td>1</td>
+      <td>52</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11T15:04:16</td>
+      <td>15:04:16</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000346</td>
+      <td>T00101386</td>
+      <td>None</td>
+      <td>11</td>
+      <td>1</td>
+      <td>53</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11T11:25:35</td>
+      <td>11:25:35</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Old Age Pension</td>
+      <td>7234.0</td>
+      <td>2013</td>
+      <td>6434.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00002357</td>
+      <td>T00689828</td>
+      <td>PNC Financial Services</td>
+      <td>12</td>
+      <td>1</td>
+      <td>54</td>
+      <td>Credit</td>
+      <td>34144538.0</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12T10:30:16</td>
+      <td>10:30:16</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>None</td>
+      <td>15879.0</td>
+      <td>2013</td>
+      <td>14779.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002484</td>
+      <td>T00725752</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>55</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12T16:47:37</td>
+      <td>16:47:37</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>None</td>
+      <td>5207.0</td>
+      <td>2013</td>
+      <td>4507.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001926</td>
+      <td>T00565655</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>56</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12T13:52:16</td>
+      <td>13:52:16</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>None</td>
+      <td>7446.0</td>
+      <td>2013</td>
+      <td>6446.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002925</td>
+      <td>T00857974</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>57</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12T12:34:59</td>
+      <td>12:34:59</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001909</td>
+      <td>T00560898</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>58</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12T14:13:45</td>
+      <td>14:13:45</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>None</td>
+      <td>18477.0</td>
+      <td>2013</td>
+      <td>17477.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000704</td>
+      <td>T00207265</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>59</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12T11:04:49</td>
+      <td>11:04:49</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Old Age Pension</td>
+      <td>4976.0</td>
+      <td>2013</td>
+      <td>4276.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001628</td>
+      <td>T00477639</td>
+      <td>Bank of New York Mellon Corp.</td>
+      <td>12</td>
+      <td>1</td>
+      <td>60</td>
+      <td>Credit</td>
+      <td>15916598.0</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12T11:14:10</td>
+      <td>11:14:10</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002099</td>
+      <td>T00615542</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>61</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12T13:13:38</td>
+      <td>13:13:38</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Old Age Pension</td>
+      <td>5209.0</td>
+      <td>2013</td>
+      <td>5009.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001493</td>
+      <td>T00439036</td>
+      <td>JPMorgan Chase</td>
+      <td>13</td>
+      <td>1</td>
+      <td>62</td>
+      <td>Credit</td>
+      <td>54522466.0</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13T14:38:37</td>
+      <td>14:38:37</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003760</td>
+      <td>T01100759</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>63</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13T15:18:01</td>
+      <td>15:18:01</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Old Age Pension</td>
+      <td>6218.0</td>
+      <td>2013</td>
+      <td>5718.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001637</td>
+      <td>T00480215</td>
+      <td>Bank of New York Mellon Corp.</td>
+      <td>13</td>
+      <td>1</td>
+      <td>64</td>
+      <td>Credit</td>
+      <td>45134812.0</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13T14:23:02</td>
+      <td>14:23:02</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00005270</td>
+      <td>T01548749</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>65</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13T13:11:54</td>
+      <td>13:11:54</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>None</td>
+      <td>14967.0</td>
+      <td>2013</td>
+      <td>13967.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001726</td>
+      <td>T00505241</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>66</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13T12:29:39</td>
+      <td>12:29:39</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>None</td>
+      <td>7659.0</td>
+      <td>2013</td>
+      <td>6959.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002881</td>
+      <td>T00846007</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>67</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13T14:39:11</td>
+      <td>14:39:11</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>None</td>
+      <td>16714.0</td>
+      <td>2013</td>
+      <td>15914.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003487</td>
+      <td>T01021121</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>68</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13T13:39:09</td>
+      <td>13:39:09</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Old Age Pension</td>
+      <td>4870.0</td>
+      <td>2013</td>
+      <td>4470.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00009635</td>
+      <td>T02908689</td>
+      <td>Bank of America</td>
+      <td>14</td>
+      <td>1</td>
+      <td>69</td>
+      <td>Credit</td>
+      <td>37906074.0</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14T14:50:59</td>
+      <td>14:50:59</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002926</td>
+      <td>T00858384</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>70</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14T10:12:59</td>
+      <td>10:12:59</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001699</td>
+      <td>T00498389</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>71</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14T14:55:00</td>
+      <td>14:55:00</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>None</td>
+      <td>11637.0</td>
+      <td>2013</td>
+      <td>10737.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002393</td>
+      <td>T00699221</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>72</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14T14:59:01</td>
+      <td>14:59:01</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003909</td>
+      <td>T01142758</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>73</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14T14:49:02</td>
+      <td>14:49:02</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>None</td>
+      <td>45549.0</td>
+      <td>2013</td>
+      <td>44749.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00005270</td>
+      <td>T01548750</td>
+      <td>Goldman Sachs</td>
+      <td>14</td>
+      <td>1</td>
+      <td>74</td>
+      <td>Credit</td>
+      <td>80269753.0</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14T09:52:52</td>
+      <td>09:52:52</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001731</td>
+      <td>T00506836</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>75</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14T16:20:17</td>
+      <td>16:20:17</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00011265</td>
+      <td>T03393738</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>76</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14T11:58:13</td>
+      <td>11:58:13</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>None</td>
+      <td>46852.0</td>
+      <td>2013</td>
+      <td>46552.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002122</td>
+      <td>T00621775</td>
+      <td>None</td>
+      <td>15</td>
+      <td>1</td>
+      <td>77</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15T10:12:11</td>
+      <td>10:12:11</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002519</td>
+      <td>T00737258</td>
+      <td>None</td>
+      <td>15</td>
+      <td>1</td>
+      <td>78</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15T15:25:00</td>
+      <td>15:25:00</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>None</td>
+      <td>13456.0</td>
+      <td>2013</td>
+      <td>13156.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000485</td>
+      <td>T00144549</td>
+      <td>None</td>
+      <td>16</td>
+      <td>1</td>
+      <td>79</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-16</td>
+      <td>2013-01-16</td>
+      <td>2013-01-16T14:32:23</td>
+      <td>14:32:23</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001481</td>
+      <td>T00435762</td>
+      <td>None</td>
+      <td>17</td>
+      <td>1</td>
+      <td>80</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17T14:42:51</td>
+      <td>14:42:51</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>None</td>
+      <td>23823.0</td>
+      <td>2013</td>
+      <td>23323.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003510</td>
+      <td>T01027726</td>
+      <td>None</td>
+      <td>17</td>
+      <td>1</td>
+      <td>81</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17T08:48:50</td>
+      <td>08:48:50</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00010364</td>
+      <td>T03122924</td>
+      <td>None</td>
+      <td>17</td>
+      <td>1</td>
+      <td>82</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17T12:57:05</td>
+      <td>12:57:05</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00004034</td>
+      <td>T01176385</td>
+      <td>None</td>
+      <td>18</td>
+      <td>1</td>
+      <td>83</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18T15:59:05</td>
+      <td>15:59:05</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000401</td>
+      <td>T00119435</td>
+      <td>None</td>
+      <td>18</td>
+      <td>1</td>
+      <td>84</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18T11:37:05</td>
+      <td>11:37:05</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>None</td>
+      <td>11792.0</td>
+      <td>2013</td>
+      <td>10792.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003760</td>
+      <td>T01100767</td>
+      <td>None</td>
+      <td>18</td>
+      <td>1</td>
+      <td>85</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18T10:17:03</td>
+      <td>10:17:03</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002330</td>
+      <td>T00682546</td>
+      <td>None</td>
+      <td>19</td>
+      <td>1</td>
+      <td>86</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19T09:28:59</td>
+      <td>09:28:59</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001806</td>
+      <td>T00529772</td>
+      <td>None</td>
+      <td>19</td>
+      <td>1</td>
+      <td>87</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19T15:16:58</td>
+      <td>15:16:58</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003834</td>
+      <td>T01121963</td>
+      <td>None</td>
+      <td>19</td>
+      <td>1</td>
+      <td>88</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19T09:34:56</td>
+      <td>09:34:56</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001222</td>
+      <td>T00359511</td>
+      <td>None</td>
+      <td>20</td>
+      <td>1</td>
+      <td>89</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20T11:07:02</td>
+      <td>11:07:02</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000212</td>
+      <td>T00063712</td>
+      <td>None</td>
+      <td>20</td>
+      <td>1</td>
+      <td>90</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20T12:29:33</td>
+      <td>12:29:33</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001019</td>
+      <td>T00298978</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>91</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21T15:60:16</td>
+      <td>15:60:16</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000459</td>
+      <td>T00136957</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>92</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21T11:07:56</td>
+      <td>11:07:56</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000456</td>
+      <td>T00135814</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>93</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21T08:28:34</td>
+      <td>08:28:34</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000772</td>
+      <td>T00226654</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>94</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21T08:31:17</td>
+      <td>08:31:17</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00011295</td>
+      <td>T03402664</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>95</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21T13:38:31</td>
+      <td>13:38:31</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>None</td>
+      <td>7968.0</td>
+      <td>2013</td>
+      <td>7268.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002378</td>
+      <td>T00695250</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>96</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22T14:43:54</td>
+      <td>14:43:54</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001536</td>
+      <td>T00451890</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>97</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22T11:17:36</td>
+      <td>11:17:36</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002676</td>
+      <td>T00785190</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>98</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22T08:36:26</td>
+      <td>08:36:26</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>None</td>
+      <td>17225.0</td>
+      <td>2013</td>
+      <td>16125.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002099</td>
+      <td>T00615548</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>99</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22T15:37:35</td>
+      <td>15:37:35</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002970</td>
+      <td>T00871631</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>100</td>
+      <td>Credit</td>
+      <td>NaN</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22T11:08:59</td>
+      <td>11:08:59</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>transaction_category</th>
+      <th>balance</th>
+      <th>year_</th>
+      <th>transaction_amount</th>
+      <th>transaction_description</th>
+      <th>account_id</th>
+      <th>transaction_id</th>
+      <th>bank_name</th>
+      <th>day_of_month</th>
+      <th>month_</th>
+      <th>row_number</th>
+      <th>transaction_type</th>
+      <th>account_holder</th>
+      <th>full_date</th>
+      <th>transaction_date</th>
+      <th>transaction_datetime</th>
+      <th>transaction_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002378</td>
+      <td>T00695247</td>
+      <td>None</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01 11:02:40</td>
+      <td>11:02:40</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>900.0</td>
+      <td>2013</td>
+      <td>900.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000576</td>
+      <td>T00171812</td>
+      <td>None</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01 08:23:33</td>
+      <td>08:23:33</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000704</td>
+      <td>T00207264</td>
+      <td>None</td>
+      <td>1</td>
+      <td>1</td>
+      <td>3</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01 15:19:21</td>
+      <td>15:19:21</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003818</td>
+      <td>T01117247</td>
+      <td>None</td>
+      <td>1</td>
+      <td>1</td>
+      <td>4</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01</td>
+      <td>2013-01-01 10:42:35</td>
+      <td>10:42:35</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001972</td>
+      <td>T00579373</td>
+      <td>None</td>
+      <td>2</td>
+      <td>1</td>
+      <td>5</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02 11:39:25</td>
+      <td>11:39:25</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002632</td>
+      <td>T00771035</td>
+      <td>None</td>
+      <td>2</td>
+      <td>1</td>
+      <td>6</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02</td>
+      <td>2013-01-02 15:15:12</td>
+      <td>15:15:12</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001539</td>
+      <td>T00452728</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>7</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03 09:34:29</td>
+      <td>09:34:29</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002484</td>
+      <td>T00725751</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>8</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03 09:36:35</td>
+      <td>09:36:35</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001695</td>
+      <td>T00497211</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>9</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03 15:22:23</td>
+      <td>15:22:23</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000793</td>
+      <td>T00232960</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>10</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03 15:08:16</td>
+      <td>15:08:16</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001726</td>
+      <td>T00505240</td>
+      <td>None</td>
+      <td>3</td>
+      <td>1</td>
+      <td>11</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03</td>
+      <td>2013-01-03 13:54:49</td>
+      <td>13:54:49</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000485</td>
+      <td>T00144541</td>
+      <td>None</td>
+      <td>4</td>
+      <td>1</td>
+      <td>12</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04 16:40:53</td>
+      <td>16:40:53</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002177</td>
+      <td>T00637741</td>
+      <td>None</td>
+      <td>4</td>
+      <td>1</td>
+      <td>13</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04 10:30:59</td>
+      <td>10:30:59</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002357</td>
+      <td>T00689827</td>
+      <td>None</td>
+      <td>4</td>
+      <td>1</td>
+      <td>14</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04 16:29:16</td>
+      <td>16:29:16</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002881</td>
+      <td>T00846006</td>
+      <td>None</td>
+      <td>4</td>
+      <td>1</td>
+      <td>15</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04</td>
+      <td>2013-01-04 09:29:01</td>
+      <td>09:29:01</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Old Age Pension</td>
+      <td>5923.0</td>
+      <td>2013</td>
+      <td>5123.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00002177</td>
+      <td>T00637742</td>
+      <td>State Street Corp.</td>
+      <td>5</td>
+      <td>1</td>
+      <td>16</td>
+      <td>Credit</td>
+      <td>62457513</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05 16:44:42</td>
+      <td>16:44:42</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00009635</td>
+      <td>T02908688</td>
+      <td>None</td>
+      <td>5</td>
+      <td>1</td>
+      <td>17</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05 13:32:11</td>
+      <td>13:32:11</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>None</td>
+      <td>4201.0</td>
+      <td>2013</td>
+      <td>3401.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00000793</td>
+      <td>T00232961</td>
+      <td>Goldman Sachs</td>
+      <td>5</td>
+      <td>1</td>
+      <td>18</td>
+      <td>Credit</td>
+      <td>6149286</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05 11:56:11</td>
+      <td>11:56:11</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000652</td>
+      <td>T00192096</td>
+      <td>None</td>
+      <td>5</td>
+      <td>1</td>
+      <td>19</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05</td>
+      <td>2013-01-05 09:28:49</td>
+      <td>09:28:49</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001844</td>
+      <td>T00542215</td>
+      <td>None</td>
+      <td>6</td>
+      <td>1</td>
+      <td>20</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06 14:38:54</td>
+      <td>14:38:54</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001926</td>
+      <td>T00565654</td>
+      <td>None</td>
+      <td>6</td>
+      <td>1</td>
+      <td>21</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06</td>
+      <td>2013-01-06 11:41:28</td>
+      <td>11:41:28</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>None</td>
+      <td>3742.0</td>
+      <td>2013</td>
+      <td>3242.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001844</td>
+      <td>T00542216</td>
+      <td>Capital One</td>
+      <td>7</td>
+      <td>1</td>
+      <td>22</td>
+      <td>Credit</td>
+      <td>42988401</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07 10:11:45</td>
+      <td>10:11:45</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003510</td>
+      <td>T01027725</td>
+      <td>None</td>
+      <td>7</td>
+      <td>1</td>
+      <td>23</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07 08:59:48</td>
+      <td>08:59:48</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001276</td>
+      <td>T00374589</td>
+      <td>None</td>
+      <td>7</td>
+      <td>1</td>
+      <td>24</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07 13:53:48</td>
+      <td>13:53:48</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Old Age Pension</td>
+      <td>5698.0</td>
+      <td>2013</td>
+      <td>5298.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001972</td>
+      <td>T00579374</td>
+      <td>Bank of New York Mellon Corp.</td>
+      <td>7</td>
+      <td>1</td>
+      <td>25</td>
+      <td>Credit</td>
+      <td>14132887</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07 08:09:01</td>
+      <td>08:09:01</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>None</td>
+      <td>900.0</td>
+      <td>2013</td>
+      <td>900.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002393</td>
+      <td>T00699220</td>
+      <td>None</td>
+      <td>7</td>
+      <td>1</td>
+      <td>26</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07</td>
+      <td>2013-01-07 09:44:19</td>
+      <td>09:44:19</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000435</td>
+      <td>T00129502</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>27</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 11:33:46</td>
+      <td>11:33:46</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>None</td>
+      <td>7174.0</td>
+      <td>2013</td>
+      <td>6774.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001276</td>
+      <td>T00374590</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>28</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 10:41:24</td>
+      <td>10:41:24</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000192</td>
+      <td>T00057433</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>29</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 11:27:40</td>
+      <td>11:27:40</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>None</td>
+      <td>12032.0</td>
+      <td>2013</td>
+      <td>11832.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001695</td>
+      <td>T00497212</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>30</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 11:42:14</td>
+      <td>11:42:14</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002122</td>
+      <td>T00621760</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>31</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 13:23:47</td>
+      <td>13:23:47</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001637</td>
+      <td>T00480214</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>32</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 14:01:07</td>
+      <td>14:01:07</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002087</td>
+      <td>T00612392</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>33</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 13:21:14</td>
+      <td>13:21:14</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000764</td>
+      <td>T00224342</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>34</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 10:25:46</td>
+      <td>10:25:46</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003592</td>
+      <td>T01049881</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>35</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 13:49:31</td>
+      <td>13:49:31</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003871</td>
+      <td>T01132662</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>36</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 14:07:56</td>
+      <td>14:07:56</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003487</td>
+      <td>T01021120</td>
+      <td>None</td>
+      <td>8</td>
+      <td>1</td>
+      <td>37</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08</td>
+      <td>2013-01-08 08:08:38</td>
+      <td>08:08:38</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001493</td>
+      <td>T00439035</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>38</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09 09:39:13</td>
+      <td>09:39:13</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000374</td>
+      <td>T00110534</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>39</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09 09:09:09</td>
+      <td>09:09:09</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>None</td>
+      <td>15364.0</td>
+      <td>2013</td>
+      <td>14264.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002632</td>
+      <td>T00771036</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>40</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09 09:27:45</td>
+      <td>09:27:45</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>None</td>
+      <td>900.0</td>
+      <td>2013</td>
+      <td>900.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001730</td>
+      <td>T00506450</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>41</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09 11:42:16</td>
+      <td>11:42:16</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>None</td>
+      <td>14551.0</td>
+      <td>2013</td>
+      <td>13851.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000652</td>
+      <td>T00192097</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>42</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09 16:46:01</td>
+      <td>16:46:01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>None</td>
+      <td>17966.0</td>
+      <td>2013</td>
+      <td>17366.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003818</td>
+      <td>T01117248</td>
+      <td>None</td>
+      <td>9</td>
+      <td>1</td>
+      <td>43</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09</td>
+      <td>2013-01-09 08:09:03</td>
+      <td>08:09:03</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002379</td>
+      <td>T00695720</td>
+      <td>None</td>
+      <td>10</td>
+      <td>1</td>
+      <td>44</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10 15:55:39</td>
+      <td>15:55:39</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002925</td>
+      <td>T00857973</td>
+      <td>None</td>
+      <td>10</td>
+      <td>1</td>
+      <td>45</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10 12:19:11</td>
+      <td>12:19:11</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001628</td>
+      <td>T00477638</td>
+      <td>None</td>
+      <td>10</td>
+      <td>1</td>
+      <td>46</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10 08:10:26</td>
+      <td>08:10:26</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Old Age Pension</td>
+      <td>6607.0</td>
+      <td>2013</td>
+      <td>6007.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00003592</td>
+      <td>T01049882</td>
+      <td>U.S. Bancorp</td>
+      <td>10</td>
+      <td>1</td>
+      <td>47</td>
+      <td>Credit</td>
+      <td>73166322</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10 09:02:13</td>
+      <td>09:02:13</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000866</td>
+      <td>T00252644</td>
+      <td>None</td>
+      <td>10</td>
+      <td>1</td>
+      <td>48</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10</td>
+      <td>2013-01-10 10:45:25</td>
+      <td>10:45:25</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001338</td>
+      <td>T00393505</td>
+      <td>None</td>
+      <td>11</td>
+      <td>1</td>
+      <td>49</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11 08:34:56</td>
+      <td>08:34:56</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Old Age Pension</td>
+      <td>7107.0</td>
+      <td>2013</td>
+      <td>6207.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00000576</td>
+      <td>T00171813</td>
+      <td>State Street Corp.</td>
+      <td>11</td>
+      <td>1</td>
+      <td>50</td>
+      <td>Credit</td>
+      <td>30300313</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11 16:36:38</td>
+      <td>16:36:38</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>None</td>
+      <td>900.0</td>
+      <td>2013</td>
+      <td>900.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001979</td>
+      <td>T00581699</td>
+      <td>None</td>
+      <td>11</td>
+      <td>1</td>
+      <td>51</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11 12:20:47</td>
+      <td>12:20:47</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>None</td>
+      <td>13144.0</td>
+      <td>2013</td>
+      <td>12644.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000866</td>
+      <td>T00252645</td>
+      <td>None</td>
+      <td>11</td>
+      <td>1</td>
+      <td>52</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11 15:04:16</td>
+      <td>15:04:16</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000346</td>
+      <td>T00101386</td>
+      <td>None</td>
+      <td>11</td>
+      <td>1</td>
+      <td>53</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11</td>
+      <td>2013-01-11 11:25:35</td>
+      <td>11:25:35</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Old Age Pension</td>
+      <td>7234.0</td>
+      <td>2013</td>
+      <td>6434.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00002357</td>
+      <td>T00689828</td>
+      <td>PNC Financial Services</td>
+      <td>12</td>
+      <td>1</td>
+      <td>54</td>
+      <td>Credit</td>
+      <td>34144538</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12 10:30:16</td>
+      <td>10:30:16</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>None</td>
+      <td>15879.0</td>
+      <td>2013</td>
+      <td>14779.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002484</td>
+      <td>T00725752</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>55</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12 16:47:37</td>
+      <td>16:47:37</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>None</td>
+      <td>5207.0</td>
+      <td>2013</td>
+      <td>4507.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001926</td>
+      <td>T00565655</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>56</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12 13:52:16</td>
+      <td>13:52:16</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>None</td>
+      <td>7446.0</td>
+      <td>2013</td>
+      <td>6446.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002925</td>
+      <td>T00857974</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>57</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12 12:34:59</td>
+      <td>12:34:59</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001909</td>
+      <td>T00560898</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>58</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12 14:13:45</td>
+      <td>14:13:45</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>None</td>
+      <td>18477.0</td>
+      <td>2013</td>
+      <td>17477.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000704</td>
+      <td>T00207265</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>59</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12 11:04:49</td>
+      <td>11:04:49</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Old Age Pension</td>
+      <td>4976.0</td>
+      <td>2013</td>
+      <td>4276.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001628</td>
+      <td>T00477639</td>
+      <td>Bank of New York Mellon Corp.</td>
+      <td>12</td>
+      <td>1</td>
+      <td>60</td>
+      <td>Credit</td>
+      <td>15916598</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12 11:14:10</td>
+      <td>11:14:10</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002099</td>
+      <td>T00615542</td>
+      <td>None</td>
+      <td>12</td>
+      <td>1</td>
+      <td>61</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12</td>
+      <td>2013-01-12 13:13:38</td>
+      <td>13:13:38</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Old Age Pension</td>
+      <td>5209.0</td>
+      <td>2013</td>
+      <td>5009.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001493</td>
+      <td>T00439036</td>
+      <td>JPMorgan Chase</td>
+      <td>13</td>
+      <td>1</td>
+      <td>62</td>
+      <td>Credit</td>
+      <td>54522466</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13 14:38:37</td>
+      <td>14:38:37</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003760</td>
+      <td>T01100759</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>63</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13 15:18:01</td>
+      <td>15:18:01</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Old Age Pension</td>
+      <td>6218.0</td>
+      <td>2013</td>
+      <td>5718.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00001637</td>
+      <td>T00480215</td>
+      <td>Bank of New York Mellon Corp.</td>
+      <td>13</td>
+      <td>1</td>
+      <td>64</td>
+      <td>Credit</td>
+      <td>45134812</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13 14:23:02</td>
+      <td>14:23:02</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00005270</td>
+      <td>T01548749</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>65</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13 13:11:54</td>
+      <td>13:11:54</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>None</td>
+      <td>14967.0</td>
+      <td>2013</td>
+      <td>13967.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001726</td>
+      <td>T00505241</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>66</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13 12:29:39</td>
+      <td>12:29:39</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>None</td>
+      <td>7659.0</td>
+      <td>2013</td>
+      <td>6959.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002881</td>
+      <td>T00846007</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>67</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13 14:39:11</td>
+      <td>14:39:11</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>None</td>
+      <td>16714.0</td>
+      <td>2013</td>
+      <td>15914.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003487</td>
+      <td>T01021121</td>
+      <td>None</td>
+      <td>13</td>
+      <td>1</td>
+      <td>68</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13</td>
+      <td>2013-01-13 13:39:09</td>
+      <td>13:39:09</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Old Age Pension</td>
+      <td>4870.0</td>
+      <td>2013</td>
+      <td>4470.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00009635</td>
+      <td>T02908689</td>
+      <td>Bank of America</td>
+      <td>14</td>
+      <td>1</td>
+      <td>69</td>
+      <td>Credit</td>
+      <td>37906074</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14 14:50:59</td>
+      <td>14:50:59</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>None</td>
+      <td>600.0</td>
+      <td>2013</td>
+      <td>600.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002926</td>
+      <td>T00858384</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>70</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14 10:12:59</td>
+      <td>10:12:59</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>None</td>
+      <td>800.0</td>
+      <td>2013</td>
+      <td>800.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001699</td>
+      <td>T00498389</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>71</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14 14:55:00</td>
+      <td>14:55:00</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>None</td>
+      <td>11637.0</td>
+      <td>2013</td>
+      <td>10737.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002393</td>
+      <td>T00699221</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>72</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14 14:59:01</td>
+      <td>14:59:01</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003909</td>
+      <td>T01142758</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>73</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14 14:49:02</td>
+      <td>14:49:02</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>None</td>
+      <td>45549.0</td>
+      <td>2013</td>
+      <td>44749.0</td>
+      <td>Collection from Another Bank</td>
+      <td>A00005270</td>
+      <td>T01548750</td>
+      <td>Goldman Sachs</td>
+      <td>14</td>
+      <td>1</td>
+      <td>74</td>
+      <td>Credit</td>
+      <td>80269753</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14 09:52:52</td>
+      <td>09:52:52</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001731</td>
+      <td>T00506836</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>75</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14 16:20:17</td>
+      <td>16:20:17</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00011265</td>
+      <td>T03393738</td>
+      <td>None</td>
+      <td>14</td>
+      <td>1</td>
+      <td>76</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14</td>
+      <td>2013-01-14 11:58:13</td>
+      <td>11:58:13</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>None</td>
+      <td>46852.0</td>
+      <td>2013</td>
+      <td>46552.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002122</td>
+      <td>T00621775</td>
+      <td>None</td>
+      <td>15</td>
+      <td>1</td>
+      <td>77</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15 10:12:11</td>
+      <td>10:12:11</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002519</td>
+      <td>T00737258</td>
+      <td>None</td>
+      <td>15</td>
+      <td>1</td>
+      <td>78</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15</td>
+      <td>2013-01-15 15:25:00</td>
+      <td>15:25:00</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>None</td>
+      <td>13456.0</td>
+      <td>2013</td>
+      <td>13156.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000485</td>
+      <td>T00144549</td>
+      <td>None</td>
+      <td>16</td>
+      <td>1</td>
+      <td>79</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-16</td>
+      <td>2013-01-16</td>
+      <td>2013-01-16 14:32:23</td>
+      <td>14:32:23</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001481</td>
+      <td>T00435762</td>
+      <td>None</td>
+      <td>17</td>
+      <td>1</td>
+      <td>80</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17 14:42:51</td>
+      <td>14:42:51</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>None</td>
+      <td>23823.0</td>
+      <td>2013</td>
+      <td>23323.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003510</td>
+      <td>T01027726</td>
+      <td>None</td>
+      <td>17</td>
+      <td>1</td>
+      <td>81</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17 08:48:50</td>
+      <td>08:48:50</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00010364</td>
+      <td>T03122924</td>
+      <td>None</td>
+      <td>17</td>
+      <td>1</td>
+      <td>82</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17</td>
+      <td>2013-01-17 12:57:05</td>
+      <td>12:57:05</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00004034</td>
+      <td>T01176385</td>
+      <td>None</td>
+      <td>18</td>
+      <td>1</td>
+      <td>83</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18 15:59:05</td>
+      <td>15:59:05</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000401</td>
+      <td>T00119435</td>
+      <td>None</td>
+      <td>18</td>
+      <td>1</td>
+      <td>84</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18 11:37:05</td>
+      <td>11:37:05</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>None</td>
+      <td>11792.0</td>
+      <td>2013</td>
+      <td>10792.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003760</td>
+      <td>T01100767</td>
+      <td>None</td>
+      <td>18</td>
+      <td>1</td>
+      <td>85</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18</td>
+      <td>2013-01-18 10:17:03</td>
+      <td>10:17:03</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002330</td>
+      <td>T00682546</td>
+      <td>None</td>
+      <td>19</td>
+      <td>1</td>
+      <td>86</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19 09:28:59</td>
+      <td>09:28:59</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001806</td>
+      <td>T00529772</td>
+      <td>None</td>
+      <td>19</td>
+      <td>1</td>
+      <td>87</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19 15:16:58</td>
+      <td>15:16:58</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00003834</td>
+      <td>T01121963</td>
+      <td>None</td>
+      <td>19</td>
+      <td>1</td>
+      <td>88</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19</td>
+      <td>2013-01-19 09:34:56</td>
+      <td>09:34:56</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001222</td>
+      <td>T00359511</td>
+      <td>None</td>
+      <td>20</td>
+      <td>1</td>
+      <td>89</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20 11:07:02</td>
+      <td>11:07:02</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000212</td>
+      <td>T00063712</td>
+      <td>None</td>
+      <td>20</td>
+      <td>1</td>
+      <td>90</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20</td>
+      <td>2013-01-20 12:29:33</td>
+      <td>12:29:33</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001019</td>
+      <td>T00298978</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>91</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>NaT</td>
+      <td>15:59:16</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>None</td>
+      <td>1000.0</td>
+      <td>2013</td>
+      <td>1000.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000459</td>
+      <td>T00136957</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>92</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21 11:07:56</td>
+      <td>11:07:56</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>None</td>
+      <td>700.0</td>
+      <td>2013</td>
+      <td>700.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000456</td>
+      <td>T00135814</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>93</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21 08:28:34</td>
+      <td>08:28:34</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>None</td>
+      <td>500.0</td>
+      <td>2013</td>
+      <td>500.0</td>
+      <td>Credit in Cash</td>
+      <td>A00000772</td>
+      <td>T00226654</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>94</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21 08:31:17</td>
+      <td>08:31:17</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>None</td>
+      <td>1100.0</td>
+      <td>2013</td>
+      <td>1100.0</td>
+      <td>Credit in Cash</td>
+      <td>A00011295</td>
+      <td>T03402664</td>
+      <td>None</td>
+      <td>21</td>
+      <td>1</td>
+      <td>95</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21</td>
+      <td>2013-01-21 13:38:31</td>
+      <td>13:38:31</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>None</td>
+      <td>7968.0</td>
+      <td>2013</td>
+      <td>7268.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002378</td>
+      <td>T00695250</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>96</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22 14:43:54</td>
+      <td>14:43:54</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>None</td>
+      <td>300.0</td>
+      <td>2013</td>
+      <td>300.0</td>
+      <td>Credit in Cash</td>
+      <td>A00001536</td>
+      <td>T00451890</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>97</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22 11:17:36</td>
+      <td>11:17:36</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>None</td>
+      <td>200.0</td>
+      <td>2013</td>
+      <td>200.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002676</td>
+      <td>T00785190</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>98</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22 08:36:26</td>
+      <td>08:36:26</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>None</td>
+      <td>17225.0</td>
+      <td>2013</td>
+      <td>16125.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002099</td>
+      <td>T00615548</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>99</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22 15:37:35</td>
+      <td>15:37:35</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>None</td>
+      <td>400.0</td>
+      <td>2013</td>
+      <td>400.0</td>
+      <td>Credit in Cash</td>
+      <td>A00002970</td>
+      <td>T00871631</td>
+      <td>None</td>
+      <td>22</td>
+      <td>1</td>
+      <td>100</td>
+      <td>Credit</td>
+      <td>None</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22</td>
+      <td>2013-01-22 11:08:59</td>
+      <td>11:08:59</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_category</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_category"></div><b>📃 Summary:</b> Purpose unknown, possibly transaction category<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">balance</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_balance"></div><b>📃 Summary:</b> Account balance after the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">year_</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_year_"></div><b>📃 Summary:</b> Year of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_amount"></div><b>📃 Summary:</b> Transaction amount in currency units<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Credit in Cash'>Credit in Cash</option><option value='Collection from Another Bank'>Collection from Another Bank</option><option value='Cash Withdrawal'>Cash Withdrawal</option><option value='Remittance to Another Bank'>Remittance to Another Bank</option><option value='Check Deposit'>Check Deposit</option><option value='Wire Transfer'>Wire Transfer</option><option value='ATM Withdrawal'>ATM Withdrawal</option><option value='Online Payment'>Online Payment</option><option value='Direct Deposit'>Direct Deposit</option><option value='Standing Order'>Standing Order</option><option value='Loan Payment'>Loan Payment</option><option value='Interest Credit'>Interest Credit</option><option value='Fee Deduction'>Fee Deduction</option><option value='Currency Exchange'>Currency Exchange</option><option value='Bank Transfer'>Bank Transfer</option></select></span><br><br><div id="bar_viz_transaction_description"></div><b>📃 Summary:</b> Description of the transaction type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_id"></div><b>📃 Summary:</b> Unique identifier for the account<br><b>🎨 Patterns:</b><br><ul><li><code>A\d{8}</code><br><i>Account IDs starting with 'A' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_transaction_id"></div><b>📃 Summary:</b> Unique identifier for the transaction<br><b>🦄 Unique:</b> This column is a unique identifier for each transaction. For this table, each row represents a single financial transaction, and transaction_id is unique across rows.<br><b>🎨 Patterns:</b><br><ul><li><code>T\d{8}</code><br><i>Transaction IDs starting with 'T' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">bank_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_bank_name"></div><b>📃 Summary:</b> Name or code of the bank<br><b>❓ Missing:</b> Transactions might not always involve a specific bank.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">day_of_month</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_day_of_month"></div><b>📃 Summary:</b> Day of the month for the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">month_</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_month_"></div><b>📃 Summary:</b> Month of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_row_number"></div><b>📃 Summary:</b> Purpose unknown, appears to be a counter<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Credit'>Credit</option><option value='Debit'>Debit</option></select></span><br><br><div id="bar_viz_transaction_type"></div><b>📃 Summary:</b> Type of transaction (e.g., Credit, Debit)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_holder</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_holder"></div><b>📃 Summary:</b> Account holder's name or identifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">full_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_full_date"></div><b>📃 Summary:</b> Full date of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_date"></div><b>📃 Summary:</b> Date of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_datetime"></div><b>📃 Summary:</b> Full date and time of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_time"></div><b>📃 Summary:</b> Time of the transaction<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about completed financial transactions. It includes details such as transaction ID, account ID, type of transaction, operation, amount, balance, date, and time. Each row represents a single transaction with its associated information. The table covers various credit transactions, specifically cash deposits, made on different dates and times.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>13</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>column_a</td>
+      <td>Purpose unknown, appears to be a counter</td>
+      <td>row_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>trans_id</td>
+      <td>Unique identifier for the transaction</td>
+      <td>transaction_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>account_id</td>
+      <td>Unique identifier for the account</td>
+      <td>account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>type</td>
+      <td>Type of transaction (e.g., Credit, Debit)</td>
+      <td>transaction_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>operation</td>
+      <td>Description of the transaction type</td>
+      <td>transaction_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>amount</td>
+      <td>Transaction amount in currency units</td>
+      <td>transaction_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>balance</td>
+      <td>Account balance after the transaction</td>
+      <td>balance</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>k_symbol</td>
+      <td>Purpose unknown, possibly transaction category</td>
+      <td>transaction_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>bank</td>
+      <td>Name or code of the bank</td>
+      <td>bank_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>account</td>
+      <td>Account holder's name or identifier</td>
+      <td>account_holder</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>year_</td>
+      <td>Year of the transaction</td>
+      <td>year_</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>month_</td>
+      <td>Month of the transaction</td>
+      <td>month_</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>day_</td>
+      <td>Day of the month for the transaction</td>
+      <td>day_of_month</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>date_</td>
+      <td>Date of the transaction</td>
+      <td>transaction_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>fulldate</td>
+      <td>Full date of the transaction</td>
+      <td>full_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>fulltime</td>
+      <td>Time of the transaction</td>
+      <td>transaction_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>fulldatewithtime</td>
+      <td>Full date and time of the transaction</td>
+      <td>transaction_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>✂️ 3. Leading and Trailing Whitespace</h2><br>
+                    🔍 <b>1</b> columns have leading and trailing whitespace<br>
+                    ✔️ <b>1</b> columns have been trimmed<br><br><br><h2>🚧 4. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>transaction_time</b>: '15:60:16' is unusual because minutes cannot exceed 59 in a valid time format.<br>❌ The column has not been cleaned<br><br></li></ol><br><h2>🕵️‍♂️ 5. Disguised Missing Values</h2><br>
+                    🔍 <b>1</b> columns have disguised missing values<br>
+                    ✔️ <b>1</b> columns have been cleaned<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>transaction_category</td>
+      <td>[]</td>
+      <td>True</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 6. Data Type</h2><br>
+                    ✔️ <b>5</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_holder</td>
+      <td>CAST("account_holder" AS VARCHAR)</td>
+      <td>To transform the 'account_holder' column from FLOAT to VARCHAR in Snowflake, we need to use a simple CAST function. This will convert the numeric values to their string representation. In Snowflake, VARCHAR is equivalent to STRING, so we can use either. The CAST function will automatically handle the conversion of floating-point numbers to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>full_date</td>
+      <td>CAST("full_date" AS DATE)</td>
+      <td>To transform the 'full_date' column from VARCHAR to DATE in Snowflake, we can use a simple CAST function. The date format in the given values is already in the ISO date format (YYYY-MM-DD), which Snowflake can automatically interpret. Therefore, we don't need to specify a format string, and a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>transaction_date</td>
+      <td>CAST("transaction_date" AS DATE)</td>
+      <td>To transform the 'transaction_date' column from VARCHAR to DATE in Snowflake, we can use a simple CAST function. The date format in the given values appears to be 'YYYY-MM-DD', which is the standard ISO date format. Snowflake can automatically interpret this format when casting to DATE, so we don't need to specify a format string.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>transaction_datetime</td>
+      <td>TRY_TO_TIMESTAMP("transaction_datetime", 'YYYY-MM-DDTHH24:MI:SS')</td>
+      <td>To transform the 'transaction_datetime' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The current format of the data matches the ISO 8601 format, which is directly compatible with Snowflake's TIMESTAMP data type. Therefore, we don't need to specify a format string in this case.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>transaction_time</td>
+      <td>CASE\n    WHEN REGEXP_LIKE("transaction_time", '([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d') THEN CAST("transaction_time" AS TIME)\n    WHEN REGEXP_LIKE("transaction_time", '\\d{2}:\\d{2}:\\d{2}') THEN TO_TIME(\n    CASE\n        WHEN SPLIT_PART("transaction_time", ':', 1)::INT &gt; 23 THEN '23'\n        ELSE LPAD(SPLIT_PART("transaction_time", ':', 1), 2, '0')\n    END || ':' ||\n    CASE\n        WHEN SPLIT_PART("transaction_time", ':', 2)::INT &gt; 59 THEN '59'\n        ELSE LPAD(SPLIT_PART("transaction_time", ':', 2), 2, '0')\n    END || ':' ||\n    CASE\n        WHEN SPLIT_PART("transaction_time", ':', 3)::INT &gt; 59 THEN '59'\n        ELSE LPAD(SPLIT_PART("transaction_time", ':', 3), 2, '0')\n    END\n)\n    ELSE "transaction_time"\nEND</td>
+      <td>To transform the 'transaction_time' column from VARCHAR to TIME data type in Snowflake, we can use a simple CAST function. The given values are already in a valid time format (HH:MM:SS), which matches Snowflake's default time format. Therefore, we don't need to specify a format string in this case. Snowflake will automatically recognize and convert the string to a TIME data type.\n\nTo transform the 'transaction_time' column from VARCHAR to TIME data type in Snowflake, we can use a simple CAST function. The provided data already follows the HH:MI:SS format, which is compatible with Snowflake's TIME data type. However, it's important to note that some of the given values are invalid times (e.g., '15:60:16' has 60 minutes, which is not valid). Snowflake will automatically adjust these invalid times to the nearest valid time during the casting process.\n\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 7. Missing Values</h2><br>
+                    🔍 <b>5</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_holder</td>
+      <td>84.2</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>bank_name</td>
+      <td>84.2</td>
+      <td>True</td>
+      <td>Transactions might not always involve a specific bank.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>transaction_category</td>
+      <td>77.1</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>transaction_datetime</td>
+      <td>3.0</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>transaction_description</td>
+      <td>14.1</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_holder</td>
+      <td>84.2</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>transaction_category</td>
+      <td>77.1</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>transaction_datetime</td>
+      <td>3.0</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>transaction_description</td>
+      <td>14.1</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Interest Credit...', 'value': 61.572052401746724}, {'label': 'Old Age Pension', 'value': 36.24454148471616}, {'label': 'Household', 'value': 1.3100436681222707}, {'label': 'Insurance Payme...', 'value': 0.43668122270742354}, {'label': 'Payment on Stat...', 'value': 0.43668122270742354}];
+    drawBarChart("bar_viz_transaction_category", data);
+data = [{'label': '200', 'value': 3.6999999999999997}, {'label': '400', 'value': 2.8000000000000003}, {'label': '1100', 'value': 2.8000000000000003}, {'label': '700', 'value': 2.8000000000000003}, {'label': '1000', 'value': 2.7}, {'label': 'Other values', 'value': 85.2}];
+    drawBarChart("bar_viz_balance", data);
+data = [{'x': 2013, 'y': 1000}];
+    binWidth = 2013;
+    drawHistogram("hist_viz_year_", data, binWidth);
+data = [{'label': '200', 'value': 3.9}, {'label': '700', 'value': 3.4000000000000004}, {'label': '800', 'value': 3.2}, {'label': '900', 'value': 3.0}, {'label': '1100', 'value': 3.0}, {'label': 'Other values', 'value': 83.5}];
+    drawBarChart("bar_viz_transaction_amount", data);
+data = [{'label': 'Credit in Cash', 'value': 71.1292200232829}, {'label': 'Collection from...', 'value': 17.81140861466822}, {'label': 'Cash Withdrawal', 'value': 10.477299185098952}, {'label': 'Remittance to A...', 'value': 0.5820721769499418}];
+    drawBarChart("bar_viz_transaction_description", data);
+data = [{'label': 'A00002378', 'value': 1.7999999999999998}, {'label': 'A00000485', 'value': 1.7000000000000002}, {'label': 'A00005270', 'value': 0.8999999999999999}, {'label': 'A00003760', 'value': 0.8999999999999999}, {'label': 'A00002099', 'value': 0.8999999999999999}, {'label': 'Other values', 'value': 93.8}];
+    drawBarChart("bar_viz_account_id", data);
+data = [{'label': 'T03572389', 'value': 0.1}, {'label': 'T03558799', 'value': 0.1}, {'label': 'T03654667', 'value': 0.1}, {'label': 'T03657066', 'value': 0.1}, {'label': 'T03458834', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_transaction_id", data);
+data = [{'label': 'Bank of New Yor...', 'value': 12.025316455696203}, {'label': 'Capital One', 'value': 10.759493670886076}, {'label': 'JPMorgan Chase', 'value': 10.759493670886076}, {'label': 'Bank of America', 'value': 9.49367088607595}, {'label': 'Wells Fargo & C...', 'value': 9.49367088607595}, {'label': 'Other values', 'value': 47.46835443037975}];
+    drawBarChart("bar_viz_bank_name", data);
+data = [{'x': 1.75, 'y': 27}, {'x': 3.25, 'y': 20}, {'x': 4.75, 'y': 74}, {'x': 6.25, 'y': 42}, {'x': 7.75, 'y': 112}, {'x': 9.25, 'y': 45}, {'x': 10.75, 'y': 84}, {'x': 12.25, 'y': 64}, {'x': 13.75, 'y': 105}, {'x': 15.25, 'y': 14}, {'x': 16.75, 'y': 28}, {'x': 18.25, 'y': 25}, {'x': 19.75, 'y': 45}, {'x': 21.25, 'y': 17}, {'x': 22.75, 'y': 42}, {'x': 24.25, 'y': 23}, {'x': 25.75, 'y': 54}, {'x': 27.25, 'y': 17}, {'x': 28.75, 'y': 118}, {'x': 30.25, 'y': 44}];
+    binWidth = 1.5;
+    drawHistogram("hist_viz_day_of_month", data, binWidth);
+data = [{'x': 1.05, 'y': 177}, {'x': 1.15, 'y': 0}, {'x': 1.25, 'y': 0}, {'x': 1.35, 'y': 0}, {'x': 1.45, 'y': 0}, {'x': 1.55, 'y': 0}, {'x': 1.6500000000000001, 'y': 0}, {'x': 1.75, 'y': 0}, {'x': 1.85, 'y': 0}, {'x': 1.95, 'y': 0}, {'x': 2.05, 'y': 395}, {'x': 2.1500000000000004, 'y': 0}, {'x': 2.25, 'y': 0}, {'x': 2.35, 'y': 0}, {'x': 2.45, 'y': 0}, {'x': 2.55, 'y': 0}, {'x': 2.6500000000000004, 'y': 0}, {'x': 2.75, 'y': 0}, {'x': 2.85, 'y': 0}, {'x': 2.95, 'y': 428}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_month_", data, binWidth);
+data = [{'x': 25.975, 'y': 50}, {'x': 75.92500000000001, 'y': 50}, {'x': 125.87500000000001, 'y': 50}, {'x': 175.82500000000002, 'y': 50}, {'x': 225.775, 'y': 50}, {'x': 275.725, 'y': 50}, {'x': 325.67500000000007, 'y': 50}, {'x': 375.625, 'y': 50}, {'x': 425.57500000000005, 'y': 50}, {'x': 475.525, 'y': 50}, {'x': 525.475, 'y': 50}, {'x': 575.4250000000001, 'y': 50}, {'x': 625.375, 'y': 50}, {'x': 675.325, 'y': 50}, {'x': 725.2750000000001, 'y': 50}, {'x': 775.225, 'y': 50}, {'x': 825.1750000000001, 'y': 50}, {'x': 875.125, 'y': 50}, {'x': 925.075, 'y': 50}, {'x': 975.0250000000001, 'y': 50}];
+    binWidth = 49.95;
+    drawHistogram("hist_viz_row_number", data, binWidth);
+data = [{'label': 'Credit', 'value': 90.5}, {'label': 'Debit', 'value': 9.5}];
+    drawBarChart("bar_viz_transaction_type", data);
+data = [{'label': '6149286', 'value': 1.89873417721519}, {'label': '15916598', 'value': 1.89873417721519}, {'label': '62457513', 'value': 1.89873417721519}, {'label': '54522466', 'value': 1.89873417721519}, {'label': '80269753', 'value': 1.89873417721519}, {'label': 'Other values', 'value': 90.50632911392405}];
+    drawBarChart("bar_viz_account_holder", data);
+data = [{'label': '2013-02-28', 'value': 11.0}, {'label': '2013-01-31', 'value': 4.1000000000000005}, {'label': '2013-03-12', 'value': 3.5000000000000004}, {'label': '2013-03-13', 'value': 3.2}, {'label': '2013-03-07', 'value': 3.1}, {'label': 'Other values', 'value': 75.1}];
+    drawBarChart("bar_viz_full_date", data);
+data = [{'label': '2013-02-28', 'value': 11.0}, {'label': '2013-01-31', 'value': 4.1000000000000005}, {'label': '2013-03-12', 'value': 3.5000000000000004}, {'label': '2013-03-13', 'value': 3.2}, {'label': '2013-03-07', 'value': 3.1}, {'label': 'Other values', 'value': 75.1}];
+    drawBarChart("bar_viz_transaction_date", data);
+data = [{'label': '2013-03-02 08:3...', 'value': 0.10309278350515465}, {'label': '2013-03-08 11:2...', 'value': 0.10309278350515465}, {'label': '2013-03-09 08:4...', 'value': 0.10309278350515465}, {'label': '2013-03-10 16:4...', 'value': 0.10309278350515465}, {'label': '2013-02-13 08:0...', 'value': 0.10309278350515465}, {'label': 'Other values', 'value': 99.48453608247422}];
+    drawBarChart("bar_viz_transaction_datetime", data);
+data = [{'label': '15:37:35', 'value': 0.2}, {'label': '10:01:27', 'value': 0.2}, {'label': '16:21:42', 'value': 0.2}, {'label': '12:17:20', 'value': 0.2}, {'label': '10:38:26', 'value': 0.2}, {'label': 'Other values', 'value': 99.0}];
+    drawBarChart("bar_viz_transaction_time", data);
+
+
+</script>
+</body>
+</html>

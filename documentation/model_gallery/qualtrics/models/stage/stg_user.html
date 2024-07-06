@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>user</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>_fivetran_deleted</th>
+      <th>account_status</th>
+      <th>email</th>
+      <th>first_name</th>
+      <th>last_name</th>
+      <th>user_type</th>
+      <th>username</th>
+      <th>account_expiration_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>False</td>
+      <td>active</td>
+      <td>developers@puppy.com</td>
+      <td>Puppy</td>
+      <td>Developers</td>
+      <td>UT_BRANDADMIN</td>
+      <td>developers@fivetran.com</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>UR_0AnU60plqo2I4DL</td>
+      <td>False</td>
+      <td>active</td>
+      <td>cat@fivetran.com</td>
+      <td>Cat</td>
+      <td>Meow</td>
+      <td>UT_BRANDADMIN</td>
+      <td>colin@fivetran.com</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>user_id</th>
+      <th>is_deleted</th>
+      <th>account_status</th>
+      <th>email</th>
+      <th>first_name</th>
+      <th>last_name</th>
+      <th>user_type</th>
+      <th>username</th>
+      <th>account_expiration_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>False</td>
+      <td>active</td>
+      <td>developers@puppy.com</td>
+      <td>Puppy</td>
+      <td>Developers</td>
+      <td>UT_BRANDADMIN</td>
+      <td>developers@fivetran.com</td>
+      <td>NaT</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>UR_0AnU60plqo2I4DL</td>
+      <td>False</td>
+      <td>active</td>
+      <td>cat@fivetran.com</td>
+      <td>Cat</td>
+      <td>Meow</td>
+      <td>UT_BRANDADMIN</td>
+      <td>colin@fivetran.com</td>
+      <td>NaT</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_user_id"></div><b>📃 Summary:</b> Unique identifier for the user<br><b>🦄 Unique:</b> This column is a unique identifier for each user. For this table, each row represents a distinct user account. user_id appears to be unique across rows, as it's designed to be a specific identifier for each user.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='active'>active</option><option value='inactive'>inactive</option><option value='suspended'>suspended</option><option value='pending'>pending</option><option value='locked'>locked</option><option value='closed'>closed</option><option value='banned'>banned</option><option value='archived'>archived</option></select></span><br><br><div id="bar_viz_account_status"></div><b>📃 Summary:</b> Current status of the user account<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_email"></div><b>📃 Summary:</b> User's email address<br><b>🦄 Unique:</b> This column represents the user's email address. In most systems, email addresses are unique for each user account. However, there's a slight possibility that in some systems, multiple accounts could share an email (e.g., work accounts). Based on the sample data, it appears to be unique.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">first_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_first_name"></div><b>📃 Summary:</b> User's first name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_name"></div><b>📃 Summary:</b> User's last name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='UT_BRANDADMIN'>UT_BRANDADMIN</option><option value='UT_ADMIN'>UT_ADMIN</option><option value='UT_USER'>UT_USER</option><option value='UT_MANAGER'>UT_MANAGER</option><option value='UT_SUPPORT'>UT_SUPPORT</option><option value='UT_GUEST'>UT_GUEST</option><option value='UT_DEVELOPER'>UT_DEVELOPER</option><option value='UT_ANALYST'>UT_ANALYST</option><option value='UT_MODERATOR'>UT_MODERATOR</option><option value='UT_EDITOR'>UT_EDITOR</option></select></span><br><br><div id="bar_viz_user_type"></div><b>📃 Summary:</b> Type or role of the user<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">username</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_username"></div><b>📃 Summary:</b> User's username for login<br><b>🦄 Unique:</b> This column represents the user's username for login. In most systems, usernames are unique for each user account. Based on the sample data, it appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_expiration_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_account_expiration_date"></div><b>📃 Summary:</b> Date when the user account expires<br><b>❓ Missing:</b> Active accounts may not have an expiration date.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about user accounts. It contains user details like ID, email, name, and account status. The table includes information on account creation, expiration, and last login dates. It also tracks user types, organizations, and response counts. Some fields like language and time zone suggest customization options for users.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>7</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the user</td>
+      <td>user_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>account_creation_date</td>
+      <td>Date when the user account was created</td>
+      <td>account_creation_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>account_expiration_date</td>
+      <td>Date when the user account expires</td>
+      <td>account_expiration_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>account_status</td>
+      <td>Current status of the user account</td>
+      <td>account_status</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>division_id</td>
+      <td>Identifier for the user's division</td>
+      <td>division_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>email</td>
+      <td>User's email address</td>
+      <td>email</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>first_name</td>
+      <td>User's first name</td>
+      <td>first_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>language_</td>
+      <td>User's preferred language</td>
+      <td>preferred_language</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>last_login_date</td>
+      <td>Date of user's most recent login</td>
+      <td>last_login_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>last_name</td>
+      <td>User's last name</td>
+      <td>last_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>organization_id</td>
+      <td>Identifier for the user's organization</td>
+      <td>organization_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>password_expiration_date</td>
+      <td>Date when the user's password expires</td>
+      <td>password_expiration_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>password_last_changed_date</td>
+      <td>Date when the password was last changed</td>
+      <td>password_last_changed_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>response_count_auditable</td>
+      <td>Number of auditable responses by the user</td>
+      <td>auditable_response_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>response_count_deleted</td>
+      <td>Number of deleted responses by the user</td>
+      <td>deleted_response_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>response_count_generated</td>
+      <td>Number of generated responses by the user</td>
+      <td>generated_response_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>time_zone</td>
+      <td>User's preferred time zone</td>
+      <td>time_zone</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>unsubscribed</td>
+      <td>Indicates if the user has unsubscribed</td>
+      <td>is_unsubscribed</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>user_type</td>
+      <td>Type or role of the user</td>
+      <td>user_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>username</td>
+      <td>User's username for login</td>
+      <td>username</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>2</b> columns have erroneous values<br><ol><li><b>first_name</b>: 'Cat' and 'Puppy' are unusual because they are animal names, not typical human first names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'Cat'</td>
+      <td>''</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>'Puppy'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>last_name</b>: 'Developers' and 'Meow' are unusual for last names; they don't represent typical family names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'Developers'</td>
+      <td>''</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>'Meow'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>13</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_creation_date</td>
+      <td>CAST("account_creation_date" AS TIMESTAMP)</td>
+      <td>To transform the 'account_creation_date' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column is already in a numeric format (DECIMAL), we don't need to use the strptime function or any string formatting. A direct cast to TIMESTAMP should suffice. However, it's important to note that without knowing the exact format of the DECIMAL values (e.g., Unix timestamp, formatted date number), this cast might not produce the expected results in all cases. If the DECIMAL represents a Unix timestamp, this cast should work correctly.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>account_expiration_date</td>
+      <td>CAST("account_expiration_date" AS TIMESTAMP)</td>
+      <td>To transform the 'account_expiration_date' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column has no distinct values (it's empty), we don't need to worry about any specific date format conversion. A straightforward CAST should suffice.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auditable_response_count</td>
+      <td>CAST("auditable_response_count" AS INT)</td>
+      <td>To transform the data type of the 'auditable_response_count' column from DECIMAL to INT, we need to use a simple CAST function in DuckDB. This will convert the decimal values to integers, potentially truncating any fractional parts. Since the question states that the column has no distinct values (empty list), this transformation should not affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>deleted_response_count</td>
+      <td>CAST("deleted_response_count" AS INT)</td>
+      <td>To transform the data type of the 'deleted_response_count' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only empty brackets [], which suggests it might be empty or contain null values, a straightforward cast to INT should suffice. This will convert any decimal values to integers by truncating the decimal part, and null values will remain null.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>division_id</td>
+      <td>CAST("division_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'division_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>generated_response_count</td>
+      <td>CAST("generated_response_count" AS INT)</td>
+      <td>To transform the data type of the 'generated_response_count' column from DECIMAL to INT, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is already numeric (DECIMAL), a straightforward cast to INT should work without any issues. This will effectively round any decimal values to the nearest integer.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>is_unsubscribed</td>
+      <td>CAST("is_unsubscribed" AS BOOLEAN)</td>
+      <td>To transform the 'is_unsubscribed' column from DECIMAL to BOOLEAN in DuckDB, we need to use a simple CAST function. Since the column only contains distinct values of [], which implies it might contain NULL values or empty values, a straightforward cast should suffice. In DuckDB, casting to BOOLEAN typically interprets 0 as FALSE and any non-zero value as TRUE, while NULL values remain NULL.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>last_login_date</td>
+      <td>CAST("last_login_date" AS TIMESTAMP)</td>
+      <td>To transform the 'last_login_date' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column is already in a numeric format (DECIMAL), we don't need to use the strptime function or any string formatting. DuckDB can directly cast a numeric value to a TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>organization_id</td>
+      <td>CAST("organization_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'organization_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>password_expiration_date</td>
+      <td>CAST("password_expiration_date" AS TIMESTAMP)</td>
+      <td>To transform the 'password_expiration_date' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column has no distinct values (it's empty or null), we don't need to worry about formatting specific date strings. A straightforward CAST to TIMESTAMP should suffice.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>password_last_changed_date</td>
+      <td>CAST("password_last_changed_date" AS TIMESTAMP)</td>
+      <td>To transform the 'password_last_changed_date' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column has no distinct values (it's empty), we don't need to worry about specific date formats or conversions. A straightforward CAST to TIMESTAMP should suffice.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>preferred_language</td>
+      <td>CAST("preferred_language" AS VARCHAR)</td>
+      <td>To transform the data type of the 'preferred_language' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we'll proceed with the cast as requested.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>time_zone</td>
+      <td>CAST("time_zone" AS VARCHAR)</td>
+      <td>To transform the data type of the 'time_zone' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently a DECIMAL and we want to convert it to a VARCHAR (which is equivalent to a string), we can use CAST directly.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>13</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_creation_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>account_expiration_date</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Active accounts may not have an expiration date.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auditable_response_count</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>deleted_response_count</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>division_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>generated_response_count</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>is_unsubscribed</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>last_login_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>organization_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>password_expiration_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>password_last_changed_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>preferred_language</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>time_zone</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_creation_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>auditable_response_count</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>deleted_response_count</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>division_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>generated_response_count</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>is_unsubscribed</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>last_login_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>organization_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>password_expiration_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>password_last_changed_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>preferred_language</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>time_zone</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'UR_cYdNGsrFUeml...', 'value': 50.0}, {'label': 'UR_0AnU60plqo2I...', 'value': 50.0}];
+    drawBarChart("bar_viz_user_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'active', 'value': 100.0}];
+    drawBarChart("bar_viz_account_status", data);
+data = [{'label': 'developers@pupp...', 'value': 50.0}, {'label': 'cat@fivetran.co...', 'value': 50.0}];
+    drawBarChart("bar_viz_email", data);
+data = [{'label': 'Puppy', 'value': 50.0}, {'label': 'Cat', 'value': 50.0}];
+    drawBarChart("bar_viz_first_name", data);
+data = [{'label': 'Meow', 'value': 50.0}, {'label': 'Developers', 'value': 50.0}];
+    drawBarChart("bar_viz_last_name", data);
+data = [{'label': 'UT_BRANDADMIN', 'value': 100.0}];
+    drawBarChart("bar_viz_user_type", data);
+data = [{'label': 'colin@fivetran....', 'value': 50.0}, {'label': 'developers@five...', 'value': 50.0}];
+    drawBarChart("bar_viz_username", data);
+data = [];
+    drawBarChart("bar_viz_account_expiration_date", data);
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,3222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>charge_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>amount</th>
+      <th>amount_refunded</th>
+      <th>captured</th>
+      <th>card_id</th>
+      <th>currency</th>
+      <th>customer_id</th>
+      <th>description</th>
+      <th>failure_code</th>
+      <th>failure_message</th>
+      <th>livemode</th>
+      <th>outcome_network_status</th>
+      <th>outcome_reason</th>
+      <th>outcome_risk_level</th>
+      <th>outcome_seller_message</th>
+      <th>outcome_type</th>
+      <th>paid</th>
+      <th>payment_intent_id</th>
+      <th>receipt_email</th>
+      <th>refunded</th>
+      <th>status</th>
+      <th>calculated_statement_descriptor</th>
+      <th>created</th>
+      <th>invoice_id</th>
+      <th>metadata</th>
+      <th>receipt_number</th>
+      <th>receipt_url</th>
+      <th>shipping_address_line_1</th>
+      <th>shipping_address_line_2</th>
+      <th>shipping_carrier</th>
+      <th>shipping_address_city</th>
+      <th>shipping_address_country</th>
+      <th>shipping_phone</th>
+      <th>shipping_address_postal_code</th>
+      <th>shipping_name</th>
+      <th>shipping_address_state</th>
+      <th>shipping_tracking_number</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>ch_0IMDAfig6peNXzgDJYQKfT3B</td>
+      <td>3293232</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hr3Oyig6peNXzgDkOfs9Dqm</td>
+      <td>usd</td>
+      <td>cus_IRb688lkE0TnTM</td>
+      <td>068dfcec35b4d2eb8e5655783b40608e</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDAfig6peNXzgDnE8UotlM</td>
+      <td>32beaaeef4e37a5d19f8bafc1a1631c2</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:07:57</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ch_0IMDAVig6peNXzgDHlr1zyyW</td>
+      <td>2040000</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hj3Mhig6peNXzgDeAoKLH7U</td>
+      <td>usd</td>
+      <td>cus_IHmGn2733l3GK6</td>
+      <td>403e2c77a9041c677cb45b09d65a2636</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDAVig6peNXzgDJXuKVLtD</td>
+      <td>e9e8ea6013cb5c982f71b5247c98be65</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:07:47</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ch_0IMD9Yig6peNXzgDUvMKMSla</td>
+      <td>4071</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0HfVlUig6peNXzgDvnqkgdRQ</td>
+      <td>usd</td>
+      <td>cus_IEXWsmR0hA8iGL</td>
+      <td>d36f9f0f170bb3069a9b1d7055c8b412</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMD9Yig6peNXzgDtgkX3pjH</td>
+      <td>ab11bebc20a2f74af38dc1f84d33e759</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:06:48</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>ch_0IMDGtig6peNXzgD1jdR6t7Y</td>
+      <td>197391</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0I3Nemig6peNXzgDdDSfZXb9</td>
+      <td>usd</td>
+      <td>cus_IegzSpQ6V9deOW</td>
+      <td>f794a8544921fbec51dd986d00a443f8</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDGtig6peNXzgDCuzBH6xK</td>
+      <td>24a64fea88592b8a7bb9783eeb93f4c5</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:14:23</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>ch_0IMDLjig6peNXzgDQ0WJ7OtY</td>
+      <td>15000</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hw4QGig6peNXzgDCwWwFnh0</td>
+      <td>usd</td>
+      <td>cus_IX8c0jeM4yuzDn</td>
+      <td>cda6649904149ac57765d9deac2263e6</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDLjig6peNXzgDppN3qSTF</td>
+      <td>eb27183b771710ba705cc3d1f10be3fd</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:19:23</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>ch_0IMD9Wig6peNXzgDHxwWBPEZ</td>
+      <td>183000</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0HnC5mig6peNXzgDXSNeK1Bu</td>
+      <td>usd</td>
+      <td>cus_INy1KScKAog1uS</td>
+      <td>3944b9f788ae4e71b100786be80205de</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMD9Vig6peNXzgDQxQe1FHT</td>
+      <td>6e05435f9bf429c0fb659a54fd7529b8</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:06:46</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>ch_0IMDDQig6peNXzgDah11dNBN</td>
+      <td>243500</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0HnC5mig6peNXzgDXSNeK1Bu</td>
+      <td>usd</td>
+      <td>cus_INy1KScKAog1uS</td>
+      <td>dd43606ef2262a592ebf62590c9d4df5</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDDQig6peNXzgDaC9Gjkx0</td>
+      <td>6e05435f9bf429c0fb659a54fd7529b8</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:10:48</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ch_0IMDDUig6peNXzgDyqDvLubr</td>
+      <td>2786</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0HfVlUig6peNXzgDvnqkgdRQ</td>
+      <td>usd</td>
+      <td>cus_IEXWsmR0hA8iGL</td>
+      <td>7ae43df98d8720a8f8fa6cc2d7987552</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDDUig6peNXzgDsuEhnuAl</td>
+      <td>ab11bebc20a2f74af38dc1f84d33e759</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:10:52</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>ch_0IMDEuig6peNXzgDkP5uU3im</td>
+      <td>73650</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hpc71ig6peNXzgDy1i9s6en</td>
+      <td>usd</td>
+      <td>cus_IQT24DskOLZ2yF</td>
+      <td>95175f4654496b92456b626a93b7ac33</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDEuig6peNXzgDqEn5B1gv</td>
+      <td>9cad6f0e0c1dff3dd27a98ee7fa4ff40</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:12:20</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>ch_0IMDJ3ig6peNXzgD5HDCXZGY</td>
+      <td>25600</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0I6fuwig6peNXzgDpmJZOcbj</td>
+      <td>usd</td>
+      <td>cus_I5NJ6elPyrZHfj</td>
+      <td>a4a3c49803b2e7ab42c1f6de44197126</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDJ3ig6peNXzgDjJpHOesH</td>
+      <td>5eb7cf4a91f5aadf5a52479989bc55ed</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:16:37</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ch_0IMD9pig6peNXzgD5E7v2nk3</td>
+      <td>69750</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hpc71ig6peNXzgDy1i9s6en</td>
+      <td>usd</td>
+      <td>cus_IQT24DskOLZ2yF</td>
+      <td>0b3c44516e5462c35367b3bed49b4a4d</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMD9oig6peNXzgD8rGMNoRL</td>
+      <td>9cad6f0e0c1dff3dd27a98ee7fa4ff40</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:07:05</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>ch_0IMD9dig6peNXzgD3i6CTeP6</td>
+      <td>160700</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hnu2tig6peNXzgDeQNHwzSV</td>
+      <td>usd</td>
+      <td>cus_IOhGAHpVOsOV99</td>
+      <td>d871ea4e3c6b57da4750add9e8da62ae</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMD9dig6peNXzgDSLNX3MAL</td>
+      <td>9bd8e73d66d10af5cb18588b9e7c3872</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:06:53</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>ch_0IMDH8ig6peNXzgDku6HtBcQ</td>
+      <td>24592</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0I3saBig6peNXzgDVgYNcLHV</td>
+      <td>usd</td>
+      <td>cus_IfCy5uUXv2MDT0</td>
+      <td>e1f0c035dbb83e796ffac9c71d94b138</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDH7ig6peNXzgD3IFw1Ss8</td>
+      <td>a5548420ede4e57b3e2fe16a984f851d</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:14:38</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>ch_0IMDA2ig6peNXzgDU9JZdY1J</td>
+      <td>109800</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hj3Mhig6peNXzgDeAoKLH7U</td>
+      <td>usd</td>
+      <td>cus_IHmGn2733l3GK6</td>
+      <td>ed23dd0d8e2a65a9980b08d23c73360d</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDA2ig6peNXzgDDcfY1N2L</td>
+      <td>e9e8ea6013cb5c982f71b5247c98be65</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:07:18</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>ch_0IMDJyig6peNXzgDngzT0dAy</td>
+      <td>117100</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hj3Mhig6peNXzgDeAoKLH7U</td>
+      <td>usd</td>
+      <td>cus_IHmGn2733l3GK6</td>
+      <td>75b420f296d4874b1fd7c70eb3630cfa</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDJyig6peNXzgD4Ghvs0zF</td>
+      <td>e9e8ea6013cb5c982f71b5247c98be65</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:17:34</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ch_0IGmOVig6peNXzgDFYDv1XdZ</td>
+      <td>117524</td>
+      <td>0</td>
+      <td>False</td>
+      <td>card_Gti5RQklrpVVJ2</td>
+      <td>usd</td>
+      <td>cus_F4zOnlDjqyZKdP</td>
+      <td>61721ad6e321cf891a91d20b397a4fd4</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IGmOVig6peNXzgDoFcKFzqx</td>
+      <td>bd6a239ac7909ad0fe72d99b6d464a24</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-03 14:31:47</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>charge_id</th>
+      <th>amount_cents</th>
+      <th>refunded_cents</th>
+      <th>is_captured</th>
+      <th>card_id</th>
+      <th>currency</th>
+      <th>customer_id</th>
+      <th>description</th>
+      <th>failure_code</th>
+      <th>failure_message</th>
+      <th>is_live</th>
+      <th>network_status</th>
+      <th>outcome_reason</th>
+      <th>risk_level</th>
+      <th>seller_message</th>
+      <th>outcome_type</th>
+      <th>is_paid</th>
+      <th>payment_intent_id</th>
+      <th>hashed_receipt_email</th>
+      <th>is_refunded</th>
+      <th>charge_status</th>
+      <th>calculated_statement_descriptor</th>
+      <th>created_at</th>
+      <th>invoice_id</th>
+      <th>metadata</th>
+      <th>receipt_number</th>
+      <th>receipt_url</th>
+      <th>shipping_address_1</th>
+      <th>shipping_address_2</th>
+      <th>shipping_carrier</th>
+      <th>shipping_city</th>
+      <th>shipping_country</th>
+      <th>shipping_phone</th>
+      <th>shipping_postal_code</th>
+      <th>shipping_recipient_name</th>
+      <th>shipping_state</th>
+      <th>shipping_tracking_number</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>ch_0IMDAfig6peNXzgDJYQKfT3B</td>
+      <td>3293232</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hr3Oyig6peNXzgDkOfs9Dqm</td>
+      <td>usd</td>
+      <td>cus_IRb688lkE0TnTM</td>
+      <td>068dfcec35b4d2eb8e5655783b40608e</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDAfig6peNXzgDnE8UotlM</td>
+      <td>32beaaeef4e37a5d19f8bafc1a1631c2</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:07:57</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ch_0IMDAVig6peNXzgDHlr1zyyW</td>
+      <td>2040000</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hj3Mhig6peNXzgDeAoKLH7U</td>
+      <td>usd</td>
+      <td>cus_IHmGn2733l3GK6</td>
+      <td>403e2c77a9041c677cb45b09d65a2636</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDAVig6peNXzgDJXuKVLtD</td>
+      <td>e9e8ea6013cb5c982f71b5247c98be65</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:07:47</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ch_0IMD9Yig6peNXzgDUvMKMSla</td>
+      <td>4071</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0HfVlUig6peNXzgDvnqkgdRQ</td>
+      <td>usd</td>
+      <td>cus_IEXWsmR0hA8iGL</td>
+      <td>d36f9f0f170bb3069a9b1d7055c8b412</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMD9Yig6peNXzgDtgkX3pjH</td>
+      <td>ab11bebc20a2f74af38dc1f84d33e759</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:06:48</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>ch_0IMDGtig6peNXzgD1jdR6t7Y</td>
+      <td>197391</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0I3Nemig6peNXzgDdDSfZXb9</td>
+      <td>usd</td>
+      <td>cus_IegzSpQ6V9deOW</td>
+      <td>f794a8544921fbec51dd986d00a443f8</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDGtig6peNXzgDCuzBH6xK</td>
+      <td>24a64fea88592b8a7bb9783eeb93f4c5</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:14:23</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>ch_0IMDLjig6peNXzgDQ0WJ7OtY</td>
+      <td>15000</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hw4QGig6peNXzgDCwWwFnh0</td>
+      <td>usd</td>
+      <td>cus_IX8c0jeM4yuzDn</td>
+      <td>cda6649904149ac57765d9deac2263e6</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDLjig6peNXzgDppN3qSTF</td>
+      <td>eb27183b771710ba705cc3d1f10be3fd</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:19:23</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>ch_0IMD9Wig6peNXzgDHxwWBPEZ</td>
+      <td>183000</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0HnC5mig6peNXzgDXSNeK1Bu</td>
+      <td>usd</td>
+      <td>cus_INy1KScKAog1uS</td>
+      <td>3944b9f788ae4e71b100786be80205de</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMD9Vig6peNXzgDQxQe1FHT</td>
+      <td>6e05435f9bf429c0fb659a54fd7529b8</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:06:46</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>ch_0IMDDQig6peNXzgDah11dNBN</td>
+      <td>243500</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0HnC5mig6peNXzgDXSNeK1Bu</td>
+      <td>usd</td>
+      <td>cus_INy1KScKAog1uS</td>
+      <td>dd43606ef2262a592ebf62590c9d4df5</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDDQig6peNXzgDaC9Gjkx0</td>
+      <td>6e05435f9bf429c0fb659a54fd7529b8</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:10:48</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ch_0IMDDUig6peNXzgDyqDvLubr</td>
+      <td>2786</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0HfVlUig6peNXzgDvnqkgdRQ</td>
+      <td>usd</td>
+      <td>cus_IEXWsmR0hA8iGL</td>
+      <td>7ae43df98d8720a8f8fa6cc2d7987552</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDDUig6peNXzgDsuEhnuAl</td>
+      <td>ab11bebc20a2f74af38dc1f84d33e759</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:10:52</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>ch_0IMDEuig6peNXzgDkP5uU3im</td>
+      <td>73650</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hpc71ig6peNXzgDy1i9s6en</td>
+      <td>usd</td>
+      <td>cus_IQT24DskOLZ2yF</td>
+      <td>95175f4654496b92456b626a93b7ac33</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDEuig6peNXzgDqEn5B1gv</td>
+      <td>9cad6f0e0c1dff3dd27a98ee7fa4ff40</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:12:20</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>ch_0IMDJ3ig6peNXzgD5HDCXZGY</td>
+      <td>25600</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0I6fuwig6peNXzgDpmJZOcbj</td>
+      <td>usd</td>
+      <td>cus_I5NJ6elPyrZHfj</td>
+      <td>a4a3c49803b2e7ab42c1f6de44197126</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDJ3ig6peNXzgDjJpHOesH</td>
+      <td>5eb7cf4a91f5aadf5a52479989bc55ed</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:16:37</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ch_0IMD9pig6peNXzgD5E7v2nk3</td>
+      <td>69750</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hpc71ig6peNXzgDy1i9s6en</td>
+      <td>usd</td>
+      <td>cus_IQT24DskOLZ2yF</td>
+      <td>0b3c44516e5462c35367b3bed49b4a4d</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMD9oig6peNXzgD8rGMNoRL</td>
+      <td>9cad6f0e0c1dff3dd27a98ee7fa4ff40</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:07:05</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>ch_0IMD9dig6peNXzgD3i6CTeP6</td>
+      <td>160700</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hnu2tig6peNXzgDeQNHwzSV</td>
+      <td>usd</td>
+      <td>cus_IOhGAHpVOsOV99</td>
+      <td>d871ea4e3c6b57da4750add9e8da62ae</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMD9dig6peNXzgDSLNX3MAL</td>
+      <td>9bd8e73d66d10af5cb18588b9e7c3872</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:06:53</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>ch_0IMDH8ig6peNXzgDku6HtBcQ</td>
+      <td>24592</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0I3saBig6peNXzgDVgYNcLHV</td>
+      <td>usd</td>
+      <td>cus_IfCy5uUXv2MDT0</td>
+      <td>e1f0c035dbb83e796ffac9c71d94b138</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDH7ig6peNXzgD3IFw1Ss8</td>
+      <td>a5548420ede4e57b3e2fe16a984f851d</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:14:38</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>ch_0IMDA2ig6peNXzgDU9JZdY1J</td>
+      <td>109800</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hj3Mhig6peNXzgDeAoKLH7U</td>
+      <td>usd</td>
+      <td>cus_IHmGn2733l3GK6</td>
+      <td>ed23dd0d8e2a65a9980b08d23c73360d</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDA2ig6peNXzgDDcfY1N2L</td>
+      <td>e9e8ea6013cb5c982f71b5247c98be65</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:07:18</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>ch_0IMDJyig6peNXzgDngzT0dAy</td>
+      <td>117100</td>
+      <td>0</td>
+      <td>False</td>
+      <td>pm_0Hj3Mhig6peNXzgDeAoKLH7U</td>
+      <td>usd</td>
+      <td>cus_IHmGn2733l3GK6</td>
+      <td>75b420f296d4874b1fd7c70eb3630cfa</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IMDJyig6peNXzgD4Ghvs0zF</td>
+      <td>e9e8ea6013cb5c982f71b5247c98be65</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-18 14:17:34</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ch_0IGmOVig6peNXzgDFYDv1XdZ</td>
+      <td>117524</td>
+      <td>0</td>
+      <td>False</td>
+      <td>card_Gti5RQklrpVVJ2</td>
+      <td>usd</td>
+      <td>cus_F4zOnlDjqyZKdP</td>
+      <td>61721ad6e321cf891a91d20b397a4fd4</td>
+      <td>card_declined</td>
+      <td>Your card was declined.</td>
+      <td>True</td>
+      <td>declined_by_network</td>
+      <td>do_not_honor</td>
+      <td>normal</td>
+      <td>The bank returned the decline code `do_not_honor`.</td>
+      <td>issuer_declined</td>
+      <td>False</td>
+      <td>pi_0IGmOVig6peNXzgDoFcKFzqx</td>
+      <td>bd6a239ac7909ad0fe72d99b6d464a24</td>
+      <td>False</td>
+      <td>failed</td>
+      <td>6f867b34cbc9bf57509503b3123a2ecb</td>
+      <td>2021-02-03 14:31:47</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">charge_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_charge_id"></div><b>📃 Summary:</b> Unique identifier for the charge<br><b>🦄 Unique:</b> This column represents a unique identifier for each charge transaction. For this table, each row represents a distinct charge transaction. The charge_id is unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_cents"></div><b>📃 Summary:</b> Transaction amount in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">refunded_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_refunded_cents"></div><b>📃 Summary:</b> Amount refunded in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_captured</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_captured"></div><b>📃 Summary:</b> Whether the charge was captured<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">card_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_card_id"></div><b>📃 Summary:</b> ID of the card used<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='usd'>usd</option><option value='eur'>eur</option><option value='gbp'>gbp</option><option value='jpy'>jpy</option><option value='cad'>cad</option><option value='aud'>aud</option><option value='chf'>chf</option><option value='cny'>cny</option><option value='hkd'>hkd</option><option value='nzd'>nzd</option><option value='sek'>sek</option><option value='krw'>krw</option><option value='sgd'>sgd</option><option value='nok'>nok</option><option value='mxn'>mxn</option><option value='inr'>inr</option><option value='rub'>rub</option><option value='zar'>zar</option><option value='try'>try</option><option value='brl'>brl</option><option value='twd'>twd</option><option value='dkk'>dkk</option><option value='pln'>pln</option><option value='thb'>thb</option><option value='idr'>idr</option></select></span><br><br><div id="bar_viz_currency"></div><b>📃 Summary:</b> Currency of the charge<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_customer_id"></div><b>📃 Summary:</b> ID of the customer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_description"></div><b>📃 Summary:</b> Description of the charge<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">failure_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='card_declined'>card_declined</option><option value='insufficient_funds'>insufficient_funds</option><option value='expired_card'>expired_card</option><option value='invalid_card_number'>invalid_card_number</option><option value='invalid_cvc'>invalid_cvc</option><option value='incorrect_cvc'>incorrect_cvc</option><option value='lost_card'>lost_card</option><option value='stolen_card'>stolen_card</option><option value='fraudulent_card'>fraudulent_card</option><option value='processing_error'>processing_error</option><option value='issuer_not_available'>issuer_not_available</option><option value='do_not_honor'>do_not_honor</option><option value='card_not_supported'>card_not_supported</option><option value='currency_not_supported'>currency_not_supported</option><option value='duplicate_transaction'>duplicate_transaction</option><option value='authentication_required'>authentication_required</option><option value='blocked_card'>blocked_card</option><option value='restricted_card'>restricted_card</option><option value='card_velocity_exceeded'>card_velocity_exceeded</option><option value='withdrawal_count_limit_exceeded'>withdrawal_count_limit_exceeded</option></select></span><br><br><div id="bar_viz_failure_code"></div><b>📃 Summary:</b> Code indicating reason for failure<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">failure_message</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_failure_message"></div><b>📃 Summary:</b> Message describing the failure<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_live</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_live"></div><b>📃 Summary:</b> Whether charge was in live mode<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">network_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='declined_by_network'>declined_by_network</option><option value='approved'>approved</option><option value='declined_by_issuer'>declined_by_issuer</option><option value='network_error'>network_error</option><option value='timeout'>timeout</option><option value='invalid_card'>invalid_card</option><option value='insufficient_funds'>insufficient_funds</option><option value='lost_or_stolen_card'>lost_or_stolen_card</option><option value='suspected_fraud'>suspected_fraud</option><option value='expired_card'>expired_card</option><option value='processing_error'>processing_error</option><option value='card_not_supported'>card_not_supported</option><option value='card_restricted'>card_restricted</option><option value='do_not_honor'>do_not_honor</option><option value='pickup_card'>pickup_card</option></select></span><br><br><div id="bar_viz_network_status"></div><b>📃 Summary:</b> Network status of the charge outcome<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">outcome_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='do_not_honor'>do_not_honor</option><option value='insufficient_funds'>insufficient_funds</option><option value='lost_card'>lost_card</option><option value='stolen_card'>stolen_card</option><option value='expired_card'>expired_card</option><option value='invalid_card_number'>invalid_card_number</option><option value='invalid_cvc'>invalid_cvc</option><option value='card_not_supported'>card_not_supported</option><option value='processing_error'>processing_error</option><option value='fraudulent'>fraudulent</option><option value='generic_decline'>generic_decline</option><option value='card_velocity_exceeded'>card_velocity_exceeded</option><option value='suspected_fraud'>suspected_fraud</option><option value='card_restricted'>card_restricted</option><option value='currency_not_supported'>currency_not_supported</option><option value='approved'>approved</option><option value='partially_approved'>partially_approved</option><option value='authentication_required'>authentication_required</option><option value='incorrect_address'>incorrect_address</option><option value='transaction_not_allowed'>transaction_not_allowed</option></select></span><br><br><div id="bar_viz_outcome_reason"></div><b>📃 Summary:</b> Reason for the charge outcome<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">risk_level</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='low'>low</option><option value='normal'>normal</option><option value='medium'>medium</option><option value='high'>high</option><option value='critical'>critical</option></select></span><br><br><div id="bar_viz_risk_level"></div><b>📃 Summary:</b> Risk level of the charge outcome<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">seller_message</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='do_not_honor'>do_not_honor</option><option value='insufficient_funds'>insufficient_funds</option><option value='lost_card'>lost_card</option><option value='stolen_card'>stolen_card</option><option value='expired_card'>expired_card</option><option value='invalid_card_number'>invalid_card_number</option><option value='invalid_cvc'>invalid_cvc</option><option value='card_declined'>card_declined</option><option value='processing_error'>processing_error</option><option value='incorrect_pin'>incorrect_pin</option><option value='incorrect_zip'>incorrect_zip</option><option value='invalid_expiry_date'>invalid_expiry_date</option><option value='card_not_supported'>card_not_supported</option><option value='fraudulent'>fraudulent</option><option value='pickup_card'>pickup_card</option><option value='restricted_card'>restricted_card</option><option value='security_violation'>security_violation</option><option value='service_not_allowed'>service_not_allowed</option><option value='transaction_not_allowed'>transaction_not_allowed</option><option value='try_again_later'>try_again_later</option><option value='The bank returned the decline code `do_not_honor`.'>The bank returned the decline code `do_not_honor`.</option></select></span><br><br><div id="bar_viz_seller_message"></div><b>📃 Summary:</b> Seller message for the charge outcome<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">outcome_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='issuer_declined'>issuer_declined</option><option value='approved'>approved</option><option value='blocked'>blocked</option><option value='expired_card'>expired_card</option><option value='insufficient_funds'>insufficient_funds</option><option value='lost_card'>lost_card</option><option value='stolen_card'>stolen_card</option><option value='invalid_amount'>invalid_amount</option><option value='invalid_number'>invalid_number</option><option value='fraud_suspect'>fraud_suspect</option><option value='processor_declined'>processor_declined</option><option value='authentication_required'>authentication_required</option><option value='card_not_supported'>card_not_supported</option><option value='do_not_honor'>do_not_honor</option><option value='duplicate_transaction'>duplicate_transaction</option><option value='generic_decline'>generic_decline</option></select></span><br><br><div id="bar_viz_outcome_type"></div><b>📃 Summary:</b> Type of the charge outcome<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_paid</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_paid"></div><b>📃 Summary:</b> Indicates if the charge was successful<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payment_intent_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_payment_intent_id"></div><b>📃 Summary:</b> Unique identifier for the payment intent<br><b>🦄 Unique:</b> This column represents a unique identifier for the payment intent associated with each charge. While it's likely to be unique for each transaction in this table, it's possible that multiple charges could be associated with the same payment intent in some cases.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hashed_receipt_email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_hashed_receipt_email"></div><b>📃 Summary:</b> Hashed email address for receipt<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_refunded</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_refunded"></div><b>📃 Summary:</b> Indicates if the charge was refunded<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">charge_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='failed'>failed</option><option value='succeeded'>succeeded</option><option value='pending'>pending</option><option value='refunded'>refunded</option><option value='canceled'>canceled</option><option value='disputed'>disputed</option><option value='authorized'>authorized</option><option value='captured'>captured</option><option value='expired'>expired</option><option value='requires_payment_method'>requires_payment_method</option><option value='requires_confirmation'>requires_confirmation</option><option value='requires_action'>requires_action</option><option value='processing'>processing</option></select></span><br><br><div id="bar_viz_charge_status"></div><b>📃 Summary:</b> Current status of the charge<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">calculated_statement_descriptor</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_calculated_statement_descriptor"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_created_at"></div><b>📃 Summary:</b> Timestamp of charge creation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">invoice_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_invoice_id"></div><b>📃 Summary:</b> ID of associated invoice<br><b>❓ Missing:</b> Failed transactions don't generate invoices<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">metadata</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_metadata"></div><b>📃 Summary:</b> Additional metadata for the charge<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">receipt_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_receipt_number"></div><b>📃 Summary:</b> Receipt number if available<br><b>❓ Missing:</b> Failed transactions don't generate receipts<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">receipt_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_receipt_url"></div><b>📃 Summary:</b> URL to access the receipt<br><b>❓ Missing:</b> Failed transactions don't generate receipts<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_address_1</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_address_1"></div><b>📃 Summary:</b> First line of shipping address<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_address_2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_address_2"></div><b>📃 Summary:</b> Second line of shipping address<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_carrier</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_carrier"></div><b>📃 Summary:</b> Name of shipping carrier<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_city"></div><b>📃 Summary:</b> City in shipping address<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_country</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_country"></div><b>📃 Summary:</b> Country in shipping address<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_phone</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_phone"></div><b>📃 Summary:</b> Phone number for shipping<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_postal_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_postal_code"></div><b>📃 Summary:</b> Postal code in shipping address<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_recipient_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_recipient_name"></div><b>📃 Summary:</b> Name of recipient for shipping<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_state"></div><b>📃 Summary:</b> State in shipping address<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shipping_tracking_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_shipping_tracking_number"></div><b>📃 Summary:</b> Tracking number for shipment<br><b>❓ Missing:</b> No shipping involved in this transaction<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about charge transactions. It contains details like amount, currency, customer ID, card details, and transaction status. Most charges failed due to card declines. The table includes information on the reason for failure, risk assessment, and metadata. All charges are in USD and were made on February 18, 2021.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>25</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the charge</td>
+      <td>charge_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>amount</td>
+      <td>Transaction amount in cents</td>
+      <td>amount_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>amount_refunded</td>
+      <td>Amount refunded in cents</td>
+      <td>refunded_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>application</td>
+      <td>Associated application</td>
+      <td>application</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>application_fee_amount</td>
+      <td>Application fee amount</td>
+      <td>app_fee_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>balance_transaction_id</td>
+      <td>ID of the balance transaction</td>
+      <td>balance_transaction_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>bank_account_id</td>
+      <td>ID of the bank account</td>
+      <td>bank_account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>captured</td>
+      <td>Whether the charge was captured</td>
+      <td>is_captured</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>card_id</td>
+      <td>ID of the card used</td>
+      <td>card_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>connected_account_id</td>
+      <td>ID of the connected account</td>
+      <td>connected_account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>created</td>
+      <td>Timestamp of charge creation</td>
+      <td>created_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>currency</td>
+      <td>Currency of the charge</td>
+      <td>currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>customer_id</td>
+      <td>ID of the customer</td>
+      <td>customer_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>description</td>
+      <td>Description of the charge</td>
+      <td>description</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>destination</td>
+      <td>Destination of the charge</td>
+      <td>destination</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>failure_code</td>
+      <td>Code indicating reason for failure</td>
+      <td>failure_code</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>failure_message</td>
+      <td>Message describing the failure</td>
+      <td>failure_message</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>fraud_details_stripe_report</td>
+      <td>Stripe's fraud report</td>
+      <td>stripe_fraud_report</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>fraud_details_user_report</td>
+      <td>User's fraud report</td>
+      <td>user_fraud_report</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>invoice_id</td>
+      <td>ID of associated invoice</td>
+      <td>invoice_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>livemode</td>
+      <td>Whether charge was in live mode</td>
+      <td>is_live</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>metadata</td>
+      <td>Additional metadata for the charge</td>
+      <td>metadata</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>on_behalf_of</td>
+      <td>Account charge was made on behalf of</td>
+      <td>on_behalf_of</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>outcome_network_status</td>
+      <td>Network status of the charge outcome</td>
+      <td>network_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>outcome_reason</td>
+      <td>Reason for the charge outcome</td>
+      <td>outcome_reason</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>outcome_risk_level</td>
+      <td>Risk level of the charge outcome</td>
+      <td>risk_level</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>outcome_risk_score</td>
+      <td>Risk score of the charge outcome</td>
+      <td>risk_score</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>outcome_seller_message</td>
+      <td>Seller message for the charge outcome</td>
+      <td>seller_message</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>outcome_type</td>
+      <td>Type of the charge outcome</td>
+      <td>outcome_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>paid</td>
+      <td>Indicates if the charge was successful</td>
+      <td>is_paid</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>payment_intent_id</td>
+      <td>Unique identifier for the payment intent</td>
+      <td>payment_intent_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>receipt_email</td>
+      <td>Hashed email address for receipt</td>
+      <td>hashed_receipt_email</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>receipt_number</td>
+      <td>Receipt number if available</td>
+      <td>receipt_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>receipt_url</td>
+      <td>URL to access the receipt</td>
+      <td>receipt_url</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>refunded</td>
+      <td>Indicates if the charge was refunded</td>
+      <td>is_refunded</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>shipping_address_city</td>
+      <td>City in shipping address</td>
+      <td>shipping_city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>shipping_address_country</td>
+      <td>Country in shipping address</td>
+      <td>shipping_country</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>shipping_address_line_1</td>
+      <td>First line of shipping address</td>
+      <td>shipping_address_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>shipping_address_line_2</td>
+      <td>Second line of shipping address</td>
+      <td>shipping_address_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>shipping_address_postal_code</td>
+      <td>Postal code in shipping address</td>
+      <td>shipping_postal_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>shipping_address_state</td>
+      <td>State in shipping address</td>
+      <td>shipping_state</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>shipping_carrier</td>
+      <td>Name of shipping carrier</td>
+      <td>shipping_carrier</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>shipping_name</td>
+      <td>Name of recipient for shipping</td>
+      <td>shipping_recipient_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>shipping_phone</td>
+      <td>Phone number for shipping</td>
+      <td>shipping_phone</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>shipping_tracking_number</td>
+      <td>Tracking number for shipment</td>
+      <td>shipping_tracking_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>source_id</td>
+      <td>Identifier for the payment source</td>
+      <td>source_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>source_transfer</td>
+      <td>Information about the source transfer</td>
+      <td>source_transfer</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>statement_descriptor</td>
+      <td>Description on customer's statement</td>
+      <td>statement_descriptor</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>status</td>
+      <td>Current status of the charge</td>
+      <td>charge_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>transfer_data_destination</td>
+      <td>Destination for transfer data</td>
+      <td>transfer_destination</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>transfer_group</td>
+      <td>Group identifier for transfers</td>
+      <td>transfer_group</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>transfer_id</td>
+      <td>Unique identifier for the transfer</td>
+      <td>transfer_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>calculated_statement_descriptor</td>
+      <td>Calculated statement descriptor</td>
+      <td>calculated_statement_descriptor</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>30</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>app_fee_amount</td>
+      <td>CAST("app_fee_amount" AS VARCHAR)</td>
+      <td>To transform the data type of the 'app_fee_amount' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Since the question specifically asks for DuckDB syntax, we'll use the standard SQL CAST function, which is supported in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>balance_transaction_id</td>
+      <td>CAST("balance_transaction_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'balance_transaction_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the current distinct values are empty, this cast will work for any future decimal values that might be added to the column.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>bank_account_id</td>
+      <td>CAST("bank_account_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'bank_account_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>connected_account_id</td>
+      <td>CAST("connected_account_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'connected_account_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>created_at</td>
+      <td>CAST("created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'created_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date-time format in the given examples is already in a standard format that can be directly cast to TIMESTAMP without using strptime(). DuckDB can automatically recognize and convert this format.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>destination</td>
+      <td>CAST("destination" AS VARCHAR)</td>
+      <td>To transform the data type of the 'destination' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(column_name AS new_data_type). In this case, we're casting the 'destination' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>invoice_id</td>
+      <td>CAST("invoice_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'invoice_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert each value in the column to its string representation. Even though the distinct values list is empty, we can still perform this cast operation on the column.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>metadata</td>
+      <td>CAST("metadata" AS JSON)</td>
+      <td>To transform the 'metadata' column from VARCHAR to JSON, we need to use a simple CAST function. In DuckDB, we can directly cast a VARCHAR containing a valid JSON string to JSON data type. This will parse the string and convert it into a JSON object that can be queried and manipulated as JSON data.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>on_behalf_of</td>
+      <td>CAST("on_behalf_of" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'on_behalf_of' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. Since the column 'on_behalf_of' has no distinct values (it's an empty list), we don't need to worry about any specific data conversion issues. The CAST function will convert any numeric values to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>receipt_number</td>
+      <td>CAST("receipt_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'receipt_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>receipt_url</td>
+      <td>CAST("receipt_url" AS VARCHAR)</td>
+      <td>To transform the data type of the 'receipt_url' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>risk_score</td>
+      <td>CAST("risk_score" AS VARCHAR)</td>
+      <td>To transform the data type of the 'risk_score' column from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows the standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>shipping_address_1</td>
+      <td>CAST("shipping_address_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'shipping_address_1' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>shipping_address_2</td>
+      <td>CAST("shipping_address_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'shipping_address_2' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>shipping_carrier</td>
+      <td>CAST("shipping_carrier" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_carrier' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>shipping_city</td>
+      <td>CAST("shipping_city" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_city' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>shipping_country</td>
+      <td>CAST("shipping_country" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_country' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward and follows the standard SQL CAST syntax.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>shipping_phone</td>
+      <td>CAST("shipping_phone" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_phone' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>shipping_postal_code</td>
+      <td>CAST("shipping_postal_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_postal_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric postal code values to string format. Even though the distinct values list is empty, we'll proceed with the cast as requested. In DuckDB, the CAST function is used to convert data from one type to another.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>shipping_recipient_name</td>
+      <td>CAST("shipping_recipient_name" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'shipping_recipient_name' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the desired data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>shipping_state</td>
+      <td>CAST("shipping_state" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_state' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional considerations since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>shipping_tracking_number</td>
+      <td>CAST("shipping_tracking_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shipping_tracking_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>source_id</td>
+      <td>CAST("source_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'source_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Since the question states that 'source_id' has no distinct values (an empty list), this transformation will effectively create an empty VARCHAR column, but the syntax remains the same regardless of the content.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>source_transfer</td>
+      <td>CAST("source_transfer" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'source_transfer' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. Since the column already exists and we're just changing its data type, we can directly cast it to VARCHAR. This will convert all numeric values in the column to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>statement_descriptor</td>
+      <td>CAST("statement_descriptor" AS VARCHAR)</td>
+      <td>To transform the data type of the 'statement_descriptor' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, then AS, and finally the desired data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>stripe_fraud_report</td>
+      <td>CAST("stripe_fraud_report" AS VARCHAR)</td>
+      <td>To transform the data type of the 'stripe_fraud_report' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the current distinct values are empty, this cast will work for any future decimal values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>transfer_destination</td>
+      <td>CAST("transfer_destination" AS VARCHAR)</td>
+      <td>To transform the data type of the 'transfer_destination' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently DECIMAL and we want to change it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>transfer_group</td>
+      <td>CAST("transfer_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'transfer_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. Since the column already contains distinct values, we can directly cast it to VARCHAR without any additional processing. This transformation will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>transfer_id</td>
+      <td>CAST("transfer_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'transfer_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each value in the column to its string representation. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>user_fraud_report</td>
+      <td>CAST("user_fraud_report" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'user_fraud_report' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>29</b> columns have missing values<br>
+                    ✔️ <b>13</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>app_fee_amount</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>application</td>
+      <td>93.75</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>balance_transaction_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>bank_account_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>connected_account_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>destination</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>invoice_id</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Failed transactions don't generate invoices</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>on_behalf_of</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>receipt_number</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Failed transactions don't generate receipts</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>receipt_url</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Failed transactions don't generate receipts</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>risk_score</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>shipping_address_1</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>shipping_address_2</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>shipping_carrier</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>shipping_city</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>shipping_country</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>shipping_phone</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>shipping_postal_code</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>shipping_recipient_name</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>shipping_state</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>shipping_tracking_number</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>No shipping involved in this transaction</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>source_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>source_transfer</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>statement_descriptor</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>stripe_fraud_report</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>transfer_destination</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>transfer_group</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>transfer_id</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>user_fraud_report</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>app_fee_amount</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>application</td>
+      <td>93.75</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>balance_transaction_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>bank_account_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>connected_account_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>destination</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>on_behalf_of</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>risk_score</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>source_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>source_transfer</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>statement_descriptor</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>stripe_fraud_report</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>transfer_destination</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>transfer_group</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>transfer_id</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>user_fraud_report</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'ch_0IMDAfig6peN...', 'value': 6.25}, {'label': 'ch_0IMD9Wig6peN...', 'value': 6.25}, {'label': 'ch_0IMD9Yig6peN...', 'value': 6.25}, {'label': 'ch_0IMDLjig6peN...', 'value': 6.25}, {'label': 'ch_0IMDDQig6peN...', 'value': 6.25}, {'label': 'Other values', 'value': 68.75}];
+    drawBarChart("bar_viz_charge_id", data);
+data = [{'x': 85047.15, 'y': 11}, {'x': 249569.44999999998, 'y': 3}, {'x': 414091.75, 'y': 0}, {'x': 578614.0499999999, 'y': 0}, {'x': 743136.35, 'y': 0}, {'x': 907658.6499999999, 'y': 0}, {'x': 1072180.95, 'y': 0}, {'x': 1236703.25, 'y': 0}, {'x': 1401225.5499999998, 'y': 0}, {'x': 1565747.85, 'y': 0}, {'x': 1730270.15, 'y': 0}, {'x': 1894792.4499999997, 'y': 0}, {'x': 2059314.75, 'y': 1}, {'x': 2223837.05, 'y': 0}, {'x': 2388359.3499999996, 'y': 0}, {'x': 2552881.65, 'y': 0}];
+    binWidth = 164522.3;
+    drawHistogram("hist_viz_amount_cents", data, binWidth);
+data = [{'x': 0, 'y': 16}];
+    binWidth = 0;
+    drawHistogram("hist_viz_refunded_cents", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_captured", data);
+data = [{'label': 'pm_0Hj3Mhig6peN...', 'value': 18.75}, {'label': 'pm_0HfVlUig6peN...', 'value': 12.5}, {'label': 'pm_0HnC5mig6peN...', 'value': 12.5}, {'label': 'pm_0Hpc71ig6peN...', 'value': 12.5}, {'label': 'pm_0Hw4QGig6peN...', 'value': 6.25}, {'label': 'Other values', 'value': 37.5}];
+    drawBarChart("bar_viz_card_id", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency", data);
+data = [{'label': 'cus_IHmGn2733l3...', 'value': 18.75}, {'label': 'cus_IEXWsmR0hA8...', 'value': 12.5}, {'label': 'cus_IQT24DskOLZ...', 'value': 12.5}, {'label': 'cus_INy1KScKAog...', 'value': 12.5}, {'label': 'cus_IRb688lkE0T...', 'value': 6.25}, {'label': 'Other values', 'value': 37.5}];
+    drawBarChart("bar_viz_customer_id", data);
+data = [{'label': '403e2c77a9041c6...', 'value': 6.25}, {'label': 'f794a8544921fbe...', 'value': 6.25}, {'label': 'cda6649904149ac...', 'value': 6.25}, {'label': 'd871ea4e3c6b57d...', 'value': 6.25}, {'label': '068dfcec35b4d2e...', 'value': 6.25}, {'label': 'Other values', 'value': 68.75}];
+    drawBarChart("bar_viz_description", data);
+data = [{'label': 'card_declined', 'value': 100.0}];
+    drawBarChart("bar_viz_failure_code", data);
+data = [{'label': 'Your card was d...', 'value': 100.0}];
+    drawBarChart("bar_viz_failure_message", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_live", data);
+data = [{'label': 'declined_by_net...', 'value': 100.0}];
+    drawBarChart("bar_viz_network_status", data);
+data = [{'label': 'do_not_honor', 'value': 100.0}];
+    drawBarChart("bar_viz_outcome_reason", data);
+data = [{'label': 'normal', 'value': 100.0}];
+    drawBarChart("bar_viz_risk_level", data);
+data = [{'label': 'The bank return...', 'value': 100.0}];
+    drawBarChart("bar_viz_seller_message", data);
+data = [{'label': 'issuer_declined', 'value': 100.0}];
+    drawBarChart("bar_viz_outcome_type", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_paid", data);
+data = [{'label': 'pi_0IMDAVig6peN...', 'value': 6.25}, {'label': 'pi_0IMD9Yig6peN...', 'value': 6.25}, {'label': 'pi_0IMDGtig6peN...', 'value': 6.25}, {'label': 'pi_0IMDA2ig6peN...', 'value': 6.25}, {'label': 'pi_0IMDJyig6peN...', 'value': 6.25}, {'label': 'Other values', 'value': 68.75}];
+    drawBarChart("bar_viz_payment_intent_id", data);
+data = [{'label': 'e9e8ea6013cb5c9...', 'value': 18.75}, {'label': '6e05435f9bf429c...', 'value': 12.5}, {'label': 'ab11bebc20a2f74...', 'value': 12.5}, {'label': '9cad6f0e0c1dff3...', 'value': 12.5}, {'label': '5eb7cf4a91f5aad...', 'value': 6.25}, {'label': 'Other values', 'value': 37.5}];
+    drawBarChart("bar_viz_hashed_receipt_email", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_refunded", data);
+data = [{'label': 'failed', 'value': 100.0}];
+    drawBarChart("bar_viz_charge_status", data);
+data = [{'label': '6f867b34cbc9bf5...', 'value': 100.0}];
+    drawBarChart("bar_viz_calculated_statement_descriptor", data);
+data = [{'label': '2021-02-18 14:0...', 'value': 6.25}, {'label': '2021-02-18 14:1...', 'value': 6.25}, {'label': '2021-02-18 14:1...', 'value': 6.25}, {'label': '2021-02-18 14:0...', 'value': 6.25}, {'label': '2021-02-18 14:1...', 'value': 6.25}, {'label': 'Other values', 'value': 68.75}];
+    drawBarChart("bar_viz_created_at", data);
+data = [];
+    drawBarChart("bar_viz_invoice_id", data);
+data = [{'label': '{"external_id":...', 'value': 100.0}];
+    drawBarChart("bar_viz_metadata", data);
+data = [];
+    drawBarChart("bar_viz_receipt_number", data);
+data = [];
+    drawBarChart("bar_viz_receipt_url", data);
+data = [];
+    drawBarChart("bar_viz_shipping_address_1", data);
+data = [];
+    drawBarChart("bar_viz_shipping_address_2", data);
+data = [];
+    drawBarChart("bar_viz_shipping_carrier", data);
+data = [];
+    drawBarChart("bar_viz_shipping_city", data);
+data = [];
+    drawBarChart("bar_viz_shipping_country", data);
+data = [];
+    drawBarChart("bar_viz_shipping_phone", data);
+data = [];
+    drawBarChart("bar_viz_shipping_postal_code", data);
+data = [];
+    drawBarChart("bar_viz_shipping_recipient_name", data);
+data = [];
+    drawBarChart("bar_viz_shipping_state", data);
+data = [];
+    drawBarChart("bar_viz_shipping_tracking_number", data);
+
+
+</script>
+</body>
+</html>

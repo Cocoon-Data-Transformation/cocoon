@@ -1,0 +1,4085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>completedloan</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>loan_id</th>
+      <th>account_id</th>
+      <th>amount</th>
+      <th>duration</th>
+      <th>payments</th>
+      <th>status</th>
+      <th>year_</th>
+      <th>month_</th>
+      <th>day_</th>
+      <th>location</th>
+      <th>purpose</th>
+      <th>date_</th>
+      <th>fulldate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>5657.0</td>
+      <td>A00003354</td>
+      <td>4980</td>
+      <td>12</td>
+      <td>415</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>7</td>
+      <td>5</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2014-07-05</td>
+      <td>2014-07-05</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>6234.0</td>
+      <td>A00006061</td>
+      <td>5148</td>
+      <td>12</td>
+      <td>429</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>28</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-05-28</td>
+      <td>2018-05-28</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>6699.0</td>
+      <td>A00008330</td>
+      <td>7656</td>
+      <td>24</td>
+      <td>319</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>3</td>
+      <td>30</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-03-30</td>
+      <td>2014-03-30</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>6688.0</td>
+      <td>A00008268</td>
+      <td>8616</td>
+      <td>24</td>
+      <td>359</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>9</td>
+      <td>26</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-09-26</td>
+      <td>2017-09-26</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>6312.0</td>
+      <td>A00006453</td>
+      <td>10944</td>
+      <td>36</td>
+      <td>304</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>17</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-05-17</td>
+      <td>2018-05-17</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6019.0</td>
+      <td>A00005033</td>
+      <td>11400</td>
+      <td>12</td>
+      <td>950</td>
+      <td>A</td>
+      <td>2016</td>
+      <td>7</td>
+      <td>25</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2016-07-25</td>
+      <td>2016-07-25</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>6229.0</td>
+      <td>A00006040</td>
+      <td>11736</td>
+      <td>24</td>
+      <td>489</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>10</td>
+      <td>2</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-10-02</td>
+      <td>2014-10-02</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>5103.0</td>
+      <td>A00000666</td>
+      <td>12540</td>
+      <td>12</td>
+      <td>1045</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>11</td>
+      <td>28</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2017-11-28</td>
+      <td>2017-11-28</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>6539.0</td>
+      <td>A00007559</td>
+      <td>12792</td>
+      <td>12</td>
+      <td>1066</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>7</td>
+      <td>11</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-07-11</td>
+      <td>2018-07-11</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>5718.0</td>
+      <td>A00003637</td>
+      <td>14028</td>
+      <td>12</td>
+      <td>1169</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>9</td>
+      <td>1</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-09-01</td>
+      <td>2017-09-01</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>6064.0</td>
+      <td>A00005215</td>
+      <td>14628</td>
+      <td>12</td>
+      <td>1219</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>8</td>
+      <td>4</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-08-04</td>
+      <td>2014-08-04</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>5897.0</td>
+      <td>A00004476</td>
+      <td>15192</td>
+      <td>24</td>
+      <td>633</td>
+      <td>A</td>
+      <td>2016</td>
+      <td>9</td>
+      <td>25</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2016-09-25</td>
+      <td>2016-09-25</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>5599.0</td>
+      <td>A00003064</td>
+      <td>15420</td>
+      <td>12</td>
+      <td>1285</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>21</td>
+      <td>18</td>
+      <td>car</td>
+      <td>2015-03-21</td>
+      <td>2015-03-21</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>6852.0</td>
+      <td>A00009140</td>
+      <td>16032</td>
+      <td>48</td>
+      <td>334</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>11</td>
+      <td>10</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-11-10</td>
+      <td>2018-11-10</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>6377.0</td>
+      <td>A00006792</td>
+      <td>17184</td>
+      <td>12</td>
+      <td>1432</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>3</td>
+      <td>17</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-03-17</td>
+      <td>2017-03-17</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>6297.0</td>
+      <td>A00006363</td>
+      <td>17508</td>
+      <td>12</td>
+      <td>1459</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>10</td>
+      <td>25</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-10-25</td>
+      <td>2014-10-25</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>5463.0</td>
+      <td>A00002413</td>
+      <td>17952</td>
+      <td>12</td>
+      <td>1496</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>10</td>
+      <td>6</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2018-10-06</td>
+      <td>2018-10-06</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>6942.0</td>
+      <td>A00009513</td>
+      <td>18324</td>
+      <td>12</td>
+      <td>1527</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>7</td>
+      <td>16</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-07-16</td>
+      <td>2017-07-16</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>5740.0</td>
+      <td>A00003752</td>
+      <td>18564</td>
+      <td>12</td>
+      <td>1547</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>2</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-04-02</td>
+      <td>2015-04-02</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>7230.0</td>
+      <td>A00010954</td>
+      <td>18720</td>
+      <td>60</td>
+      <td>312</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>4</td>
+      <td>2</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-04-02</td>
+      <td>2017-04-02</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>7034.0</td>
+      <td>A00010001</td>
+      <td>19044</td>
+      <td>36</td>
+      <td>529</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>7</td>
+      <td>11</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2016-07-11</td>
+      <td>2016-07-11</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>5651.0</td>
+      <td>A00003329</td>
+      <td>19248</td>
+      <td>12</td>
+      <td>1604</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>8</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2017-12-08</td>
+      <td>2017-12-08</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>5429.0</td>
+      <td>A00002268</td>
+      <td>20196</td>
+      <td>36</td>
+      <td>561</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>7</td>
+      <td>18</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2016-07-18</td>
+      <td>2016-07-18</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>5922.0</td>
+      <td>A00004580</td>
+      <td>20220</td>
+      <td>12</td>
+      <td>1685</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>5</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2015-08-05</td>
+      <td>2015-08-05</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>6043.0</td>
+      <td>A00005126</td>
+      <td>20352</td>
+      <td>48</td>
+      <td>424</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>11</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-01-11</td>
+      <td>2016-01-11</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>6591.0</td>
+      <td>A00007819</td>
+      <td>20832</td>
+      <td>48</td>
+      <td>434</td>
+      <td>C</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2015-02-02</td>
+      <td>2015-02-02</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>6721.0</td>
+      <td>A00008475</td>
+      <td>21072</td>
+      <td>24</td>
+      <td>878</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>1</td>
+      <td>21</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-01-21</td>
+      <td>2014-01-21</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>5980.0</td>
+      <td>A00004825</td>
+      <td>21396</td>
+      <td>12</td>
+      <td>1783</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>18</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2015-08-18</td>
+      <td>2015-08-18</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>6600.0</td>
+      <td>A00007861</td>
+      <td>21852</td>
+      <td>36</td>
+      <td>607</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>10</td>
+      <td>8</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2015-10-08</td>
+      <td>2015-10-08</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>7121.0</td>
+      <td>A00010364</td>
+      <td>21924</td>
+      <td>36</td>
+      <td>609</td>
+      <td>A</td>
+      <td>2013</td>
+      <td>11</td>
+      <td>10</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2013-11-10</td>
+      <td>2013-11-10</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>7072.0</td>
+      <td>A00010148</td>
+      <td>22104</td>
+      <td>12</td>
+      <td>1842</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>27</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-01-27</td>
+      <td>2018-01-27</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>5147.0</td>
+      <td>A00000938</td>
+      <td>22260</td>
+      <td>60</td>
+      <td>371</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>21</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2018-05-21</td>
+      <td>2018-05-21</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>6052.0</td>
+      <td>A00005164</td>
+      <td>22356</td>
+      <td>36</td>
+      <td>621</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>23</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-03-23</td>
+      <td>2018-03-23</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>5382.0</td>
+      <td>A00002134</td>
+      <td>22932</td>
+      <td>36</td>
+      <td>637</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>3</td>
+      <td>17</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2017-03-17</td>
+      <td>2017-03-17</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>6354.0</td>
+      <td>A00006688</td>
+      <td>22968</td>
+      <td>36</td>
+      <td>638</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>10</td>
+      <td>23</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2016-10-23</td>
+      <td>2016-10-23</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>5754.0</td>
+      <td>A00003834</td>
+      <td>23052</td>
+      <td>12</td>
+      <td>1921</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>28</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2014-09-28</td>
+      <td>2014-09-28</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>6878.0</td>
+      <td>A00009242</td>
+      <td>23184</td>
+      <td>12</td>
+      <td>1932</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>1</td>
+      <td>24</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-01-24</td>
+      <td>2017-01-24</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>5384.0</td>
+      <td>A00002142</td>
+      <td>23328</td>
+      <td>12</td>
+      <td>1944</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>7</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2018-03-07</td>
+      <td>2018-03-07</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>7139.0</td>
+      <td>A00010445</td>
+      <td>23412</td>
+      <td>12</td>
+      <td>1951</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>22</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-01-22</td>
+      <td>2018-01-22</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>5229.0</td>
+      <td>A00001329</td>
+      <td>23520</td>
+      <td>12</td>
+      <td>1960</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>9</td>
+      <td>6</td>
+      <td>64</td>
+      <td>home_improvement</td>
+      <td>2017-09-06</td>
+      <td>2017-09-06</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>5723.0</td>
+      <td>A00003674</td>
+      <td>23628</td>
+      <td>12</td>
+      <td>1969</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>10</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2014-09-10</td>
+      <td>2014-09-10</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>7187.0</td>
+      <td>A00010711</td>
+      <td>24180</td>
+      <td>60</td>
+      <td>403</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>24</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-12-24</td>
+      <td>2017-12-24</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>5130.0</td>
+      <td>A00000813</td>
+      <td>24312</td>
+      <td>12</td>
+      <td>2026</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>5</td>
+      <td>11</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2014-05-11</td>
+      <td>2014-05-11</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>5479.0</td>
+      <td>A00002486</td>
+      <td>24516</td>
+      <td>12</td>
+      <td>2043</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>1</td>
+      <td>10</td>
+      <td>59</td>
+      <td>home_improvement</td>
+      <td>2014-01-10</td>
+      <td>2014-01-10</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>5584.0</td>
+      <td>A00002986</td>
+      <td>24792</td>
+      <td>24</td>
+      <td>1033</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>6</td>
+      <td>18</td>
+      <td>debt_consolidation</td>
+      <td>2017-12-06</td>
+      <td>2017-12-06</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>6407.0</td>
+      <td>A00006930</td>
+      <td>25944</td>
+      <td>24</td>
+      <td>1081</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>5</td>
+      <td>26</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2014-05-26</td>
+      <td>2014-05-26</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>6242.0</td>
+      <td>A00006097</td>
+      <td>26208</td>
+      <td>36</td>
+      <td>728</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>10</td>
+      <td>22</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-10-22</td>
+      <td>2017-10-22</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>5005.0</td>
+      <td>A00000176</td>
+      <td>27456</td>
+      <td>12</td>
+      <td>2288</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>4</td>
+      <td>10</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-04-10</td>
+      <td>2017-04-10</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>6578.0</td>
+      <td>A00007765</td>
+      <td>27984</td>
+      <td>12</td>
+      <td>2332</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>11</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-12-11</td>
+      <td>2015-12-11</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>6227.0</td>
+      <td>A00006030</td>
+      <td>28248</td>
+      <td>24</td>
+      <td>1177</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>4</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-03-04</td>
+      <td>2015-03-04</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>6865.0</td>
+      <td>A00009199</td>
+      <td>29448</td>
+      <td>12</td>
+      <td>2454</td>
+      <td>B</td>
+      <td>2016</td>
+      <td>9</td>
+      <td>11</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-09-11</td>
+      <td>2016-09-11</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>6676.0</td>
+      <td>A00008159</td>
+      <td>29784</td>
+      <td>24</td>
+      <td>1241</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>13</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-06-13</td>
+      <td>2015-06-13</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>5620.0</td>
+      <td>A00003161</td>
+      <td>30012</td>
+      <td>12</td>
+      <td>2501</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>6</td>
+      <td>16</td>
+      <td>18</td>
+      <td>home_improvement</td>
+      <td>2018-06-16</td>
+      <td>2018-06-16</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>5311.0</td>
+      <td>A00001766</td>
+      <td>30060</td>
+      <td>60</td>
+      <td>501</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>6</td>
+      <td>15</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2016-06-15</td>
+      <td>2016-06-15</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>6501.0</td>
+      <td>A00007418</td>
+      <td>30276</td>
+      <td>12</td>
+      <td>2523</td>
+      <td>B</td>
+      <td>2016</td>
+      <td>4</td>
+      <td>29</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2016-04-29</td>
+      <td>2016-04-29</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>4961.0</td>
+      <td>A00000019</td>
+      <td>30276</td>
+      <td>12</td>
+      <td>2523</td>
+      <td>B</td>
+      <td>2016</td>
+      <td>4</td>
+      <td>29</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-04-29</td>
+      <td>2016-04-29</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>6502.0</td>
+      <td>A00007424</td>
+      <td>30276</td>
+      <td>12</td>
+      <td>2523</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>8</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-12-08</td>
+      <td>2017-12-08</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>4962.0</td>
+      <td>A00000025</td>
+      <td>30276</td>
+      <td>12</td>
+      <td>2523</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>8</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-12-08</td>
+      <td>2017-12-08</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>7200.0</td>
+      <td>A00010799</td>
+      <td>31140</td>
+      <td>60</td>
+      <td>519</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>7</td>
+      <td>11</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-07-11</td>
+      <td>2018-07-11</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>6185.0</td>
+      <td>A00005774</td>
+      <td>31176</td>
+      <td>24</td>
+      <td>1299</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>28</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-11-28</td>
+      <td>2015-11-28</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>5576.0</td>
+      <td>A00002962</td>
+      <td>31248</td>
+      <td>12</td>
+      <td>2604</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>21</td>
+      <td>18</td>
+      <td>debt_consolidation</td>
+      <td>2014-12-21</td>
+      <td>2014-12-21</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>7110.0</td>
+      <td>A00010345</td>
+      <td>31260</td>
+      <td>12</td>
+      <td>2605</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>21</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-01-21</td>
+      <td>2018-01-21</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>6970.0</td>
+      <td>A00009677</td>
+      <td>31620</td>
+      <td>60</td>
+      <td>527</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>6</td>
+      <td>17</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-06-17</td>
+      <td>2017-06-17</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>6546.0</td>
+      <td>A00007607</td>
+      <td>31728</td>
+      <td>24</td>
+      <td>1322</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>27</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2015-03-27</td>
+      <td>2015-03-27</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>6130.0</td>
+      <td>A00005541</td>
+      <td>32640</td>
+      <td>48</td>
+      <td>680</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>7</td>
+      <td>18</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-07-18</td>
+      <td>2016-07-18</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>6758.0</td>
+      <td>A00008742</td>
+      <td>33144</td>
+      <td>12</td>
+      <td>2762</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>7</td>
+      <td>29</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-07-29</td>
+      <td>2017-07-29</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>5932.0</td>
+      <td>A00004626</td>
+      <td>33348</td>
+      <td>12</td>
+      <td>2779</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>6</td>
+      <td>18</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-06-18</td>
+      <td>2017-06-18</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>6764.0</td>
+      <td>A00008776</td>
+      <td>33984</td>
+      <td>48</td>
+      <td>708</td>
+      <td>C</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>26</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-08-26</td>
+      <td>2015-08-26</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>6310.0</td>
+      <td>A00006440</td>
+      <td>34572</td>
+      <td>12</td>
+      <td>2881</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>6</td>
+      <td>17</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-06-17</td>
+      <td>2017-06-17</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>6643.0</td>
+      <td>A00008038</td>
+      <td>35856</td>
+      <td>24</td>
+      <td>1494</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>18</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-01-18</td>
+      <td>2018-01-18</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>5207.0</td>
+      <td>A00001244</td>
+      <td>35904</td>
+      <td>48</td>
+      <td>748</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>2</td>
+      <td>28</td>
+      <td>64</td>
+      <td>home_improvement</td>
+      <td>2017-02-28</td>
+      <td>2017-02-28</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>7008.0</td>
+      <td>A00009897</td>
+      <td>36168</td>
+      <td>12</td>
+      <td>3014</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>22</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-09-22</td>
+      <td>2015-09-22</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>6682.0</td>
+      <td>A00008225</td>
+      <td>36204</td>
+      <td>12</td>
+      <td>3017</td>
+      <td>D</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>30</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-03-30</td>
+      <td>2018-03-30</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>6929.0</td>
+      <td>A00009472</td>
+      <td>36396</td>
+      <td>12</td>
+      <td>3033</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>8</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-05-08</td>
+      <td>2015-05-08</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>6306.0</td>
+      <td>A00006425</td>
+      <td>36684</td>
+      <td>12</td>
+      <td>3057</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>20</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2014-12-20</td>
+      <td>2014-12-20</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>7096.0</td>
+      <td>A00010257</td>
+      <td>37812</td>
+      <td>12</td>
+      <td>3151</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>9</td>
+      <td>2</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-09-02</td>
+      <td>2018-09-02</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>6362.0</td>
+      <td>A00006738</td>
+      <td>37908</td>
+      <td>12</td>
+      <td>3159</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>10</td>
+      <td>31</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-10-31</td>
+      <td>2015-10-31</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>5332.0</td>
+      <td>A00001869</td>
+      <td>37944</td>
+      <td>36</td>
+      <td>1054</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>29</td>
+      <td>64</td>
+      <td>home_improvement</td>
+      <td>2018-01-29</td>
+      <td>2018-01-29</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>6820.0</td>
+      <td>A00009034</td>
+      <td>38148</td>
+      <td>12</td>
+      <td>3179</td>
+      <td>A</td>
+      <td>2013</td>
+      <td>12</td>
+      <td>16</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2013-12-16</td>
+      <td>2013-12-16</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>6321.0</td>
+      <td>A00006505</td>
+      <td>38496</td>
+      <td>12</td>
+      <td>3208</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>10</td>
+      <td>8</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-10-08</td>
+      <td>2018-10-08</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>5358.0</td>
+      <td>A00002018</td>
+      <td>38520</td>
+      <td>12</td>
+      <td>3210</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>1</td>
+      <td>21</td>
+      <td>59</td>
+      <td>debt_consolidation</td>
+      <td>2017-01-21</td>
+      <td>2017-01-21</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>5634.0</td>
+      <td>A00003229</td>
+      <td>39024</td>
+      <td>12</td>
+      <td>3252</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>5</td>
+      <td>1</td>
+      <td>59</td>
+      <td>home_improvement</td>
+      <td>2017-05-01</td>
+      <td>2017-05-01</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>7294.0</td>
+      <td>A00011327</td>
+      <td>39168</td>
+      <td>24</td>
+      <td>1632</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>9</td>
+      <td>27</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-09-27</td>
+      <td>2018-09-27</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>6888.0</td>
+      <td>A00009265</td>
+      <td>39576</td>
+      <td>12</td>
+      <td>3298</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>7</td>
+      <td>11</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2014-07-11</td>
+      <td>2014-07-11</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>6887.0</td>
+      <td>A00009263</td>
+      <td>39576</td>
+      <td>12</td>
+      <td>3298</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>5</td>
+      <td>8</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-05-08</td>
+      <td>2017-05-08</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>5665.0</td>
+      <td>A00003390</td>
+      <td>40632</td>
+      <td>12</td>
+      <td>3386</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>11</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-03-11</td>
+      <td>2018-03-11</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>5582.0</td>
+      <td>A00002982</td>
+      <td>41256</td>
+      <td>12</td>
+      <td>3438</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>4</td>
+      <td>17</td>
+      <td>18</td>
+      <td>debt_consolidation</td>
+      <td>2018-04-17</td>
+      <td>2018-04-17</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>5808.0</td>
+      <td>A00004099</td>
+      <td>41856</td>
+      <td>48</td>
+      <td>872</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>7</td>
+      <td>31</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-07-31</td>
+      <td>2017-07-31</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>6895.0</td>
+      <td>A00009307</td>
+      <td>41904</td>
+      <td>12</td>
+      <td>3492</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>19</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2014-09-19</td>
+      <td>2014-09-19</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>6535.0</td>
+      <td>A00007546</td>
+      <td>41952</td>
+      <td>12</td>
+      <td>3496</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>2</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2015-11-02</td>
+      <td>2015-11-02</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>5841.0</td>
+      <td>A00004268</td>
+      <td>41988</td>
+      <td>12</td>
+      <td>3499</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>11</td>
+      <td>4</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-11-04</td>
+      <td>2018-11-04</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>6553.0</td>
+      <td>A00007636</td>
+      <td>42384</td>
+      <td>12</td>
+      <td>3532</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>26</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-01-26</td>
+      <td>2018-01-26</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>5046.0</td>
+      <td>A00000349</td>
+      <td>42816</td>
+      <td>12</td>
+      <td>3568</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>9</td>
+      <td>9</td>
+      <td>70</td>
+      <td>debt_consolidation</td>
+      <td>2018-09-09</td>
+      <td>2018-09-09</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>6727.0</td>
+      <td>A00008505</td>
+      <td>42840</td>
+      <td>12</td>
+      <td>3570</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>10</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-12-10</td>
+      <td>2017-12-10</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>6621.0</td>
+      <td>A00007957</td>
+      <td>42900</td>
+      <td>12</td>
+      <td>3575</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>6</td>
+      <td>14</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-06-14</td>
+      <td>2017-06-14</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>6315.0</td>
+      <td>A00006472</td>
+      <td>43164</td>
+      <td>12</td>
+      <td>3597</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>6</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-02-06</td>
+      <td>2015-02-06</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>5313.0</td>
+      <td>A00001776</td>
+      <td>43200</td>
+      <td>24</td>
+      <td>1800</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>27</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2018-05-27</td>
+      <td>2018-05-27</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>5693.0</td>
+      <td>A00003489</td>
+      <td>44088</td>
+      <td>24</td>
+      <td>1837</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>1</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-08-01</td>
+      <td>2015-08-01</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>7087.0</td>
+      <td>A00010215</td>
+      <td>44304</td>
+      <td>24</td>
+      <td>1846</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>2</td>
+      <td>20</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2017-02-20</td>
+      <td>2017-02-20</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>6144.0</td>
+      <td>A00005593</td>
+      <td>44376</td>
+      <td>12</td>
+      <td>3698</td>
+      <td>A</td>
+      <td>2016</td>
+      <td>8</td>
+      <td>9</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-08-09</td>
+      <td>2016-08-09</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>loan_id</th>
+      <th>account_id</th>
+      <th>loan_amount</th>
+      <th>loan_term_months</th>
+      <th>monthly_payment</th>
+      <th>loan_status</th>
+      <th>start_year</th>
+      <th>start_month</th>
+      <th>start_day</th>
+      <th>location_code</th>
+      <th>loan_purpose</th>
+      <th>loan_start_date</th>
+      <th>loan_start_fulldate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>5657.0</td>
+      <td>A00003354</td>
+      <td>4980</td>
+      <td>12</td>
+      <td>415</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>7</td>
+      <td>5</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2014-07-05</td>
+      <td>2014-07-05</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>6234.0</td>
+      <td>A00006061</td>
+      <td>5148</td>
+      <td>12</td>
+      <td>429</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>28</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-05-28</td>
+      <td>2018-05-28</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>6699.0</td>
+      <td>A00008330</td>
+      <td>7656</td>
+      <td>24</td>
+      <td>319</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>3</td>
+      <td>30</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-03-30</td>
+      <td>2014-03-30</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>6688.0</td>
+      <td>A00008268</td>
+      <td>8616</td>
+      <td>24</td>
+      <td>359</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>9</td>
+      <td>26</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-09-26</td>
+      <td>2017-09-26</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>6312.0</td>
+      <td>A00006453</td>
+      <td>10944</td>
+      <td>36</td>
+      <td>304</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>17</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-05-17</td>
+      <td>2018-05-17</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6019.0</td>
+      <td>A00005033</td>
+      <td>11400</td>
+      <td>12</td>
+      <td>950</td>
+      <td>A</td>
+      <td>2016</td>
+      <td>7</td>
+      <td>25</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2016-07-25</td>
+      <td>2016-07-25</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>6229.0</td>
+      <td>A00006040</td>
+      <td>11736</td>
+      <td>24</td>
+      <td>489</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>10</td>
+      <td>2</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-10-02</td>
+      <td>2014-10-02</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>5103.0</td>
+      <td>A00000666</td>
+      <td>12540</td>
+      <td>12</td>
+      <td>1045</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>11</td>
+      <td>28</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2017-11-28</td>
+      <td>2017-11-28</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>6539.0</td>
+      <td>A00007559</td>
+      <td>12792</td>
+      <td>12</td>
+      <td>1066</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>7</td>
+      <td>11</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-07-11</td>
+      <td>2018-07-11</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>5718.0</td>
+      <td>A00003637</td>
+      <td>14028</td>
+      <td>12</td>
+      <td>1169</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>9</td>
+      <td>1</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-09-01</td>
+      <td>2017-09-01</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>6064.0</td>
+      <td>A00005215</td>
+      <td>14628</td>
+      <td>12</td>
+      <td>1219</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>8</td>
+      <td>4</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-08-04</td>
+      <td>2014-08-04</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>5897.0</td>
+      <td>A00004476</td>
+      <td>15192</td>
+      <td>24</td>
+      <td>633</td>
+      <td>A</td>
+      <td>2016</td>
+      <td>9</td>
+      <td>25</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2016-09-25</td>
+      <td>2016-09-25</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>5599.0</td>
+      <td>A00003064</td>
+      <td>15420</td>
+      <td>12</td>
+      <td>1285</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>21</td>
+      <td>18</td>
+      <td>car</td>
+      <td>2015-03-21</td>
+      <td>2015-03-21</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>6852.0</td>
+      <td>A00009140</td>
+      <td>16032</td>
+      <td>48</td>
+      <td>334</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>11</td>
+      <td>10</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-11-10</td>
+      <td>2018-11-10</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>6377.0</td>
+      <td>A00006792</td>
+      <td>17184</td>
+      <td>12</td>
+      <td>1432</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>3</td>
+      <td>17</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-03-17</td>
+      <td>2017-03-17</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>6297.0</td>
+      <td>A00006363</td>
+      <td>17508</td>
+      <td>12</td>
+      <td>1459</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>10</td>
+      <td>25</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-10-25</td>
+      <td>2014-10-25</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>5463.0</td>
+      <td>A00002413</td>
+      <td>17952</td>
+      <td>12</td>
+      <td>1496</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>10</td>
+      <td>6</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2018-10-06</td>
+      <td>2018-10-06</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>6942.0</td>
+      <td>A00009513</td>
+      <td>18324</td>
+      <td>12</td>
+      <td>1527</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>7</td>
+      <td>16</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-07-16</td>
+      <td>2017-07-16</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>5740.0</td>
+      <td>A00003752</td>
+      <td>18564</td>
+      <td>12</td>
+      <td>1547</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>2</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-04-02</td>
+      <td>2015-04-02</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>7230.0</td>
+      <td>A00010954</td>
+      <td>18720</td>
+      <td>60</td>
+      <td>312</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>4</td>
+      <td>2</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-04-02</td>
+      <td>2017-04-02</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>7034.0</td>
+      <td>A00010001</td>
+      <td>19044</td>
+      <td>36</td>
+      <td>529</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>7</td>
+      <td>11</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2016-07-11</td>
+      <td>2016-07-11</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>5651.0</td>
+      <td>A00003329</td>
+      <td>19248</td>
+      <td>12</td>
+      <td>1604</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>8</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2017-12-08</td>
+      <td>2017-12-08</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>5429.0</td>
+      <td>A00002268</td>
+      <td>20196</td>
+      <td>36</td>
+      <td>561</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>7</td>
+      <td>18</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2016-07-18</td>
+      <td>2016-07-18</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>5922.0</td>
+      <td>A00004580</td>
+      <td>20220</td>
+      <td>12</td>
+      <td>1685</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>5</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2015-08-05</td>
+      <td>2015-08-05</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>6043.0</td>
+      <td>A00005126</td>
+      <td>20352</td>
+      <td>48</td>
+      <td>424</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>11</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-01-11</td>
+      <td>2016-01-11</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>6591.0</td>
+      <td>A00007819</td>
+      <td>20832</td>
+      <td>48</td>
+      <td>434</td>
+      <td>C</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2015-02-02</td>
+      <td>2015-02-02</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>6721.0</td>
+      <td>A00008475</td>
+      <td>21072</td>
+      <td>24</td>
+      <td>878</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>1</td>
+      <td>21</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2014-01-21</td>
+      <td>2014-01-21</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>5980.0</td>
+      <td>A00004825</td>
+      <td>21396</td>
+      <td>12</td>
+      <td>1783</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>18</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2015-08-18</td>
+      <td>2015-08-18</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>6600.0</td>
+      <td>A00007861</td>
+      <td>21852</td>
+      <td>36</td>
+      <td>607</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>10</td>
+      <td>8</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2015-10-08</td>
+      <td>2015-10-08</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>7121.0</td>
+      <td>A00010364</td>
+      <td>21924</td>
+      <td>36</td>
+      <td>609</td>
+      <td>A</td>
+      <td>2013</td>
+      <td>11</td>
+      <td>10</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2013-11-10</td>
+      <td>2013-11-10</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>7072.0</td>
+      <td>A00010148</td>
+      <td>22104</td>
+      <td>12</td>
+      <td>1842</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>27</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-01-27</td>
+      <td>2018-01-27</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>5147.0</td>
+      <td>A00000938</td>
+      <td>22260</td>
+      <td>60</td>
+      <td>371</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>21</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2018-05-21</td>
+      <td>2018-05-21</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>6052.0</td>
+      <td>A00005164</td>
+      <td>22356</td>
+      <td>36</td>
+      <td>621</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>23</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2018-03-23</td>
+      <td>2018-03-23</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>5382.0</td>
+      <td>A00002134</td>
+      <td>22932</td>
+      <td>36</td>
+      <td>637</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>3</td>
+      <td>17</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2017-03-17</td>
+      <td>2017-03-17</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>6354.0</td>
+      <td>A00006688</td>
+      <td>22968</td>
+      <td>36</td>
+      <td>638</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>10</td>
+      <td>23</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2016-10-23</td>
+      <td>2016-10-23</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>5754.0</td>
+      <td>A00003834</td>
+      <td>23052</td>
+      <td>12</td>
+      <td>1921</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>28</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2014-09-28</td>
+      <td>2014-09-28</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>6878.0</td>
+      <td>A00009242</td>
+      <td>23184</td>
+      <td>12</td>
+      <td>1932</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>1</td>
+      <td>24</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-01-24</td>
+      <td>2017-01-24</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>5384.0</td>
+      <td>A00002142</td>
+      <td>23328</td>
+      <td>12</td>
+      <td>1944</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>7</td>
+      <td>59</td>
+      <td>car</td>
+      <td>2018-03-07</td>
+      <td>2018-03-07</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>7139.0</td>
+      <td>A00010445</td>
+      <td>23412</td>
+      <td>12</td>
+      <td>1951</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>22</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-01-22</td>
+      <td>2018-01-22</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>5229.0</td>
+      <td>A00001329</td>
+      <td>23520</td>
+      <td>12</td>
+      <td>1960</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>9</td>
+      <td>6</td>
+      <td>64</td>
+      <td>home_improvement</td>
+      <td>2017-09-06</td>
+      <td>2017-09-06</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>5723.0</td>
+      <td>A00003674</td>
+      <td>23628</td>
+      <td>12</td>
+      <td>1969</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>10</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2014-09-10</td>
+      <td>2014-09-10</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>7187.0</td>
+      <td>A00010711</td>
+      <td>24180</td>
+      <td>60</td>
+      <td>403</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>24</td>
+      <td>1</td>
+      <td>car</td>
+      <td>2017-12-24</td>
+      <td>2017-12-24</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>5130.0</td>
+      <td>A00000813</td>
+      <td>24312</td>
+      <td>12</td>
+      <td>2026</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>5</td>
+      <td>11</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2014-05-11</td>
+      <td>2014-05-11</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>5479.0</td>
+      <td>A00002486</td>
+      <td>24516</td>
+      <td>12</td>
+      <td>2043</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>1</td>
+      <td>10</td>
+      <td>59</td>
+      <td>home_improvement</td>
+      <td>2014-01-10</td>
+      <td>2014-01-10</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>5584.0</td>
+      <td>A00002986</td>
+      <td>24792</td>
+      <td>24</td>
+      <td>1033</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>6</td>
+      <td>18</td>
+      <td>debt_consolidation</td>
+      <td>2017-12-06</td>
+      <td>2017-12-06</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>6407.0</td>
+      <td>A00006930</td>
+      <td>25944</td>
+      <td>24</td>
+      <td>1081</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>5</td>
+      <td>26</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2014-05-26</td>
+      <td>2014-05-26</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>6242.0</td>
+      <td>A00006097</td>
+      <td>26208</td>
+      <td>36</td>
+      <td>728</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>10</td>
+      <td>22</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-10-22</td>
+      <td>2017-10-22</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>5005.0</td>
+      <td>A00000176</td>
+      <td>27456</td>
+      <td>12</td>
+      <td>2288</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>4</td>
+      <td>10</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-04-10</td>
+      <td>2017-04-10</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>6578.0</td>
+      <td>A00007765</td>
+      <td>27984</td>
+      <td>12</td>
+      <td>2332</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>11</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-12-11</td>
+      <td>2015-12-11</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>6227.0</td>
+      <td>A00006030</td>
+      <td>28248</td>
+      <td>24</td>
+      <td>1177</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>4</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-03-04</td>
+      <td>2015-03-04</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>6865.0</td>
+      <td>A00009199</td>
+      <td>29448</td>
+      <td>12</td>
+      <td>2454</td>
+      <td>B</td>
+      <td>2016</td>
+      <td>9</td>
+      <td>11</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-09-11</td>
+      <td>2016-09-11</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>6676.0</td>
+      <td>A00008159</td>
+      <td>29784</td>
+      <td>24</td>
+      <td>1241</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>13</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-06-13</td>
+      <td>2015-06-13</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>5620.0</td>
+      <td>A00003161</td>
+      <td>30012</td>
+      <td>12</td>
+      <td>2501</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>6</td>
+      <td>16</td>
+      <td>18</td>
+      <td>home_improvement</td>
+      <td>2018-06-16</td>
+      <td>2018-06-16</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>5311.0</td>
+      <td>A00001766</td>
+      <td>30060</td>
+      <td>60</td>
+      <td>501</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>6</td>
+      <td>15</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2016-06-15</td>
+      <td>2016-06-15</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>6501.0</td>
+      <td>A00007418</td>
+      <td>30276</td>
+      <td>12</td>
+      <td>2523</td>
+      <td>B</td>
+      <td>2016</td>
+      <td>4</td>
+      <td>29</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2016-04-29</td>
+      <td>2016-04-29</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>4961.0</td>
+      <td>A00000019</td>
+      <td>30276</td>
+      <td>12</td>
+      <td>2523</td>
+      <td>B</td>
+      <td>2016</td>
+      <td>4</td>
+      <td>29</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-04-29</td>
+      <td>2016-04-29</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>6502.0</td>
+      <td>A00007424</td>
+      <td>30276</td>
+      <td>12</td>
+      <td>2523</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>8</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-12-08</td>
+      <td>2017-12-08</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>4962.0</td>
+      <td>A00000025</td>
+      <td>30276</td>
+      <td>12</td>
+      <td>2523</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>8</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-12-08</td>
+      <td>2017-12-08</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>7200.0</td>
+      <td>A00010799</td>
+      <td>31140</td>
+      <td>60</td>
+      <td>519</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>7</td>
+      <td>11</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-07-11</td>
+      <td>2018-07-11</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>6185.0</td>
+      <td>A00005774</td>
+      <td>31176</td>
+      <td>24</td>
+      <td>1299</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>28</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-11-28</td>
+      <td>2015-11-28</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>5576.0</td>
+      <td>A00002962</td>
+      <td>31248</td>
+      <td>12</td>
+      <td>2604</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>21</td>
+      <td>18</td>
+      <td>debt_consolidation</td>
+      <td>2014-12-21</td>
+      <td>2014-12-21</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>7110.0</td>
+      <td>A00010345</td>
+      <td>31260</td>
+      <td>12</td>
+      <td>2605</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>21</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-01-21</td>
+      <td>2018-01-21</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>6970.0</td>
+      <td>A00009677</td>
+      <td>31620</td>
+      <td>60</td>
+      <td>527</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>6</td>
+      <td>17</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-06-17</td>
+      <td>2017-06-17</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>6546.0</td>
+      <td>A00007607</td>
+      <td>31728</td>
+      <td>24</td>
+      <td>1322</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>27</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2015-03-27</td>
+      <td>2015-03-27</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>6130.0</td>
+      <td>A00005541</td>
+      <td>32640</td>
+      <td>48</td>
+      <td>680</td>
+      <td>C</td>
+      <td>2016</td>
+      <td>7</td>
+      <td>18</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-07-18</td>
+      <td>2016-07-18</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>6758.0</td>
+      <td>A00008742</td>
+      <td>33144</td>
+      <td>12</td>
+      <td>2762</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>7</td>
+      <td>29</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-07-29</td>
+      <td>2017-07-29</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>5932.0</td>
+      <td>A00004626</td>
+      <td>33348</td>
+      <td>12</td>
+      <td>2779</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>6</td>
+      <td>18</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-06-18</td>
+      <td>2017-06-18</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>6764.0</td>
+      <td>A00008776</td>
+      <td>33984</td>
+      <td>48</td>
+      <td>708</td>
+      <td>C</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>26</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-08-26</td>
+      <td>2015-08-26</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>6310.0</td>
+      <td>A00006440</td>
+      <td>34572</td>
+      <td>12</td>
+      <td>2881</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>6</td>
+      <td>17</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-06-17</td>
+      <td>2017-06-17</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>6643.0</td>
+      <td>A00008038</td>
+      <td>35856</td>
+      <td>24</td>
+      <td>1494</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>18</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-01-18</td>
+      <td>2018-01-18</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>5207.0</td>
+      <td>A00001244</td>
+      <td>35904</td>
+      <td>48</td>
+      <td>748</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>2</td>
+      <td>28</td>
+      <td>64</td>
+      <td>home_improvement</td>
+      <td>2017-02-28</td>
+      <td>2017-02-28</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>7008.0</td>
+      <td>A00009897</td>
+      <td>36168</td>
+      <td>12</td>
+      <td>3014</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>22</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-09-22</td>
+      <td>2015-09-22</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>6682.0</td>
+      <td>A00008225</td>
+      <td>36204</td>
+      <td>12</td>
+      <td>3017</td>
+      <td>D</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>30</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-03-30</td>
+      <td>2018-03-30</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>6929.0</td>
+      <td>A00009472</td>
+      <td>36396</td>
+      <td>12</td>
+      <td>3033</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>8</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-05-08</td>
+      <td>2015-05-08</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>6306.0</td>
+      <td>A00006425</td>
+      <td>36684</td>
+      <td>12</td>
+      <td>3057</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>20</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2014-12-20</td>
+      <td>2014-12-20</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>7096.0</td>
+      <td>A00010257</td>
+      <td>37812</td>
+      <td>12</td>
+      <td>3151</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>9</td>
+      <td>2</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-09-02</td>
+      <td>2018-09-02</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>6362.0</td>
+      <td>A00006738</td>
+      <td>37908</td>
+      <td>12</td>
+      <td>3159</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>10</td>
+      <td>31</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-10-31</td>
+      <td>2015-10-31</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>5332.0</td>
+      <td>A00001869</td>
+      <td>37944</td>
+      <td>36</td>
+      <td>1054</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>29</td>
+      <td>64</td>
+      <td>home_improvement</td>
+      <td>2018-01-29</td>
+      <td>2018-01-29</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>6820.0</td>
+      <td>A00009034</td>
+      <td>38148</td>
+      <td>12</td>
+      <td>3179</td>
+      <td>A</td>
+      <td>2013</td>
+      <td>12</td>
+      <td>16</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2013-12-16</td>
+      <td>2013-12-16</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>6321.0</td>
+      <td>A00006505</td>
+      <td>38496</td>
+      <td>12</td>
+      <td>3208</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>10</td>
+      <td>8</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-10-08</td>
+      <td>2018-10-08</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>5358.0</td>
+      <td>A00002018</td>
+      <td>38520</td>
+      <td>12</td>
+      <td>3210</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>1</td>
+      <td>21</td>
+      <td>59</td>
+      <td>debt_consolidation</td>
+      <td>2017-01-21</td>
+      <td>2017-01-21</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>5634.0</td>
+      <td>A00003229</td>
+      <td>39024</td>
+      <td>12</td>
+      <td>3252</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>5</td>
+      <td>1</td>
+      <td>59</td>
+      <td>home_improvement</td>
+      <td>2017-05-01</td>
+      <td>2017-05-01</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>7294.0</td>
+      <td>A00011327</td>
+      <td>39168</td>
+      <td>24</td>
+      <td>1632</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>9</td>
+      <td>27</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-09-27</td>
+      <td>2018-09-27</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>6888.0</td>
+      <td>A00009265</td>
+      <td>39576</td>
+      <td>12</td>
+      <td>3298</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>7</td>
+      <td>11</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2014-07-11</td>
+      <td>2014-07-11</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>6887.0</td>
+      <td>A00009263</td>
+      <td>39576</td>
+      <td>12</td>
+      <td>3298</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>5</td>
+      <td>8</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-05-08</td>
+      <td>2017-05-08</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>5665.0</td>
+      <td>A00003390</td>
+      <td>40632</td>
+      <td>12</td>
+      <td>3386</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>3</td>
+      <td>11</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-03-11</td>
+      <td>2018-03-11</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>5582.0</td>
+      <td>A00002982</td>
+      <td>41256</td>
+      <td>12</td>
+      <td>3438</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>4</td>
+      <td>17</td>
+      <td>18</td>
+      <td>debt_consolidation</td>
+      <td>2018-04-17</td>
+      <td>2018-04-17</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>5808.0</td>
+      <td>A00004099</td>
+      <td>41856</td>
+      <td>48</td>
+      <td>872</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>7</td>
+      <td>31</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-07-31</td>
+      <td>2017-07-31</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>6895.0</td>
+      <td>A00009307</td>
+      <td>41904</td>
+      <td>12</td>
+      <td>3492</td>
+      <td>A</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>19</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2014-09-19</td>
+      <td>2014-09-19</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>6535.0</td>
+      <td>A00007546</td>
+      <td>41952</td>
+      <td>12</td>
+      <td>3496</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>2</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2015-11-02</td>
+      <td>2015-11-02</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>5841.0</td>
+      <td>A00004268</td>
+      <td>41988</td>
+      <td>12</td>
+      <td>3499</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>11</td>
+      <td>4</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2018-11-04</td>
+      <td>2018-11-04</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>6553.0</td>
+      <td>A00007636</td>
+      <td>42384</td>
+      <td>12</td>
+      <td>3532</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>1</td>
+      <td>26</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2018-01-26</td>
+      <td>2018-01-26</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>5046.0</td>
+      <td>A00000349</td>
+      <td>42816</td>
+      <td>12</td>
+      <td>3568</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>9</td>
+      <td>9</td>
+      <td>70</td>
+      <td>debt_consolidation</td>
+      <td>2018-09-09</td>
+      <td>2018-09-09</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>6727.0</td>
+      <td>A00008505</td>
+      <td>42840</td>
+      <td>12</td>
+      <td>3570</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>12</td>
+      <td>10</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-12-10</td>
+      <td>2017-12-10</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>6621.0</td>
+      <td>A00007957</td>
+      <td>42900</td>
+      <td>12</td>
+      <td>3575</td>
+      <td>A</td>
+      <td>2017</td>
+      <td>6</td>
+      <td>14</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2017-06-14</td>
+      <td>2017-06-14</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>6315.0</td>
+      <td>A00006472</td>
+      <td>43164</td>
+      <td>12</td>
+      <td>3597</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>6</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-02-06</td>
+      <td>2015-02-06</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>5313.0</td>
+      <td>A00001776</td>
+      <td>43200</td>
+      <td>24</td>
+      <td>1800</td>
+      <td>C</td>
+      <td>2018</td>
+      <td>5</td>
+      <td>27</td>
+      <td>64</td>
+      <td>debt_consolidation</td>
+      <td>2018-05-27</td>
+      <td>2018-05-27</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>5693.0</td>
+      <td>A00003489</td>
+      <td>44088</td>
+      <td>24</td>
+      <td>1837</td>
+      <td>A</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>1</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2015-08-01</td>
+      <td>2015-08-01</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>7087.0</td>
+      <td>A00010215</td>
+      <td>44304</td>
+      <td>24</td>
+      <td>1846</td>
+      <td>C</td>
+      <td>2017</td>
+      <td>2</td>
+      <td>20</td>
+      <td>1</td>
+      <td>home_improvement</td>
+      <td>2017-02-20</td>
+      <td>2017-02-20</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>6144.0</td>
+      <td>A00005593</td>
+      <td>44376</td>
+      <td>12</td>
+      <td>3698</td>
+      <td>A</td>
+      <td>2016</td>
+      <td>8</td>
+      <td>9</td>
+      <td>1</td>
+      <td>debt_consolidation</td>
+      <td>2016-08-09</td>
+      <td>2016-08-09</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">loan_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_loan_id"></div><b>📃 Summary:</b> Unique identifier for the loan<br><b>🦄 Unique:</b> This column represents a unique identifier for each loan. For this table, each row represents a single completed loan transaction. loan_id is unique across rows as it's designed to be a specific identifier for each loan.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_id"></div><b>📃 Summary:</b> Unique identifier for the account<br><b>🎨 Patterns:</b><br><ul><li><code>A\d{8}</code><br><i>Account IDs starting with 'A' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">loan_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_loan_amount"></div><b>📃 Summary:</b> Total loan amount in currency units<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">loan_term_months</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_loan_term_months"></div><b>📃 Summary:</b> Loan term in months<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">monthly_payment</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_monthly_payment"></div><b>📃 Summary:</b> Monthly payment amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">loan_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='C'>C</option><option value='A'>A</option><option value='D'>D</option><option value='B'>B</option></select></span><br><br><div id="bar_viz_loan_status"></div><b>📃 Summary:</b> Loan status (A: successful, C: issues)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">start_year</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_start_year"></div><b>📃 Summary:</b> Year of loan initiation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">start_month</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_start_month"></div><b>📃 Summary:</b> Month of loan initiation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">start_day</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_start_day"></div><b>📃 Summary:</b> Day of the month for loan initiation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">location_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_location_code"></div><b>📃 Summary:</b> Location code for the loan<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">loan_purpose</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='home'>home</option><option value='debt_consolidation'>debt_consolidation</option><option value='home_improvement'>home_improvement</option><option value='car'>car</option><option value='business'>business</option><option value='education'>education</option><option value='medical'>medical</option><option value='vacation'>vacation</option><option value='wedding'>wedding</option><option value='major_purchase'>major_purchase</option><option value='moving'>moving</option><option value='renewable_energy'>renewable_energy</option><option value='credit_card'>credit_card</option><option value='other'>other</option></select></span><br><br><div id="bar_viz_loan_purpose"></div><b>📃 Summary:</b> Purpose of the loan<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">loan_start_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_loan_start_date"></div><b>📃 Summary:</b> Date of loan initiation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">loan_start_fulldate</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_loan_start_fulldate"></div><b>📃 Summary:</b> Full date of loan initiation<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about completed loans. It contains details of each loan including the loan ID, account ID, amount, duration, payments, status, date information, location, and purpose. Each row represents a single completed loan transaction. The table includes both successfully repaid loans (status A) and loans with issues (status C), primarily for car purchases.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>11</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>loan_id</td>
+      <td>Unique identifier for the loan</td>
+      <td>loan_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>account_id</td>
+      <td>Unique identifier for the account</td>
+      <td>account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>amount</td>
+      <td>Total loan amount in currency units</td>
+      <td>loan_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>duration</td>
+      <td>Loan term in months</td>
+      <td>loan_term_months</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>payments</td>
+      <td>Monthly payment amount</td>
+      <td>monthly_payment</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>status</td>
+      <td>Loan status (A: successful, C: issues)</td>
+      <td>loan_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>year_</td>
+      <td>Year of loan initiation</td>
+      <td>start_year</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>month_</td>
+      <td>Month of loan initiation</td>
+      <td>start_month</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>day_</td>
+      <td>Day of the month for loan initiation</td>
+      <td>start_day</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>date_</td>
+      <td>Date of loan initiation</td>
+      <td>loan_start_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>fulldate</td>
+      <td>Full date of loan initiation</td>
+      <td>loan_start_fulldate</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>location</td>
+      <td>Location code for the loan</td>
+      <td>location_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>purpose</td>
+      <td>Purpose of the loan</td>
+      <td>loan_purpose</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>2</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>loan_start_date</td>
+      <td>CAST("loan_start_date" AS DATE)</td>
+      <td>To transform the 'loan_start_date' column from VARCHAR to DATE in Snowflake, we can use a simple CAST function. The current format of the dates in the column is already in the ISO 8601 format (YYYY-MM-DD), which is directly compatible with Snowflake's DATE data type. Therefore, we don't need to use TO_DATE function with a specific format string. A straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>loan_start_fulldate</td>
+      <td>CAST("loan_start_fulldate" AS DATE)</td>
+      <td>To transform the 'loan_start_fulldate' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the date ('YYYY-MM-DD') is already compatible with Snowflake's default date format, so we don't need to specify a format string. A straightforward CAST to DATE will work.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': '6004', 'value': 0.1466275659824047}, {'label': '5862', 'value': 0.1466275659824047}, {'label': '5779', 'value': 0.1466275659824047}, {'label': '7091', 'value': 0.1466275659824047}, {'label': '6386', 'value': 0.1466275659824047}, {'label': 'Other values', 'value': 99.26686217008798}];
+    drawBarChart("bar_viz_loan_id", data);
+data = [{'label': 'A00005362', 'value': 0.1466275659824047}, {'label': 'A00000067', 'value': 0.1466275659824047}, {'label': 'A00001801', 'value': 0.1466275659824047}, {'label': 'A00004725', 'value': 0.1466275659824047}, {'label': 'A00007632', 'value': 0.1466275659824047}, {'label': 'Other values', 'value': 99.26686217008798}];
+    drawBarChart("bar_viz_account_id", data);
+data = [{'x': 19626.0, 'y': 68}, {'x': 48918.0, 'y': 93}, {'x': 78210.0, 'y': 115}, {'x': 107502.0, 'y': 70}, {'x': 136794.0, 'y': 52}, {'x': 166086.0, 'y': 60}, {'x': 195378.0, 'y': 52}, {'x': 224670.0, 'y': 35}, {'x': 253962.0, 'y': 27}, {'x': 283254.0, 'y': 27}, {'x': 312546.0, 'y': 23}, {'x': 341838.0, 'y': 13}, {'x': 371130.0, 'y': 12}, {'x': 400422.0, 'y': 12}, {'x': 429714.0, 'y': 7}, {'x': 459006.0, 'y': 8}, {'x': 488298.0, 'y': 3}, {'x': 517590.0, 'y': 1}, {'x': 546882.0, 'y': 2}, {'x': 576174.0, 'y': 2}];
+    binWidth = 29292.0;
+    drawHistogram("hist_viz_loan_amount", data, binWidth);
+data = [{'x': 13.2, 'y': 131}, {'x': 15.600000000000001, 'y': 0}, {'x': 18.0, 'y': 0}, {'x': 20.4, 'y': 0}, {'x': 22.8, 'y': 0}, {'x': 25.2, 'y': 138}, {'x': 27.6, 'y': 0}, {'x': 30.0, 'y': 0}, {'x': 32.4, 'y': 0}, {'x': 34.8, 'y': 0}, {'x': 37.2, 'y': 130}, {'x': 39.599999999999994, 'y': 0}, {'x': 42.0, 'y': 0}, {'x': 44.400000000000006, 'y': 0}, {'x': 46.8, 'y': 0}, {'x': 49.2, 'y': 138}, {'x': 51.599999999999994, 'y': 0}, {'x': 54.0, 'y': 0}, {'x': 56.4, 'y': 0}, {'x': 58.8, 'y': 145}];
+    binWidth = 2.4;
+    drawHistogram("hist_viz_loan_term_months", data, binWidth);
+data = [{'x': 544.15, 'y': 27}, {'x': 1024.4499999999998, 'y': 26}, {'x': 1504.75, 'y': 41}, {'x': 1985.05, 'y': 60}, {'x': 2465.35, 'y': 45}, {'x': 2945.65, 'y': 55}, {'x': 3425.95, 'y': 58}, {'x': 3906.25, 'y': 50}, {'x': 4386.549999999999, 'y': 59}, {'x': 4866.85, 'y': 32}, {'x': 5347.15, 'y': 40}, {'x': 5827.450000000001, 'y': 36}, {'x': 6307.75, 'y': 35}, {'x': 6788.05, 'y': 27}, {'x': 7268.35, 'y': 29}, {'x': 7748.65, 'y': 21}, {'x': 8228.95, 'y': 23}, {'x': 8709.25, 'y': 7}, {'x': 9189.55, 'y': 4}, {'x': 9669.85, 'y': 7}];
+    binWidth = 480.3;
+    drawHistogram("hist_viz_monthly_payment", data, binWidth);
+data = [{'label': 'C', 'value': 59.09090909090909}, {'label': 'A', 'value': 29.765395894428153}, {'label': 'D', 'value': 6.598240469208211}, {'label': 'B', 'value': 4.545454545454546}];
+    drawBarChart("bar_viz_loan_status", data);
+data = [{'x': 2013.125, 'y': 20}, {'x': 2013.375, 'y': 0}, {'x': 2013.625, 'y': 0}, {'x': 2013.875, 'y': 0}, {'x': 2014.125, 'y': 101}, {'x': 2014.375, 'y': 0}, {'x': 2014.625, 'y': 0}, {'x': 2014.875, 'y': 0}, {'x': 2015.125, 'y': 90}, {'x': 2015.375, 'y': 0}, {'x': 2015.625, 'y': 0}, {'x': 2015.875, 'y': 0}, {'x': 2016.125, 'y': 117}, {'x': 2016.375, 'y': 0}, {'x': 2016.625, 'y': 0}, {'x': 2016.875, 'y': 0}, {'x': 2017.125, 'y': 196}, {'x': 2017.375, 'y': 0}, {'x': 2017.625, 'y': 0}, {'x': 2017.875, 'y': 158}];
+    binWidth = 0.25;
+    drawHistogram("hist_viz_start_year", data, binWidth);
+data = [{'x': 1.275, 'y': 55}, {'x': 1.8250000000000002, 'y': 50}, {'x': 2.375, 'y': 0}, {'x': 2.9250000000000003, 'y': 55}, {'x': 3.475, 'y': 0}, {'x': 4.025, 'y': 48}, {'x': 4.575000000000001, 'y': 0}, {'x': 5.125, 'y': 58}, {'x': 5.675000000000001, 'y': 0}, {'x': 6.225, 'y': 62}, {'x': 6.775, 'y': 59}, {'x': 7.325000000000001, 'y': 0}, {'x': 7.875, 'y': 58}, {'x': 8.425, 'y': 0}, {'x': 8.975000000000001, 'y': 63}, {'x': 9.525, 'y': 0}, {'x': 10.075000000000001, 'y': 53}, {'x': 10.625, 'y': 0}, {'x': 11.175, 'y': 55}, {'x': 11.725000000000001, 'y': 66}];
+    binWidth = 0.55;
+    drawHistogram("hist_viz_start_month", data, binWidth);
+data = [{'x': 1.75, 'y': 47}, {'x': 3.25, 'y': 26}, {'x': 4.75, 'y': 52}, {'x': 6.25, 'y': 25}, {'x': 7.75, 'y': 46}, {'x': 9.25, 'y': 22}, {'x': 10.75, 'y': 58}, {'x': 12.25, 'y': 26}, {'x': 13.75, 'y': 29}, {'x': 15.25, 'y': 24}, {'x': 16.75, 'y': 35}, {'x': 18.25, 'y': 19}, {'x': 19.75, 'y': 37}, {'x': 21.25, 'y': 25}, {'x': 22.75, 'y': 37}, {'x': 24.25, 'y': 22}, {'x': 25.75, 'y': 39}, {'x': 27.25, 'y': 17}, {'x': 28.75, 'y': 59}, {'x': 30.25, 'y': 37}];
+    binWidth = 1.5;
+    drawHistogram("hist_viz_start_day", data, binWidth);
+data = [{'x': 2.725, 'y': 507}, {'x': 6.175000000000001, 'y': 0}, {'x': 9.625, 'y': 0}, {'x': 13.075000000000001, 'y': 0}, {'x': 16.525, 'y': 21}, {'x': 19.975, 'y': 0}, {'x': 23.425000000000004, 'y': 2}, {'x': 26.875, 'y': 0}, {'x': 30.325, 'y': 3}, {'x': 33.775, 'y': 0}, {'x': 37.225, 'y': 0}, {'x': 40.675000000000004, 'y': 0}, {'x': 44.125, 'y': 0}, {'x': 47.575, 'y': 5}, {'x': 51.025000000000006, 'y': 0}, {'x': 54.475, 'y': 0}, {'x': 57.925000000000004, 'y': 55}, {'x': 61.375, 'y': 0}, {'x': 64.825, 'y': 75}, {'x': 68.275, 'y': 14}];
+    binWidth = 3.45;
+    drawHistogram("hist_viz_location_code", data, binWidth);
+data = [{'label': 'home', 'value': 78.73900293255132}, {'label': 'debt_consolidat...', 'value': 10.997067448680351}, {'label': 'home_improvemen...', 'value': 5.865102639296188}, {'label': 'car', 'value': 4.398826979472141}];
+    drawBarChart("bar_viz_loan_purpose", data);
+data = [{'label': '2018-07-12', 'value': 0.5865102639296188}, {'label': '2017-12-28', 'value': 0.5865102639296188}, {'label': '2018-04-19', 'value': 0.5865102639296188}, {'label': '2017-06-19', 'value': 0.43988269794721413}, {'label': '2014-05-26', 'value': 0.43988269794721413}, {'label': 'Other values', 'value': 97.36070381231671}];
+    drawBarChart("bar_viz_loan_start_date", data);
+data = [{'label': '2018-07-12', 'value': 0.5865102639296188}, {'label': '2017-12-28', 'value': 0.5865102639296188}, {'label': '2018-04-19', 'value': 0.5865102639296188}, {'label': '2017-06-19', 'value': 0.43988269794721413}, {'label': '2014-05-26', 'value': 0.43988269794721413}, {'label': 'Other values', 'value': 97.36070381231671}];
+    drawBarChart("bar_viz_loan_start_fulldate", data);
+
+
+</script>
+</body>
+</html>

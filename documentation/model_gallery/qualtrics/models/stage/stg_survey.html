@@ -1,0 +1,2822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>survey</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>_fivetran_deleted</th>
+      <th>brand_base_url</th>
+      <th>brand_id</th>
+      <th>option_active_response_set</th>
+      <th>option_autoadvance</th>
+      <th>option_autoadvance_pages</th>
+      <th>option_autofocus</th>
+      <th>option_back_button</th>
+      <th>option_ballot_box_stuffing_prevention</th>
+      <th>option_highlight_questions</th>
+      <th>option_new_scoring</th>
+      <th>option_next_button</th>
+      <th>option_no_index</th>
+      <th>option_partial_data</th>
+      <th>option_previous_button</th>
+      <th>option_save_and_continue</th>
+      <th>option_secure_response_files</th>
+      <th>option_skin_library</th>
+      <th>option_skin_question_width</th>
+      <th>option_skin_type</th>
+      <th>option_survey_language</th>
+      <th>option_survey_protection</th>
+      <th>option_survey_termination</th>
+      <th>option_survey_title</th>
+      <th>owner_id</th>
+      <th>project_category</th>
+      <th>project_type</th>
+      <th>scoring_summary_after_questions</th>
+      <th>scoring_summary_after_survey</th>
+      <th>survey_name</th>
+      <th>survey_status</th>
+      <th>option_custom_styles</th>
+      <th>last_activated</th>
+      <th>last_modified</th>
+      <th>option_survey_creation_date</th>
+      <th>option_survey_expiration</th>
+      <th>option_skin</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>SV_cARsuFqXn9bksDk</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_3zccqsZVQTIwYfQ</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>True</td>
+      <td>off</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>Qualtrics</td>
+      <td>700.0</td>
+      <td>MQ</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>None</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CX</td>
+      <td>CustomerSatisfactionScore</td>
+      <td>False</td>
+      <td>False</td>
+      <td>TestSurvey_FilterAPI</td>
+      <td>Inactive</td>
+      <td>{"altRowStyles":{"selector":".Skin .ReadableAlt, .Skin .LightBG","styles":{"backgroundColor":null}},"borderStyles":{"selector":".Skin .CS .horizontalbar table.sliderGrid tr.xlabel th, .Skin .CS .horizontalbar .ylabel, .Skin .CS .horizontalbar table.sliderGrid tr td.value, .Skin .Slider .horizontalbar table.sliderGrid tr.xlabel th, .Skin .BorderColor, .Skin .DarkBorderColor, .Skin .Slider .horizontalbar table.sliderGrid tr td.value, .Skin thead, .Skin .GAP .ChoiceStructure thead th  ","styles":{"borderColor":null}},"choiceStyles":{"selector":".Skin .horizontalbar th.ylabel, .Skin .Matrix table td, .Skin .Matrix table th, .Skin .Matrix table thead th, .Skin .Matrix table thead td, .Skin .PGR .DragAndDrop .Items label, .Skin .QuestionBody ul.ChoiceStructure, .Skin .PGR .DragAndDrop .Group ul, .Skin .PGR .DragAndDrop .Group h2, .Skin .PGR .DragAndDrop .Items ul, .Skin .PGR .DragAndDrop .Items h2, .Skin .DD .QuestionBody table.ChoiceStructure, .Skin .PGR .DragAndDrop .NoColumns td.groupsContainerTd div ul, .Skin .PGR .DragAndDrop .NoColumns td.groupsContainerTd div h2, .Skin .SBS thead th, .Skin .SBS td, .Skin .SBS .Answers td, .Skin .SBS .Answers th, .SBS table.ChoiceStructure, .Skin .horizontalbar thead table.LabelDescriptions tr td, .Skin .horizontalbar thead tr td.NotApplicable, .QuestionBody th, .Skin .QuestionBody .MC .MAVR label, .Skin .QuestionBody .MC .SAVR label, .Skin .SBS thead th, .Skin .SBS td, .Skin .RO .DND ul li, .Skin .reg, .SkinInner .ChoiceStructure, .Skin thead, .Skin .GAP .ChoiceStructure thead th, .Skin .GAP .ChoiceStructure .c4, .Skin .GAP .ChoiceStructure th, .Skin .GAP .ChoiceStructure .WhyText, .SkinInner .ChoiceStructure .LightBG, .Skin .QuestionOuter.Highlight .Inner .reg, .Skin .QuestionOuter.Highlight .Inner .alt, .Skin .QuestionOuter.Highlight .Inner .ReadableAlt       ","styles":{"color":null,"fontFamily":null,"fontSize":null,"fontStyle":null,"fontWeight":null,"textDecoration":null}},"customCSS":null,"errorStyles":{"selector":".Skin .ValidationError","styles":{"backgroundColor":null,"borderColor":null,"color":null}},"errorStylesBG":{"selector":".Skin .HeaderValidationError, .Skin .HeaderValidationError li a","styles":{"backgroundColor":null,"color":null}},"footerStyles":{"selector":".Skin #Footer","styles":{"color":null}},"headerStyles":{"selector":".Skin div#Header","styles":{"color":null}},"highlightStyles":{"selector":".Skin .QuestionOuter.Highlight .Inner, .Skin .QuestionOuter.Highlight .Inner .reg, .Skin .QuestionOuter.Highlight .Inner .alt, .Skin .QuestionOuter.Highlight .Inner .ReadableAlt","styles":{"backgroundColor":null}},"highlightStylesAlt":{"selector":".Skin .QuestionOuter.Highlight .Inner .ReadableAlt, .Skin .QuestionOuter.Highlight .Inner .LightBG","styles":{"backgroundColor":null}},"pageStyles":{"selector":"#SurveyEngineBody","styles":{"backgroundColor":null}},"questionSeparatorStyles":{"selector":".Skin .Separator","styles":{"backgroundColor":null,"display":null}},"questionStyles":{"selector":".Skin .QuestionText","styles":{"color":null,"fontFamily":null,"fontSize":null,"fontStyle":null,"fontWeight":null,"textDecoration":null}},"textEntryStyles":{"selector":".Skin select, .Skin .InputText","styles":{"color":null}},"textStyles":{"selector":".SkinInner","styles":{"color":null,"fontFamily":null,"fontSize":null,"fontStyle":null,"fontWeight":null,"textDecoration":null}}}</td>
+      <td>None</td>
+      <td>2022-07-15 15:31:11.000000</td>
+      <td>2022-07-15 15:30:27.000000</td>
+      <td>NaN</td>
+      <td>"xmskin"</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>SV_08GFzuA5eDhxx53</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_3XaYj2HxzK4NTs9</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>fivetrandev</td>
+      <td>NaN</td>
+      <td>templated</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>Online Survey Software | Qualtrics Survey Solutions</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CX</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Untitled Project</td>
+      <td>Inactive</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-07-01 10:25:18.000000</td>
+      <td>2020-07-01 10:25:11.000000</td>
+      <td>NaN</td>
+      <td>{"brandingId":null,"templateId":"*2014","overrides":null}</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>SV_8GsOFOOKnw9KAmx</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_bjbsBC4lfPOyEhT</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>fivetrandev</td>
+      <td>NaN</td>
+      <td>templated</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>Online Survey Software | Qualtrics Survey Solutions</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CX</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>TestSurvey2</td>
+      <td>Active</td>
+      <td>None</td>
+      <td>2020-06-30 11:24:41.000000</td>
+      <td>2020-07-01 08:57:47.000000</td>
+      <td>2020-06-30 11:22:54.000000</td>
+      <td>NaN</td>
+      <td>{"brandingId":null,"templateId":"*2014","overrides":null}</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>SV_8vvMJsA88y5AZxA</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_38eltRqQKKndZSS</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>fivetrandev</td>
+      <td>NaN</td>
+      <td>templated</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>Online Survey Software | Qualtrics Survey Solutions</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CORE</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>SurveyWithMAQ1</td>
+      <td>Inactive</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2021-02-04 10:59:03.000000</td>
+      <td>2021-02-04 10:55:54.000000</td>
+      <td>NaN</td>
+      <td>{"brandingId":null,"templateId":"*2014","overrides":null}</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>SV_1XGe0Xykmeo0lyB</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_1MNRbPFAJML4L0F</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>fivetrandev</td>
+      <td>NaN</td>
+      <td>templated</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>Online Survey Software | Qualtrics Survey Solutions</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CORE</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Untitled Project</td>
+      <td>Inactive</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-08-06 05:38:26.000000</td>
+      <td>2020-08-06 05:38:07.000000</td>
+      <td>NaN</td>
+      <td>{"brandingId":null,"templateId":"*2014","overrides":null}</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>survey_id</th>
+      <th>is_deleted</th>
+      <th>brand_base_url</th>
+      <th>brand_id</th>
+      <th>active_response_set</th>
+      <th>autoadvance</th>
+      <th>autoadvance_pages</th>
+      <th>autofocus</th>
+      <th>show_back_button</th>
+      <th>prevent_ballot_stuffing</th>
+      <th>highlight_questions</th>
+      <th>new_scoring_enabled</th>
+      <th>next_button_text</th>
+      <th>no_index_enabled</th>
+      <th>partial_data_allowed</th>
+      <th>previous_button_text</th>
+      <th>save_and_continue_enabled</th>
+      <th>secure_response_files_enabled</th>
+      <th>skin_library_name</th>
+      <th>skin_question_width</th>
+      <th>skin_type</th>
+      <th>survey_language</th>
+      <th>survey_protection_type</th>
+      <th>survey_termination_message</th>
+      <th>survey_title</th>
+      <th>owner_id</th>
+      <th>project_category</th>
+      <th>project_type</th>
+      <th>show_question_scoring</th>
+      <th>show_survey_scoring</th>
+      <th>survey_name</th>
+      <th>survey_status</th>
+      <th>custom_styles</th>
+      <th>last_activated</th>
+      <th>last_modified</th>
+      <th>survey_creation_date</th>
+      <th>survey_expiration_date</th>
+      <th>survey_skin_settings</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>SV_cARsuFqXn9bksDk</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_3zccqsZVQTIwYfQ</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>False</td>
+      <td>True</td>
+      <td>off</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>Qualtrics</td>
+      <td>700.0</td>
+      <td>MQ</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>None</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CX</td>
+      <td>CustomerSatisfactionScore</td>
+      <td>False</td>
+      <td>False</td>
+      <td>TestSurvey_FilterAPI</td>
+      <td>Inactive</td>
+      <td>{"altRowStyles":{"selector":".Skin .ReadableAlt, .Skin .LightBG","styles":{"backgroundColor":null}},"borderStyles":{"selector":".Skin .CS .horizontalbar table.sliderGrid tr.xlabel th, .Skin .CS .horizontalbar .ylabel, .Skin .CS .horizontalbar table.sliderGrid tr td.value, .Skin .Slider .horizontalbar table.sliderGrid tr.xlabel th, .Skin .BorderColor, .Skin .DarkBorderColor, .Skin .Slider .horizontalbar table.sliderGrid tr td.value, .Skin thead, .Skin .GAP .ChoiceStructure thead th  ","styles":{"borderColor":null}},"choiceStyles":{"selector":".Skin .horizontalbar th.ylabel, .Skin .Matrix table td, .Skin .Matrix table th, .Skin .Matrix table thead th, .Skin .Matrix table thead td, .Skin .PGR .DragAndDrop .Items label, .Skin .QuestionBody ul.ChoiceStructure, .Skin .PGR .DragAndDrop .Group ul, .Skin .PGR .DragAndDrop .Group h2, .Skin .PGR .DragAndDrop .Items ul, .Skin .PGR .DragAndDrop .Items h2, .Skin .DD .QuestionBody table.ChoiceStructure, .Skin .PGR .DragAndDrop .NoColumns td.groupsContainerTd div ul, .Skin .PGR .DragAndDrop .NoColumns td.groupsContainerTd div h2, .Skin .SBS thead th, .Skin .SBS td, .Skin .SBS .Answers td, .Skin .SBS .Answers th, .SBS table.ChoiceStructure, .Skin .horizontalbar thead table.LabelDescriptions tr td, .Skin .horizontalbar thead tr td.NotApplicable, .QuestionBody th, .Skin .QuestionBody .MC .MAVR label, .Skin .QuestionBody .MC .SAVR label, .Skin .SBS thead th, .Skin .SBS td, .Skin .RO .DND ul li, .Skin .reg, .SkinInner .ChoiceStructure, .Skin thead, .Skin .GAP .ChoiceStructure thead th, .Skin .GAP .ChoiceStructure .c4, .Skin .GAP .ChoiceStructure th, .Skin .GAP .ChoiceStructure .WhyText, .SkinInner .ChoiceStructure .LightBG, .Skin .QuestionOuter.Highlight .Inner .reg, .Skin .QuestionOuter.Highlight .Inner .alt, .Skin .QuestionOuter.Highlight .Inner .ReadableAlt       ","styles":{"color":null,"fontFamily":null,"fontSize":null,"fontStyle":null,"fontWeight":null,"textDecoration":null}},"customCSS":null,"errorStyles":{"selector":".Skin .ValidationError","styles":{"backgroundColor":null,"borderColor":null,"color":null}},"errorStylesBG":{"selector":".Skin .HeaderValidationError, .Skin .HeaderValidationError li a","styles":{"backgroundColor":null,"color":null}},"footerStyles":{"selector":".Skin #Footer","styles":{"color":null}},"headerStyles":{"selector":".Skin div#Header","styles":{"color":null}},"highlightStyles":{"selector":".Skin .QuestionOuter.Highlight .Inner, .Skin .QuestionOuter.Highlight .Inner .reg, .Skin .QuestionOuter.Highlight .Inner .alt, .Skin .QuestionOuter.Highlight .Inner .ReadableAlt","styles":{"backgroundColor":null}},"highlightStylesAlt":{"selector":".Skin .QuestionOuter.Highlight .Inner .ReadableAlt, .Skin .QuestionOuter.Highlight .Inner .LightBG","styles":{"backgroundColor":null}},"pageStyles":{"selector":"#SurveyEngineBody","styles":{"backgroundColor":null}},"questionSeparatorStyles":{"selector":".Skin .Separator","styles":{"backgroundColor":null,"display":null}},"questionStyles":{"selector":".Skin .QuestionText","styles":{"color":null,"fontFamily":null,"fontSize":null,"fontStyle":null,"fontWeight":null,"textDecoration":null}},"textEntryStyles":{"selector":".Skin select, .Skin .InputText","styles":{"color":null}},"textStyles":{"selector":".SkinInner","styles":{"color":null,"fontFamily":null,"fontSize":null,"fontStyle":null,"fontWeight":null,"textDecoration":null}}}</td>
+      <td>NaT</td>
+      <td>2022-07-15 15:31:11</td>
+      <td>2022-07-15 15:30:27</td>
+      <td>NaT</td>
+      <td>"xmskin"</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>SV_08GFzuA5eDhxx53</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_3XaYj2HxzK4NTs9</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>fivetrandev</td>
+      <td>NaN</td>
+      <td>templated</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>Online Survey Software | Qualtrics Survey Solutions</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CX</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Untitled Project</td>
+      <td>Inactive</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>2020-07-01 10:25:18</td>
+      <td>2020-07-01 10:25:11</td>
+      <td>NaT</td>
+      <td>{"brandingId":null,"templateId":"*2014","overrides":null}</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>SV_8GsOFOOKnw9KAmx</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_bjbsBC4lfPOyEhT</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>fivetrandev</td>
+      <td>NaN</td>
+      <td>templated</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>Online Survey Software | Qualtrics Survey Solutions</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CX</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>TestSurvey2</td>
+      <td>Active</td>
+      <td>None</td>
+      <td>2020-06-30 11:24:41</td>
+      <td>2020-07-01 08:57:47</td>
+      <td>2020-06-30 11:22:54</td>
+      <td>NaT</td>
+      <td>{"brandingId":null,"templateId":"*2014","overrides":null}</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>SV_8vvMJsA88y5AZxA</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_38eltRqQKKndZSS</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>fivetrandev</td>
+      <td>NaN</td>
+      <td>templated</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>Online Survey Software | Qualtrics Survey Solutions</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CORE</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>SurveyWithMAQ1</td>
+      <td>Inactive</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>2021-02-04 10:59:03</td>
+      <td>2021-02-04 10:55:54</td>
+      <td>NaT</td>
+      <td>{"brandingId":null,"templateId":"*2014","overrides":null}</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>SV_1XGe0Xykmeo0lyB</td>
+      <td>False</td>
+      <td>https://fivetrandev.ca1.qualtrics.com</td>
+      <td>fivetrandev</td>
+      <td>RS_1MNRbPFAJML4L0F</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>False</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1</td>
+      <td>→</td>
+      <td>Yes</td>
+      <td>+1 week</td>
+      <td>←</td>
+      <td>True</td>
+      <td>True</td>
+      <td>fivetrandev</td>
+      <td>NaN</td>
+      <td>templated</td>
+      <td>EN</td>
+      <td>PublicSurvey</td>
+      <td>DefaultMessage</td>
+      <td>Online Survey Software | Qualtrics Survey Solutions</td>
+      <td>UR_cYdNGsrFUemlDbD</td>
+      <td>CORE</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>Untitled Project</td>
+      <td>Inactive</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>2020-08-06 05:38:26</td>
+      <td>2020-08-06 05:38:07</td>
+      <td>NaT</td>
+      <td>{"brandingId":null,"templateId":"*2014","overrides":null}</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_survey_id"></div><b>📃 Summary:</b> Unique identifier for the survey<br><b>🦄 Unique:</b> This column represents a unique identifier for each survey. For this table, each row represents a unique survey, and the survey_id appears to be a unique string for each row. This column is likely to be unique across all rows and can serve as a primary key for the table.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record was deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brand_base_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_brand_base_url"></div><b>📃 Summary:</b> Base URL for the brand's Qualtrics instance<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brand_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_brand_id"></div><b>📃 Summary:</b> Unique identifier for the brand<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">active_response_set</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_active_response_set"></div><b>📃 Summary:</b> Active response set option<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">autoadvance</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_autoadvance"></div><b>📃 Summary:</b> Option to automatically advance questions<br><b>❓ Missing:</b> Feature may not be enabled for all surveys<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">autoadvance_pages</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_autoadvance_pages"></div><b>📃 Summary:</b> Option to automatically advance pages<br><b>❓ Missing:</b> Feature may not be enabled for all surveys<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">autofocus</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_autofocus"></div><b>📃 Summary:</b> Option to automatically focus on first question<br><b>❓ Missing:</b> Feature may not be enabled for all surveys<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">show_back_button</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_show_back_button"></div><b>📃 Summary:</b> Option to show back button<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">prevent_ballot_stuffing</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_prevent_ballot_stuffing"></div><b>📃 Summary:</b> Option to prevent ballot box stuffing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">highlight_questions</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='off'>off</option><option value='on'>on</option></select></span><br><br><div id="bar_viz_highlight_questions"></div><b>📃 Summary:</b> Option to highlight questions<br><b>❓ Missing:</b> Feature may not be enabled for all surveys<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">new_scoring_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_new_scoring_enabled"></div><b>📃 Summary:</b> New scoring system enabled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">next_button_text</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='→'>→</option><option value='>'>></option><option value='>>'>>></option><option value='⏵'>⏵</option><option value='⇒'>⇒</option><option value='➔'>➔</option><option value='➜'>➜</option><option value='▶'>▶</option><option value='Next'>Next</option><option value='Forward'>Forward</option><option value='Continue'>Continue</option><option value='Proceed'>Proceed</option><option value='Advance'>Advance</option><option value=' → '> → </option></select></span><br><br><div id="bar_viz_next_button_text"></div><b>📃 Summary:</b> Text or symbol for next button<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">no_index_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Yes'>Yes</option><option value='No'>No</option></select></span><br><br><div id="bar_viz_no_index_enabled"></div><b>📃 Summary:</b> Prevent search engine indexing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">partial_data_allowed</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_partial_data_allowed"></div><b>📃 Summary:</b> Allow partial data submission<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">previous_button_text</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='←'>←</option><option value='◄'>◄</option><option value='«'>«</option><option value='⟨'>⟨</option><option value='⮜'>⮜</option><option value='⯇'>⯇</option><option value='Previous'>Previous</option><option value='Prev'>Prev</option><option value='Back'>Back</option><option value='<'><</option><option value='<<'><<</option><option value='❮'>❮</option><option value='⏪'>⏪</option><option value='🡄'>🡄</option><option value='🡸'>🡸</option><option value=' ← '> ← </option></select></span><br><br><div id="bar_viz_previous_button_text"></div><b>📃 Summary:</b> Text or symbol for previous button<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">save_and_continue_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_save_and_continue_enabled"></div><b>📃 Summary:</b> Save and continue feature enabled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">secure_response_files_enabled</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_secure_response_files_enabled"></div><b>📃 Summary:</b> Secure response files enabled<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">skin_library_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_skin_library_name"></div><b>📃 Summary:</b> Skin library name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">skin_question_width</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_skin_question_width"></div><b>📃 Summary:</b> Width of question in skin<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">skin_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='MQ'>MQ</option><option value='Bootstrap'>Bootstrap</option><option value='Foundation'>Foundation</option><option value='Bulma'>Bulma</option><option value='Tailwind'>Tailwind</option><option value='Material'>Material</option><option value='Semantic UI'>Semantic UI</option><option value='UIkit'>UIkit</option><option value='Skeleton'>Skeleton</option><option value='Pure'>Pure</option><option value='Milligram'>Milligram</option><option value='Materialize'>Materialize</option><option value='Primer'>Primer</option><option value='Spectre'>Spectre</option><option value='Picnic'>Picnic</option><option value='Chota'>Chota</option><option value='Water.css'>Water.css</option><option value='Sakura'>Sakura</option><option value='MVP.css'>MVP.css</option><option value='Mini.css'>Mini.css</option><option value='templated'>templated</option></select></span><br><br><div id="bar_viz_skin_type"></div><b>📃 Summary:</b> Type of skin used<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_language</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='EN'>EN</option><option value='ES'>ES</option><option value='FR'>FR</option><option value='DE'>DE</option><option value='IT'>IT</option><option value='PT'>PT</option><option value='RU'>RU</option><option value='ZH'>ZH</option><option value='JA'>JA</option><option value='KO'>KO</option><option value='AR'>AR</option><option value='HI'>HI</option><option value='BN'>BN</option><option value='PA'>PA</option><option value='TE'>TE</option><option value='MR'>MR</option><option value='TA'>TA</option><option value='UR'>UR</option><option value='GU'>GU</option><option value='KN'>KN</option></select></span><br><br><div id="bar_viz_survey_language"></div><b>📃 Summary:</b> Survey language<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_protection_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='PublicSurvey'>PublicSurvey</option><option value='PasswordProtected'>PasswordProtected</option><option value='InvitationOnly'>InvitationOnly</option><option value='IPRestricted'>IPRestricted</option><option value='TimeRestricted'>TimeRestricted</option><option value='GeographicallyRestricted'>GeographicallyRestricted</option><option value='SingleResponse'>SingleResponse</option><option value='AnonymousResponses'>AnonymousResponses</option><option value='EncryptedResponses'>EncryptedResponses</option><option value='CaptchaProtected'>CaptchaProtected</option></select></span><br><br><div id="bar_viz_survey_protection_type"></div><b>📃 Summary:</b> Survey protection type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_termination_message</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_survey_termination_message"></div><b>📃 Summary:</b> Survey termination message<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_title</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_survey_title"></div><b>📃 Summary:</b> Title displayed for the survey<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">owner_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_owner_id"></div><b>📃 Summary:</b> Unique identifier of the survey owner<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">project_category</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='CX'>CX</option><option value='CORE'>CORE</option><option value='NPS'>NPS</option><option value='CSAT'>CSAT</option><option value='Employee Experience'>Employee Experience</option><option value='Market Research'>Market Research</option><option value='Product Feedback'>Product Feedback</option><option value='Brand Awareness'>Brand Awareness</option><option value='Customer Loyalty'>Customer Loyalty</option><option value='Voice of Customer'>Voice of Customer</option><option value='User Experience'>User Experience</option><option value='Website Feedback'>Website Feedback</option><option value='Event Feedback'>Event Feedback</option><option value='Business-to-Business'>Business-to-Business</option><option value='Academic Research'>Academic Research</option></select></span><br><br><div id="bar_viz_project_category"></div><b>📃 Summary:</b> Category of the survey project<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">project_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='CustomerSatisfactionScore'>CustomerSatisfactionScore</option><option value='NetPromoterScore'>NetPromoterScore</option><option value='ProductFeedback'>ProductFeedback</option><option value='EmployeeSatisfaction'>EmployeeSatisfaction</option><option value='MarketResearch'>MarketResearch</option><option value='BrandAwareness'>BrandAwareness</option><option value='EventFeedback'>EventFeedback</option><option value='WebsiteUsability'>WebsiteUsability</option><option value='CourseEvaluation'>CourseEvaluation</option><option value='PatientExperience'>PatientExperience</option><option value='PoliticalPolling'>PoliticalPolling</option><option value='SocialMediaSentiment'>SocialMediaSentiment</option><option value='ConceptTesting'>ConceptTesting</option><option value='CustomerNeeds'>CustomerNeeds</option><option value='CompetitiveAnalysis'>CompetitiveAnalysis</option><option value='UserExperience'>UserExperience</option><option value='ServiceQuality'>ServiceQuality</option><option value='PricingSensitivity'>PricingSensitivity</option><option value='AdvertisingEffectiveness'>AdvertisingEffectiveness</option><option value='DemographicStudy'>DemographicStudy</option></select></span><br><br><div id="bar_viz_project_type"></div><b>📃 Summary:</b> Type of the survey project<br><b>❓ Missing:</b> Some surveys might not belong to a specific project type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">show_question_scoring</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_show_question_scoring"></div><b>📃 Summary:</b> Display scoring summary after each question<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">show_survey_scoring</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_show_survey_scoring"></div><b>📃 Summary:</b> Display scoring summary after survey completion<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_survey_name"></div><b>📃 Summary:</b> Name of the survey<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Inactive'>Inactive</option><option value='Active'>Active</option></select></span><br><br><div id="bar_viz_survey_status"></div><b>📃 Summary:</b> Current status of the survey<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">custom_styles</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_custom_styles"></div><b>📃 Summary:</b> Custom CSS styles for the survey<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_activated</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_activated"></div><b>📃 Summary:</b> Timestamp of last survey activation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified"></div><b>📃 Summary:</b> Timestamp of last survey modification<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_creation_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_survey_creation_date"></div><b>📃 Summary:</b> Survey creation date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_expiration_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_survey_expiration_date"></div><b>📃 Summary:</b> Survey expiration date<br><b>❓ Missing:</b> Surveys without expiration dates don't need this field.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">survey_skin_settings</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_survey_skin_settings"></div><b>📃 Summary:</b> Survey skin or theme settings<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about surveys. Each row represents a single survey with various configuration options. It includes details like survey ID, brand information, creator ID, response settings, scoring options, language preferences, and survey status. The table also contains metadata such as creation date, last modified date, and various customization options for the survey's appearance and behavior.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>52</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the survey</td>
+      <td>survey_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record was deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auto_scoring_category</td>
+      <td>Automatic scoring category for the survey</td>
+      <td>auto_scoring_category</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>brand_base_url</td>
+      <td>Base URL for the brand's Qualtrics instance</td>
+      <td>brand_base_url</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>brand_id</td>
+      <td>Unique identifier for the brand</td>
+      <td>brand_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>bundle_short_name</td>
+      <td>Short name for the survey bundle</td>
+      <td>bundle_short_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>composition_type</td>
+      <td>Type of survey composition</td>
+      <td>composition_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>creator_id</td>
+      <td>Unique identifier of the survey creator</td>
+      <td>creator_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>default_scoring_category</td>
+      <td>Default category for survey scoring</td>
+      <td>default_scoring_category</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>division_id</td>
+      <td>Unique identifier for the division</td>
+      <td>division_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>is_active</td>
+      <td>Indicates if the survey is active</td>
+      <td>is_active</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>last_accessed</td>
+      <td>Timestamp of last survey access</td>
+      <td>last_accessed</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>last_activated</td>
+      <td>Timestamp of last survey activation</td>
+      <td>last_activated</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>last_modified</td>
+      <td>Timestamp of last survey modification</td>
+      <td>last_modified</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>option_active_response_set</td>
+      <td>Active response set option</td>
+      <td>active_response_set</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>option_anonymize_response</td>
+      <td>Option to anonymize responses</td>
+      <td>anonymize_response</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>option_auto_confirm_start</td>
+      <td>Option to auto-confirm survey start</td>
+      <td>auto_confirm_start</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>option_autoadvance</td>
+      <td>Option to automatically advance questions</td>
+      <td>autoadvance</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>option_autoadvance_pages</td>
+      <td>Option to automatically advance pages</td>
+      <td>autoadvance_pages</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>option_autofocus</td>
+      <td>Option to automatically focus on first question</td>
+      <td>autofocus</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>option_available_languages</td>
+      <td>Available languages for the survey</td>
+      <td>available_languages</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>option_back_button</td>
+      <td>Option to show back button</td>
+      <td>show_back_button</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>option_ballot_box_stuffing_prevention</td>
+      <td>Option to prevent ballot box stuffing</td>
+      <td>prevent_ballot_stuffing</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>option_collect_geo_location</td>
+      <td>Option to collect geolocation data</td>
+      <td>collect_geolocation</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>option_confirm_start</td>
+      <td>Option to confirm survey start</td>
+      <td>confirm_start</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>option_custom_styles</td>
+      <td>Custom CSS styles for the survey</td>
+      <td>custom_styles</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>option_email_thank_you</td>
+      <td>Option to send thank you emails</td>
+      <td>send_thank_you_email</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>option_eosredirect_url</td>
+      <td>URL for end-of-survey redirect</td>
+      <td>end_of_survey_redirect_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>option_highlight_questions</td>
+      <td>Option to highlight questions</td>
+      <td>highlight_questions</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>option_inactive_survey</td>
+      <td>Option for inactive survey behavior</td>
+      <td>inactive_survey_behavior</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>option_new_scoring</td>
+      <td>New scoring system enabled</td>
+      <td>new_scoring_enabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>option_next_button</td>
+      <td>Text or symbol for next button</td>
+      <td>next_button_text</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>option_no_index</td>
+      <td>Prevent search engine indexing</td>
+      <td>no_index_enabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>option_page_transition</td>
+      <td>Transition effect between pages</td>
+      <td>page_transition_effect</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>option_partial_data</td>
+      <td>Allow partial data submission</td>
+      <td>partial_data_allowed</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>option_partial_data_close_after</td>
+      <td>Time to close after partial submission</td>
+      <td>partial_data_close_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>option_password_protection</td>
+      <td>Survey password protection</td>
+      <td>password_protected</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>option_previous_button</td>
+      <td>Text or symbol for previous button</td>
+      <td>previous_button_text</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>option_progress_bar_display</td>
+      <td>Progress bar display settings</td>
+      <td>progress_bar_display</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>option_protect_selection_ids</td>
+      <td>Protect selection IDs</td>
+      <td>protect_selection_ids</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>option_recaptcha_v_3</td>
+      <td>reCAPTCHA v3 settings</td>
+      <td>recaptcha_v3_settings</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>option_referer_check</td>
+      <td>Referrer check enabled</td>
+      <td>referer_check_enabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>option_referer_url</td>
+      <td>Allowed referrer URL</td>
+      <td>allowed_referer_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>option_relevant_id</td>
+      <td>Relevant ID for survey</td>
+      <td>survey_relevant_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>option_relevant_idlockout_period</td>
+      <td>Lockout period for relevant ID</td>
+      <td>relevant_id_lockout_period</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>option_response_summary</td>
+      <td>Response summary enabled</td>
+      <td>response_summary_enabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>option_save_and_continue</td>
+      <td>Save and continue feature enabled</td>
+      <td>save_and_continue_enabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>option_secure_response_files</td>
+      <td>Secure response files enabled</td>
+      <td>secure_response_files_enabled</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>option_show_export_tags</td>
+      <td>Show export tags</td>
+      <td>show_export_tags</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>option_skin</td>
+      <td>Survey skin or theme settings</td>
+      <td>survey_skin_settings</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>option_skin_library</td>
+      <td>Skin library name</td>
+      <td>skin_library_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>option_skin_question_width</td>
+      <td>Width of question in skin</td>
+      <td>skin_question_width</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>option_skin_type</td>
+      <td>Type of skin used</td>
+      <td>skin_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>option_survey_creation_date</td>
+      <td>Survey creation date</td>
+      <td>survey_creation_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>option_survey_expiration</td>
+      <td>Survey expiration date</td>
+      <td>survey_expiration_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>option_survey_language</td>
+      <td>Survey language</td>
+      <td>survey_language</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>option_survey_meta_description</td>
+      <td>Survey meta description</td>
+      <td>survey_meta_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>option_survey_name</td>
+      <td>Name of the survey</td>
+      <td>option_survey_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>option_survey_protection</td>
+      <td>Survey protection type</td>
+      <td>survey_protection_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>option_survey_termination</td>
+      <td>Survey termination message</td>
+      <td>survey_termination_message</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>option_survey_title</td>
+      <td>Title displayed for the survey</td>
+      <td>survey_title</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>option_validate_message</td>
+      <td>Custom validation message for survey responses</td>
+      <td>validation_message</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>owner_id</td>
+      <td>Unique identifier of the survey owner</td>
+      <td>owner_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>project_category</td>
+      <td>Category of the survey project</td>
+      <td>project_category</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>project_type</td>
+      <td>Type of the survey project</td>
+      <td>project_type</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>registry_sha</td>
+      <td>SHA hash for registry version control</td>
+      <td>registry_sha</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>registry_version</td>
+      <td>Version number of the registry</td>
+      <td>registry_version</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>schema_version</td>
+      <td>Version of the survey schema</td>
+      <td>schema_version</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>scoring_summary_after_questions</td>
+      <td>Display scoring summary after each question</td>
+      <td>show_question_scoring</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>scoring_summary_after_survey</td>
+      <td>Display scoring summary after survey completion</td>
+      <td>show_survey_scoring</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>scoring_summary_category</td>
+      <td>Category for scoring summary</td>
+      <td>scoring_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>survey_name</td>
+      <td>Name of the survey</td>
+      <td>survey_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>survey_status</td>
+      <td>Current status of the survey</td>
+      <td>survey_status</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>✂️ 3. Leading and Trailing Whitespace</h2><br>
+                    🔍 <b>2</b> columns have leading and trailing whitespace<br>
+                    ❌ No column is trimmed<br><br><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>41</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>allowed_referer_url</td>
+      <td>CAST("allowed_referer_url" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'allowed_referer_url' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently contains no distinct values (empty list), this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>anonymize_response</td>
+      <td>CAST("anonymize_response" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'anonymize_response' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the current distinct values are empty, this cast will work for any potential decimal values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auto_confirm_start</td>
+      <td>CAST("auto_confirm_start" AS VARCHAR)</td>
+      <td>To transform the data type of the 'auto_confirm_start' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>auto_scoring_category</td>
+      <td>CAST("auto_scoring_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'auto_scoring_category' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>available_languages</td>
+      <td>CAST("available_languages" AS VARCHAR)</td>
+      <td>To transform the data type of the 'available_languages' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently DECIMAL and we want to change it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>bundle_short_name</td>
+      <td>CAST("bundle_short_name" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'bundle_short_name' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We don't need to specify a length for VARCHAR in DuckDB, as it defaults to unlimited length.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>collect_geolocation</td>
+      <td>CAST("collect_geolocation" AS VARCHAR)</td>
+      <td>To transform the data type of the 'collect_geolocation' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(column_name AS new_data_type). In this case, we're casting the 'collect_geolocation' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>composition_type</td>
+      <td>CAST("composition_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'composition_type' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this operation is straightforward. We simply use CAST() and specify the target data type as VARCHAR. This will convert the numeric values in the DECIMAL column to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>confirm_start</td>
+      <td>CAST("confirm_start" AS VARCHAR)</td>
+      <td>To transform the data type of the 'confirm_start' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward and doesn't require any additional handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>creator_id</td>
+      <td>CAST("creator_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'creator_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each value in the column to its string representation. Even though the distinct values list is empty, we'll proceed with the cast as requested.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>custom_styles</td>
+      <td>CAST("custom_styles" AS JSON)</td>
+      <td>To transform the 'custom_styles' column from VARCHAR to JSON, we need to use a simple CAST function. In DuckDB, we can directly cast a VARCHAR containing a valid JSON string to a JSON data type. This approach is straightforward and doesn't require any complex parsing or manipulation.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>default_scoring_category</td>
+      <td>CAST("default_scoring_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'default_scoring_category' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>division_id</td>
+      <td>CAST("division_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'division_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>end_of_survey_redirect_url</td>
+      <td>CAST("end_of_survey_redirect_url" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'end_of_survey_redirect_url' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>inactive_survey_behavior</td>
+      <td>CAST("inactive_survey_behavior" AS VARCHAR)</td>
+      <td>To transform the data type of the 'inactive_survey_behavior' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>is_active</td>
+      <td>CAST("is_active" AS VARCHAR)</td>
+      <td>To transform the data type of the 'is_active' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each value in the column to its string representation. Since the distinct values list is empty, we don't need to consider any specific values in our transformation.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>last_accessed</td>
+      <td>CAST("last_accessed" AS TIMESTAMP)</td>
+      <td>To transform the 'last_accessed' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column is empty (no distinct values), we don't need to worry about specific date formats or conversions. A straightforward CAST should suffice. This approach will work for an empty column and will also handle any future DECIMAL values that might be added, assuming they represent a valid timestamp.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>last_activated</td>
+      <td>CAST("last_activated" AS TIMESTAMP)</td>
+      <td>To transform the 'last_activated' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The current format of the date string ('2020-06-30 11:24:41.000000') is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). DuckDB can automatically parse this format when casting to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>last_modified</td>
+      <td>CAST("last_modified" AS TIMESTAMP)</td>
+      <td>To transform the 'last_modified' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The dates in the 'last_modified' column are already in a format that can be directly interpreted as a timestamp (YYYY-MM-DD HH:MM:SS.SSSSSS). Therefore, we don't need to use the strptime function to parse the string. A straightforward CAST will suffice to convert the VARCHAR to TIMESTAMP.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>option_survey_name</td>
+      <td>CAST("option_survey_name" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'option_survey_name' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>page_transition_effect</td>
+      <td>CAST("page_transition_effect" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'page_transition_effect' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We just need to wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>partial_data_close_time</td>
+      <td>CAST("partial_data_close_time" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'partial_data_close_time' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional formatting or manipulation since we're just changing the data type.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>password_protected</td>
+      <td>CAST("password_protected" AS VARCHAR)</td>
+      <td>To transform the data type of the 'password_protected' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains no distinct values (it's empty or null), casting it to VARCHAR should not cause any data loss or conversion issues.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>progress_bar_display</td>
+      <td>CAST("progress_bar_display" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'progress_bar_display' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB syntax, this is straightforward and can be done using the CAST keyword or the :: operator. Since the task specifically asks for a cast clause, we'll use the CAST keyword.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>protect_selection_ids</td>
+      <td>CAST("protect_selection_ids" AS VARCHAR)</td>
+      <td>To transform the data type of the 'protect_selection_ids' column from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>recaptcha_v3_settings</td>
+      <td>CAST("recaptcha_v3_settings" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'recaptcha_v3_settings' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>referer_check_enabled</td>
+      <td>CAST("referer_check_enabled" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'referer_check_enabled' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>registry_sha</td>
+      <td>CAST("registry_sha" AS VARCHAR)</td>
+      <td>To transform the data type of the 'registry_sha' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward and directly converts the DECIMAL type to VARCHAR without any additional processing.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>registry_version</td>
+      <td>CAST("registry_version" AS VARCHAR)</td>
+      <td>To transform the data type of the 'registry_version' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this operation is straightforward. We simply use the CAST keyword, specifying the column name and the desired data type. This will convert each value in the 'registry_version' column to its string representation.\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>relevant_id_lockout_period</td>
+      <td>CAST("relevant_id_lockout_period" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'relevant_id_lockout_period' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains no distinct values (it's empty), this transformation should be straightforward and won't affect any existing data.\n</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>response_summary_enabled</td>
+      <td>CAST("response_summary_enabled" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'response_summary_enabled' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>schema_version</td>
+      <td>CAST("schema_version" AS VARCHAR)</td>
+      <td>To transform the data type of the 'schema_version' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we'll proceed with the cast to ensure any potential values are properly converted.\n</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>scoring_category</td>
+      <td>CAST("scoring_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'scoring_category' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. This will convert the numeric values to their string representations. In DuckDB, the syntax for this operation is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>send_thank_you_email</td>
+      <td>CAST("send_thank_you_email" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'send_thank_you_email' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>show_export_tags</td>
+      <td>CAST("show_export_tags" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'show_export_tags' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. Since the column currently contains no distinct values (it's empty or null), the transformation should be straightforward. The CAST function will convert any existing decimal values to their string representation, and null values will remain null.\n</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>survey_creation_date</td>
+      <td>CAST("survey_creation_date" AS TIMESTAMP)</td>
+      <td>To transform the 'survey_creation_date' column from VARCHAR to TIMESTAMP, we can use a simple CAST function. The date-time format in the given examples is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS.ssssss), which is directly compatible with DuckDB's TIMESTAMP type. Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>survey_expiration_date</td>
+      <td>CAST("survey_expiration_date" AS TIMESTAMP)</td>
+      <td>To transform the 'survey_expiration_date' column from DECIMAL to TIMESTAMP, we can use a simple CAST function. Since the column already contains distinct values (although none are provided in this case), we can assume the data is in a format that can be directly cast to TIMESTAMP. In DuckDB, DECIMAL can be directly cast to TIMESTAMP without needing an intermediate conversion to VARCHAR or using the strptime function.\n</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>survey_meta_description</td>
+      <td>CAST("survey_meta_description" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'survey_meta_description' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the current distinct values are empty, this cast will ensure that any future decimal values in this column will be treated as strings.\n</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>survey_relevant_id</td>
+      <td>CAST("survey_relevant_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'survey_relevant_id' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. This transformation is straightforward and doesn't require any additional processing since the column appears to be empty (it has no distinct values).\n</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>survey_skin_settings</td>
+      <td>CAST("survey_skin_settings" AS JSON)</td>
+      <td>To transform the 'survey_skin_settings' column from VARCHAR to JSON, we need to use a simple CAST function. DuckDB supports direct casting to JSON for valid JSON strings. The first value in the column is already a valid JSON string, while the second value '"xmskin"' is a JSON string containing a simple string value. Both can be cast to JSON without additional parsing.\n</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>validation_message</td>
+      <td>CAST("validation_message" AS VARCHAR)</td>
+      <td>To transform the data type of the 'validation_message' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the desired data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>45</b> columns have missing values<br>
+                    ✔️ <b>6</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>allowed_referer_url</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>anonymize_response</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auto_confirm_start</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>auto_scoring_category</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>autoadvance</td>
+      <td>80</td>
+      <td>True</td>
+      <td>Feature may not be enabled for all surveys</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>autoadvance_pages</td>
+      <td>80</td>
+      <td>True</td>
+      <td>Feature may not be enabled for all surveys</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>autofocus</td>
+      <td>80</td>
+      <td>True</td>
+      <td>Feature may not be enabled for all surveys</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>available_languages</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>bundle_short_name</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>collect_geolocation</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>composition_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>confirm_start</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>creator_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>custom_styles</td>
+      <td>80</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>default_scoring_category</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>division_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>end_of_survey_redirect_url</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>highlight_questions</td>
+      <td>80</td>
+      <td>True</td>
+      <td>Feature may not be enabled for all surveys</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>inactive_survey_behavior</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>is_active</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>last_accessed</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>last_activated</td>
+      <td>80</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>option_survey_name</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>page_transition_effect</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>partial_data_close_time</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>password_protected</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>progress_bar_display</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>project_type</td>
+      <td>80</td>
+      <td>True</td>
+      <td>Some surveys might not belong to a specific project type</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>protect_selection_ids</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>recaptcha_v3_settings</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>referer_check_enabled</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>registry_sha</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>registry_version</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>relevant_id_lockout_period</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>response_summary_enabled</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>schema_version</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>scoring_category</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>send_thank_you_email</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>show_export_tags</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>skin_question_width</td>
+      <td>80</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>survey_expiration_date</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Surveys without expiration dates don't need this field.</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>survey_meta_description</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>survey_relevant_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>survey_title</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>validation_message</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>allowed_referer_url</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>anonymize_response</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auto_confirm_start</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>auto_scoring_category</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>available_languages</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>bundle_short_name</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>collect_geolocation</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>composition_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>confirm_start</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>creator_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>custom_styles</td>
+      <td>80</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>default_scoring_category</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>division_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>end_of_survey_redirect_url</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>inactive_survey_behavior</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>is_active</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>last_accessed</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>last_activated</td>
+      <td>80</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>option_survey_name</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>page_transition_effect</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>partial_data_close_time</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>password_protected</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>progress_bar_display</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>protect_selection_ids</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>recaptcha_v3_settings</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>referer_check_enabled</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>registry_sha</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>registry_version</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>relevant_id_lockout_period</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>response_summary_enabled</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>schema_version</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>scoring_category</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>send_thank_you_email</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>show_export_tags</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>skin_question_width</td>
+      <td>80</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>survey_meta_description</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>survey_relevant_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>survey_title</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>validation_message</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'SV_8GsOFOOKnw9K...', 'value': 20.0}, {'label': 'SV_8vvMJsA88y5A...', 'value': 20.0}, {'label': 'SV_cARsuFqXn9bk...', 'value': 20.0}, {'label': 'SV_1XGe0Xykmeo0...', 'value': 20.0}, {'label': 'SV_08GFzuA5eDhx...', 'value': 20.0}];
+    drawBarChart("bar_viz_survey_id", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'https://fivetra...', 'value': 100.0}];
+    drawBarChart("bar_viz_brand_base_url", data);
+data = [{'label': 'fivetrandev', 'value': 100.0}];
+    drawBarChart("bar_viz_brand_id", data);
+data = [{'label': 'RS_3zccqsZVQTIw...', 'value': 20.0}, {'label': 'RS_3XaYj2HxzK4N...', 'value': 20.0}, {'label': 'RS_bjbsBC4lfPOy...', 'value': 20.0}, {'label': 'RS_1MNRbPFAJML4...', 'value': 20.0}, {'label': 'RS_38eltRqQKKnd...', 'value': 20.0}];
+    drawBarChart("bar_viz_active_response_set", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_autoadvance", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_autoadvance_pages", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_autofocus", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_show_back_button", data);
+data = [{'label': 'False', 'value': 80.0}, {'label': 'True', 'value': 20.0}];
+    drawBarChart("bar_viz_prevent_ballot_stuffing", data);
+data = [{'label': 'off', 'value': 100.0}];
+    drawBarChart("bar_viz_highlight_questions", data);
+data = [{'x': 1, 'y': 5}];
+    binWidth = 1;
+    drawHistogram("hist_viz_new_scoring_enabled", data, binWidth);
+data = [{'label': ' → ', 'value': 100.0}];
+    drawBarChart("bar_viz_next_button_text", data);
+data = [{'label': 'Yes', 'value': 100.0}];
+    drawBarChart("bar_viz_no_index_enabled", data);
+data = [{'label': '+1 week', 'value': 100.0}];
+    drawBarChart("bar_viz_partial_data_allowed", data);
+data = [{'label': ' ← ', 'value': 100.0}];
+    drawBarChart("bar_viz_previous_button_text", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_save_and_continue_enabled", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_secure_response_files_enabled", data);
+data = [{'label': 'fivetrandev', 'value': 80.0}, {'label': 'Qualtrics', 'value': 20.0}];
+    drawBarChart("bar_viz_skin_library_name", data);
+data = [{'x': 700.0, 'y': 1}];
+    binWidth = 700.0;
+    drawHistogram("hist_viz_skin_question_width", data, binWidth);
+data = [{'label': 'templated', 'value': 80.0}, {'label': 'MQ', 'value': 20.0}];
+    drawBarChart("bar_viz_skin_type", data);
+data = [{'label': 'EN', 'value': 100.0}];
+    drawBarChart("bar_viz_survey_language", data);
+data = [{'label': 'PublicSurvey', 'value': 100.0}];
+    drawBarChart("bar_viz_survey_protection_type", data);
+data = [{'label': 'DefaultMessage', 'value': 100.0}];
+    drawBarChart("bar_viz_survey_termination_message", data);
+data = [{'label': 'Online Survey S...', 'value': 100.0}];
+    drawBarChart("bar_viz_survey_title", data);
+data = [{'label': 'UR_cYdNGsrFUeml...', 'value': 100.0}];
+    drawBarChart("bar_viz_owner_id", data);
+data = [{'label': 'CX', 'value': 60.0}, {'label': 'CORE', 'value': 40.0}];
+    drawBarChart("bar_viz_project_category", data);
+data = [{'label': 'CustomerSatisfa...', 'value': 100.0}];
+    drawBarChart("bar_viz_project_type", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_show_question_scoring", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_show_survey_scoring", data);
+data = [{'label': 'Untitled Projec...', 'value': 40.0}, {'label': 'TestSurvey_Filt...', 'value': 20.0}, {'label': 'SurveyWithMAQ1', 'value': 20.0}, {'label': 'TestSurvey2', 'value': 20.0}];
+    drawBarChart("bar_viz_survey_name", data);
+data = [{'label': 'Inactive', 'value': 80.0}, {'label': 'Active', 'value': 20.0}];
+    drawBarChart("bar_viz_survey_status", data);
+data = [{'label': '{"altRowStyles"...', 'value': 100.0}];
+    drawBarChart("bar_viz_custom_styles", data);
+data = [{'label': '2020-06-30 11:2...', 'value': 100.0}];
+    drawBarChart("bar_viz_last_activated", data);
+data = [{'label': '2020-07-01 08:5...', 'value': 20.0}, {'label': '2020-08-06 05:3...', 'value': 20.0}, {'label': '2022-07-15 15:3...', 'value': 20.0}, {'label': '2021-02-04 10:5...', 'value': 20.0}, {'label': '2020-07-01 10:2...', 'value': 20.0}];
+    drawBarChart("bar_viz_last_modified", data);
+data = [{'label': '2022-07-15 15:3...', 'value': 20.0}, {'label': '2020-07-01 10:2...', 'value': 20.0}, {'label': '2020-08-06 05:3...', 'value': 20.0}, {'label': '2020-06-30 11:2...', 'value': 20.0}, {'label': '2021-02-04 10:5...', 'value': 20.0}];
+    drawBarChart("bar_viz_survey_creation_date", data);
+data = [];
+    drawBarChart("bar_viz_survey_expiration_date", data);
+data = [{'label': '{"brandingId":n...', 'value': 80.0}, {'label': '"xmskin"', 'value': 20.0}];
+    drawBarChart("bar_viz_survey_skin_settings", data);
+
+
+</script>
+</body>
+</html>

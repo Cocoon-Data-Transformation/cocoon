@@ -1,0 +1,2082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>completeddisposition</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>disp_id</th>
+      <th>client_id</th>
+      <th>account_id</th>
+      <th>type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>D00000001</td>
+      <td>1.0</td>
+      <td>A00000001</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>D00000002</td>
+      <td>2.0</td>
+      <td>A00000002</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>D00000003</td>
+      <td>3.0</td>
+      <td>A00000002</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>D00000004</td>
+      <td>4.0</td>
+      <td>A00000003</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>D00000005</td>
+      <td>5.0</td>
+      <td>A00000003</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>D00000006</td>
+      <td>6.0</td>
+      <td>A00000004</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>D00000007</td>
+      <td>7.0</td>
+      <td>A00000005</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>D00000008</td>
+      <td>8.0</td>
+      <td>A00000006</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>D00000009</td>
+      <td>9.0</td>
+      <td>A00000007</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>D00000010</td>
+      <td>10.0</td>
+      <td>A00000008</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>D00000011</td>
+      <td>11.0</td>
+      <td>A00000008</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>D00000012</td>
+      <td>12.0</td>
+      <td>A00000009</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>D00000013</td>
+      <td>13.0</td>
+      <td>A00000010</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>D00000014</td>
+      <td>14.0</td>
+      <td>A00000011</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>D00000015</td>
+      <td>15.0</td>
+      <td>A00000012</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>D00000016</td>
+      <td>16.0</td>
+      <td>A00000012</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>D00000017</td>
+      <td>17.0</td>
+      <td>A00000013</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>D00000018</td>
+      <td>18.0</td>
+      <td>A00000013</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>D00000019</td>
+      <td>19.0</td>
+      <td>A00000014</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>D00000020</td>
+      <td>20.0</td>
+      <td>A00000015</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>D00000021</td>
+      <td>21.0</td>
+      <td>A00000016</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>D00000022</td>
+      <td>22.0</td>
+      <td>A00000017</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>D00000023</td>
+      <td>23.0</td>
+      <td>A00000017</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>D00000024</td>
+      <td>24.0</td>
+      <td>A00000018</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>D00000025</td>
+      <td>25.0</td>
+      <td>A00000019</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>D00000026</td>
+      <td>26.0</td>
+      <td>A00000020</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>D00000027</td>
+      <td>27.0</td>
+      <td>A00000021</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>D00000028</td>
+      <td>28.0</td>
+      <td>A00000022</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>D00000029</td>
+      <td>29.0</td>
+      <td>A00000023</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>D00000030</td>
+      <td>30.0</td>
+      <td>A00000024</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>D00000031</td>
+      <td>31.0</td>
+      <td>A00000025</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>D00000032</td>
+      <td>32.0</td>
+      <td>A00000026</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>D00000033</td>
+      <td>33.0</td>
+      <td>A00000027</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>D00000036</td>
+      <td>36.0</td>
+      <td>A00000029</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>D00000037</td>
+      <td>37.0</td>
+      <td>A00000029</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>D00000038</td>
+      <td>38.0</td>
+      <td>A00000030</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>D00000039</td>
+      <td>39.0</td>
+      <td>A00000031</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>D00000040</td>
+      <td>40.0</td>
+      <td>A00000032</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>D00000041</td>
+      <td>41.0</td>
+      <td>A00000033</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>D00000042</td>
+      <td>42.0</td>
+      <td>A00000034</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>D00000043</td>
+      <td>43.0</td>
+      <td>A00000035</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>D00000044</td>
+      <td>44.0</td>
+      <td>A00000036</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>D00000045</td>
+      <td>45.0</td>
+      <td>A00000037</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>D00000046</td>
+      <td>46.0</td>
+      <td>A00000038</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>D00000047</td>
+      <td>47.0</td>
+      <td>A00000039</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>D00000048</td>
+      <td>48.0</td>
+      <td>A00000040</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>D00000049</td>
+      <td>49.0</td>
+      <td>A00000041</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>D00000050</td>
+      <td>50.0</td>
+      <td>A00000042</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>D00000051</td>
+      <td>51.0</td>
+      <td>A00000043</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>D00000052</td>
+      <td>52.0</td>
+      <td>A00000044</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>D00000053</td>
+      <td>53.0</td>
+      <td>A00000045</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>D00000055</td>
+      <td>55.0</td>
+      <td>A00000047</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>D00000056</td>
+      <td>56.0</td>
+      <td>A00000048</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>D00000057</td>
+      <td>57.0</td>
+      <td>A00000048</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>D00000058</td>
+      <td>58.0</td>
+      <td>A00000049</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>D00000059</td>
+      <td>59.0</td>
+      <td>A00000050</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>D00000060</td>
+      <td>60.0</td>
+      <td>A00000051</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>D00000061</td>
+      <td>61.0</td>
+      <td>A00000052</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>D00000062</td>
+      <td>62.0</td>
+      <td>A00000053</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>D00000063</td>
+      <td>63.0</td>
+      <td>A00000054</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>D00000064</td>
+      <td>64.0</td>
+      <td>A00000055</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>D00000065</td>
+      <td>65.0</td>
+      <td>A00000056</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>D00000066</td>
+      <td>66.0</td>
+      <td>A00000057</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>D00000067</td>
+      <td>67.0</td>
+      <td>A00000058</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>D00000068</td>
+      <td>68.0</td>
+      <td>A00000059</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>D00000070</td>
+      <td>70.0</td>
+      <td>A00000061</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>D00000071</td>
+      <td>71.0</td>
+      <td>A00000061</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>D00000072</td>
+      <td>72.0</td>
+      <td>A00000062</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>D00000073</td>
+      <td>73.0</td>
+      <td>A00000063</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>D00000074</td>
+      <td>74.0</td>
+      <td>A00000063</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>D00000075</td>
+      <td>75.0</td>
+      <td>A00000064</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>D00000076</td>
+      <td>76.0</td>
+      <td>A00000065</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>D00000077</td>
+      <td>77.0</td>
+      <td>A00000066</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>D00000078</td>
+      <td>78.0</td>
+      <td>A00000067</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>D00000079</td>
+      <td>79.0</td>
+      <td>A00000068</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>D00000080</td>
+      <td>80.0</td>
+      <td>A00000069</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>D00000081</td>
+      <td>81.0</td>
+      <td>A00000070</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>D00000082</td>
+      <td>82.0</td>
+      <td>A00000070</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>D00000083</td>
+      <td>83.0</td>
+      <td>A00000071</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>D00000084</td>
+      <td>84.0</td>
+      <td>A00000071</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>D00000085</td>
+      <td>85.0</td>
+      <td>A00000072</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>D00000086</td>
+      <td>86.0</td>
+      <td>A00000072</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>D00000087</td>
+      <td>87.0</td>
+      <td>A00000073</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>D00000089</td>
+      <td>89.0</td>
+      <td>A00000075</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>D00000090</td>
+      <td>90.0</td>
+      <td>A00000076</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>D00000091</td>
+      <td>91.0</td>
+      <td>A00000077</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>D00000092</td>
+      <td>92.0</td>
+      <td>A00000078</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>D00000093</td>
+      <td>93.0</td>
+      <td>A00000079</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>D00000094</td>
+      <td>94.0</td>
+      <td>A00000080</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>D00000095</td>
+      <td>95.0</td>
+      <td>A00000080</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>D00000096</td>
+      <td>96.0</td>
+      <td>A00000081</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>D00000097</td>
+      <td>97.0</td>
+      <td>A00000082</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>D00000098</td>
+      <td>98.0</td>
+      <td>A00000083</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>D00000099</td>
+      <td>99.0</td>
+      <td>A00000083</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>D00000100</td>
+      <td>100.0</td>
+      <td>A00000084</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>D00000101</td>
+      <td>101.0</td>
+      <td>A00000085</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>D00000102</td>
+      <td>102.0</td>
+      <td>A00000086</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>D00000103</td>
+      <td>103.0</td>
+      <td>A00000086</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>D00000105</td>
+      <td>105.0</td>
+      <td>A00000088</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>D00000106</td>
+      <td>106.0</td>
+      <td>A00000089</td>
+      <td>Owner</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>disposition_id</th>
+      <th>client_id</th>
+      <th>account_id</th>
+      <th>relationship_type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>D00000001</td>
+      <td>1.0</td>
+      <td>A00000001</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>D00000002</td>
+      <td>2.0</td>
+      <td>A00000002</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>D00000003</td>
+      <td>3.0</td>
+      <td>A00000002</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>D00000004</td>
+      <td>4.0</td>
+      <td>A00000003</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>D00000005</td>
+      <td>5.0</td>
+      <td>A00000003</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>D00000006</td>
+      <td>6.0</td>
+      <td>A00000004</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>D00000007</td>
+      <td>7.0</td>
+      <td>A00000005</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>D00000008</td>
+      <td>8.0</td>
+      <td>A00000006</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>D00000009</td>
+      <td>9.0</td>
+      <td>A00000007</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>D00000010</td>
+      <td>10.0</td>
+      <td>A00000008</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>D00000011</td>
+      <td>11.0</td>
+      <td>A00000008</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>D00000012</td>
+      <td>12.0</td>
+      <td>A00000009</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>D00000013</td>
+      <td>13.0</td>
+      <td>A00000010</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>D00000014</td>
+      <td>14.0</td>
+      <td>A00000011</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>D00000015</td>
+      <td>15.0</td>
+      <td>A00000012</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>D00000016</td>
+      <td>16.0</td>
+      <td>A00000012</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>D00000017</td>
+      <td>17.0</td>
+      <td>A00000013</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>D00000018</td>
+      <td>18.0</td>
+      <td>A00000013</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>D00000019</td>
+      <td>19.0</td>
+      <td>A00000014</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>D00000020</td>
+      <td>20.0</td>
+      <td>A00000015</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>D00000021</td>
+      <td>21.0</td>
+      <td>A00000016</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>D00000022</td>
+      <td>22.0</td>
+      <td>A00000017</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>D00000023</td>
+      <td>23.0</td>
+      <td>A00000017</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>D00000024</td>
+      <td>24.0</td>
+      <td>A00000018</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>D00000025</td>
+      <td>25.0</td>
+      <td>A00000019</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>D00000026</td>
+      <td>26.0</td>
+      <td>A00000020</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>D00000027</td>
+      <td>27.0</td>
+      <td>A00000021</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>D00000028</td>
+      <td>28.0</td>
+      <td>A00000022</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>D00000029</td>
+      <td>29.0</td>
+      <td>A00000023</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>D00000030</td>
+      <td>30.0</td>
+      <td>A00000024</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>D00000031</td>
+      <td>31.0</td>
+      <td>A00000025</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>D00000032</td>
+      <td>32.0</td>
+      <td>A00000026</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>D00000033</td>
+      <td>33.0</td>
+      <td>A00000027</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>D00000036</td>
+      <td>36.0</td>
+      <td>A00000029</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>D00000037</td>
+      <td>37.0</td>
+      <td>A00000029</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>D00000038</td>
+      <td>38.0</td>
+      <td>A00000030</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>D00000039</td>
+      <td>39.0</td>
+      <td>A00000031</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>D00000040</td>
+      <td>40.0</td>
+      <td>A00000032</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>D00000041</td>
+      <td>41.0</td>
+      <td>A00000033</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>D00000042</td>
+      <td>42.0</td>
+      <td>A00000034</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>D00000043</td>
+      <td>43.0</td>
+      <td>A00000035</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>D00000044</td>
+      <td>44.0</td>
+      <td>A00000036</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>D00000045</td>
+      <td>45.0</td>
+      <td>A00000037</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>D00000046</td>
+      <td>46.0</td>
+      <td>A00000038</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>D00000047</td>
+      <td>47.0</td>
+      <td>A00000039</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>D00000048</td>
+      <td>48.0</td>
+      <td>A00000040</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>D00000049</td>
+      <td>49.0</td>
+      <td>A00000041</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>D00000050</td>
+      <td>50.0</td>
+      <td>A00000042</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>D00000051</td>
+      <td>51.0</td>
+      <td>A00000043</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>D00000052</td>
+      <td>52.0</td>
+      <td>A00000044</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>D00000053</td>
+      <td>53.0</td>
+      <td>A00000045</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>D00000055</td>
+      <td>55.0</td>
+      <td>A00000047</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>D00000056</td>
+      <td>56.0</td>
+      <td>A00000048</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>D00000057</td>
+      <td>57.0</td>
+      <td>A00000048</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>D00000058</td>
+      <td>58.0</td>
+      <td>A00000049</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>D00000059</td>
+      <td>59.0</td>
+      <td>A00000050</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>D00000060</td>
+      <td>60.0</td>
+      <td>A00000051</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>D00000061</td>
+      <td>61.0</td>
+      <td>A00000052</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>D00000062</td>
+      <td>62.0</td>
+      <td>A00000053</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>D00000063</td>
+      <td>63.0</td>
+      <td>A00000054</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>D00000064</td>
+      <td>64.0</td>
+      <td>A00000055</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>D00000065</td>
+      <td>65.0</td>
+      <td>A00000056</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>D00000066</td>
+      <td>66.0</td>
+      <td>A00000057</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>D00000067</td>
+      <td>67.0</td>
+      <td>A00000058</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>D00000068</td>
+      <td>68.0</td>
+      <td>A00000059</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>D00000070</td>
+      <td>70.0</td>
+      <td>A00000061</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>D00000071</td>
+      <td>71.0</td>
+      <td>A00000061</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>D00000072</td>
+      <td>72.0</td>
+      <td>A00000062</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>D00000073</td>
+      <td>73.0</td>
+      <td>A00000063</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>D00000074</td>
+      <td>74.0</td>
+      <td>A00000063</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>D00000075</td>
+      <td>75.0</td>
+      <td>A00000064</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>D00000076</td>
+      <td>76.0</td>
+      <td>A00000065</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>D00000077</td>
+      <td>77.0</td>
+      <td>A00000066</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>D00000078</td>
+      <td>78.0</td>
+      <td>A00000067</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>D00000079</td>
+      <td>79.0</td>
+      <td>A00000068</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>D00000080</td>
+      <td>80.0</td>
+      <td>A00000069</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>D00000081</td>
+      <td>81.0</td>
+      <td>A00000070</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>D00000082</td>
+      <td>82.0</td>
+      <td>A00000070</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>D00000083</td>
+      <td>83.0</td>
+      <td>A00000071</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>D00000084</td>
+      <td>84.0</td>
+      <td>A00000071</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>D00000085</td>
+      <td>85.0</td>
+      <td>A00000072</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>D00000086</td>
+      <td>86.0</td>
+      <td>A00000072</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>D00000087</td>
+      <td>87.0</td>
+      <td>A00000073</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>D00000089</td>
+      <td>89.0</td>
+      <td>A00000075</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>D00000090</td>
+      <td>90.0</td>
+      <td>A00000076</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>D00000091</td>
+      <td>91.0</td>
+      <td>A00000077</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>D00000092</td>
+      <td>92.0</td>
+      <td>A00000078</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>D00000093</td>
+      <td>93.0</td>
+      <td>A00000079</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>D00000094</td>
+      <td>94.0</td>
+      <td>A00000080</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>D00000095</td>
+      <td>95.0</td>
+      <td>A00000080</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>D00000096</td>
+      <td>96.0</td>
+      <td>A00000081</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>D00000097</td>
+      <td>97.0</td>
+      <td>A00000082</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>D00000098</td>
+      <td>98.0</td>
+      <td>A00000083</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>D00000099</td>
+      <td>99.0</td>
+      <td>A00000083</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>D00000100</td>
+      <td>100.0</td>
+      <td>A00000084</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>D00000101</td>
+      <td>101.0</td>
+      <td>A00000085</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>D00000102</td>
+      <td>102.0</td>
+      <td>A00000086</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>D00000103</td>
+      <td>103.0</td>
+      <td>A00000086</td>
+      <td>User</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>D00000105</td>
+      <td>105.0</td>
+      <td>A00000088</td>
+      <td>Owner</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>D00000106</td>
+      <td>106.0</td>
+      <td>A00000089</td>
+      <td>Owner</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">disposition_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_disposition_id"></div><b>📃 Summary:</b> Unique identifier for each disposition<br><b>🦄 Unique:</b> This column is a unique identifier for each disposition. For this table, each row represents a distinct relationship between a client and an account. The disposition_id is unique across rows, as it's described as a "unique ID" in the table description.<br><b>🎨 Patterns:</b><br><ul><li><code>D\d{8}</code><br><i>Disposition IDs starting with 'D' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_client_id"></div><b>📃 Summary:</b> Unique identifier for each client<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_id"></div><b>📃 Summary:</b> Unique identifier for each bank account<br><b>🎨 Patterns:</b><br><ul><li><code>A\d{8}</code><br><i>Account IDs starting with 'A' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">relationship_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Owner'>Owner</option><option value='User'>User</option></select></span><br><br><div id="bar_viz_relationship_type"></div><b>📃 Summary:</b> Indicates whether client is account owner or user<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about completed dispositions. It shows the relationship between clients and accounts. Each disposition has a unique ID. It links a client to an account. The type field indicates whether the client is an owner or user of the account. This table allows tracking of account ownership and access rights for different clients.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>2</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>disp_id</td>
+      <td>Unique identifier for each disposition</td>
+      <td>disposition_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>client_id</td>
+      <td>Unique identifier for each client</td>
+      <td>client_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>account_id</td>
+      <td>Unique identifier for each bank account</td>
+      <td>account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>type</td>
+      <td>Indicates whether client is account owner or user</td>
+      <td>relationship_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'D00000592', 'value': 0.1}, {'label': 'D00000502', 'value': 0.1}, {'label': 'D00000509', 'value': 0.1}, {'label': 'D00000512', 'value': 0.1}, {'label': 'D00000517', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_disposition_id", data);
+data = [{'label': '748', 'value': 0.1}, {'label': '666', 'value': 0.1}, {'label': '673', 'value': 0.1}, {'label': '687', 'value': 0.1}, {'label': '688', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_client_id", data);
+data = [{'label': 'A00000322', 'value': 0.2}, {'label': 'A00000215', 'value': 0.2}, {'label': 'A00000782', 'value': 0.2}, {'label': 'A00000225', 'value': 0.2}, {'label': 'A00000097', 'value': 0.2}, {'label': 'Other values', 'value': 99.0}];
+    drawBarChart("bar_viz_account_id", data);
+data = [{'label': 'Owner', 'value': 83.39999999999999}, {'label': 'User', 'value': 16.6}];
+    drawBarChart("bar_viz_relationship_type", data);
+
+
+</script>
+</body>
+</html>

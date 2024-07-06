@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>plan_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>active</th>
+      <th>amount</th>
+      <th>billing_scheme</th>
+      <th>currency</th>
+      <th>interval_</th>
+      <th>interval_count</th>
+      <th>is_deleted</th>
+      <th>livemode</th>
+      <th>product_id</th>
+      <th>usage_type</th>
+      <th>created</th>
+      <th>nickname</th>
+      <th>tiers_mode</th>
+      <th>trial_period_days</th>
+      <th>aggregate_usage</th>
+      <th>transform_usage_divide_by</th>
+      <th>transform_usage_round</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>zb1</td>
+      <td>True</td>
+      <td>150000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUZaPcD5jIhqAG</td>
+      <td>licensed</td>
+      <td>2017-05-10 18:50:13</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ab2</td>
+      <td>True</td>
+      <td>150000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUqcov3uJTssuQ</td>
+      <td>licensed</td>
+      <td>2017-05-05 16:56:44</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>5gh</td>
+      <td>True</td>
+      <td>150000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>6</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BTzAZ8EnmwNUqW</td>
+      <td>licensed</td>
+      <td>2017-05-15 18:53:55</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3gf</td>
+      <td>True</td>
+      <td>180000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>6</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUonomUNsdG3qx</td>
+      <td>licensed</td>
+      <td>2017-06-15 16:01:06</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>214gfdg</td>
+      <td>True</td>
+      <td>264030</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>3</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUo1nHP2vIrVtF</td>
+      <td>licensed</td>
+      <td>2017-08-04 16:29:13</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>fgds754</td>
+      <td>True</td>
+      <td>45000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUBtgJBLlTGcy9</td>
+      <td>licensed</td>
+      <td>2017-06-21 16:23:32</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>dfgdw576</td>
+      <td>True</td>
+      <td>20000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BV5IFAOt2EwqSl</td>
+      <td>licensed</td>
+      <td>2015-05-28 01:08:05</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>rhsdr456</td>
+      <td>True</td>
+      <td>100</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BU23UCziUM7ezw</td>
+      <td>licensed</td>
+      <td>2015-05-28 01:10:13</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>3gds</td>
+      <td>True</td>
+      <td>50000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BTXZakZKkKlf6g</td>
+      <td>licensed</td>
+      <td>2015-10-23 21:23:35</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>234rtgh</td>
+      <td>True</td>
+      <td>40000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUrKq3BcaxvjkU</td>
+      <td>licensed</td>
+      <td>2015-12-01 21:06:02</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>658jfgh</td>
+      <td>True</td>
+      <td>15000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUaE6AwT15sLSX</td>
+      <td>licensed</td>
+      <td>2015-11-16 22:42:15</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>hfdstrt345</td>
+      <td>True</td>
+      <td>11500</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BTN1m9rU6ivOBN</td>
+      <td>licensed</td>
+      <td>2016-01-06 16:58:21</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>634mfh</td>
+      <td>True</td>
+      <td>89000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BTNNlwDZ0nGHYp</td>
+      <td>licensed</td>
+      <td>2016-03-09 23:16:21</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>plan_id</th>
+      <th>is_active</th>
+      <th>price_in_cents</th>
+      <th>billing_method</th>
+      <th>currency_code</th>
+      <th>billing_interval</th>
+      <th>billing_cycle_duration</th>
+      <th>is_deleted</th>
+      <th>is_live_mode</th>
+      <th>product_id</th>
+      <th>usage_type</th>
+      <th>creation_datetime</th>
+      <th>plan_nickname</th>
+      <th>pricing_tier_mode</th>
+      <th>trial_period_days</th>
+      <th>usage_aggregation_method</th>
+      <th>usage_transform_divisor</th>
+      <th>usage_transform_rounding</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>zbc001</td>
+      <td>True</td>
+      <td>150000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUZaPcD5jIhqAG</td>
+      <td>licensed</td>
+      <td>2017-05-10 18:50:13</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>abc002</td>
+      <td>True</td>
+      <td>150000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUqcov3uJTssuQ</td>
+      <td>licensed</td>
+      <td>2017-05-05 16:56:44</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ghg005</td>
+      <td>True</td>
+      <td>150000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>6</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BTzAZ8EnmwNUqW</td>
+      <td>licensed</td>
+      <td>2017-05-15 18:53:55</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>gfg003</td>
+      <td>True</td>
+      <td>180000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>6</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUonomUNsdG3qx</td>
+      <td>licensed</td>
+      <td>2017-06-15 16:01:06</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>gfd214</td>
+      <td>True</td>
+      <td>264030</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>3</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUo1nHP2vIrVtF</td>
+      <td>licensed</td>
+      <td>2017-08-04 16:29:13</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>fgs754</td>
+      <td>True</td>
+      <td>45000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUBtgJBLlTGcy9</td>
+      <td>licensed</td>
+      <td>2017-06-21 16:23:32</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>dfw576</td>
+      <td>True</td>
+      <td>20000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BV5IFAOt2EwqSl</td>
+      <td>licensed</td>
+      <td>2015-05-28 01:08:05</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>rhs456</td>
+      <td>True</td>
+      <td>100</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BU23UCziUM7ezw</td>
+      <td>licensed</td>
+      <td>2015-05-28 01:10:13</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>gds003</td>
+      <td>True</td>
+      <td>50000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BTXZakZKkKlf6g</td>
+      <td>licensed</td>
+      <td>2015-10-23 21:23:35</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>rtg234</td>
+      <td>True</td>
+      <td>40000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUrKq3BcaxvjkU</td>
+      <td>licensed</td>
+      <td>2015-12-01 21:06:02</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>jfg658</td>
+      <td>True</td>
+      <td>15000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BUaE6AwT15sLSX</td>
+      <td>licensed</td>
+      <td>2015-11-16 22:42:15</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>hft345</td>
+      <td>True</td>
+      <td>11500</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BTN1m9rU6ivOBN</td>
+      <td>licensed</td>
+      <td>2016-01-06 16:58:21</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>mfh634</td>
+      <td>True</td>
+      <td>89000</td>
+      <td>per_unit</td>
+      <td>usd</td>
+      <td>month</td>
+      <td>1</td>
+      <td>False</td>
+      <td>True</td>
+      <td>prod_BTNNlwDZ0nGHYp</td>
+      <td>licensed</td>
+      <td>2016-03-09 23:16:21</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">plan_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_plan_id"></div><b>📃 Summary:</b> Unique identifier for the plan<br><b>🦄 Unique:</b> This column represents a unique identifier for each subscription plan. For this table, each row represents a distinct subscription plan. The plan_id appears to be unique across rows, as it uses a specific alphanumeric format (e.g., zbc001, abc002) that is likely designed to be unique for each plan.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_active</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_active"></div><b>📃 Summary:</b> Indicates if the plan is currently active<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">price_in_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_price_in_cents"></div><b>📃 Summary:</b> Price of the plan in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='per_unit'>per_unit</option><option value='flat_rate'>flat_rate</option><option value='tiered'>tiered</option><option value='usage_based'>usage_based</option><option value='subscription'>subscription</option><option value='value_based'>value_based</option><option value='time_and_materials'>time_and_materials</option><option value='milestone'>milestone</option><option value='cost_plus'>cost_plus</option><option value='percentage_of_completion'>percentage_of_completion</option></select></span><br><br><div id="bar_viz_billing_method"></div><b>📃 Summary:</b> Method used for billing calculation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency_code"></div><b>📃 Summary:</b> Currency used for the plan pricing<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_interval</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='day'>day</option><option value='week'>week</option><option value='month'>month</option><option value='quarter'>quarter</option><option value='year'>year</option></select></span><br><br><div id="bar_viz_billing_interval"></div><b>📃 Summary:</b> Billing frequency (e.g., month)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">billing_cycle_duration</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_billing_cycle_duration"></div><b>📃 Summary:</b> Number of intervals between billings<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the plan has been deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_live_mode</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_live_mode"></div><b>📃 Summary:</b> Indicates if the plan is in live or test mode<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">product_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_product_id"></div><b>📃 Summary:</b> Unique identifier of the associated product<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">usage_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='licensed'>licensed</option><option value='subscription'>subscription</option><option value='pay-per-use'>pay-per-use</option><option value='freemium'>freemium</option><option value='perpetual'>perpetual</option><option value='tiered'>tiered</option><option value='metered'>metered</option><option value='floating'>floating</option><option value='site'>site</option><option value='volume'>volume</option><option value='concurrent'>concurrent</option><option value='named-user'>named-user</option><option value='enterprise'>enterprise</option><option value='academic'>academic</option><option value='trial'>trial</option></select></span><br><br><div id="bar_viz_usage_type"></div><b>📃 Summary:</b> Type of usage for the plan<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_datetime</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_datetime"></div><b>📃 Summary:</b> Date and time when the plan was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">plan_nickname</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_plan_nickname"></div><b>📃 Summary:</b> Optional nickname for the plan (empty in this case)<br><b>❓ Missing:</b> Optional friendly name for the plan, not always needed.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pricing_tier_mode</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_pricing_tier_mode"></div><b>📃 Summary:</b> Pricing tier structure (empty in this case)<br><b>❓ Missing:</b> Not applicable for plans without tiered pricing.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">trial_period_days</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_trial_period_days"></div><b>📃 Summary:</b> Number of trial days (empty in this case)<br><b>❓ Missing:</b> Not applicable for plans without a trial period.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">usage_aggregation_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_usage_aggregation_method"></div><b>📃 Summary:</b> Aggregation method for metered usage (empty in this case)<br><b>❓ Missing:</b> Not applicable for licensed plans without usage-based billing.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">usage_transform_divisor</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_usage_transform_divisor"></div><b>📃 Summary:</b> Usage transformation divisor (empty in this case)<br><b>❓ Missing:</b> Not applicable for licensed plans without usage transformations.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">usage_transform_rounding</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_usage_transform_rounding"></div><b>📃 Summary:</b> Usage transformation rounding method (empty in this case)<br><b>❓ Missing:</b> Not applicable for licensed plans without usage transformations.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about subscription plans. It contains details like plan ID, active status, pricing amount, currency, billing interval, created date, and product ID. Each row represents a unique plan with its specific attributes. The plans have different durations (monthly or multi-month) and prices. All plans use USD currency and are set to "licensed" usage type.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>14</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the plan</td>
+      <td>plan_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>active</td>
+      <td>Indicates if the plan is currently active</td>
+      <td>is_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>aggregate_usage</td>
+      <td>Aggregation method for metered usage (empty in this case)</td>
+      <td>usage_aggregation_method</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>amount</td>
+      <td>Price of the plan in cents</td>
+      <td>price_in_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>billing_scheme</td>
+      <td>Method used for billing calculation</td>
+      <td>billing_method</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>created</td>
+      <td>Date and time when the plan was created</td>
+      <td>creation_datetime</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>currency</td>
+      <td>Currency used for the plan pricing</td>
+      <td>currency_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>interval_</td>
+      <td>Billing frequency (e.g., month)</td>
+      <td>billing_interval</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>interval_count</td>
+      <td>Number of intervals between billings</td>
+      <td>billing_cycle_duration</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>is_deleted</td>
+      <td>Indicates if the plan has been deleted</td>
+      <td>is_deleted</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>livemode</td>
+      <td>Indicates if the plan is in live or test mode</td>
+      <td>is_live_mode</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>nickname</td>
+      <td>Optional nickname for the plan (empty in this case)</td>
+      <td>plan_nickname</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>product_id</td>
+      <td>Unique identifier of the associated product</td>
+      <td>product_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>tiers_mode</td>
+      <td>Pricing tier structure (empty in this case)</td>
+      <td>pricing_tier_mode</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>transform_usage_divide_by</td>
+      <td>Usage transformation divisor (empty in this case)</td>
+      <td>usage_transform_divisor</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>transform_usage_round</td>
+      <td>Usage transformation rounding method (empty in this case)</td>
+      <td>usage_transform_rounding</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>trial_period_days</td>
+      <td>Number of trial days (empty in this case)</td>
+      <td>trial_period_days</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>usage_type</td>
+      <td>Type of usage for the plan</td>
+      <td>usage_type</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>plan_id</b>: Inconsistent formats: '214gfdg' vs 'ab2'. Varying lengths: 'ab2' vs 'hfdstrt345'. Special character in '658jfgh'.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>214gfdg</td>
+      <td>gfd214</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>234rtgh</td>
+      <td>rtg234</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3gds</td>
+      <td>gds003</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3gf</td>
+      <td>gfg003</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5gh</td>
+      <td>ghg005</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>634mfh</td>
+      <td>mfh634</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>658jfgh</td>
+      <td>jfg658</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ab2</td>
+      <td>abc002</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>dfgdw576</td>
+      <td>dfw576</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>fgds754</td>
+      <td>fgs754</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>hfdstrt345</td>
+      <td>hft345</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>rhsdr456</td>
+      <td>rhs456</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>zb1</td>
+      <td>zbc001</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>7</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>creation_datetime</td>
+      <td>CAST("creation_datetime" AS TIMESTAMP)</td>
+      <td>To transform the 'creation_datetime' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The format of the datetime strings in the column is already in a standard format that DuckDB can automatically parse (YYYY-MM-DD HH:MM:SS). Therefore, we don't need to use the strptime function to specify a custom format. A straightforward CAST to TIMESTAMP will work.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>plan_nickname</td>
+      <td>CAST("plan_nickname" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'plan_nickname' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>pricing_tier_mode</td>
+      <td>CAST("pricing_tier_mode" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'pricing_tier_mode' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column contains distinct values (even though none are specified in the given information), a straightforward CAST operation is sufficient.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>trial_period_days</td>
+      <td>CAST("trial_period_days" AS INT)</td>
+      <td>To transform the data type of the column 'trial_period_days' from 'DECIMAL' to 'INT', we need to use a simple CAST function in DuckDB. Since the column currently contains no distinct values (as indicated by the empty list []), this transformation should be straightforward and won't result in any data loss. The CAST function will convert any decimal values to their integer equivalents by truncating any fractional parts, but in this case, it seems there are no values to convert.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>usage_aggregation_method</td>
+      <td>CAST("usage_aggregation_method" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'usage_aggregation_method' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>usage_transform_divisor</td>
+      <td>CAST("usage_transform_divisor" AS INT)</td>
+      <td>To transform the column 'usage_transform_divisor' from DECIMAL to INT, we need to use a simple CAST function. Since the column currently has no distinct values (it's empty or null), we don't need to worry about rounding or truncation issues. A straightforward cast to INT will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>usage_transform_rounding</td>
+      <td>CAST("usage_transform_rounding" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'usage_transform_rounding' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>6</b> columns have missing values<br>
+                    ✔️ <b>6</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>plan_nickname</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Optional friendly name for the plan, not always needed.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>pricing_tier_mode</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for plans without tiered pricing.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>trial_period_days</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for plans without a trial period.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>usage_aggregation_method</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for licensed plans without usage-based billing.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>usage_transform_divisor</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for licensed plans without usage transformations.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>usage_transform_rounding</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for licensed plans without usage transformations.</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'abc002', 'value': 7.6923076923076925}, {'label': 'fgs754', 'value': 7.6923076923076925}, {'label': 'dfw576', 'value': 7.6923076923076925}, {'label': 'jfg658', 'value': 7.6923076923076925}, {'label': 'hft345', 'value': 7.6923076923076925}, {'label': 'Other values', 'value': 61.53846153846154}];
+    drawBarChart("bar_viz_plan_id", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_active", data);
+data = [{'x': 6698.25, 'y': 2}, {'x': 19894.75, 'y': 2}, {'x': 33091.25, 'y': 0}, {'x': 46287.75, 'y': 3}, {'x': 59484.25, 'y': 0}, {'x': 72680.75, 'y': 0}, {'x': 85877.25, 'y': 1}, {'x': 99073.75, 'y': 0}, {'x': 112270.25, 'y': 0}, {'x': 125466.75, 'y': 0}, {'x': 138663.25, 'y': 0}, {'x': 151859.75, 'y': 3}, {'x': 165056.25, 'y': 0}];
+    binWidth = 13196.5;
+    drawHistogram("hist_viz_price_in_cents", data, binWidth);
+data = [{'label': 'per_unit', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_method", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_code", data);
+data = [{'label': 'month', 'value': 100.0}];
+    drawBarChart("bar_viz_billing_interval", data);
+data = [{'x': 1.125, 'y': 10}, {'x': 1.375, 'y': 0}, {'x': 1.625, 'y': 0}, {'x': 1.875, 'y': 0}, {'x': 2.125, 'y': 0}, {'x': 2.375, 'y': 0}, {'x': 2.625, 'y': 0}, {'x': 2.875, 'y': 0}, {'x': 3.125, 'y': 1}, {'x': 3.375, 'y': 0}, {'x': 3.625, 'y': 0}, {'x': 3.875, 'y': 0}, {'x': 4.125, 'y': 0}];
+    binWidth = 0.25;
+    drawHistogram("hist_viz_billing_cycle_duration", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_live_mode", data);
+data = [{'label': 'prod_BUqcov3uJT...', 'value': 7.6923076923076925}, {'label': 'prod_BUZaPcD5jI...', 'value': 7.6923076923076925}, {'label': 'prod_BUo1nHP2vI...', 'value': 7.6923076923076925}, {'label': 'prod_BUBtgJBLlT...', 'value': 7.6923076923076925}, {'label': 'prod_BTN1m9rU6i...', 'value': 7.6923076923076925}, {'label': 'Other values', 'value': 61.53846153846154}];
+    drawBarChart("bar_viz_product_id", data);
+data = [{'label': 'licensed', 'value': 100.0}];
+    drawBarChart("bar_viz_usage_type", data);
+data = [{'label': '2017-05-10 18:5...', 'value': 7.6923076923076925}, {'label': '2015-05-28 01:0...', 'value': 7.6923076923076925}, {'label': '2015-10-23 21:2...', 'value': 7.6923076923076925}, {'label': '2015-11-16 22:4...', 'value': 7.6923076923076925}, {'label': '2016-01-06 16:5...', 'value': 7.6923076923076925}, {'label': 'Other values', 'value': 61.53846153846154}];
+    drawBarChart("bar_viz_creation_datetime", data);
+data = [];
+    drawBarChart("bar_viz_plan_nickname", data);
+data = [];
+    drawBarChart("bar_viz_pricing_tier_mode", data);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_trial_period_days", data, binWidth);
+data = [];
+    drawBarChart("bar_viz_usage_aggregation_method", data);
+data = [];
+    binWidth = 0;
+    drawHistogram("hist_viz_usage_transform_divisor", data, binWidth);
+data = [];
+    drawBarChart("bar_viz_usage_transform_rounding", data);
+
+
+</script>
+</body>
+</html>

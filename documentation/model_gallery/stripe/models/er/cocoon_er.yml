@@ -1,0 +1,212 @@
+entities:
+- entity_name: Customers
+  entity_description: Represents individual customers with their personal and account
+    information
+  table_name: stg_customer_data
+  primary_key: customer_id
+- entity_name: PaymentIntents
+  entity_description: Represents the intention to collect payment from a customer
+  table_name: stg_payment_intent_data
+  primary_key: payment_intent_id
+- entity_name: Refunds
+  entity_description: Represents refund transactions issued to customers
+  table_name: stg_refund_data
+  primary_key: refund_id
+- entity_name: BalanceTransactions
+  entity_description: Represents financial transactions affecting the account balance
+  table_name: stg_balance_transaction_data
+  primary_key: transaction_id
+- entity_name: Charges
+  entity_description: Represents individual charge attempts on customer payment methods
+  table_name: stg_charge_data
+  primary_key: charge_id
+- entity_name: Account
+  entity_description: Represents the Stripe business account and its settings
+  table_name: stg_account_data
+  primary_key: account_id
+- entity_name: InvoiceLineItems
+  entity_description: Represents individual line items on customer invoices
+  table_name: stg_invoice_line_item_data
+  primary_key: line_item_id
+- entity_name: Subscriptions
+  entity_description: Represents recurring payment agreements with customers
+  table_name: stg_subscription_data
+  primary_key: subscription_id
+- entity_name: Plans
+  entity_description: Represents pricing plans available for subscriptions
+  table_name: stg_plan_data
+  primary_key: plan_id
+- entity_name: CreditNotes
+  entity_description: Represents credit notes issued to customers for refunds or adjustments
+  table_name: stg_credit_note_data
+  primary_key: credit_note_id
+- entity_name: PaymentMethods
+  entity_description: Represents payment methods associated with customers
+  table_name: stg_payment_method_data
+  primary_key: payment_method_id
+- entity_name: Payouts
+  entity_description: Represents money transfers from Stripe to the connected bank
+    account
+  table_name: stg_payout_data
+  primary_key: payout_id
+relations:
+- relation_name: CustomerPaymentProcessing
+  relation_description: PaymentIntents are created for Customers using specific PaymentMethods,
+    potentially resulting in Charges upon successful processing.
+  table_name: stg_payment_intent_data
+  entities:
+  - PaymentIntents
+  - Customers
+  - Charges
+  - PaymentMethods
+- relation_name: RefundChargeBalanceUpdate
+  relation_description: Refunds are issued against Charges and generate BalanceTransactions,
+    updating the account balance for the merchant.
+  table_name: stg_refund_data
+  entities:
+  - Refunds
+  - BalanceTransactions
+  - Charges
+- relation_name: AccountFinancialTransactions
+  relation_description: BalanceTransactions record financial activities, including
+    Charges and Payouts, associated with an Account, tracking monetary movements and
+    fees.
+  table_name: stg_balance_transaction_data
+  entities:
+  - BalanceTransactions
+  - Charges
+  - Account
+  - Payouts
+- relation_name: CustomerChargeAttempts
+  relation_description: Customers initiate Charges through PaymentIntents, representing
+    attempted transactions that may succeed or fail.
+  table_name: stg_charge_data
+  entities:
+  - Charges
+  - Customers
+  - PaymentIntents
+- relation_name: SubscriptionInvoiceLineItems
+  relation_description: InvoiceLineItems represent individual charges associated with
+    Subscriptions, which are based on specific Plans.
+  table_name: stg_invoice_line_item_data
+  entities:
+  - InvoiceLineItems
+  - Subscriptions
+  - Plans
+- relation_name: CustomerSubscriptionBilling
+  relation_description: Customers purchase Subscriptions, which are billed using specific
+    PaymentMethods associated with the customer's account.
+  table_name: stg_subscription_data
+  entities:
+  - Subscriptions
+  - Customers
+  - PaymentMethods
+- relation_name: CreditNoteRefunds
+  relation_description: Credit Notes are issued to customers and may be associated
+    with Refunds for payments previously made.
+  table_name: stg_credit_note_data
+  entities:
+  - CreditNotes
+  - Refunds
+- relation_name: CustomerPaymentMethods
+  relation_description: This stores the PaymentMethods associated with Customers,
+    including billing details and unique identifiers for each payment method.
+  table_name: stg_payment_method_data
+  entities:
+  - PaymentMethods
+  - Customers
+- relation_name: AccountBalancePayouts
+  relation_description: Payouts are financial transfers from BalanceTransactions,
+    which are linked to an Account's available funds for withdrawal.
+  table_name: stg_payout_data
+  entities:
+  - Payouts
+  - BalanceTransactions
+  - Account
+- relation_name: CustomerInvoiceSubscriptionItems
+  relation_description: Customers receive Invoices containing InvoiceLineItems, which
+    are associated with Subscriptions for specific services or products.
+  table_name: stg_invoice_data
+  entities:
+  - Customers
+  - InvoiceLineItems
+  - Subscriptions
+- relation_name: CustomerSubscriptionBillingHistory
+  relation_description: Customers purchase Subscriptions, which are billed using specific
+    PaymentMethods, tracking the lifecycle from creation to cancellation.
+  table_name: stg_subscription_history_data
+  entities:
+  - Customers
+  - Subscriptions
+  - PaymentMethods
+- relation_name: AccountChargeDisputeFlow
+  relation_description: Account initiates Charges, which generate BalanceTransactions.
+    Disputes on Charges affect BalanceTransactions and Account balance.
+  table_name: stg_dispute_data
+  entities:
+  - BalanceTransactions
+  - Charges
+  - Account
+- relation_name: PayoutBalanceTransactions
+  relation_description: Payouts are processed transactions that transfer funds to
+    a bank account, each associated with a specific balance transaction.
+  table_name: stg_transfer_data
+  entities:
+  - BalanceTransactions
+  - Payouts
+- relation_description: This table stores individual fee transactions, each representing
+    a unique balance transaction with specific monetary and categorical details.
+  table_name: stg_fee_data
+  entities:
+  - BalanceTransactions
+- relation_name: CreditNoteLineItems
+  relation_description: CreditNotes contain multiple InvoiceLineItems, representing
+    individual items credited or refunded to customers.
+  table_name: stg_credit_note_line_item_data
+  entities:
+  - InvoiceLineItems
+  - CreditNotes
+- relation_description: This table represents InvoiceLineItems, storing detailed pricing
+    information for products or services that can be billed to customers.
+  table_name: stg_price_data
+  entities:
+  - InvoiceLineItems
+- relation_description: This table stores detailed information about various PaymentMethods
+    used for transactions, including card details and processing attributes.
+  table_name: stg_card_data
+  entities:
+  - PaymentMethods
+- relation_description: This table stores credit card payment method details associated
+    with unique payment method IDs for processing transactions.
+  table_name: stg_payment_method_card_data
+  entities:
+  - PaymentMethods
+story:
+- relation_name: CustomerPaymentMethods
+  story_line: Customers register various payment methods for future transactions.
+- relation_name: CustomerSubscriptionBilling
+  story_line: Customers purchase subscriptions using their registered payment methods.
+- relation_name: SubscriptionInvoiceLineItems
+  story_line: Subscriptions generate invoice line items based on plans.
+- relation_name: CustomerInvoiceSubscriptionItems
+  story_line: Customers receive invoices detailing their subscription charges.
+- relation_name: CustomerPaymentProcessing
+  story_line: Payment intents initiate charges using customer's payment methods.
+- relation_name: CustomerChargeAttempts
+  story_line: Charges are attempted through payment intents for customers.
+- relation_name: AccountFinancialTransactions
+  story_line: Successful charges create balance transactions in merchant's account.
+- relation_name: CustomerSubscriptionBillingHistory
+  story_line: System tracks subscription lifecycle from creation to cancellation.
+- relation_name: RefundChargeBalanceUpdate
+  story_line: Refunds reverse charges and update merchant's balance transactions.
+- relation_name: CreditNoteRefunds
+  story_line: Credit notes are issued for refunds on previous payments.
+- relation_name: CreditNoteLineItems
+  story_line: Credit notes itemize individual refunded or credited amounts.
+- relation_name: AccountChargeDisputeFlow
+  story_line: Disputed charges affect merchant's balance transactions and account.
+- relation_name: AccountBalancePayouts
+  story_line: Merchant initiates payouts from available account balance funds.
+- relation_name: PayoutBalanceTransactions
+  story_line: Payouts transfer funds to merchant's bank account.

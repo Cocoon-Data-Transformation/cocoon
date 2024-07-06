@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>ticket_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>via_source_to_address</th>
+      <th>is_public</th>
+      <th>via_source_to_name</th>
+      <th>url</th>
+      <th>has_incidents</th>
+      <th>description</th>
+      <th>recipient</th>
+      <th>subject</th>
+      <th>organization_id</th>
+      <th>status</th>
+      <th>brand_id</th>
+      <th>via_channel</th>
+      <th>allow_channelback</th>
+      <th>id</th>
+      <th>type</th>
+      <th>ticket_form_id</th>
+      <th>group_id</th>
+      <th>assignee_id</th>
+      <th>created_at</th>
+      <th>due_at</th>
+      <th>followup_ids</th>
+      <th>via_followup_source_id</th>
+      <th>forum_topic_id</th>
+      <th>updated_at</th>
+      <th>merged_ticket_ids</th>
+      <th>priority</th>
+      <th>problem_id</th>
+      <th>requester_id</th>
+      <th>submitter_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>None</td>
+      <td>https://zendesk.com/api/v2/tickets/1595.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>deleted</td>
+      <td>360003529474</td>
+      <td>web</td>
+      <td>False</td>
+      <td>1595</td>
+      <td>incident</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>NaN</td>
+      <td>2020-02-19 01:54:52</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-02-19 01:55:11</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>396331237134</td>
+      <td>396331237134</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/16988.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.704691e+11</td>
+      <td>solved</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>16988</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600134e+11</td>
+      <td>4.182841e+11</td>
+      <td>2020-12-22 00:19:23</td>
+      <td>NaN</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2021-01-13 18:42:39</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1500656884401</td>
+      <td>1500656884401</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/14173.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.703211e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>14173</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>3.963717e+11</td>
+      <td>2020-10-28 12:03:02</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-11-11 17:01:32</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>424883466453</td>
+      <td>424883466453</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>X</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/11071.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>NaN</td>
+      <td>deleted</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>11071</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-08-28 18:06:36</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-09-02 11:01:27</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>419755385214</td>
+      <td>419755385214</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/1966.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>1966</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>3.963154e+11</td>
+      <td>2020-02-27 06:05:08</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-03-25 16:03:26</td>
+      <td>[1967]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>402813302773</td>
+      <td>402813302773</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>X</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/11013.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702979e+11</td>
+      <td>deleted</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>11013</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600084e+11</td>
+      <td>4.028517e+11</td>
+      <td>2020-08-27 23:09:52</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-09-02 15:53:16</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>419688934974</td>
+      <td>419688934974</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/1404.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>1404</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>3.963717e+11</td>
+      <td>2020-02-13 21:43:58</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-02-28 01:01:57</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>403125197514</td>
+      <td>403125197514</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/4721.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>4721</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>3.963717e+11</td>
+      <td>2020-04-20 14:31:46</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-05-14 20:04:34</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>402862357193</td>
+      <td>402862357193</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/6171.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>6171</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>3.963344e+11</td>
+      <td>2020-05-17 17:50:31</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-05-31 23:03:46</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>410930434074</td>
+      <td>410930434074</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/6605.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>6605</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>3.963154e+11</td>
+      <td>2020-05-26 22:29:50</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2020-06-09 23:03:49</td>
+      <td>[]</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>410416672973</td>
+      <td>410416672973</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>ticket_recipient_address</th>
+      <th>is_public</th>
+      <th>ticket_recipient_name</th>
+      <th>api_url</th>
+      <th>has_incidents</th>
+      <th>ticket_description</th>
+      <th>recipient_email</th>
+      <th>ticket_subject</th>
+      <th>organization_id</th>
+      <th>ticket_status</th>
+      <th>brand_id</th>
+      <th>submission_channel</th>
+      <th>channelback_allowed</th>
+      <th>ticket_id</th>
+      <th>ticket_type</th>
+      <th>ticket_form_id</th>
+      <th>group_id</th>
+      <th>assignee_id</th>
+      <th>creation_timestamp</th>
+      <th>due_date</th>
+      <th>followup_ids</th>
+      <th>followup_source_id</th>
+      <th>forum_topic_id</th>
+      <th>last_update_timestamp</th>
+      <th>merged_ticket_ids</th>
+      <th>priority</th>
+      <th>problem_id</th>
+      <th>requester_id</th>
+      <th>submitter_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>None</td>
+      <td>https://zendesk.com/api/v2/tickets/1595.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>deleted</td>
+      <td>360003529474</td>
+      <td>web</td>
+      <td>False</td>
+      <td>1595</td>
+      <td>incident</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>None</td>
+      <td>2020-02-19 01:54:52</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-02-19 01:55:11</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>396331237134</td>
+      <td>396331237134</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/16988.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.704691e+11</td>
+      <td>solved</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>16988</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600134e+11</td>
+      <td>418284131934.0</td>
+      <td>2020-12-22 00:19:23</td>
+      <td>NaT</td>
+      <td>[]</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2021-01-13 18:42:39</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>1500656884401</td>
+      <td>1500656884401</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/14173.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.703211e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>14173</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>396371699653.0</td>
+      <td>2020-10-28 12:03:02</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-11-11 17:01:32</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>424883466453</td>
+      <td>424883466453</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>None</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/11071.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>NaN</td>
+      <td>deleted</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>11071</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2020-08-28 18:06:36</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-09-02 11:01:27</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>419755385214</td>
+      <td>419755385214</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/1966.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>1966</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>396315360434.0</td>
+      <td>2020-02-27 06:05:08</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-03-25 16:03:26</td>
+      <td>[1967]</td>
+      <td>None</td>
+      <td>None</td>
+      <td>402813302773</td>
+      <td>402813302773</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>None</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/11013.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702979e+11</td>
+      <td>deleted</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>11013</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600084e+11</td>
+      <td>402851697393.0</td>
+      <td>2020-08-27 23:09:52</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-09-02 15:53:16</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>419688934974</td>
+      <td>419688934974</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/1404.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>1404</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>396371699653.0</td>
+      <td>2020-02-13 21:43:58</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-02-28 01:01:57</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>403125197514</td>
+      <td>403125197514</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/4721.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>4721</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>396371706773.0</td>
+      <td>2020-04-20 14:31:46</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-05-14 20:04:34</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>402862357193</td>
+      <td>402862357193</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/6171.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>6171</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>396334400494.0</td>
+      <td>2020-05-17 17:50:31</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-05-31 23:03:46</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>410930434074</td>
+      <td>410930434074</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>example@email.com</td>
+      <td>True</td>
+      <td>Support</td>
+      <td>https://zendesk.com/api/v2/tickets/6605.json</td>
+      <td>False</td>
+      <td>description1</td>
+      <td>email@email.com</td>
+      <td>subject1</td>
+      <td>3.702957e+11</td>
+      <td>closed</td>
+      <td>360003529474</td>
+      <td>email</td>
+      <td>False</td>
+      <td>6605</td>
+      <td>None</td>
+      <td>360002048693</td>
+      <td>3.600070e+11</td>
+      <td>396315360434.0</td>
+      <td>2020-05-26 22:29:50</td>
+      <td>NaT</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2020-06-09 23:03:49</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>None</td>
+      <td>410416672973</td>
+      <td>410416672973</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_recipient_address</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_ticket_recipient_address"></div><b>📃 Summary:</b> Email address or identifier of the ticket recipient<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_public</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_public"></div><b>📃 Summary:</b> Indicates if the ticket is publicly visible<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_recipient_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Support'>Support</option><option value='IT'>IT</option><option value='Customer Service'>Customer Service</option><option value='Technical Support'>Technical Support</option><option value='Sales'>Sales</option><option value='Billing'>Billing</option><option value='Product Team'>Product Team</option><option value='Quality Assurance'>Quality Assurance</option><option value='Operations'>Operations</option><option value='Escalations'>Escalations</option><option value='Management'>Management</option><option value='Human Resources'>Human Resources</option><option value='Legal'>Legal</option><option value='Security'>Security</option></select></span><br><br><div id="bar_viz_ticket_recipient_name"></div><b>📃 Summary:</b> Name of the ticket recipient or department<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">api_url</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_api_url"></div><b>📃 Summary:</b> URL to access the ticket in the API<br><b>🦄 Unique:</b> This column contains a unique URL for each ticket. For this table, each row represents a single ticket, and the api_url is unique across rows as it includes the ticket_id in the URL.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_incidents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_incidents"></div><b>📃 Summary:</b> Indicates if ticket has associated incidents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_ticket_description"></div><b>📃 Summary:</b> Detailed description of the ticket issue<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">recipient_email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_recipient_email"></div><b>📃 Summary:</b> Email address of the ticket recipient<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_subject</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_ticket_subject"></div><b>📃 Summary:</b> Brief subject line of the ticket<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">organization_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_organization_id"></div><b>📃 Summary:</b> ID of the organization associated with the ticket<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='closed'>closed</option><option value='deleted'>deleted</option><option value='solved'>solved</option><option value='open'>open</option><option value='pending'>pending</option><option value='in progress'>in progress</option><option value='on hold'>on hold</option><option value='escalated'>escalated</option><option value='new'>new</option><option value='reopened'>reopened</option></select></span><br><br><div id="bar_viz_ticket_status"></div><b>📃 Summary:</b> Current status of the ticket<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brand_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_brand_id"></div><b>📃 Summary:</b> ID of the brand associated with the ticket<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">submission_channel</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='email'>email</option><option value='web'>web</option><option value='phone'>phone</option><option value='in-person'>in-person</option><option value='mobile app'>mobile app</option><option value='social media'>social media</option><option value='chat'>chat</option></select></span><br><br><div id="bar_viz_submission_channel"></div><b>📃 Summary:</b> Channel through which the ticket was submitted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">channelback_allowed</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_channelback_allowed"></div><b>📃 Summary:</b> Indicates if channelback is allowed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_ticket_id"></div><b>📃 Summary:</b> Unique identifier for the ticket<br><b>🦄 Unique:</b> This column is a unique identifier for each ticket. For this table, where each row is a ticket, the ticket_id is unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='incident'>incident</option><option value='problem'>problem</option><option value='change'>change</option><option value='service request'>service request</option><option value='task'>task</option><option value='alert'>alert</option><option value='event'>event</option><option value='knowledge'>knowledge</option><option value='project'>project</option><option value='maintenance'>maintenance</option></select></span><br><br><div id="bar_viz_ticket_type"></div><b>📃 Summary:</b> Type of the ticket<br><b>❓ Missing:</b> Some tickets may not require a specific type.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ticket_form_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_ticket_form_id"></div><b>📃 Summary:</b> ID of the form used to create the ticket<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_group_id"></div><b>📃 Summary:</b> ID of the group handling the ticket<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">assignee_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_assignee_id"></div><b>📃 Summary:</b> ID of the agent assigned to the ticket<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_timestamp"></div><b>📃 Summary:</b> Timestamp of ticket creation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">due_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_due_date"></div><b>📃 Summary:</b> Due date for the ticket<br><b>❓ Missing:</b> Not all tickets require a due date.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">followup_ids</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_followup_ids"></div><b>📃 Summary:</b> IDs of follow-up tickets<br><b>❓ Missing:</b> Not all tickets have followups.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">followup_source_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_followup_source_id"></div><b>📃 Summary:</b> ID of the follow-up source<br><b>❓ Missing:</b> Not all tickets have followups.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">forum_topic_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_forum_topic_id"></div><b>📃 Summary:</b> ID of related forum topic<br><b>❓ Missing:</b> Not all tickets are related to forum topics.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_update_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_update_timestamp"></div><b>📃 Summary:</b> Timestamp of last ticket update<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">merged_ticket_ids</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_merged_ticket_ids"></div><b>📃 Summary:</b> IDs of tickets merged with this one<br><b>❓ Missing:</b> Not all tickets are merged with others.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">priority</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_priority"></div><b>📃 Summary:</b> Priority level of the ticket<br><b>❓ Missing:</b> Not all tickets are assigned a priority.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">problem_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_problem_id"></div><b>📃 Summary:</b> ID of the problem associated with the ticket<br><b>❓ Missing:</b> Not all tickets are linked to a specific problem.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">requester_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_requester_id"></div><b>📃 Summary:</b> ID of the person who requested the ticket<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">submitter_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_submitter_id"></div><b>📃 Summary:</b> ID of the person who submitted the ticket<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about support tickets. It contains details like ticket ID, creation date, status, requester, assignee, and subject. Each row represents a single ticket with its attributes. The table includes information on how the ticket was submitted (via web, email), its current status (solved, closed, deleted), and associated organizations or groups. It also tracks ticket updates and links to related tickets.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>19</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the ticket</td>
+      <td>ticket_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>allow_channelback</td>
+      <td>Indicates if channelback is allowed</td>
+      <td>channelback_allowed</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>assignee_id</td>
+      <td>ID of the agent assigned to the ticket</td>
+      <td>assignee_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>brand_id</td>
+      <td>ID of the brand associated with the ticket</td>
+      <td>brand_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>created_at</td>
+      <td>Timestamp of ticket creation</td>
+      <td>creation_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>description</td>
+      <td>Detailed description of the ticket issue</td>
+      <td>ticket_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>due_at</td>
+      <td>Due date for the ticket</td>
+      <td>due_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>external_id</td>
+      <td>External identifier for the ticket</td>
+      <td>external_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>forum_topic_id</td>
+      <td>ID of related forum topic</td>
+      <td>forum_topic_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>group_id</td>
+      <td>ID of the group handling the ticket</td>
+      <td>group_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>has_incidents</td>
+      <td>Indicates if ticket has associated incidents</td>
+      <td>has_incidents</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>is_public</td>
+      <td>Indicates if the ticket is publicly visible</td>
+      <td>is_public</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>organization_id</td>
+      <td>ID of the organization associated with the ticket</td>
+      <td>organization_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>priority</td>
+      <td>Priority level of the ticket</td>
+      <td>priority</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>problem_id</td>
+      <td>ID of the problem associated with the ticket</td>
+      <td>problem_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>recipient</td>
+      <td>Email address of the ticket recipient</td>
+      <td>recipient_email</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>requester_id</td>
+      <td>ID of the person who requested the ticket</td>
+      <td>requester_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>status</td>
+      <td>Current status of the ticket</td>
+      <td>ticket_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>subject</td>
+      <td>Brief subject line of the ticket</td>
+      <td>ticket_subject</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>submitter_id</td>
+      <td>ID of the person who submitted the ticket</td>
+      <td>submitter_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>system_client</td>
+      <td>Client system used for the ticket</td>
+      <td>system_client</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>ticket_form_id</td>
+      <td>ID of the form used to create the ticket</td>
+      <td>ticket_form_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>type</td>
+      <td>Type of the ticket</td>
+      <td>ticket_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>updated_at</td>
+      <td>Timestamp of last ticket update</td>
+      <td>last_update_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>url</td>
+      <td>URL to access the ticket in the API</td>
+      <td>api_url</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>via_channel</td>
+      <td>Channel through which the ticket was submitted</td>
+      <td>submission_channel</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>via_source_from_id</td>
+      <td>Identifier of the source that created the ticket</td>
+      <td>ticket_source_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>via_source_from_title</td>
+      <td>Title or name of the source that created the ticket</td>
+      <td>ticket_source_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>via_source_rel</td>
+      <td>Relationship between the source and the ticket</td>
+      <td>ticket_source_relationship</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>via_source_to_address</td>
+      <td>Email address or identifier of the ticket recipient</td>
+      <td>ticket_recipient_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>via_source_to_name</td>
+      <td>Name of the ticket recipient or department</td>
+      <td>ticket_recipient_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>merged_ticket_ids</td>
+      <td>IDs of tickets merged with this one</td>
+      <td>merged_ticket_ids</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>via_source_from_address</td>
+      <td>Original email address for email submissions</td>
+      <td>source_email_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>followup_ids</td>
+      <td>IDs of follow-up tickets</td>
+      <td>followup_ids</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>via_followup_source_id</td>
+      <td>ID of the follow-up source</td>
+      <td>followup_source_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>4</b> columns have erroneous values<br><ol><li><b>ticket_description</b>: 'description1' is unusual because it's likely a placeholder and not actual ticket content.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'description1'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>ticket_subject</b>: 'subject1' is unusual because it appears to be a placeholder rather than actual ticket subject content.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'subject1'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>ticket_recipient_address</b>: 'X' is unusual because it's not a valid email address format and likely represents missing or placeholder data.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'X'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>merged_ticket_ids</b>: '[]' and '[1967]' are unusual because they are string representations of lists rather than actual list values.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'[]'</td>
+      <td>[]</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>'[1967]'</td>
+      <td>[1967]</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                    🔍 <b>2</b> columns have disguised missing values<br>
+                    ✔️ <b>2</b> columns have been cleaned<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>ticket_recipient_address</td>
+      <td>[X]</td>
+      <td>True</td>
+      <td>X</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>merged_ticket_ids</td>
+      <td>[[]]</td>
+      <td>True</td>
+      <td>[]</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                    ✔️ <b>18</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>assignee_id</td>
+      <td>CAST("assignee_id" AS VARCHAR)</td>
+      <td>To transform the 'assignee_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value to its string representation. Since the values appear to be large numbers with decimal points, casting to VARCHAR will preserve the full precision of the original values as strings.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>creation_timestamp</td>
+      <td>CAST("creation_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'creation_timestamp' column from VARCHAR to TIMESTAMP in DuckDB, we can use a simple CAST function. The given dates are already in a format that DuckDB can automatically recognize (YYYY-MM-DD HH:MM:SS), so we don't need to use the strptime function for explicit parsing. A straightforward CAST to TIMESTAMP will work in this case.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>due_date</td>
+      <td>CAST("due_date" AS DATE)</td>
+      <td>To transform the data type of the 'due_date' column from 'DECIMAL' to 'DATE', we don't need to use the strptime function because: 1. The column is already of type DECIMAL, which suggests it's likely in a numeric format. 2. There are no distinct values provided, so we can't determine if any specific date format is being used. 3. A simple CAST operation should be sufficient to convert from DECIMAL to DATE in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>external_id</td>
+      <td>CAST("external_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'external_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the current distinct values are empty, this cast will ensure that any future decimal values in this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>followup_ids</td>
+      <td>CASE \n    WHEN "followup_ids" = '[]' THEN CAST('[]' AS INTEGER[])\n    ELSE TRY_CAST("followup_ids" AS INTEGER[])\nEND</td>
+      <td>To transform the 'followup_ids' column from VARCHAR to ARRAY, we need to use a simple CAST function. Since the column contains string representations of arrays (e.g., '[]'), we can directly cast it to an ARRAY type in DuckDB. This approach works because DuckDB is capable of interpreting string representations of arrays when casting to ARRAY type.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>followup_source_id</td>
+      <td>CAST("followup_source_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'followup_source_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>forum_topic_id</td>
+      <td>CAST("forum_topic_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'forum_topic_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Even though the current distinct values are empty, this cast will work for any potential decimal values that might be added in the future.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>last_update_timestamp</td>
+      <td>CAST("last_update_timestamp" AS TIMESTAMP)</td>
+      <td>To transform the 'last_update_timestamp' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given examples is already in a standard format that can be directly interpreted as a timestamp (YYYY-MM-DD HH:MM:SS). Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>merged_ticket_ids</td>
+      <td>from_json("merged_ticket_ids", '["INTEGER"]')</td>
+      <td>To transform the 'merged_ticket_ids' column from VARCHAR to ARRAY, we need to use a cast function. The column already contains values in a format that resembles an array (e.g., '[1967]'), so a simple CAST operation should work. In DuckDB, we can directly cast a string representation of an array to an actual array data type.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>priority</td>
+      <td>CAST("priority" AS VARCHAR)</td>
+      <td>To transform the data type of the 'priority' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Since DuckDB uses standard SQL syntax for CAST operations, we can use the standard CAST(expression AS type) format.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>problem_id</td>
+      <td>CAST("problem_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'problem_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'problem_id' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>requester_id</td>
+      <td>CAST("requester_id" AS VARCHAR)</td>
+      <td>To transform the 'requester_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert data from one type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>source_email_address</td>
+      <td>CAST("source_email_address" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'source_email_address' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each value in the column to its string representation. Even though the current distinct values are empty, this cast will work for any potential decimal values that might be added in the future.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>submitter_id</td>
+      <td>CAST("submitter_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'submitter_id' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_data_type). In this case, we're casting the 'submitter_id' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>system_client</td>
+      <td>CAST("system_client" AS VARCHAR)</td>
+      <td>To transform the data type of the 'system_client' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently DECIMAL and we want to change it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ticket_source_id</td>
+      <td>CAST("ticket_source_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'ticket_source_id' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>ticket_source_name</td>
+      <td>CAST("ticket_source_name" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'ticket_source_name' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we can still perform this cast operation on the column.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>ticket_source_relationship</td>
+      <td>CAST("ticket_source_relationship" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'ticket_source_relationship' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future if needed.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                    🔍 <b>19</b> columns have missing values<br>
+                    ✔️ <b>8</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>assignee_id</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>due_date</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not all tickets require a due date.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>external_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>followup_ids</td>
+      <td>90</td>
+      <td>True</td>
+      <td>Not all tickets have followups.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>followup_source_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not all tickets have followups.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>forum_topic_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not all tickets are related to forum topics.</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>group_id</td>
+      <td>10</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>merged_ticket_ids</td>
+      <td>90</td>
+      <td>True</td>
+      <td>Not all tickets are merged with others.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>organization_id</td>
+      <td>10</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>priority</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not all tickets are assigned a priority.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>problem_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not all tickets are linked to a specific problem.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>source_email_address</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>system_client</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>ticket_recipient_address</td>
+      <td>20</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>ticket_recipient_name</td>
+      <td>10</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ticket_source_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>ticket_source_name</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>ticket_source_relationship</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>ticket_type</td>
+      <td>90</td>
+      <td>True</td>
+      <td>Some tickets may not require a specific type.</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>assignee_id</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>external_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>group_id</td>
+      <td>10</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>organization_id</td>
+      <td>10</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>source_email_address</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>system_client</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>ticket_recipient_address</td>
+      <td>20</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ticket_recipient_name</td>
+      <td>10</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>ticket_source_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>ticket_source_name</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ticket_source_relationship</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'example@email.c...', 'value': 100.0}];
+    drawBarChart("bar_viz_ticket_recipient_address", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_public", data);
+data = [{'label': 'Support', 'value': 100.0}];
+    drawBarChart("bar_viz_ticket_recipient_name", data);
+data = [{'label': 'https://zendesk...', 'value': 10.0}, {'label': 'https://zendesk...', 'value': 10.0}, {'label': 'https://zendesk...', 'value': 10.0}, {'label': 'https://zendesk...', 'value': 10.0}, {'label': 'https://zendesk...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_api_url", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_has_incidents", data);
+data = [{'label': 'description1', 'value': 100.0}];
+    drawBarChart("bar_viz_ticket_description", data);
+data = [{'label': 'email@email.com', 'value': 100.0}];
+    drawBarChart("bar_viz_recipient_email", data);
+data = [{'label': 'subject1', 'value': 100.0}];
+    drawBarChart("bar_viz_ticket_subject", data);
+data = [{'x': 370300044064.975, 'y': 7}, {'x': 370308712446.92505, 'y': 0}, {'x': 370317380828.875, 'y': 1}, {'x': 370326049210.82495, 'y': 0}, {'x': 370334717592.775, 'y': 0}, {'x': 370343385974.725, 'y': 0}, {'x': 370352054356.67505, 'y': 0}, {'x': 370360722738.625, 'y': 0}, {'x': 370369391120.57495, 'y': 0}, {'x': 370378059502.525, 'y': 0}];
+    binWidth = 8668381.95;
+    drawHistogram("hist_viz_organization_id", data, binWidth);
+data = [{'label': 'closed', 'value': 60.0}, {'label': 'deleted', 'value': 30.0}, {'label': 'solved', 'value': 10.0}];
+    drawBarChart("bar_viz_ticket_status", data);
+data = [{'x': 360003529474, 'y': 10}];
+    binWidth = 360003529474;
+    drawHistogram("hist_viz_brand_id", data, binWidth);
+data = [{'label': 'email', 'value': 90.0}, {'label': 'web', 'value': 10.0}];
+    drawBarChart("bar_viz_submission_channel", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_channelback_allowed", data);
+data = [{'x': 1793.6, 'y': 3}, {'x': 2572.8, 'y': 0}, {'x': 3352.0, 'y': 0}, {'x': 4131.200000000001, 'y': 0}, {'x': 4910.4, 'y': 1}, {'x': 5689.6, 'y': 0}, {'x': 6468.800000000001, 'y': 2}, {'x': 7248.0, 'y': 0}, {'x': 8027.2, 'y': 0}, {'x': 8806.4, 'y': 0}];
+    binWidth = 779.2;
+    drawHistogram("hist_viz_ticket_id", data, binWidth);
+data = [{'label': 'incident', 'value': 100.0}];
+    drawBarChart("bar_viz_ticket_type", data);
+data = [{'x': 360002048693, 'y': 10}];
+    binWidth = 360002048693;
+    drawHistogram("hist_viz_ticket_form_id", data, binWidth);
+data = [{'x': 360007125065.0, 'y': 7}, {'x': 360007445127.0, 'y': 0}, {'x': 360007765189.0, 'y': 0}, {'x': 360008085251.0, 'y': 0}, {'x': 360008405313.0, 'y': 1}, {'x': 360008725375.0, 'y': 0}, {'x': 360009045437.0, 'y': 0}, {'x': 360009365499.0, 'y': 0}, {'x': 360009685561.0, 'y': 0}, {'x': 360010005623.0, 'y': 0}];
+    binWidth = 320062.0;
+    drawHistogram("hist_viz_group_id", data, binWidth);
+data = [{'label': '396315360434.0', 'value': 25.0}, {'label': '396371699653.0', 'value': 25.0}, {'label': '396371706773.0', 'value': 12.5}, {'label': '396334400494.0', 'value': 12.5}, {'label': '418284131934.0', 'value': 12.5}, {'label': '402851697393.0', 'value': 12.5}];
+    drawBarChart("bar_viz_assignee_id", data);
+data = [{'label': '2020-02-27 06:0...', 'value': 10.0}, {'label': '2020-08-28 18:0...', 'value': 10.0}, {'label': '2020-08-27 23:0...', 'value': 10.0}, {'label': '2020-04-20 14:3...', 'value': 10.0}, {'label': '2020-02-19 01:5...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_creation_timestamp", data);
+data = [];
+    drawBarChart("bar_viz_due_date", data);
+data = [{'label': '[]', 'value': 100.0}];
+    drawBarChart("bar_viz_followup_ids", data);
+data = [];
+    drawBarChart("bar_viz_followup_source_id", data);
+data = [];
+    drawBarChart("bar_viz_forum_topic_id", data);
+data = [{'label': '2021-01-13 18:4...', 'value': 10.0}, {'label': '2020-11-11 17:0...', 'value': 10.0}, {'label': '2020-09-02 11:0...', 'value': 10.0}, {'label': '2020-09-02 15:5...', 'value': 10.0}, {'label': '2020-03-25 16:0...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_last_update_timestamp", data);
+data = [{'label': '[1967]', 'value': 100.0}];
+    drawBarChart("bar_viz_merged_ticket_ids", data);
+data = [];
+    drawBarChart("bar_viz_priority", data);
+data = [];
+    drawBarChart("bar_viz_problem_id", data);
+data = [{'label': '396331237134', 'value': 10.0}, {'label': '403125197514', 'value': 10.0}, {'label': '410930434074', 'value': 10.0}, {'label': '424883466453', 'value': 10.0}, {'label': '419755385214', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_requester_id", data);
+data = [{'label': '1500656884401', 'value': 10.0}, {'label': '402862357193', 'value': 10.0}, {'label': '419755385214', 'value': 10.0}, {'label': '396331237134', 'value': 10.0}, {'label': '403125197514', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_submitter_id", data);
+
+
+</script>
+</body>
+</html>

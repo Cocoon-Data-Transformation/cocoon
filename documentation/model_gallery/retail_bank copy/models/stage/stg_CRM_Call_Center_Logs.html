@@ -1,0 +1,4168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>CRM_Call_Center_Logs</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>complaint_id</th>
+      <th>rand_client</th>
+      <th>phonefinal</th>
+      <th>vru_line</th>
+      <th>call_id</th>
+      <th>priority</th>
+      <th>type</th>
+      <th>outcome</th>
+      <th>server</th>
+      <th>date_received</th>
+      <th>ser_time</th>
+      <th>ser_exit</th>
+      <th>ser_start</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>CR2406263</td>
+      <td>4587.0</td>
+      <td>977-806-9726</td>
+      <td>AA0103</td>
+      <td>34536.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>MICHAL</td>
+      <td>2017-03-27</td>
+      <td>00:06:12</td>
+      <td>13:40:23</td>
+      <td>13:34:11</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CR2405641</td>
+      <td>3328.0</td>
+      <td>322-598-7152</td>
+      <td>AA0205</td>
+      <td>34537.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-03-27</td>
+      <td>00:17:48</td>
+      <td>11:16:10</td>
+      <td>10:58:22</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>CR2405629</td>
+      <td>1685.0</td>
+      <td>508-311-5237</td>
+      <td>AA0110</td>
+      <td>34538.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2017-03-27</td>
+      <td>00:12:37</td>
+      <td>13:13:31</td>
+      <td>13:00:54</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CR2400594</td>
+      <td>1945.0</td>
+      <td>265-394-2727</td>
+      <td>AA0113</td>
+      <td>34540.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVNI</td>
+      <td>2017-03-23</td>
+      <td>00:01:19</td>
+      <td>16:19:40</td>
+      <td>16:18:21</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CR2399607</td>
+      <td>4303.0</td>
+      <td>206-008-0460</td>
+      <td>AA0102</td>
+      <td>34541.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>STEREN</td>
+      <td>2017-03-22</td>
+      <td>00:06:57</td>
+      <td>14:55:19</td>
+      <td>14:48:22</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CR2398621</td>
+      <td>10209.0</td>
+      <td>617-060-9671</td>
+      <td>AA0203</td>
+      <td>34542.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>ANAT</td>
+      <td>2017-03-22</td>
+      <td>00:17:01</td>
+      <td>09:32:44</td>
+      <td>09:15:43</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>CR2398447</td>
+      <td>4248.0</td>
+      <td>617-739-1926</td>
+      <td>AA0203</td>
+      <td>34543.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2017-03-22</td>
+      <td>00:08:20</td>
+      <td>11:41:36</td>
+      <td>11:33:16</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>CR2391104</td>
+      <td>375.0</td>
+      <td>508-906-6051</td>
+      <td>AA0102</td>
+      <td>34553.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-03-16</td>
+      <td>00:12:48</td>
+      <td>14:23:31</td>
+      <td>14:10:43</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>CR2388840</td>
+      <td>2259.0</td>
+      <td>854-860-5683</td>
+      <td>AA0204</td>
+      <td>34554.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>GILI</td>
+      <td>2017-03-15</td>
+      <td>00:14:32</td>
+      <td>14:45:46</td>
+      <td>14:31:14</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>CR2388580</td>
+      <td>3366.0</td>
+      <td>356-333-5984</td>
+      <td>AA0201</td>
+      <td>34555.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>KAZAV</td>
+      <td>2017-03-15</td>
+      <td>00:15:13</td>
+      <td>16:38:04</td>
+      <td>16:22:51</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>CR2386079</td>
+      <td>9987.0</td>
+      <td>294-459-8475</td>
+      <td>AA0103</td>
+      <td>34557.0</td>
+      <td>2.0</td>
+      <td>NE</td>
+      <td>AGENT</td>
+      <td>KAZAV</td>
+      <td>2017-03-14</td>
+      <td>00:08:24</td>
+      <td>11:20:04</td>
+      <td>11:11:40</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>CR2382372</td>
+      <td>1401.0</td>
+      <td>124-161-2235</td>
+      <td>AA0201</td>
+      <td>34559.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YITZ</td>
+      <td>2017-03-10</td>
+      <td>00:00:58</td>
+      <td>10:34:01</td>
+      <td>10:33:03</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>CR2376980</td>
+      <td>3545.0</td>
+      <td>472-217-3837</td>
+      <td>AA0110</td>
+      <td>34560.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>DARMON</td>
+      <td>2017-03-09</td>
+      <td>00:13:28</td>
+      <td>10:35:22</td>
+      <td>10:21:54</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>CR2377263</td>
+      <td>4301.0</td>
+      <td>495-249-7895</td>
+      <td>AA0215</td>
+      <td>34561.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>SHLOMO</td>
+      <td>2017-03-08</td>
+      <td>00:07:22</td>
+      <td>10:45:56</td>
+      <td>10:38:34</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>CR2378338</td>
+      <td>4528.0</td>
+      <td>463-191-1159</td>
+      <td>AA0215</td>
+      <td>34562.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MIKI</td>
+      <td>2017-03-08</td>
+      <td>00:07:09</td>
+      <td>17:06:41</td>
+      <td>16:59:32</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>CR2378433</td>
+      <td>1632.0</td>
+      <td>847-606-9704</td>
+      <td>AA0202</td>
+      <td>34563.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2017-03-08</td>
+      <td>00:08:54</td>
+      <td>16:55:11</td>
+      <td>16:46:17</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>CR2378816</td>
+      <td>3074.0</td>
+      <td>212-741-2757</td>
+      <td>AA0101</td>
+      <td>34564.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>STEREN</td>
+      <td>2017-03-08</td>
+      <td>00:05:05</td>
+      <td>09:38:21</td>
+      <td>09:33:16</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>CR2376941</td>
+      <td>2354.0</td>
+      <td>212-022-5279</td>
+      <td>AA0213</td>
+      <td>34565.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>GILI</td>
+      <td>2017-03-08</td>
+      <td>00:16:09</td>
+      <td>13:29:31</td>
+      <td>13:13:22</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>CR2374521</td>
+      <td>2508.0</td>
+      <td>909-238-3879</td>
+      <td>AA0106</td>
+      <td>34566.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MIKI</td>
+      <td>2017-03-07</td>
+      <td>00:10:35</td>
+      <td>13:11:03</td>
+      <td>13:00:28</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>CR2375008</td>
+      <td>4113.0</td>
+      <td>914-751-1865</td>
+      <td>AA0204</td>
+      <td>34567.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>MICHAL</td>
+      <td>2017-03-07</td>
+      <td>00:19:45</td>
+      <td>11:01:00</td>
+      <td>10:41:15</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>CR2372694</td>
+      <td>4906.0</td>
+      <td>386-438-1635</td>
+      <td>AA0104</td>
+      <td>34568.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVIDAN</td>
+      <td>2017-03-06</td>
+      <td>00:19:53</td>
+      <td>11:51:46</td>
+      <td>11:31:53</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>CR2373271</td>
+      <td>6366.0</td>
+      <td>817-770-7405</td>
+      <td>AA0103</td>
+      <td>34569.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVIDAN</td>
+      <td>2017-03-06</td>
+      <td>00:07:11</td>
+      <td>12:58:13</td>
+      <td>12:51:02</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>CR2373496</td>
+      <td>4015.0</td>
+      <td>617-592-2307</td>
+      <td>AA0109</td>
+      <td>34570.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>ZOHARI</td>
+      <td>2017-03-06</td>
+      <td>00:00:00</td>
+      <td>13:37:53</td>
+      <td>13:37:53</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>CR2374246</td>
+      <td>11804.0</td>
+      <td>893-107-7760</td>
+      <td>AA0103</td>
+      <td>34571.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>SHLOMO</td>
+      <td>2017-03-06</td>
+      <td>00:19:54</td>
+      <td>17:02:48</td>
+      <td>16:42:54</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>CR2371358</td>
+      <td>4193.0</td>
+      <td>101-824-7809</td>
+      <td>AA0115</td>
+      <td>34572.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2017-03-03</td>
+      <td>00:09:57</td>
+      <td>11:54:42</td>
+      <td>11:44:45</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>CR2370069</td>
+      <td>13657.0</td>
+      <td>617-004-7243</td>
+      <td>AA0110</td>
+      <td>34573.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>NO_SERVER</td>
+      <td>2017-03-03</td>
+      <td>00:13:52</td>
+      <td>12:23:52</td>
+      <td>12:10:00</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>CR2367546</td>
+      <td>1592.0</td>
+      <td>617-452-6384</td>
+      <td>AA0109</td>
+      <td>34578.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>DORIT</td>
+      <td>2017-03-01</td>
+      <td>00:02:01</td>
+      <td>15:08:37</td>
+      <td>15:06:36</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>CR2364438</td>
+      <td>1950.0</td>
+      <td>678-731-5913</td>
+      <td>AA0105</td>
+      <td>34580.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>AVNI</td>
+      <td>2017-02-28</td>
+      <td>00:00:37</td>
+      <td>14:28:41</td>
+      <td>14:28:04</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>CR2365383</td>
+      <td>4474.0</td>
+      <td>865-751-9494</td>
+      <td>AA0204</td>
+      <td>34581.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MIKI</td>
+      <td>2017-02-28</td>
+      <td>00:17:53</td>
+      <td>14:41:59</td>
+      <td>14:24:06</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>CR2363462</td>
+      <td>2806.0</td>
+      <td>508-791-3193</td>
+      <td>AA0201</td>
+      <td>34584.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVNI</td>
+      <td>2017-02-27</td>
+      <td>00:20:19</td>
+      <td>09:31:01</td>
+      <td>09:10:42</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>CR2362129</td>
+      <td>11267.0</td>
+      <td>617-853-1807</td>
+      <td>AA0113</td>
+      <td>34585.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>SHARON</td>
+      <td>2017-02-27</td>
+      <td>00:05:45</td>
+      <td>14:52:48</td>
+      <td>14:47:03</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>CR2360714</td>
+      <td>76.0</td>
+      <td>293-545-7588</td>
+      <td>AA0104</td>
+      <td>34586.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>IDIT</td>
+      <td>2017-02-24</td>
+      <td>00:06:00</td>
+      <td>11:55:21</td>
+      <td>11:49:21</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>CR2357722</td>
+      <td>4541.0</td>
+      <td>401-778-6265</td>
+      <td>AA0115</td>
+      <td>34587.0</td>
+      <td>1.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>SHLOMO</td>
+      <td>2017-02-23</td>
+      <td>00:13:54</td>
+      <td>10:49:20</td>
+      <td>10:35:26</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>CR2358198</td>
+      <td>3463.0</td>
+      <td>212-616-8813</td>
+      <td>AA0106</td>
+      <td>34588.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>SHARON</td>
+      <td>2017-02-23</td>
+      <td>00:16:20</td>
+      <td>15:14:29</td>
+      <td>14:58:09</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>CR2355167</td>
+      <td>1029.0</td>
+      <td>212-333-2794</td>
+      <td>AA0215</td>
+      <td>34589.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>BENSION</td>
+      <td>2017-02-22</td>
+      <td>00:13:02</td>
+      <td>13:39:18</td>
+      <td>13:26:16</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>CR2356522</td>
+      <td>2597.0</td>
+      <td>348-023-8834</td>
+      <td>AA0214</td>
+      <td>34590.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>KAZAV</td>
+      <td>2017-02-22</td>
+      <td>00:18:25</td>
+      <td>12:43:11</td>
+      <td>12:24:46</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>CR2355552</td>
+      <td>7723.0</td>
+      <td>508-561-6860</td>
+      <td>AA0214</td>
+      <td>34591.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVNI</td>
+      <td>2017-02-22</td>
+      <td>00:11:52</td>
+      <td>13:47:54</td>
+      <td>13:36:02</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>CR2356350</td>
+      <td>7127.0</td>
+      <td>456-256-2055</td>
+      <td>AA0210</td>
+      <td>34592.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-02-22</td>
+      <td>00:11:22</td>
+      <td>16:35:57</td>
+      <td>16:24:35</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>CR2354272</td>
+      <td>446.0</td>
+      <td>505-839-7581</td>
+      <td>AA0109</td>
+      <td>34595.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>MICHAL</td>
+      <td>2017-02-21</td>
+      <td>00:05:24</td>
+      <td>16:46:23</td>
+      <td>16:40:59</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>CR2354077</td>
+      <td>1753.0</td>
+      <td>781-292-5899</td>
+      <td>AA0201</td>
+      <td>34596.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>MORIAH</td>
+      <td>2017-02-21</td>
+      <td>00:12:58</td>
+      <td>11:59:02</td>
+      <td>11:46:04</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>CR2353608</td>
+      <td>2480.0</td>
+      <td>161-776-5723</td>
+      <td>AA0203</td>
+      <td>34597.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-02-21</td>
+      <td>00:03:43</td>
+      <td>09:42:07</td>
+      <td>09:38:24</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>CR2349304</td>
+      <td>2902.0</td>
+      <td>150-386-8887</td>
+      <td>AA0204</td>
+      <td>34598.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>STEREN</td>
+      <td>2017-02-17</td>
+      <td>00:20:35</td>
+      <td>14:51:46</td>
+      <td>14:31:11</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>CR2347795</td>
+      <td>1122.0</td>
+      <td>298-650-1719</td>
+      <td>AA0105</td>
+      <td>34599.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>GELBER</td>
+      <td>2017-02-16</td>
+      <td>00:10:17</td>
+      <td>13:29:04</td>
+      <td>13:18:47</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>CR2346999</td>
+      <td>1890.0</td>
+      <td>242-066-8207</td>
+      <td>AA0115</td>
+      <td>34602.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-02-15</td>
+      <td>00:05:01</td>
+      <td>16:59:12</td>
+      <td>16:54:11</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>CR2344160</td>
+      <td>10828.0</td>
+      <td>212-376-3611</td>
+      <td>AA0102</td>
+      <td>34603.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2017-02-14</td>
+      <td>00:01:12</td>
+      <td>11:38:06</td>
+      <td>11:36:54</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>CR2343097</td>
+      <td>515.0</td>
+      <td>918-314-3728</td>
+      <td>AA0102</td>
+      <td>34604.0</td>
+      <td>0.0</td>
+      <td>NE</td>
+      <td>AGENT</td>
+      <td>KAZAV</td>
+      <td>2017-02-14</td>
+      <td>00:04:14</td>
+      <td>13:23:18</td>
+      <td>13:19:04</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>CR2340997</td>
+      <td>3047.0</td>
+      <td>663-775-5494</td>
+      <td>AA0201</td>
+      <td>34607.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>ANAT</td>
+      <td>2017-02-13</td>
+      <td>00:15:16</td>
+      <td>14:42:56</td>
+      <td>14:27:40</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>CR2341553</td>
+      <td>2578.0</td>
+      <td>914-297-7141</td>
+      <td>AA0214</td>
+      <td>34608.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-02-13</td>
+      <td>00:01:18</td>
+      <td>13:22:55</td>
+      <td>13:21:37</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>CR2339177</td>
+      <td>2693.0</td>
+      <td>570-293-7736</td>
+      <td>AA0109</td>
+      <td>34610.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>NO_SERVER</td>
+      <td>2017-02-10</td>
+      <td>00:03:07</td>
+      <td>09:19:33</td>
+      <td>09:16:26</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>CR2336561</td>
+      <td>9846.0</td>
+      <td>361-447-3343</td>
+      <td>AA0203</td>
+      <td>34611.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-02-09</td>
+      <td>00:03:55</td>
+      <td>15:47:13</td>
+      <td>15:43:18</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>CR2336515</td>
+      <td>4735.0</td>
+      <td>799-709-6386</td>
+      <td>AA0201</td>
+      <td>34612.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-02-09</td>
+      <td>00:05:38</td>
+      <td>13:35:43</td>
+      <td>13:30:05</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>CR2332670</td>
+      <td>10070.0</td>
+      <td>617-987-0617</td>
+      <td>AA0214</td>
+      <td>34614.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-02-07</td>
+      <td>00:02:01</td>
+      <td>13:07:11</td>
+      <td>13:05:10</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>CR2330453</td>
+      <td>3907.0</td>
+      <td>197-430-7586</td>
+      <td>AA0213</td>
+      <td>34615.0</td>
+      <td>0.0</td>
+      <td>NE</td>
+      <td>AGENT</td>
+      <td>GILI</td>
+      <td>2017-02-06</td>
+      <td>00:03:25</td>
+      <td>10:46:42</td>
+      <td>10:43:17</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>CR2330518</td>
+      <td>1408.0</td>
+      <td>238-765-9083</td>
+      <td>AA0202</td>
+      <td>34616.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>KAZAV</td>
+      <td>2017-02-06</td>
+      <td>00:14:28</td>
+      <td>13:59:06</td>
+      <td>13:44:38</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>CR2324151</td>
+      <td>1013.0</td>
+      <td>894-336-4117</td>
+      <td>AA0214</td>
+      <td>34618.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>STEREN</td>
+      <td>2017-02-02</td>
+      <td>00:12:24</td>
+      <td>14:45:25</td>
+      <td>14:33:01</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>CR2398401</td>
+      <td>486.0</td>
+      <td>478-749-3447</td>
+      <td>AA0204</td>
+      <td>34544.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-03-22</td>
+      <td>00:12:36</td>
+      <td>15:17:45</td>
+      <td>15:05:09</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>CR2398768</td>
+      <td>2342.0</td>
+      <td>994-862-3218</td>
+      <td>AA0101</td>
+      <td>34545.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>STEREN</td>
+      <td>2017-03-22</td>
+      <td>00:00:46</td>
+      <td>10:19:57</td>
+      <td>10:19:11</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>CR2397737</td>
+      <td>3730.0</td>
+      <td>617-161-9051</td>
+      <td>AA0205</td>
+      <td>34546.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2017-03-21</td>
+      <td>00:06:02</td>
+      <td>10:53:13</td>
+      <td>10:47:11</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>CR2398271</td>
+      <td>1891.0</td>
+      <td>953-476-9580</td>
+      <td>AA0105</td>
+      <td>34547.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>MIKI</td>
+      <td>2017-03-21</td>
+      <td>00:11:31</td>
+      <td>14:31:52</td>
+      <td>14:20:21</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>CR2392378</td>
+      <td>3321.0</td>
+      <td>254-815-1076</td>
+      <td>AA0106</td>
+      <td>34549.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>DORIT</td>
+      <td>2017-03-17</td>
+      <td>00:03:42</td>
+      <td>09:03:53</td>
+      <td>09:00:11</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>CR2392249</td>
+      <td>4218.0</td>
+      <td>508-495-9597</td>
+      <td>AA0102</td>
+      <td>34550.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVNI</td>
+      <td>2017-03-17</td>
+      <td>00:04:17</td>
+      <td>12:42:25</td>
+      <td>12:38:08</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>CR2391330</td>
+      <td>4622.0</td>
+      <td>716-474-3082</td>
+      <td>AA0214</td>
+      <td>34551.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MORIAH</td>
+      <td>2017-03-16</td>
+      <td>00:15:03</td>
+      <td>10:56:57</td>
+      <td>10:41:54</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>CR2391051</td>
+      <td>4266.0</td>
+      <td>212-955-2224</td>
+      <td>AA0103</td>
+      <td>34552.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2017-03-16</td>
+      <td>00:08:26</td>
+      <td>14:45:13</td>
+      <td>14:36:47</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>CR2321678</td>
+      <td>3791.0</td>
+      <td>356-349-1063</td>
+      <td>AA0209</td>
+      <td>34619.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MORIAH</td>
+      <td>2017-02-02</td>
+      <td>00:04:07</td>
+      <td>14:08:05</td>
+      <td>14:03:58</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>CR2325187</td>
+      <td>1628.0</td>
+      <td>504-968-6745</td>
+      <td>AA0113</td>
+      <td>34620.0</td>
+      <td>0.0</td>
+      <td>NE</td>
+      <td>AGENT</td>
+      <td>ELI</td>
+      <td>2017-02-02</td>
+      <td>00:18:28</td>
+      <td>14:29:46</td>
+      <td>14:11:18</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>CR2317826</td>
+      <td>1248.0</td>
+      <td>940-007-9030</td>
+      <td>AA0213</td>
+      <td>34622.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>BASCH</td>
+      <td>2017-01-30</td>
+      <td>00:10:27</td>
+      <td>12:05:28</td>
+      <td>11:55:01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>CR2317569</td>
+      <td>3475.0</td>
+      <td>924-456-1095</td>
+      <td>AA0107</td>
+      <td>34623.0</td>
+      <td>2.0</td>
+      <td>TT</td>
+      <td>AGENT</td>
+      <td>NO_SERVER</td>
+      <td>2017-01-30</td>
+      <td>00:15:23</td>
+      <td>10:36:00</td>
+      <td>10:20:37</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>CR2317933</td>
+      <td>2151.0</td>
+      <td>508-174-5751</td>
+      <td>AA0206</td>
+      <td>34624.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>ANAT</td>
+      <td>2017-01-30</td>
+      <td>00:10:06</td>
+      <td>11:42:47</td>
+      <td>11:32:41</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>CR2314643</td>
+      <td>1797.0</td>
+      <td>312-349-2628</td>
+      <td>AA0101</td>
+      <td>34626.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>DORIT</td>
+      <td>2017-01-27</td>
+      <td>00:13:13</td>
+      <td>13:20:57</td>
+      <td>13:07:44</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>CR2314736</td>
+      <td>2226.0</td>
+      <td>312-080-0390</td>
+      <td>AA0105</td>
+      <td>34628.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>SHARON</td>
+      <td>2017-01-27</td>
+      <td>00:05:16</td>
+      <td>11:05:56</td>
+      <td>11:00:40</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>CR2315474</td>
+      <td>3875.0</td>
+      <td>212-994-8696</td>
+      <td>AA0209</td>
+      <td>34629.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YITZ</td>
+      <td>2017-01-27</td>
+      <td>00:00:07</td>
+      <td>10:48:45</td>
+      <td>10:48:38</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>CR2310722</td>
+      <td>3657.0</td>
+      <td>248-634-7803</td>
+      <td>AA0205</td>
+      <td>34630.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MIKI</td>
+      <td>2017-01-25</td>
+      <td>00:19:21</td>
+      <td>14:47:31</td>
+      <td>14:28:10</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>CR2311288</td>
+      <td>11147.0</td>
+      <td>265-012-6222</td>
+      <td>AA0110</td>
+      <td>34631.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MIKI</td>
+      <td>2017-01-25</td>
+      <td>00:00:44</td>
+      <td>13:59:01</td>
+      <td>13:58:17</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>CR2310354</td>
+      <td>232.0</td>
+      <td>854-444-6236</td>
+      <td>AA0109</td>
+      <td>34632.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>SHARON</td>
+      <td>2017-01-25</td>
+      <td>00:14:10</td>
+      <td>14:20:38</td>
+      <td>14:06:28</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>CR2308539</td>
+      <td>2503.0</td>
+      <td>281-754-2076</td>
+      <td>AA0104</td>
+      <td>34633.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MORIAH</td>
+      <td>2017-01-24</td>
+      <td>00:18:12</td>
+      <td>12:16:03</td>
+      <td>11:57:51</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>CR2305383</td>
+      <td>146.0</td>
+      <td>917-678-2836</td>
+      <td>AA0103</td>
+      <td>34634.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVNI</td>
+      <td>2017-01-24</td>
+      <td>00:06:25</td>
+      <td>11:30:51</td>
+      <td>11:24:26</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>CR2305857</td>
+      <td>110.0</td>
+      <td>634-013-0057</td>
+      <td>AA0102</td>
+      <td>34635.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>DARMON</td>
+      <td>2017-01-23</td>
+      <td>00:07:22</td>
+      <td>10:25:12</td>
+      <td>10:17:50</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>CR2301475</td>
+      <td>2268.0</td>
+      <td>910-018-0049</td>
+      <td>AA0214</td>
+      <td>34636.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MIKI</td>
+      <td>2017-01-20</td>
+      <td>00:03:02</td>
+      <td>12:17:58</td>
+      <td>12:14:56</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>CR2301210</td>
+      <td>4258.0</td>
+      <td>547-226-1341</td>
+      <td>AA0206</td>
+      <td>34637.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>ANAT</td>
+      <td>2017-01-20</td>
+      <td>00:19:36</td>
+      <td>15:25:31</td>
+      <td>15:05:55</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>CR2301127</td>
+      <td>8489.0</td>
+      <td>585-787-6851</td>
+      <td>AA0203</td>
+      <td>34639.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-01-20</td>
+      <td>00:13:43</td>
+      <td>16:43:15</td>
+      <td>16:29:32</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>CR2298291</td>
+      <td>3258.0</td>
+      <td>711-170-3148</td>
+      <td>AA0103</td>
+      <td>34640.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>SHARON</td>
+      <td>2017-01-19</td>
+      <td>00:00:51</td>
+      <td>12:39:12</td>
+      <td>12:38:21</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>CR2294240</td>
+      <td>917.0</td>
+      <td>857-625-6519</td>
+      <td>AA0206</td>
+      <td>34642.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>DARMON</td>
+      <td>2017-01-18</td>
+      <td>00:20:17</td>
+      <td>15:36:24</td>
+      <td>15:16:07</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>CR2292024</td>
+      <td>3067.0</td>
+      <td>508-728-2172</td>
+      <td>AA0204</td>
+      <td>34643.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YITZ</td>
+      <td>2017-01-18</td>
+      <td>00:05:36</td>
+      <td>13:26:26</td>
+      <td>13:20:50</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>CR2293938</td>
+      <td>3467.0</td>
+      <td>212-985-4873</td>
+      <td>AA0215</td>
+      <td>34644.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MORIAH</td>
+      <td>2017-01-18</td>
+      <td>00:09:33</td>
+      <td>15:51:52</td>
+      <td>15:42:19</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>CR2288912</td>
+      <td>3348.0</td>
+      <td>346-192-7574</td>
+      <td>AA0213</td>
+      <td>34646.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2017-01-13</td>
+      <td>00:16:00</td>
+      <td>10:12:22</td>
+      <td>09:56:22</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>CR2289056</td>
+      <td>2981.0</td>
+      <td>944-944-0200</td>
+      <td>AA0103</td>
+      <td>34647.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>MORIAH</td>
+      <td>2017-01-13</td>
+      <td>00:19:16</td>
+      <td>14:36:07</td>
+      <td>14:16:51</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>CR2285660</td>
+      <td>2906.0</td>
+      <td>461-185-8491</td>
+      <td>AA0206</td>
+      <td>34648.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVIDAN</td>
+      <td>2017-01-11</td>
+      <td>00:13:41</td>
+      <td>12:38:37</td>
+      <td>12:24:56</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>CR2283299</td>
+      <td>287.0</td>
+      <td>716-179-4777</td>
+      <td>AA0109</td>
+      <td>34649.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>TOVA</td>
+      <td>2017-01-10</td>
+      <td>00:06:56</td>
+      <td>15:49:43</td>
+      <td>15:42:47</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>CR2283645</td>
+      <td>1394.0</td>
+      <td>674-781-6659</td>
+      <td>AA0205</td>
+      <td>34650.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>YITZ</td>
+      <td>2017-01-10</td>
+      <td>00:16:39</td>
+      <td>13:50:25</td>
+      <td>13:33:46</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>CR2282295</td>
+      <td>2786.0</td>
+      <td>671-085-3435</td>
+      <td>AA0111</td>
+      <td>34651.0</td>
+      <td>0.0</td>
+      <td>TT</td>
+      <td>AGENT</td>
+      <td>BASCH</td>
+      <td>2017-01-10</td>
+      <td>00:20:32</td>
+      <td>11:40:31</td>
+      <td>11:19:59</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>CR2281138</td>
+      <td>1199.0</td>
+      <td>644-160-4985</td>
+      <td>AA0215</td>
+      <td>34652.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>MIKI</td>
+      <td>2017-01-09</td>
+      <td>00:14:39</td>
+      <td>15:51:58</td>
+      <td>15:37:19</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>CR2275944</td>
+      <td>3782.0</td>
+      <td>212-522-4265</td>
+      <td>AA0106</td>
+      <td>34653.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>BENSION</td>
+      <td>2017-01-06</td>
+      <td>00:16:47</td>
+      <td>09:38:30</td>
+      <td>09:21:43</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>CR2279164</td>
+      <td>3909.0</td>
+      <td>459-262-9261</td>
+      <td>AA0115</td>
+      <td>34654.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>GILI</td>
+      <td>2017-01-06</td>
+      <td>00:03:26</td>
+      <td>10:42:02</td>
+      <td>10:38:36</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>CR2279262</td>
+      <td>4514.0</td>
+      <td>617-286-0356</td>
+      <td>AA0108</td>
+      <td>34655.0</td>
+      <td>0.0</td>
+      <td>TT</td>
+      <td>AGENT</td>
+      <td>STEREN</td>
+      <td>2017-01-06</td>
+      <td>00:09:30</td>
+      <td>16:18:02</td>
+      <td>16:08:32</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>CR2273074</td>
+      <td>1529.0</td>
+      <td>184-946-5589</td>
+      <td>AA0204</td>
+      <td>34656.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>AVNI</td>
+      <td>2017-01-03</td>
+      <td>00:00:48</td>
+      <td>13:13:46</td>
+      <td>13:12:58</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>CR2272555</td>
+      <td>4275.0</td>
+      <td>411-416-0778</td>
+      <td>AA0209</td>
+      <td>34657.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>SHARON</td>
+      <td>2017-01-03</td>
+      <td>00:08:25</td>
+      <td>14:49:22</td>
+      <td>14:40:57</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>CR2272801</td>
+      <td>2430.0</td>
+      <td>996-964-9510</td>
+      <td>AA0215</td>
+      <td>34658.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>AGENT</td>
+      <td>STEREN</td>
+      <td>2017-01-03</td>
+      <td>00:13:35</td>
+      <td>17:08:11</td>
+      <td>16:54:36</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>CR2267388</td>
+      <td>1121.0</td>
+      <td>617-927-2995</td>
+      <td>AA0110</td>
+      <td>34659.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2016-12-28</td>
+      <td>00:07:55</td>
+      <td>11:42:41</td>
+      <td>11:34:46</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>CR2264142</td>
+      <td>1434.0</td>
+      <td>946-732-1068</td>
+      <td>AA0101</td>
+      <td>34662.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>AGENT</td>
+      <td>YIFAT</td>
+      <td>2016-12-27</td>
+      <td>00:10:14</td>
+      <td>13:27:12</td>
+      <td>13:16:58</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>CR2264909</td>
+      <td>5325.0</td>
+      <td>755-055-9989</td>
+      <td>AA0110</td>
+      <td>34663.0</td>
+      <td>2.0</td>
+      <td>NE</td>
+      <td>AGENT</td>
+      <td>IDIT</td>
+      <td>2016-12-27</td>
+      <td>00:10:39</td>
+      <td>16:52:04</td>
+      <td>16:41:25</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>complaint_id</th>
+      <th>client_id</th>
+      <th>caller_phone_number</th>
+      <th>vru_line</th>
+      <th>call_id</th>
+      <th>call_priority</th>
+      <th>call_type</th>
+      <th>call_outcome</th>
+      <th>agent_name</th>
+      <th>call_date</th>
+      <th>service_duration</th>
+      <th>service_end_time</th>
+      <th>service_start_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>CR2406263</td>
+      <td>4587.0</td>
+      <td>977-806-9726</td>
+      <td>AA0103</td>
+      <td>34536.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>MICHAL</td>
+      <td>2017-03-27</td>
+      <td>00:06:12</td>
+      <td>13:40:23</td>
+      <td>13:34:11</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CR2405641</td>
+      <td>3328.0</td>
+      <td>322-598-7152</td>
+      <td>AA0205</td>
+      <td>34537.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-03-27</td>
+      <td>00:17:48</td>
+      <td>11:16:10</td>
+      <td>10:58:22</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>CR2405629</td>
+      <td>1685.0</td>
+      <td>508-311-5237</td>
+      <td>AA0110</td>
+      <td>34538.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2017-03-27</td>
+      <td>00:12:37</td>
+      <td>13:13:31</td>
+      <td>13:00:54</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>CR2400594</td>
+      <td>1945.0</td>
+      <td>265-394-2727</td>
+      <td>AA0113</td>
+      <td>34540.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVNI</td>
+      <td>2017-03-23</td>
+      <td>00:01:19</td>
+      <td>16:19:40</td>
+      <td>16:18:21</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>CR2399607</td>
+      <td>4303.0</td>
+      <td>206-008-0460</td>
+      <td>AA0102</td>
+      <td>34541.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>STEREN</td>
+      <td>2017-03-22</td>
+      <td>00:06:57</td>
+      <td>14:55:19</td>
+      <td>14:48:22</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>CR2398621</td>
+      <td>10209.0</td>
+      <td>617-060-9671</td>
+      <td>AA0203</td>
+      <td>34542.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>ANAT</td>
+      <td>2017-03-22</td>
+      <td>00:17:01</td>
+      <td>09:32:44</td>
+      <td>09:15:43</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>CR2398447</td>
+      <td>4248.0</td>
+      <td>617-739-1926</td>
+      <td>AA0203</td>
+      <td>34543.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2017-03-22</td>
+      <td>00:08:20</td>
+      <td>11:41:36</td>
+      <td>11:33:16</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>CR2391104</td>
+      <td>375.0</td>
+      <td>508-906-6051</td>
+      <td>AA0102</td>
+      <td>34553.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-03-16</td>
+      <td>00:12:48</td>
+      <td>14:23:31</td>
+      <td>14:10:43</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>CR2388840</td>
+      <td>2259.0</td>
+      <td>854-860-5683</td>
+      <td>AA0204</td>
+      <td>34554.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>GILI</td>
+      <td>2017-03-15</td>
+      <td>00:14:32</td>
+      <td>14:45:46</td>
+      <td>14:31:14</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>CR2388580</td>
+      <td>3366.0</td>
+      <td>356-333-5984</td>
+      <td>AA0201</td>
+      <td>34555.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>KAZAV</td>
+      <td>2017-03-15</td>
+      <td>00:15:13</td>
+      <td>16:38:04</td>
+      <td>16:22:51</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>CR2386079</td>
+      <td>9987.0</td>
+      <td>294-459-8475</td>
+      <td>AA0103</td>
+      <td>34557.0</td>
+      <td>2.0</td>
+      <td>NE</td>
+      <td>None</td>
+      <td>KAZAV</td>
+      <td>2017-03-14</td>
+      <td>00:08:24</td>
+      <td>11:20:04</td>
+      <td>11:11:40</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>CR2382372</td>
+      <td>1401.0</td>
+      <td>124-161-2235</td>
+      <td>AA0201</td>
+      <td>34559.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YITZ</td>
+      <td>2017-03-10</td>
+      <td>00:00:58</td>
+      <td>10:34:01</td>
+      <td>10:33:03</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>CR2376980</td>
+      <td>3545.0</td>
+      <td>472-217-3837</td>
+      <td>AA0110</td>
+      <td>34560.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>DARMON</td>
+      <td>2017-03-09</td>
+      <td>00:13:28</td>
+      <td>10:35:22</td>
+      <td>10:21:54</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>CR2377263</td>
+      <td>4301.0</td>
+      <td>495-249-7895</td>
+      <td>AA0215</td>
+      <td>34561.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>SHLOMO</td>
+      <td>2017-03-08</td>
+      <td>00:07:22</td>
+      <td>10:45:56</td>
+      <td>10:38:34</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>CR2378338</td>
+      <td>4528.0</td>
+      <td>463-191-1159</td>
+      <td>AA0215</td>
+      <td>34562.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MIKI</td>
+      <td>2017-03-08</td>
+      <td>00:07:09</td>
+      <td>17:06:41</td>
+      <td>16:59:32</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>CR2378433</td>
+      <td>1632.0</td>
+      <td>847-606-9704</td>
+      <td>AA0202</td>
+      <td>34563.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2017-03-08</td>
+      <td>00:08:54</td>
+      <td>16:55:11</td>
+      <td>16:46:17</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>CR2378816</td>
+      <td>3074.0</td>
+      <td>212-741-2757</td>
+      <td>AA0101</td>
+      <td>34564.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>STEREN</td>
+      <td>2017-03-08</td>
+      <td>00:05:05</td>
+      <td>09:38:21</td>
+      <td>09:33:16</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>CR2376941</td>
+      <td>2354.0</td>
+      <td>212-022-5279</td>
+      <td>AA0213</td>
+      <td>34565.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>GILI</td>
+      <td>2017-03-08</td>
+      <td>00:16:09</td>
+      <td>13:29:31</td>
+      <td>13:13:22</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>CR2374521</td>
+      <td>2508.0</td>
+      <td>909-238-3879</td>
+      <td>AA0106</td>
+      <td>34566.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MIKI</td>
+      <td>2017-03-07</td>
+      <td>00:10:35</td>
+      <td>13:11:03</td>
+      <td>13:00:28</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>CR2375008</td>
+      <td>4113.0</td>
+      <td>914-751-1865</td>
+      <td>AA0204</td>
+      <td>34567.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>MICHAL</td>
+      <td>2017-03-07</td>
+      <td>00:19:45</td>
+      <td>11:01:00</td>
+      <td>10:41:15</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>CR2372694</td>
+      <td>4906.0</td>
+      <td>386-438-1635</td>
+      <td>AA0104</td>
+      <td>34568.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVIDAN</td>
+      <td>2017-03-06</td>
+      <td>00:19:53</td>
+      <td>11:51:46</td>
+      <td>11:31:53</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>CR2373271</td>
+      <td>6366.0</td>
+      <td>817-770-7405</td>
+      <td>AA0103</td>
+      <td>34569.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVIDAN</td>
+      <td>2017-03-06</td>
+      <td>00:07:11</td>
+      <td>12:58:13</td>
+      <td>12:51:02</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>CR2373496</td>
+      <td>4015.0</td>
+      <td>617-592-2307</td>
+      <td>AA0109</td>
+      <td>34570.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>ZOHARI</td>
+      <td>2017-03-06</td>
+      <td>00:00:00</td>
+      <td>13:37:53</td>
+      <td>13:37:53</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>CR2374246</td>
+      <td>11804.0</td>
+      <td>893-107-7760</td>
+      <td>AA0103</td>
+      <td>34571.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>SHLOMO</td>
+      <td>2017-03-06</td>
+      <td>00:19:54</td>
+      <td>17:02:48</td>
+      <td>16:42:54</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>CR2371358</td>
+      <td>4193.0</td>
+      <td>101-824-7809</td>
+      <td>AA0115</td>
+      <td>34572.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2017-03-03</td>
+      <td>00:09:57</td>
+      <td>11:54:42</td>
+      <td>11:44:45</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>CR2370069</td>
+      <td>13657.0</td>
+      <td>617-004-7243</td>
+      <td>AA0110</td>
+      <td>34573.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2017-03-03</td>
+      <td>00:13:52</td>
+      <td>12:23:52</td>
+      <td>12:10:00</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>CR2367546</td>
+      <td>1592.0</td>
+      <td>617-452-6384</td>
+      <td>AA0109</td>
+      <td>34578.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>DORIT</td>
+      <td>2017-03-01</td>
+      <td>00:02:01</td>
+      <td>15:08:37</td>
+      <td>15:06:36</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>CR2364438</td>
+      <td>1950.0</td>
+      <td>678-731-5913</td>
+      <td>AA0105</td>
+      <td>34580.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>AVNI</td>
+      <td>2017-02-28</td>
+      <td>00:00:37</td>
+      <td>14:28:41</td>
+      <td>14:28:04</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>CR2365383</td>
+      <td>4474.0</td>
+      <td>865-751-9494</td>
+      <td>AA0204</td>
+      <td>34581.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MIKI</td>
+      <td>2017-02-28</td>
+      <td>00:17:53</td>
+      <td>14:41:59</td>
+      <td>14:24:06</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>CR2363462</td>
+      <td>2806.0</td>
+      <td>508-791-3193</td>
+      <td>AA0201</td>
+      <td>34584.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVNI</td>
+      <td>2017-02-27</td>
+      <td>00:20:19</td>
+      <td>09:31:01</td>
+      <td>09:10:42</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>CR2362129</td>
+      <td>11267.0</td>
+      <td>617-853-1807</td>
+      <td>AA0113</td>
+      <td>34585.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>SHARON</td>
+      <td>2017-02-27</td>
+      <td>00:05:45</td>
+      <td>14:52:48</td>
+      <td>14:47:03</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>CR2360714</td>
+      <td>76.0</td>
+      <td>293-545-7588</td>
+      <td>AA0104</td>
+      <td>34586.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>IDIT</td>
+      <td>2017-02-24</td>
+      <td>00:06:00</td>
+      <td>11:55:21</td>
+      <td>11:49:21</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>CR2357722</td>
+      <td>4541.0</td>
+      <td>401-778-6265</td>
+      <td>AA0115</td>
+      <td>34587.0</td>
+      <td>1.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>SHLOMO</td>
+      <td>2017-02-23</td>
+      <td>00:13:54</td>
+      <td>10:49:20</td>
+      <td>10:35:26</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>CR2358198</td>
+      <td>3463.0</td>
+      <td>212-616-8813</td>
+      <td>AA0106</td>
+      <td>34588.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>SHARON</td>
+      <td>2017-02-23</td>
+      <td>00:16:20</td>
+      <td>15:14:29</td>
+      <td>14:58:09</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>CR2355167</td>
+      <td>1029.0</td>
+      <td>212-333-2794</td>
+      <td>AA0215</td>
+      <td>34589.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>BENSION</td>
+      <td>2017-02-22</td>
+      <td>00:13:02</td>
+      <td>13:39:18</td>
+      <td>13:26:16</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>CR2356522</td>
+      <td>2597.0</td>
+      <td>348-023-8834</td>
+      <td>AA0214</td>
+      <td>34590.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>KAZAV</td>
+      <td>2017-02-22</td>
+      <td>00:18:25</td>
+      <td>12:43:11</td>
+      <td>12:24:46</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>CR2355552</td>
+      <td>7723.0</td>
+      <td>508-561-6860</td>
+      <td>AA0214</td>
+      <td>34591.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVNI</td>
+      <td>2017-02-22</td>
+      <td>00:11:52</td>
+      <td>13:47:54</td>
+      <td>13:36:02</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>CR2356350</td>
+      <td>7127.0</td>
+      <td>456-256-2055</td>
+      <td>AA0210</td>
+      <td>34592.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-02-22</td>
+      <td>00:11:22</td>
+      <td>16:35:57</td>
+      <td>16:24:35</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>CR2354272</td>
+      <td>446.0</td>
+      <td>505-839-7581</td>
+      <td>AA0109</td>
+      <td>34595.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>MICHAL</td>
+      <td>2017-02-21</td>
+      <td>00:05:24</td>
+      <td>16:46:23</td>
+      <td>16:40:59</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>CR2354077</td>
+      <td>1753.0</td>
+      <td>781-292-5899</td>
+      <td>AA0201</td>
+      <td>34596.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>MORIAH</td>
+      <td>2017-02-21</td>
+      <td>00:12:58</td>
+      <td>11:59:02</td>
+      <td>11:46:04</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>CR2353608</td>
+      <td>2480.0</td>
+      <td>161-776-5723</td>
+      <td>AA0203</td>
+      <td>34597.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-02-21</td>
+      <td>00:03:43</td>
+      <td>09:42:07</td>
+      <td>09:38:24</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>CR2349304</td>
+      <td>2902.0</td>
+      <td>150-386-8887</td>
+      <td>AA0204</td>
+      <td>34598.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>STEREN</td>
+      <td>2017-02-17</td>
+      <td>00:20:35</td>
+      <td>14:51:46</td>
+      <td>14:31:11</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>CR2347795</td>
+      <td>1122.0</td>
+      <td>298-650-1719</td>
+      <td>AA0105</td>
+      <td>34599.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>GELBER</td>
+      <td>2017-02-16</td>
+      <td>00:10:17</td>
+      <td>13:29:04</td>
+      <td>13:18:47</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>CR2346999</td>
+      <td>1890.0</td>
+      <td>242-066-8207</td>
+      <td>AA0115</td>
+      <td>34602.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-02-15</td>
+      <td>00:05:01</td>
+      <td>16:59:12</td>
+      <td>16:54:11</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>CR2344160</td>
+      <td>10828.0</td>
+      <td>212-376-3611</td>
+      <td>AA0102</td>
+      <td>34603.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2017-02-14</td>
+      <td>00:01:12</td>
+      <td>11:38:06</td>
+      <td>11:36:54</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>CR2343097</td>
+      <td>515.0</td>
+      <td>918-314-3728</td>
+      <td>AA0102</td>
+      <td>34604.0</td>
+      <td>0.0</td>
+      <td>NE</td>
+      <td>None</td>
+      <td>KAZAV</td>
+      <td>2017-02-14</td>
+      <td>00:04:14</td>
+      <td>13:23:18</td>
+      <td>13:19:04</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>CR2340997</td>
+      <td>3047.0</td>
+      <td>663-775-5494</td>
+      <td>AA0201</td>
+      <td>34607.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>ANAT</td>
+      <td>2017-02-13</td>
+      <td>00:15:16</td>
+      <td>14:42:56</td>
+      <td>14:27:40</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>CR2341553</td>
+      <td>2578.0</td>
+      <td>914-297-7141</td>
+      <td>AA0214</td>
+      <td>34608.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-02-13</td>
+      <td>00:01:18</td>
+      <td>13:22:55</td>
+      <td>13:21:37</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>CR2339177</td>
+      <td>2693.0</td>
+      <td>570-293-7736</td>
+      <td>AA0109</td>
+      <td>34610.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2017-02-10</td>
+      <td>00:03:07</td>
+      <td>09:19:33</td>
+      <td>09:16:26</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>CR2336561</td>
+      <td>9846.0</td>
+      <td>361-447-3343</td>
+      <td>AA0203</td>
+      <td>34611.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-02-09</td>
+      <td>00:03:55</td>
+      <td>15:47:13</td>
+      <td>15:43:18</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>CR2336515</td>
+      <td>4735.0</td>
+      <td>799-709-6386</td>
+      <td>AA0201</td>
+      <td>34612.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-02-09</td>
+      <td>00:05:38</td>
+      <td>13:35:43</td>
+      <td>13:30:05</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>CR2332670</td>
+      <td>10070.0</td>
+      <td>617-987-0617</td>
+      <td>AA0214</td>
+      <td>34614.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-02-07</td>
+      <td>00:02:01</td>
+      <td>13:07:11</td>
+      <td>13:05:10</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>CR2330453</td>
+      <td>3907.0</td>
+      <td>197-430-7586</td>
+      <td>AA0213</td>
+      <td>34615.0</td>
+      <td>0.0</td>
+      <td>NE</td>
+      <td>None</td>
+      <td>GILI</td>
+      <td>2017-02-06</td>
+      <td>00:03:25</td>
+      <td>10:46:42</td>
+      <td>10:43:17</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>CR2330518</td>
+      <td>1408.0</td>
+      <td>238-765-9083</td>
+      <td>AA0202</td>
+      <td>34616.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>KAZAV</td>
+      <td>2017-02-06</td>
+      <td>00:14:28</td>
+      <td>13:59:06</td>
+      <td>13:44:38</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>CR2324151</td>
+      <td>1013.0</td>
+      <td>894-336-4117</td>
+      <td>AA0214</td>
+      <td>34618.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>STEREN</td>
+      <td>2017-02-02</td>
+      <td>00:12:24</td>
+      <td>14:45:25</td>
+      <td>14:33:01</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>CR2398401</td>
+      <td>486.0</td>
+      <td>478-749-3447</td>
+      <td>AA0204</td>
+      <td>34544.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-03-22</td>
+      <td>00:12:36</td>
+      <td>15:17:45</td>
+      <td>15:05:09</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>CR2398768</td>
+      <td>2342.0</td>
+      <td>994-862-3218</td>
+      <td>AA0101</td>
+      <td>34545.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>STEREN</td>
+      <td>2017-03-22</td>
+      <td>00:00:46</td>
+      <td>10:19:57</td>
+      <td>10:19:11</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>CR2397737</td>
+      <td>3730.0</td>
+      <td>617-161-9051</td>
+      <td>AA0205</td>
+      <td>34546.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2017-03-21</td>
+      <td>00:06:02</td>
+      <td>10:53:13</td>
+      <td>10:47:11</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>CR2398271</td>
+      <td>1891.0</td>
+      <td>953-476-9580</td>
+      <td>AA0105</td>
+      <td>34547.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>MIKI</td>
+      <td>2017-03-21</td>
+      <td>00:11:31</td>
+      <td>14:31:52</td>
+      <td>14:20:21</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>CR2392378</td>
+      <td>3321.0</td>
+      <td>254-815-1076</td>
+      <td>AA0106</td>
+      <td>34549.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>DORIT</td>
+      <td>2017-03-17</td>
+      <td>00:03:42</td>
+      <td>09:03:53</td>
+      <td>09:00:11</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>CR2392249</td>
+      <td>4218.0</td>
+      <td>508-495-9597</td>
+      <td>AA0102</td>
+      <td>34550.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVNI</td>
+      <td>2017-03-17</td>
+      <td>00:04:17</td>
+      <td>12:42:25</td>
+      <td>12:38:08</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>CR2391330</td>
+      <td>4622.0</td>
+      <td>716-474-3082</td>
+      <td>AA0214</td>
+      <td>34551.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MORIAH</td>
+      <td>2017-03-16</td>
+      <td>00:15:03</td>
+      <td>10:56:57</td>
+      <td>10:41:54</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>CR2391051</td>
+      <td>4266.0</td>
+      <td>212-955-2224</td>
+      <td>AA0103</td>
+      <td>34552.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2017-03-16</td>
+      <td>00:08:26</td>
+      <td>14:45:13</td>
+      <td>14:36:47</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>CR2321678</td>
+      <td>3791.0</td>
+      <td>356-349-1063</td>
+      <td>AA0209</td>
+      <td>34619.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MORIAH</td>
+      <td>2017-02-02</td>
+      <td>00:04:07</td>
+      <td>14:08:05</td>
+      <td>14:03:58</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>CR2325187</td>
+      <td>1628.0</td>
+      <td>504-968-6745</td>
+      <td>AA0113</td>
+      <td>34620.0</td>
+      <td>0.0</td>
+      <td>NE</td>
+      <td>None</td>
+      <td>ELI</td>
+      <td>2017-02-02</td>
+      <td>00:18:28</td>
+      <td>14:29:46</td>
+      <td>14:11:18</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>CR2317826</td>
+      <td>1248.0</td>
+      <td>940-007-9030</td>
+      <td>AA0213</td>
+      <td>34622.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>BASCH</td>
+      <td>2017-01-30</td>
+      <td>00:10:27</td>
+      <td>12:05:28</td>
+      <td>11:55:01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>CR2317569</td>
+      <td>3475.0</td>
+      <td>924-456-1095</td>
+      <td>AA0107</td>
+      <td>34623.0</td>
+      <td>2.0</td>
+      <td>TT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2017-01-30</td>
+      <td>00:15:23</td>
+      <td>10:36:00</td>
+      <td>10:20:37</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>CR2317933</td>
+      <td>2151.0</td>
+      <td>508-174-5751</td>
+      <td>AA0206</td>
+      <td>34624.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>ANAT</td>
+      <td>2017-01-30</td>
+      <td>00:10:06</td>
+      <td>11:42:47</td>
+      <td>11:32:41</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>CR2314643</td>
+      <td>1797.0</td>
+      <td>312-349-2628</td>
+      <td>AA0101</td>
+      <td>34626.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>DORIT</td>
+      <td>2017-01-27</td>
+      <td>00:13:13</td>
+      <td>13:20:57</td>
+      <td>13:07:44</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>CR2314736</td>
+      <td>2226.0</td>
+      <td>312-080-0390</td>
+      <td>AA0105</td>
+      <td>34628.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>SHARON</td>
+      <td>2017-01-27</td>
+      <td>00:05:16</td>
+      <td>11:05:56</td>
+      <td>11:00:40</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>CR2315474</td>
+      <td>3875.0</td>
+      <td>212-994-8696</td>
+      <td>AA0209</td>
+      <td>34629.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YITZ</td>
+      <td>2017-01-27</td>
+      <td>00:00:07</td>
+      <td>10:48:45</td>
+      <td>10:48:38</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>CR2310722</td>
+      <td>3657.0</td>
+      <td>248-634-7803</td>
+      <td>AA0205</td>
+      <td>34630.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MIKI</td>
+      <td>2017-01-25</td>
+      <td>00:19:21</td>
+      <td>14:47:31</td>
+      <td>14:28:10</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>CR2311288</td>
+      <td>11147.0</td>
+      <td>265-012-6222</td>
+      <td>AA0110</td>
+      <td>34631.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MIKI</td>
+      <td>2017-01-25</td>
+      <td>00:00:44</td>
+      <td>13:59:01</td>
+      <td>13:58:17</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>CR2310354</td>
+      <td>232.0</td>
+      <td>854-444-6236</td>
+      <td>AA0109</td>
+      <td>34632.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>SHARON</td>
+      <td>2017-01-25</td>
+      <td>00:14:10</td>
+      <td>14:20:38</td>
+      <td>14:06:28</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>CR2308539</td>
+      <td>2503.0</td>
+      <td>281-754-2076</td>
+      <td>AA0104</td>
+      <td>34633.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MORIAH</td>
+      <td>2017-01-24</td>
+      <td>00:18:12</td>
+      <td>12:16:03</td>
+      <td>11:57:51</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>CR2305383</td>
+      <td>146.0</td>
+      <td>917-678-2836</td>
+      <td>AA0103</td>
+      <td>34634.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVNI</td>
+      <td>2017-01-24</td>
+      <td>00:06:25</td>
+      <td>11:30:51</td>
+      <td>11:24:26</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>CR2305857</td>
+      <td>110.0</td>
+      <td>634-013-0057</td>
+      <td>AA0102</td>
+      <td>34635.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>DARMON</td>
+      <td>2017-01-23</td>
+      <td>00:07:22</td>
+      <td>10:25:12</td>
+      <td>10:17:50</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>CR2301475</td>
+      <td>2268.0</td>
+      <td>910-018-0049</td>
+      <td>AA0214</td>
+      <td>34636.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MIKI</td>
+      <td>2017-01-20</td>
+      <td>00:03:02</td>
+      <td>12:17:58</td>
+      <td>12:14:56</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>CR2301210</td>
+      <td>4258.0</td>
+      <td>547-226-1341</td>
+      <td>AA0206</td>
+      <td>34637.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>ANAT</td>
+      <td>2017-01-20</td>
+      <td>00:19:36</td>
+      <td>15:25:31</td>
+      <td>15:05:55</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>CR2301127</td>
+      <td>8489.0</td>
+      <td>585-787-6851</td>
+      <td>AA0203</td>
+      <td>34639.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-01-20</td>
+      <td>00:13:43</td>
+      <td>16:43:15</td>
+      <td>16:29:32</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>CR2298291</td>
+      <td>3258.0</td>
+      <td>711-170-3148</td>
+      <td>AA0103</td>
+      <td>34640.0</td>
+      <td>2.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>SHARON</td>
+      <td>2017-01-19</td>
+      <td>00:00:51</td>
+      <td>12:39:12</td>
+      <td>12:38:21</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>CR2294240</td>
+      <td>917.0</td>
+      <td>857-625-6519</td>
+      <td>AA0206</td>
+      <td>34642.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>DARMON</td>
+      <td>2017-01-18</td>
+      <td>00:20:17</td>
+      <td>15:36:24</td>
+      <td>15:16:07</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>CR2292024</td>
+      <td>3067.0</td>
+      <td>508-728-2172</td>
+      <td>AA0204</td>
+      <td>34643.0</td>
+      <td>1.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YITZ</td>
+      <td>2017-01-18</td>
+      <td>00:05:36</td>
+      <td>13:26:26</td>
+      <td>13:20:50</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>CR2293938</td>
+      <td>3467.0</td>
+      <td>212-985-4873</td>
+      <td>AA0215</td>
+      <td>34644.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MORIAH</td>
+      <td>2017-01-18</td>
+      <td>00:09:33</td>
+      <td>15:51:52</td>
+      <td>15:42:19</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>CR2288912</td>
+      <td>3348.0</td>
+      <td>346-192-7574</td>
+      <td>AA0213</td>
+      <td>34646.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2017-01-13</td>
+      <td>00:16:00</td>
+      <td>10:12:22</td>
+      <td>09:56:22</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>CR2289056</td>
+      <td>2981.0</td>
+      <td>944-944-0200</td>
+      <td>AA0103</td>
+      <td>34647.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>MORIAH</td>
+      <td>2017-01-13</td>
+      <td>00:19:16</td>
+      <td>14:36:07</td>
+      <td>14:16:51</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>CR2285660</td>
+      <td>2906.0</td>
+      <td>461-185-8491</td>
+      <td>AA0206</td>
+      <td>34648.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVIDAN</td>
+      <td>2017-01-11</td>
+      <td>00:13:41</td>
+      <td>12:38:37</td>
+      <td>12:24:56</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>CR2283299</td>
+      <td>287.0</td>
+      <td>716-179-4777</td>
+      <td>AA0109</td>
+      <td>34649.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>TOVA</td>
+      <td>2017-01-10</td>
+      <td>00:06:56</td>
+      <td>15:49:43</td>
+      <td>15:42:47</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>CR2283645</td>
+      <td>1394.0</td>
+      <td>674-781-6659</td>
+      <td>AA0205</td>
+      <td>34650.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>YITZ</td>
+      <td>2017-01-10</td>
+      <td>00:16:39</td>
+      <td>13:50:25</td>
+      <td>13:33:46</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>CR2282295</td>
+      <td>2786.0</td>
+      <td>671-085-3435</td>
+      <td>AA0111</td>
+      <td>34651.0</td>
+      <td>0.0</td>
+      <td>TT</td>
+      <td>None</td>
+      <td>BASCH</td>
+      <td>2017-01-10</td>
+      <td>00:20:32</td>
+      <td>11:40:31</td>
+      <td>11:19:59</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>CR2281138</td>
+      <td>1199.0</td>
+      <td>644-160-4985</td>
+      <td>AA0215</td>
+      <td>34652.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>MIKI</td>
+      <td>2017-01-09</td>
+      <td>00:14:39</td>
+      <td>15:51:58</td>
+      <td>15:37:19</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>CR2275944</td>
+      <td>3782.0</td>
+      <td>212-522-4265</td>
+      <td>AA0106</td>
+      <td>34653.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>BENSION</td>
+      <td>2017-01-06</td>
+      <td>00:16:47</td>
+      <td>09:38:30</td>
+      <td>09:21:43</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>CR2279164</td>
+      <td>3909.0</td>
+      <td>459-262-9261</td>
+      <td>AA0115</td>
+      <td>34654.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>GILI</td>
+      <td>2017-01-06</td>
+      <td>00:03:26</td>
+      <td>10:42:02</td>
+      <td>10:38:36</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>CR2279262</td>
+      <td>4514.0</td>
+      <td>617-286-0356</td>
+      <td>AA0108</td>
+      <td>34655.0</td>
+      <td>0.0</td>
+      <td>TT</td>
+      <td>None</td>
+      <td>STEREN</td>
+      <td>2017-01-06</td>
+      <td>00:09:30</td>
+      <td>16:18:02</td>
+      <td>16:08:32</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>CR2273074</td>
+      <td>1529.0</td>
+      <td>184-946-5589</td>
+      <td>AA0204</td>
+      <td>34656.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>AVNI</td>
+      <td>2017-01-03</td>
+      <td>00:00:48</td>
+      <td>13:13:46</td>
+      <td>13:12:58</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>CR2272555</td>
+      <td>4275.0</td>
+      <td>411-416-0778</td>
+      <td>AA0209</td>
+      <td>34657.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>SHARON</td>
+      <td>2017-01-03</td>
+      <td>00:08:25</td>
+      <td>14:49:22</td>
+      <td>14:40:57</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>CR2272801</td>
+      <td>2430.0</td>
+      <td>996-964-9510</td>
+      <td>AA0215</td>
+      <td>34658.0</td>
+      <td>0.0</td>
+      <td>NW</td>
+      <td>None</td>
+      <td>STEREN</td>
+      <td>2017-01-03</td>
+      <td>00:13:35</td>
+      <td>17:08:11</td>
+      <td>16:54:36</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>CR2267388</td>
+      <td>1121.0</td>
+      <td>617-927-2995</td>
+      <td>AA0110</td>
+      <td>34659.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2016-12-28</td>
+      <td>00:07:55</td>
+      <td>11:42:41</td>
+      <td>11:34:46</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>CR2264142</td>
+      <td>1434.0</td>
+      <td>946-732-1068</td>
+      <td>AA0101</td>
+      <td>34662.0</td>
+      <td>0.0</td>
+      <td>PS</td>
+      <td>None</td>
+      <td>YIFAT</td>
+      <td>2016-12-27</td>
+      <td>00:10:14</td>
+      <td>13:27:12</td>
+      <td>13:16:58</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>CR2264909</td>
+      <td>5325.0</td>
+      <td>755-055-9989</td>
+      <td>AA0110</td>
+      <td>34663.0</td>
+      <td>2.0</td>
+      <td>NE</td>
+      <td>None</td>
+      <td>IDIT</td>
+      <td>2016-12-27</td>
+      <td>00:10:39</td>
+      <td>16:52:04</td>
+      <td>16:41:25</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">complaint_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_complaint_id"></div><b>📃 Summary:</b> Unique identifier for each complaint<br><b>🦄 Unique:</b> This column represents a unique identifier for each complaint. For this table, each row is for a single call/complaint. complaint_id appears to be unique across rows.<br><b>🎨 Patterns:</b><br><ul><li><code>CR\d{7}</code><br><i>Complaint IDs starting with 'CR' followed by 7 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_client_id"></div><b>📃 Summary:</b> Random identifier for the client<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">caller_phone_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_caller_phone_number"></div><b>📃 Summary:</b> Phone number of the caller<br><b>🎨 Patterns:</b><br><ul><li><code>\d{3}-\d{3}-\d{4}</code><br><i>Phone numbers in the format of XXX-XXX-XXXX where X is a digit</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">vru_line</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_vru_line"></div><b>📃 Summary:</b> VRU line identifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">call_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_call_id"></div><b>📃 Summary:</b> Unique identifier for each call<br><b>🦄 Unique:</b> This column represents a unique identifier for each call. For this table, each row is for a single call/complaint. call_id appears to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">call_priority</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_call_priority"></div><b>📃 Summary:</b> Priority level of the call<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">call_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_call_type"></div><b>📃 Summary:</b> Type of call or service<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">call_outcome</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_call_outcome"></div><b>📃 Summary:</b> Result of the call (e.g., AGENT)<br><b>❓ Missing:</b> Call may still be in progress or not yet resolved.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">agent_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_agent_name"></div><b>📃 Summary:</b> Name of the agent handling the call<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">call_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_call_date"></div><b>📃 Summary:</b> Date when the call was received<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">service_duration</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_service_duration"></div><b>📃 Summary:</b> Duration of the service<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">service_end_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_service_end_time"></div><b>📃 Summary:</b> Time when the service ended<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">service_start_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_service_start_time"></div><b>📃 Summary:</b> Time when the service started<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about call center logs. It contains details of customer complaints received. Each row represents a single call. It includes information like date, complaint ID, client ID, phone number, priority, call type, outcome, server name, and service time. The table tracks various aspects of each call from start to finish.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>10</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>date_received</td>
+      <td>Date when the call was received</td>
+      <td>call_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>complaint_id</td>
+      <td>Unique identifier for each complaint</td>
+      <td>complaint_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>rand_client</td>
+      <td>Random identifier for the client</td>
+      <td>client_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>phonefinal</td>
+      <td>Phone number of the caller</td>
+      <td>caller_phone_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>vru_line</td>
+      <td>VRU line identifier</td>
+      <td>vru_line</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>call_id</td>
+      <td>Unique identifier for each call</td>
+      <td>call_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>priority</td>
+      <td>Priority level of the call</td>
+      <td>call_priority</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>type</td>
+      <td>Type of call or service</td>
+      <td>call_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>outcome</td>
+      <td>Result of the call (e.g., AGENT)</td>
+      <td>call_outcome</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>server</td>
+      <td>Name of the agent handling the call</td>
+      <td>agent_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ser_start</td>
+      <td>Time when the service started</td>
+      <td>service_start_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>ser_exit</td>
+      <td>Time when the service ended</td>
+      <td>service_end_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>ser_time</td>
+      <td>Duration of the service</td>
+      <td>service_duration</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>2</b> columns have erroneous values<br><ol><li><b>call_outcome</b>: 'AGENT' is the only value, which is unusual because call outcomes typically have multiple possibilities.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>AGENT</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>agent_name</b>: 'NO_SERVER' is unusual because it doesn't follow the pattern of personal names and appears to be a system-related value.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>NO_SERVER</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>4</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>call_date</td>
+      <td>CAST("call_date" AS DATE)</td>
+      <td>To transform the 'call_date' column from VARCHAR to DATE in Snowflake, we can use a simple CAST function. The date format in the given values is already in the standard ISO format (YYYY-MM-DD), which Snowflake can automatically recognize. Therefore, we don't need to specify a format string in the cast operation.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>service_duration</td>
+      <td>CAST("service_duration" AS TIME)</td>
+      <td>To transform the 'service_duration' column from VARCHAR to TIME in Snowflake, we can use a simple CAST function. The data is already in a valid time format (HH:MM:SS), so we don't need any additional formatting or conversion functions. Snowflake can automatically interpret this format when casting to TIME.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>service_end_time</td>
+      <td>CAST("service_end_time" AS TIME)</td>
+      <td>To transform the 'service_end_time' column from VARCHAR to TIME, we can use a simple CAST function. The current format of the data ('HH:MI:SS') is already compatible with Snowflake's TIME data type, so we don't need any additional formatting or conversion functions. A straightforward CAST will suffice to change the data type while preserving the time values.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>service_start_time</td>
+      <td>CAST("service_start_time" AS TIME)</td>
+      <td>To transform the 'service_start_time' column from VARCHAR to TIME in Snowflake, we can use a simple CAST function. The current format of the data ('HH:MI:SS') is already compatible with Snowflake's TIME data type, so we don't need to use any specific formatting function like TO_TIME(). A straightforward CAST will suffice.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>2</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>agent_name</td>
+      <td>1.8</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>call_outcome</td>
+      <td>100.0</td>
+      <td>True</td>
+      <td>Call may still be in progress or not yet resolved.</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>agent_name</td>
+      <td>1.8</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'CR1522316', 'value': 0.1}, {'label': 'CR1592361', 'value': 0.1}, {'label': 'CR1590033', 'value': 0.1}, {'label': 'CR1569091', 'value': 0.1}, {'label': 'CR1565422', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_complaint_id", data);
+data = [{'label': '1286', 'value': 0.3}, {'label': '2139', 'value': 0.2}, {'label': '2447', 'value': 0.2}, {'label': '2910', 'value': 0.2}, {'label': '7', 'value': 0.2}, {'label': 'Other values', 'value': 98.9}];
+    drawBarChart("bar_viz_client_id", data);
+data = [{'label': '567-845-8514', 'value': 0.3}, {'label': '708-775-5257', 'value': 0.2}, {'label': '315-318-5357', 'value': 0.2}, {'label': '463-576-8017', 'value': 0.2}, {'label': '678-731-5913', 'value': 0.2}, {'label': 'Other values', 'value': 98.9}];
+    drawBarChart("bar_viz_caller_phone_number", data);
+data = [{'label': 'AA0109', 'value': 7.000000000000001}, {'label': 'AA0110', 'value': 5.5}, {'label': 'AA0209', 'value': 5.4}, {'label': 'AA0203', 'value': 5.3}, {'label': 'AA0115', 'value': 5.2}, {'label': 'Other values', 'value': 71.6}];
+    drawBarChart("bar_viz_vru_line", data);
+data = [{'label': '35266', 'value': 0.1}, {'label': '35180', 'value': 0.1}, {'label': '35181', 'value': 0.1}, {'label': '35183', 'value': 0.1}, {'label': '35184', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_call_id", data);
+data = [{'label': '0.0', 'value': 54.400000000000006}, {'label': '2.0', 'value': 31.6}, {'label': '1.0', 'value': 14.000000000000002}];
+    drawBarChart("bar_viz_call_priority", data);
+data = [{'label': 'PS', 'value': 69.39999999999999}, {'label': 'NW', 'value': 16.3}, {'label': 'NE', 'value': 10.0}, {'label': 'TT', 'value': 3.3000000000000003}, {'label': 'IN', 'value': 0.7000000000000001}, {'label': 'PE', 'value': 0.3}];
+    drawBarChart("bar_viz_call_type", data);
+data = [];
+    drawBarChart("bar_viz_call_outcome", data);
+data = [{'label': 'TOVA', 'value': 7.535641547861507}, {'label': 'YIFAT', 'value': 7.230142566191446}, {'label': 'IDIT', 'value': 7.026476578411406}, {'label': 'SHARON', 'value': 6.313645621181263}, {'label': 'AVNI', 'value': 5.8044806517311605}, {'label': 'Other values', 'value': 66.08961303462321}];
+    drawBarChart("bar_viz_agent_name", data);
+data = [{'label': '2016-04-28', 'value': 0.6}, {'label': '2016-04-12', 'value': 0.6}, {'label': '2016-06-06', 'value': 0.6}, {'label': '2016-05-31', 'value': 0.5}, {'label': '2015-05-11', 'value': 0.5}, {'label': 'Other values', 'value': 97.2}];
+    drawBarChart("bar_viz_call_date", data);
+data = [{'label': '00:19:07', 'value': 0.6}, {'label': '00:08:58', 'value': 0.5}, {'label': '00:11:31', 'value': 0.4}, {'label': '00:16:02', 'value': 0.4}, {'label': '00:01:12', 'value': 0.4}, {'label': 'Other values', 'value': 97.7}];
+    drawBarChart("bar_viz_service_duration", data);
+data = [{'label': '16:49:41', 'value': 0.3}, {'label': '10:37:03', 'value': 0.2}, {'label': '10:46:42', 'value': 0.2}, {'label': '16:18:02', 'value': 0.2}, {'label': '12:50:52', 'value': 0.2}, {'label': 'Other values', 'value': 98.9}];
+    drawBarChart("bar_viz_service_end_time", data);
+data = [{'label': '12:15:10', 'value': 0.2}, {'label': '09:24:14', 'value': 0.2}, {'label': '10:05:06', 'value': 0.2}, {'label': '15:06:47', 'value': 0.2}, {'label': '15:05:55', 'value': 0.2}, {'label': 'Other values', 'value': 99.0}];
+    drawBarChart("bar_viz_service_start_time", data);
+
+
+</script>
+</body>
+</html>

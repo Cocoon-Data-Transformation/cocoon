@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>user_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>_fivetran_deleted</th>
+      <th>email</th>
+      <th>name</th>
+      <th>id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>f8fca099b562801e43e671847ab63793</td>
+      <td>ba502a3057da84df93c1cee38be20d98</td>
+      <td>1145566427371773</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>bf70064fcc790acb2640c9ea6658e7bf</td>
+      <td>784742a66a3a0c271feced5b149ff8db</td>
+      <td>1140679468933567</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>False</td>
+      <td>0e8eb57f064990dd67d18c6457d3b7e4</td>
+      <td>3c065e105ba1ffa3cbcb06ce6274a0b4</td>
+      <td>1143584790050961</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>False</td>
+      <td>74ea05adc4b1b53d8ed38de392bb6ae8</td>
+      <td>eea1bd8603b800df2834f07d362a1998</td>
+      <td>1142174241683304</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>False</td>
+      <td>0920cafb10279abbb850ccf42906f584</td>
+      <td>dc4bc96708073c555c91c4909f3e7da2</td>
+      <td>1140738529427046</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>False</td>
+      <td>c2045671bfeec500fa785e46bda796b0</td>
+      <td>c2045671bfeec500fa785e46bda796b0</td>
+      <td>874533751271912</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>False</td>
+      <td>cc9681199b8d7962c787a49aad79b28a</td>
+      <td>c0639ca053b1211987bbbfd70e944bdc</td>
+      <td>892002646367883</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>False</td>
+      <td>1d4af9f6d0045aac6abf03629535e875</td>
+      <td>b31671608b9a4785bf89d02a868391c9</td>
+      <td>1115060366861453</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>False</td>
+      <td>b9adcab5121811121c2c3d0aaaf9b2e8</td>
+      <td>b6e6868d2c745b987fd6bac86965e201</td>
+      <td>1109585316746864</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>False</td>
+      <td>64b62aabe443ca4e937bbc5576179c88</td>
+      <td>64b62aabe443ca4e937bbc5576179c88</td>
+      <td>874533751409163</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>False</td>
+      <td>368eaa391757666b80b48d45492d5a62</td>
+      <td>413685a28fcb6d760c825c796a0fcecf</td>
+      <td>892002646367901</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>False</td>
+      <td>72af537b7a20cdc9125de91f5f6c9052</td>
+      <td>72af537b7a20cdc9125de91f5f6c9052</td>
+      <td>1119270776407458</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>False</td>
+      <td>396b3a68984e542c218467d3354ce079</td>
+      <td>ac0df616713dcb9a53f04f106e973d81</td>
+      <td>1116354963772542</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>False</td>
+      <td>5b4d3e849ff258a849b4cd99080097b6</td>
+      <td>527a7c3ec3b7736b0ebfa0b9e688cc4d</td>
+      <td>1139503248172020</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>False</td>
+      <td>52537af58083acd49f69acaadfa6552c</td>
+      <td>4b4826feea5d1e05d9596eaa04fe154b</td>
+      <td>1139503169042444</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>False</td>
+      <td>36e84c9f6590a44b2f10df1ecfc3649a</td>
+      <td>a8ddbe83b3c803beff4f04d48f6f5312</td>
+      <td>1139330627337223</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>False</td>
+      <td>2be7fdf344cc0e93a63089083b2c3a53</td>
+      <td>e549f53a2e1eb4b27b65b3a04c315f4e</td>
+      <td>388477550412326</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>False</td>
+      <td>76f8de0b00112335503a7d3734f52f79</td>
+      <td>00046eaa445242bb910688f9e1893b07</td>
+      <td>648669515172057</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>False</td>
+      <td>46006954dd091c5dab1b6159a5e1524c</td>
+      <td>9605959095f1e07ba7628a197088bd70</td>
+      <td>350290010811012</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>False</td>
+      <td>008e38cb1023225e4441f47ab5d01c70</td>
+      <td>a07d50fa47e3cfcad2a166929d680b45</td>
+      <td>719802245514819</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>is_deleted</th>
+      <th>hashed_email</th>
+      <th>hashed_name</th>
+      <th>user_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>False</td>
+      <td>f8fca099b562801e43e671847ab63793</td>
+      <td>ba502a3057da84df93c1cee38be20d98</td>
+      <td>1145566427371773</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>False</td>
+      <td>bf70064fcc790acb2640c9ea6658e7bf</td>
+      <td>784742a66a3a0c271feced5b149ff8db</td>
+      <td>1140679468933567</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>False</td>
+      <td>0e8eb57f064990dd67d18c6457d3b7e4</td>
+      <td>3c065e105ba1ffa3cbcb06ce6274a0b4</td>
+      <td>1143584790050961</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>False</td>
+      <td>74ea05adc4b1b53d8ed38de392bb6ae8</td>
+      <td>eea1bd8603b800df2834f07d362a1998</td>
+      <td>1142174241683304</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>False</td>
+      <td>0920cafb10279abbb850ccf42906f584</td>
+      <td>dc4bc96708073c555c91c4909f3e7da2</td>
+      <td>1140738529427046</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>False</td>
+      <td>c2045671bfeec500fa785e46bda796b0</td>
+      <td>c2045671bfeec500fa785e46bda796b0</td>
+      <td>874533751271912</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>False</td>
+      <td>cc9681199b8d7962c787a49aad79b28a</td>
+      <td>c0639ca053b1211987bbbfd70e944bdc</td>
+      <td>892002646367883</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>False</td>
+      <td>1d4af9f6d0045aac6abf03629535e875</td>
+      <td>b31671608b9a4785bf89d02a868391c9</td>
+      <td>1115060366861453</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>False</td>
+      <td>b9adcab5121811121c2c3d0aaaf9b2e8</td>
+      <td>b6e6868d2c745b987fd6bac86965e201</td>
+      <td>1109585316746864</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>False</td>
+      <td>64b62aabe443ca4e937bbc5576179c88</td>
+      <td>64b62aabe443ca4e937bbc5576179c88</td>
+      <td>874533751409163</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>False</td>
+      <td>368eaa391757666b80b48d45492d5a62</td>
+      <td>413685a28fcb6d760c825c796a0fcecf</td>
+      <td>892002646367901</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>False</td>
+      <td>72af537b7a20cdc9125de91f5f6c9052</td>
+      <td>72af537b7a20cdc9125de91f5f6c9052</td>
+      <td>1119270776407458</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>False</td>
+      <td>396b3a68984e542c218467d3354ce079</td>
+      <td>ac0df616713dcb9a53f04f106e973d81</td>
+      <td>1116354963772542</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>False</td>
+      <td>5b4d3e849ff258a849b4cd99080097b6</td>
+      <td>527a7c3ec3b7736b0ebfa0b9e688cc4d</td>
+      <td>1139503248172020</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>False</td>
+      <td>52537af58083acd49f69acaadfa6552c</td>
+      <td>4b4826feea5d1e05d9596eaa04fe154b</td>
+      <td>1139503169042444</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>False</td>
+      <td>36e84c9f6590a44b2f10df1ecfc3649a</td>
+      <td>a8ddbe83b3c803beff4f04d48f6f5312</td>
+      <td>1139330627337223</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>False</td>
+      <td>2be7fdf344cc0e93a63089083b2c3a53</td>
+      <td>e549f53a2e1eb4b27b65b3a04c315f4e</td>
+      <td>388477550412326</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>False</td>
+      <td>76f8de0b00112335503a7d3734f52f79</td>
+      <td>00046eaa445242bb910688f9e1893b07</td>
+      <td>648669515172057</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>False</td>
+      <td>46006954dd091c5dab1b6159a5e1524c</td>
+      <td>9605959095f1e07ba7628a197088bd70</td>
+      <td>350290010811012</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>False</td>
+      <td>008e38cb1023225e4441f47ab5d01c70</td>
+      <td>a07d50fa47e3cfcad2a166929d680b45</td>
+      <td>719802245514819</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record has been deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hashed_email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_hashed_email"></div><b>📃 Summary:</b> Hashed or encrypted email address of the user<br><b>🦄 Unique:</b> This column represents the hashed or encrypted email address of the user. For this table, each row represents a unique user. Email addresses are typically unique for each user, so the hashed_email is likely to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hashed_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_hashed_name"></div><b>📃 Summary:</b> Hashed or encrypted name of the user<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_user_id"></div><b>📃 Summary:</b> Unique identifier for the user<br><b>🦄 Unique:</b> This column represents a unique identifier for the user. For this table, each row represents a unique user. User IDs are specifically designed to be unique identifiers, so user_id is guaranteed to be unique across rows.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about user data. It contains user IDs, email addresses, and names. The email and name fields appear to be hashed or encrypted for privacy. There is also a "_fivetran_deleted" column, likely indicating if the record has been deleted in a data pipeline. The table stores basic user information in a secure manner.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>4</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the user</td>
+      <td>user_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record has been deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>email</td>
+      <td>Hashed or encrypted email address of the user</td>
+      <td>hashed_email</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>name</td>
+      <td>Hashed or encrypted name of the user</td>
+      <td>hashed_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>1</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>user_id</td>
+      <td>CAST("user_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'user_id' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'f8fca099b562801...', 'value': 5.0}, {'label': 'bf70064fcc790ac...', 'value': 5.0}, {'label': '72af537b7a20cdc...', 'value': 5.0}, {'label': '74ea05adc4b1b53...', 'value': 5.0}, {'label': 'cc9681199b8d796...', 'value': 5.0}, {'label': 'Other values', 'value': 75.0}];
+    drawBarChart("bar_viz_hashed_email", data);
+data = [{'label': 'ba502a3057da84d...', 'value': 5.0}, {'label': '3c065e105ba1ffa...', 'value': 5.0}, {'label': 'eea1bd8603b800d...', 'value': 5.0}, {'label': 'dc4bc96708073c5...', 'value': 5.0}, {'label': 'c0639ca053b1211...', 'value': 5.0}, {'label': 'Other values', 'value': 75.0}];
+    drawBarChart("bar_viz_hashed_name", data);
+data = [{'label': '114067946893356...', 'value': 5.0}, {'label': '110958531674686...', 'value': 5.0}, {'label': '388477550412326', 'value': 5.0}, {'label': '114358479005096...', 'value': 5.0}, {'label': '114217424168330...', 'value': 5.0}, {'label': 'Other values', 'value': 75.0}];
+    drawBarChart("bar_viz_user_id", data);
+
+
+</script>
+</body>
+</html>

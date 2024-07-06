@@ -1,0 +1,2542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>dispute_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>balance_transaction</th>
+      <th>charge_id</th>
+      <th>currency</th>
+      <th>evidence_billing_address</th>
+      <th>evidence_customer_email_address</th>
+      <th>evidence_customer_name</th>
+      <th>evidence_customer_purchase_ip</th>
+      <th>evidence_details_has_evidence</th>
+      <th>evidence_details_past_due</th>
+      <th>evidence_details_submission_count</th>
+      <th>evidence_receipt</th>
+      <th>is_charge_refundable</th>
+      <th>livemode</th>
+      <th>reason</th>
+      <th>status</th>
+      <th>metadata</th>
+      <th>connected_account_id</th>
+      <th>created</th>
+      <th>amount</th>
+      <th>evidence_access_activity_log</th>
+      <th>evidence_cancellation_policy_disclosure</th>
+      <th>evidence_cancellation_policy</th>
+      <th>evidence_cancellation_rebuttal</th>
+      <th>evidence_shipping_carrier</th>
+      <th>evidence_customer_signature</th>
+      <th>evidence_details_due_by</th>
+      <th>evidence_duplicate_charge_documentation</th>
+      <th>evidence_duplicate_charge_explanation</th>
+      <th>evidence_duplicate_charge_id</th>
+      <th>evidence_shipping_date</th>
+      <th>evidence_shipping_documentation</th>
+      <th>evidence_shipping_tracking_number</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>du_0MmTsrig6peNXzgD4bsS3XWF</td>
+      <td>txn_0MmTt4ig6peNXzgDDEp8wsKh</td>
+      <td>ch_2MZdKRig6peNXzgD0EygIk7l</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>None</td>
+      <td>True</td>
+      <td>True</td>
+      <td>product_unacceptable</td>
+      <td>won</td>
+      <td>"{"netsuite_credit_memo_id":"3324234","netsuite_credit_memo_link":"https://en.wikipedia.org/wiki/Brave_New_World","netsuite_customer_refund_id":"3524872","netsuite_customer_refund_link":"https://en.wikipedia.org/wiki/Aldous_Huxley"}"</td>
+      <td>NaN</td>
+      <td>2023-03-17 03:23:13</td>
+      <td>1234</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2023-04-26 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>du_0Lvivfig6peNXzgD33SIekHq</td>
+      <td>txn_0LviwVig6peNXzgDkSPS1Y1C</td>
+      <td>ch_2LqbkJig6peNXzgD1jG4Xy7z</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>None</td>
+      <td>True</td>
+      <td>True</td>
+      <td>general</td>
+      <td>won</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-10-22 14:44:03</td>
+      <td>3333</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-11-17 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>du_0KHowkig6peNXzgDyhndDHOe</td>
+      <td>txn_0KHoxcig6peNXzgDKWarDbF0</td>
+      <td>ch_2JtdoJig6peNXzgD1lCAvXwG</td>
+      <td>usd</td>
+      <td>1600 Pennsylvania Avenue NW, Washington, DC 20500</td>
+      <td>hello@bravenewworld.com</td>
+      <td>Aldous Huxley</td>
+      <td>68.1.21.555</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>file_0KHowoig6peNXzgDyeDmylk3</td>
+      <td>True</td>
+      <td>True</td>
+      <td>general</td>
+      <td>won</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-01-14 12:31:58</td>
+      <td>3331</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-02-09 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>du_0M9SJTig6peNXzgD58OLM8Mz</td>
+      <td>txn_0M9SKaig6peNXzgDlb5cqlBg</td>
+      <td>ch_2M2d6mig6peNXzgD03nrNVYZ</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-11-29 11:49:23</td>
+      <td>1099</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-12-25 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>du_0LuGYgig6peNXzgDM8lPBTFC</td>
+      <td>txn_0LuGZyig6peNXzgDLgWzetHo</td>
+      <td>ch_2LUt28ig6peNXzgD0RdFu0qW</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-10-18 14:14:18</td>
+      <td>1222</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-11-13 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>du_0LyvFuig6peNXzgDyBMCjDi6</td>
+      <td>txn_0LyvHhig6peNXzgDg5LanDAq</td>
+      <td>ch_2Lqdeuig6peNXzgD0sA3iBuH</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-10-31 10:30:10</td>
+      <td>221244</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-11-26 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>du_0LiAl6ig6peNXzgDEejs24CE</td>
+      <td>txn_0Lumheig6peNXzgDSp1KIXph</td>
+      <td>ch_2LVoJuig6peNXzgD1DvyohjD</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>general</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-09-15 05:37:08</td>
+      <td>432532</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-11-12 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>du_0M9ScVig6peNXzgDkfd7tUNb</td>
+      <td>txn_0M9SdPig6peNXzgDgpb4aJDQ</td>
+      <td>ch_2LqcRzig6peNXzgD06FImTqU</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-11-29 12:09:03</td>
+      <td>1400</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-12-25 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>du_0LuGd7ig6peNXzgDUxXx85wF</td>
+      <td>txn_0LuGe5ig6peNXzgD7PMfTzJ6</td>
+      <td>ch_2LfkHjig6peNXzgD1e9ltqQt</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-10-18 14:18:53</td>
+      <td>1400</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-11-13 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>du_0LuGbbig6peNXzgDjHA4RfoT</td>
+      <td>txn_0LuGcrig6peNXzgDKP5y95T9</td>
+      <td>ch_2LLwgKig6peNXzgD0Sr5X6kL</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2022-10-18 14:17:19</td>
+      <td>700</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2022-11-13 23:59:59.000000 UTC</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>dispute_id</th>
+      <th>dispute_transaction_id</th>
+      <th>charge_id</th>
+      <th>currency</th>
+      <th>evidence_billing_address</th>
+      <th>evidence_customer_email</th>
+      <th>evidence_customer_name</th>
+      <th>evidence_purchase_ip</th>
+      <th>has_evidence</th>
+      <th>evidence_past_due</th>
+      <th>evidence_submission_count</th>
+      <th>evidence_receipt</th>
+      <th>is_refundable</th>
+      <th>is_live</th>
+      <th>dispute_reason</th>
+      <th>dispute_status</th>
+      <th>additional_data</th>
+      <th>connected_account_id</th>
+      <th>dispute_created_at</th>
+      <th>disputed_amount</th>
+      <th>evidence_access_log</th>
+      <th>evidence_cancellation_disclosure</th>
+      <th>evidence_cancellation_policy</th>
+      <th>evidence_cancellation_rebuttal</th>
+      <th>evidence_carrier</th>
+      <th>evidence_customer_signature</th>
+      <th>evidence_due_date</th>
+      <th>evidence_duplicate_charge_docs</th>
+      <th>evidence_duplicate_charge_explanation</th>
+      <th>evidence_duplicate_charge_id</th>
+      <th>evidence_ship_date</th>
+      <th>evidence_ship_docs</th>
+      <th>evidence_tracking</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>du_0MmTsrig6peNXzgD4bsS3XWF</td>
+      <td>txn_0MmTt4ig6peNXzgDDEp8wsKh</td>
+      <td>ch_2MZdKRig6peNXzgD0EygIk7l</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>True</td>
+      <td>False</td>
+      <td>1</td>
+      <td>None</td>
+      <td>True</td>
+      <td>True</td>
+      <td>product_unacceptable</td>
+      <td>won</td>
+      <td>{"netsuite_credit_memo_id":"3324234","netsuite_credit_memo_link":"https://en.wikipedia.org/wiki/Brave_New_World","netsuite_customer_refund_id":"3524872","netsuite_customer_refund_link":"https://en.wikipedia.org/wiki/Aldous_Huxley"}</td>
+      <td>None</td>
+      <td>2023-03-17 03:23:13</td>
+      <td>1234.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2023-04-26 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>du_0Lvivfig6peNXzgD33SIekHq</td>
+      <td>txn_0LviwVig6peNXzgDkSPS1Y1C</td>
+      <td>ch_2LqbkJig6peNXzgD1jG4Xy7z</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>None</td>
+      <td>True</td>
+      <td>True</td>
+      <td>general</td>
+      <td>won</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-10-22 14:44:03</td>
+      <td>3333.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-11-17 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>du_0KHowkig6peNXzgDyhndDHOe</td>
+      <td>txn_0KHoxcig6peNXzgDKWarDbF0</td>
+      <td>ch_2JtdoJig6peNXzgD1lCAvXwG</td>
+      <td>usd</td>
+      <td>1600 Pennsylvania Avenue NW, Washington, DC 20500</td>
+      <td>hello@bravenewworld.com</td>
+      <td>Aldous Huxley</td>
+      <td>68.1.21.555</td>
+      <td>False</td>
+      <td>False</td>
+      <td>1</td>
+      <td>file_0KHowoig6peNXzgDyeDmylk3</td>
+      <td>True</td>
+      <td>True</td>
+      <td>general</td>
+      <td>won</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-01-14 12:31:58</td>
+      <td>3331.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-02-09 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>du_0M9SJTig6peNXzgD58OLM8Mz</td>
+      <td>txn_0M9SKaig6peNXzgDlb5cqlBg</td>
+      <td>ch_2M2d6mig6peNXzgD03nrNVYZ</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-11-29 11:49:23</td>
+      <td>1099.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-12-25 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>du_0LuGYgig6peNXzgDM8lPBTFC</td>
+      <td>txn_0LuGZyig6peNXzgDLgWzetHo</td>
+      <td>ch_2LUt28ig6peNXzgD0RdFu0qW</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-10-18 14:14:18</td>
+      <td>1222.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-11-13 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>du_0LyvFuig6peNXzgDyBMCjDi6</td>
+      <td>txn_0LyvHhig6peNXzgDg5LanDAq</td>
+      <td>ch_2Lqdeuig6peNXzgD0sA3iBuH</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-10-31 10:30:10</td>
+      <td>221244.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-11-26 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>du_0LiAl6ig6peNXzgDEejs24CE</td>
+      <td>txn_0Lumheig6peNXzgDSp1KIXph</td>
+      <td>ch_2LVoJuig6peNXzgD1DvyohjD</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>general</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-09-15 05:37:08</td>
+      <td>432532.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-11-12 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>du_0M9ScVig6peNXzgDkfd7tUNb</td>
+      <td>txn_0M9SdPig6peNXzgDgpb4aJDQ</td>
+      <td>ch_2LqcRzig6peNXzgD06FImTqU</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-11-29 12:09:03</td>
+      <td>1400.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-12-25 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>du_0LuGd7ig6peNXzgDUxXx85wF</td>
+      <td>txn_0LuGe5ig6peNXzgD7PMfTzJ6</td>
+      <td>ch_2LfkHjig6peNXzgD1e9ltqQt</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-10-18 14:18:53</td>
+      <td>1400.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-11-13 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>du_0LuGbbig6peNXzgDjHA4RfoT</td>
+      <td>txn_0LuGcrig6peNXzgDKP5y95T9</td>
+      <td>ch_2LLwgKig6peNXzgD0Sr5X6kL</td>
+      <td>usd</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>0</td>
+      <td>None</td>
+      <td>False</td>
+      <td>True</td>
+      <td>subscription_canceled</td>
+      <td>lost</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-10-18 14:17:19</td>
+      <td>700.0</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-11-13 23:59:59</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dispute_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_dispute_id"></div><b>📃 Summary:</b> Unique identifier for the dispute<br><b>🦄 Unique:</b> This column is a unique identifier for each dispute. For this table, each row represents a distinct dispute, and dispute_id is unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dispute_transaction_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_dispute_transaction_id"></div><b>📃 Summary:</b> Transaction ID for the dispute<br><b>🦄 Unique:</b> This column represents the transaction ID for each dispute. It appears to be unique for each dispute in the given sample, but it's possible that multiple disputes could theoretically be related to the same transaction in some cases.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">charge_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_charge_id"></div><b>📃 Summary:</b> Unique identifier for the disputed charge<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency"></div><b>📃 Summary:</b> Currency of the disputed amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_billing_address</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_evidence_billing_address"></div><b>📃 Summary:</b> Billing address provided as evidence<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_customer_email</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_evidence_customer_email"></div><b>📃 Summary:</b> Customer email address provided as evidence<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_customer_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_evidence_customer_name"></div><b>📃 Summary:</b> Customer name provided as evidence<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_purchase_ip</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_evidence_purchase_ip"></div><b>📃 Summary:</b> Customer's IP address at purchase as evidence<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">has_evidence</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_has_evidence"></div><b>📃 Summary:</b> Indicates if evidence has been submitted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_past_due</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_evidence_past_due"></div><b>📃 Summary:</b> Indicates if evidence submission is past due<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_submission_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_evidence_submission_count"></div><b>📃 Summary:</b> Number of evidence submissions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_receipt</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_evidence_receipt"></div><b>📃 Summary:</b> Receipt provided as evidence<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_refundable</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_refundable"></div><b>📃 Summary:</b> Indicates if the charge can be refunded<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_live</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_live"></div><b>📃 Summary:</b> Indicates if the dispute is in live mode<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dispute_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='subscription_canceled'>subscription_canceled</option><option value='general'>general</option><option value='product_unacceptable'>product_unacceptable</option><option value='fraudulent_charge'>fraudulent_charge</option><option value='duplicate_charge'>duplicate_charge</option><option value='product_not_received'>product_not_received</option><option value='incorrect_amount'>incorrect_amount</option><option value='unauthorized_charge'>unauthorized_charge</option><option value='service_unsatisfactory'>service_unsatisfactory</option><option value='refund_not_processed'>refund_not_processed</option><option value='subscription_unwanted'>subscription_unwanted</option><option value='quality_issue'>quality_issue</option><option value='shipping_issue'>shipping_issue</option></select></span><br><br><div id="bar_viz_dispute_reason"></div><b>📃 Summary:</b> Reason for the dispute<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dispute_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='lost'>lost</option><option value='won'>won</option><option value='pending'>pending</option><option value='settled'>settled</option><option value='withdrawn'>withdrawn</option></select></span><br><br><div id="bar_viz_dispute_status"></div><b>📃 Summary:</b> Current status of the dispute<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">additional_data</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_additional_data"></div><b>📃 Summary:</b> Additional data related to the dispute<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">connected_account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_connected_account_id"></div><b>📃 Summary:</b> ID of the connected account<br><b>❓ Missing:</b> Not applicable for disputes not involving connected accounts<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dispute_created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_dispute_created_at"></div><b>📃 Summary:</b> Date and time when the dispute was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">disputed_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_disputed_amount"></div><b>📃 Summary:</b> Disputed charge amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_access_log</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_access_log"></div><b>📃 Summary:</b> Access activity log provided as evidence<br><b>❓ Missing:</b> Not applicable if no evidence access occurred<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_cancellation_disclosure</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_cancellation_disclosure"></div><b>📃 Summary:</b> Disclosure of cancellation policy as evidence<br><b>❓ Missing:</b> Not applicable for disputes not related to cancellations<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_cancellation_policy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_cancellation_policy"></div><b>📃 Summary:</b> Cancellation policy provided as evidence<br><b>❓ Missing:</b> Not applicable for disputes not related to cancellations<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_cancellation_rebuttal</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_cancellation_rebuttal"></div><b>📃 Summary:</b> Rebuttal to cancellation claim as evidence<br><b>❓ Missing:</b> Not applicable for disputes not related to cancellations<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_carrier</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_carrier"></div><b>📃 Summary:</b> Shipping carrier used for the order<br><b>❓ Missing:</b> Not applicable for disputes not involving shipping<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_customer_signature</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_customer_signature"></div><b>📃 Summary:</b> Customer signature provided as evidence<br><b>❓ Missing:</b> Not applicable if customer signature wasn't required<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_due_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_evidence_due_date"></div><b>📃 Summary:</b> Due date for submitting evidence<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_duplicate_charge_docs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_duplicate_charge_docs"></div><b>📃 Summary:</b> Documentation for duplicate charge claim<br><b>❓ Missing:</b> Not applicable for disputes not about duplicate charges<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_duplicate_charge_explanation</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_duplicate_charge_explanation"></div><b>📃 Summary:</b> Explanation for duplicate charge claim<br><b>❓ Missing:</b> Not applicable for disputes not about duplicate charges<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_duplicate_charge_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_duplicate_charge_id"></div><b>📃 Summary:</b> ID of the duplicate charge<br><b>❓ Missing:</b> Not applicable for disputes not about duplicate charges<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_ship_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_ship_date"></div><b>📃 Summary:</b> Date the order was shipped<br><b>❓ Missing:</b> Not applicable for disputes not involving shipping<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_ship_docs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_ship_docs"></div><b>📃 Summary:</b> Documentation related to shipping<br><b>❓ Missing:</b> Not applicable for disputes not involving shipping<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">evidence_tracking</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_evidence_tracking"></div><b>📃 Summary:</b> Tracking number for the shipped order<br><b>❓ Missing:</b> Not applicable for disputes not involving shipping<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about dispute data for charges. It includes details like dispute ID, amount, charge ID, currency, and dispute status. Evidence fields store information provided for the dispute. Metadata contains additional references. Key fields are reason for dispute, status (won/lost), and whether the charge is refundable. The table tracks dispute lifecycles from creation to resolution.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>27</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the dispute</td>
+      <td>dispute_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>amount</td>
+      <td>Disputed charge amount</td>
+      <td>disputed_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>balance_transaction</td>
+      <td>Transaction ID for the dispute</td>
+      <td>dispute_transaction_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>charge_id</td>
+      <td>Unique identifier for the disputed charge</td>
+      <td>charge_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>connected_account_id</td>
+      <td>ID of the connected account</td>
+      <td>connected_account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>created</td>
+      <td>Date and time when the dispute was created</td>
+      <td>dispute_created_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>currency</td>
+      <td>Currency of the disputed amount</td>
+      <td>currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>evidence_access_activity_log</td>
+      <td>Access activity log provided as evidence</td>
+      <td>evidence_access_log</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>evidence_billing_address</td>
+      <td>Billing address provided as evidence</td>
+      <td>evidence_billing_address</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>evidence_cancellation_policy</td>
+      <td>Cancellation policy provided as evidence</td>
+      <td>evidence_cancellation_policy</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>evidence_cancellation_policy_disclosure</td>
+      <td>Disclosure of cancellation policy as evidence</td>
+      <td>evidence_cancellation_disclosure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>evidence_cancellation_rebuttal</td>
+      <td>Rebuttal to cancellation claim as evidence</td>
+      <td>evidence_cancellation_rebuttal</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>evidence_customer_communication</td>
+      <td>Customer communication provided as evidence</td>
+      <td>evidence_customer_communication</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>evidence_customer_email_address</td>
+      <td>Customer email address provided as evidence</td>
+      <td>evidence_customer_email</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>evidence_customer_name</td>
+      <td>Customer name provided as evidence</td>
+      <td>evidence_customer_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>evidence_customer_purchase_ip</td>
+      <td>Customer's IP address at purchase as evidence</td>
+      <td>evidence_purchase_ip</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>evidence_customer_signature</td>
+      <td>Customer signature provided as evidence</td>
+      <td>evidence_customer_signature</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>evidence_details_due_by</td>
+      <td>Due date for submitting evidence</td>
+      <td>evidence_due_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>evidence_details_has_evidence</td>
+      <td>Indicates if evidence has been submitted</td>
+      <td>has_evidence</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>evidence_details_past_due</td>
+      <td>Indicates if evidence submission is past due</td>
+      <td>evidence_past_due</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>evidence_details_submission_count</td>
+      <td>Number of evidence submissions</td>
+      <td>evidence_submission_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>evidence_duplicate_charge_documentation</td>
+      <td>Documentation for duplicate charge claim</td>
+      <td>evidence_duplicate_charge_docs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>evidence_duplicate_charge_explanation</td>
+      <td>Explanation for duplicate charge claim</td>
+      <td>evidence_duplicate_charge_explanation</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>evidence_duplicate_charge_id</td>
+      <td>ID of the duplicate charge</td>
+      <td>evidence_duplicate_charge_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>evidence_product_description</td>
+      <td>Product description provided as evidence</td>
+      <td>evidence_product_description</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>evidence_receipt</td>
+      <td>Receipt provided as evidence</td>
+      <td>evidence_receipt</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>evidence_refund_policy</td>
+      <td>Refund policy provided as evidence</td>
+      <td>evidence_refund_policy</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>evidence_refund_policy_disclosure</td>
+      <td>Disclosure of refund policy as evidence</td>
+      <td>evidence_refund_disclosure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>evidence_refund_refusal_explanation</td>
+      <td>Explanation for refund refusal as evidence</td>
+      <td>evidence_refund_refusal_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>evidence_service_date</td>
+      <td>Date of service provided as evidence</td>
+      <td>evidence_service_date</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>evidence_service_documentation</td>
+      <td>Service documentation provided as evidence</td>
+      <td>evidence_service_documentation</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>evidence_shipping_address</td>
+      <td>Shipping address provided as evidence</td>
+      <td>evidence_address</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>evidence_shipping_carrier</td>
+      <td>Shipping carrier used for the order</td>
+      <td>evidence_carrier</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>evidence_shipping_date</td>
+      <td>Date the order was shipped</td>
+      <td>evidence_ship_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>evidence_shipping_documentation</td>
+      <td>Documentation related to shipping</td>
+      <td>evidence_ship_docs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>evidence_shipping_tracking_number</td>
+      <td>Tracking number for the shipped order</td>
+      <td>evidence_tracking</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>evidence_uncategorized_file</td>
+      <td>Uncategorized file submitted as evidence</td>
+      <td>evidence_misc_file</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>evidence_uncategorized_text</td>
+      <td>Uncategorized text submitted as evidence</td>
+      <td>evidence_misc_text</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>is_charge_refundable</td>
+      <td>Indicates if the charge can be refunded</td>
+      <td>is_refundable</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>livemode</td>
+      <td>Indicates if the dispute is in live mode</td>
+      <td>is_live</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>metadata</td>
+      <td>Additional data related to the dispute</td>
+      <td>additional_data</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>reason</td>
+      <td>Reason for the dispute</td>
+      <td>dispute_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>status</td>
+      <td>Current status of the dispute</td>
+      <td>dispute_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>evidence_purchase_ip</b>: 68.1.21.555 is unusual because it's not a valid IPv4 address format.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'68.1.21.555'</td>
+      <td>'68.1.21.255'</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>27</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>additional_data</td>
+      <td>CAST(TRIM("additional_data", '"') AS JSON)</td>
+      <td>To transform the 'additional_data' column from VARCHAR to JSON, we need to use a simple CAST function. In DuckDB, we can directly cast a string containing valid JSON to a JSON data type. The CAST function will attempt to parse the string as JSON and return it as a JSON object. This is straightforward and doesn't require any complex parsing or manipulation.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>connected_account_id</td>
+      <td>CAST("connected_account_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'connected_account_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>dispute_created_at</td>
+      <td>CAST("dispute_created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'dispute_created_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date-time format in the given values is already in a standard format that can be directly interpreted as a timestamp (YYYY-MM-DD HH:MM:SS). Therefore, we don't need to use the strptime function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>disputed_amount</td>
+      <td>CAST("disputed_amount" AS DECIMAL)</td>
+      <td>To transform the 'disputed_amount' column from INT to DECIMAL, we need to use a CAST function. In DuckDB, the DECIMAL data type without specified precision and scale will default to DECIMAL(18,3), which is sufficient for the given values. A simple CAST clause will convert the integer values to their exact decimal representations without any loss of precision.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>evidence_access_log</td>
+      <td>CAST("evidence_access_log" AS VARCHAR)</td>
+      <td>To transform the data type of the 'evidence_access_log' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>evidence_address</td>
+      <td>CAST("evidence_address" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_address' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type to allow for string input in the future.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>evidence_cancellation_disclosure</td>
+      <td>CAST("evidence_cancellation_disclosure" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_cancellation_disclosure' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Since DuckDB uses standard SQL casting syntax, we can use the CAST function directly.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>evidence_cancellation_policy</td>
+      <td>CAST("evidence_cancellation_policy" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_cancellation_policy' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>evidence_cancellation_rebuttal</td>
+      <td>CAST("evidence_cancellation_rebuttal" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_cancellation_rebuttal' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>evidence_carrier</td>
+      <td>CAST("evidence_carrier" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_carrier' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (as indicated by the empty list []), this transformation won't change any actual data but will modify the column's data type.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>evidence_customer_communication</td>
+      <td>CAST("evidence_customer_communication" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_customer_communication' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional formatting or manipulation since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>evidence_customer_signature</td>
+      <td>CAST("evidence_customer_signature" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_customer_signature' from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since DuckDB syntax is similar to standard SQL for this operation, we can use the CAST function directly.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>evidence_due_date</td>
+      <td>CAST("evidence_due_date" AS TIMESTAMP)</td>
+      <td>To transform the 'evidence_due_date' column from VARCHAR to TIMESTAMP, we can use a simple CAST function in DuckDB. The given date-time strings are already in a format that can be directly cast to TIMESTAMP without needing to use strptime(). The format of the date-time strings ('YYYY-MM-DD HH:MM:SS.FFFFFF UTC') is a standard format that DuckDB can automatically recognize and convert.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>evidence_duplicate_charge_docs</td>
+      <td>CAST("evidence_duplicate_charge_docs" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_duplicate_charge_docs' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This operation will convert the numeric values to their string representations. Even though the column currently has no distinct values (as indicated by the empty list []), the CAST operation will still work and prepare the column for potential string data in the future.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>evidence_duplicate_charge_explanation</td>
+      <td>CAST("evidence_duplicate_charge_explanation" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_duplicate_charge_explanation' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column currently has no distinct values (it's empty), this transformation won't affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>evidence_duplicate_charge_id</td>
+      <td>CAST("evidence_duplicate_charge_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_duplicate_charge_id' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the current distinct values are empty, this cast will work for any future decimal values that might be added to the column.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>evidence_misc_file</td>
+      <td>CAST("evidence_misc_file" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_misc_file' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (it's empty), this transformation should not affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>evidence_misc_text</td>
+      <td>CAST("evidence_misc_text" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_misc_text' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>evidence_product_description</td>
+      <td>CAST("evidence_product_description" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_product_description' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column is currently empty (as indicated by the empty list of distinct values), this transformation will effectively change the column type without altering any existing data.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>evidence_refund_disclosure</td>
+      <td>CAST("evidence_refund_disclosure" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_refund_disclosure' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>evidence_refund_policy</td>
+      <td>CAST("evidence_refund_policy" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_refund_policy' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>evidence_refund_refusal_reason</td>
+      <td>CAST("evidence_refund_refusal_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_refund_refusal_reason' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST function to explicitly convert the column to VARCHAR data type.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>evidence_service_date</td>
+      <td>CAST("evidence_service_date" AS VARCHAR)</td>
+      <td>To transform the data type of the column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column 'evidence_service_date' is currently a DECIMAL and we want to convert it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>evidence_service_documentation</td>
+      <td>CAST("evidence_service_documentation" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_service_documentation' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward in DuckDB, and it doesn't require any additional parameters for this particular conversion.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>evidence_ship_date</td>
+      <td>CAST("evidence_ship_date" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_ship_date' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>evidence_ship_docs</td>
+      <td>CAST("evidence_ship_docs" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'evidence_ship_docs' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>evidence_tracking</td>
+      <td>CAST("evidence_tracking" AS VARCHAR)</td>
+      <td>To transform the data type of the 'evidence_tracking' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>29</b> columns have missing values<br>
+                    ✔️ <b>13</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>additional_data</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>connected_account_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not involving connected accounts</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>evidence_access_log</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if no evidence access occurred</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>evidence_address</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>evidence_billing_address</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>evidence_cancellation_disclosure</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not related to cancellations</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>evidence_cancellation_policy</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not related to cancellations</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>evidence_cancellation_rebuttal</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not related to cancellations</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>evidence_carrier</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not involving shipping</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>evidence_customer_communication</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>evidence_customer_email</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>evidence_customer_name</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>evidence_customer_signature</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if customer signature wasn't required</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>evidence_duplicate_charge_docs</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not about duplicate charges</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>evidence_duplicate_charge_explanation</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not about duplicate charges</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>evidence_duplicate_charge_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not about duplicate charges</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>evidence_misc_file</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>evidence_misc_text</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>evidence_product_description</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>evidence_purchase_ip</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>evidence_receipt</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>evidence_refund_disclosure</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>evidence_refund_policy</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>evidence_refund_refusal_reason</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>evidence_service_date</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>evidence_service_documentation</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>evidence_ship_date</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not involving shipping</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>evidence_ship_docs</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not involving shipping</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>evidence_tracking</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for disputes not involving shipping</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>additional_data</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>evidence_address</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>evidence_billing_address</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>evidence_customer_communication</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>evidence_customer_email</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>evidence_customer_name</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>evidence_misc_file</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>evidence_misc_text</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>evidence_product_description</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>evidence_purchase_ip</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>evidence_receipt</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>evidence_refund_disclosure</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>evidence_refund_policy</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>evidence_refund_refusal_reason</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>evidence_service_date</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>evidence_service_documentation</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'du_0Lvivfig6peN...', 'value': 10.0}, {'label': 'du_0KHowkig6peN...', 'value': 10.0}, {'label': 'du_0M9SJTig6peN...', 'value': 10.0}, {'label': 'du_0LuGd7ig6peN...', 'value': 10.0}, {'label': 'du_0LiAl6ig6peN...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_dispute_id", data);
+data = [{'label': 'txn_0LviwVig6pe...', 'value': 10.0}, {'label': 'txn_0LuGZyig6pe...', 'value': 10.0}, {'label': 'txn_0Lumheig6pe...', 'value': 10.0}, {'label': 'txn_0LuGcrig6pe...', 'value': 10.0}, {'label': 'txn_0MmTt4ig6pe...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_dispute_transaction_id", data);
+data = [{'label': 'ch_2Lqdeuig6peN...', 'value': 10.0}, {'label': 'ch_2LVoJuig6peN...', 'value': 10.0}, {'label': 'ch_2MZdKRig6peN...', 'value': 10.0}, {'label': 'ch_2LqbkJig6peN...', 'value': 10.0}, {'label': 'ch_2M2d6mig6peN...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_charge_id", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency", data);
+data = [{'label': '1600 Pennsylvan...', 'value': 100.0}];
+    drawBarChart("bar_viz_evidence_billing_address", data);
+data = [{'label': 'hello@braveneww...', 'value': 100.0}];
+    drawBarChart("bar_viz_evidence_customer_email", data);
+data = [{'label': 'Aldous Huxley', 'value': 100.0}];
+    drawBarChart("bar_viz_evidence_customer_name", data);
+data = [{'label': '68.1.21.555', 'value': 100.0}];
+    drawBarChart("bar_viz_evidence_purchase_ip", data);
+data = [{'label': 'False', 'value': 90.0}, {'label': 'True', 'value': 10.0}];
+    drawBarChart("bar_viz_has_evidence", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_evidence_past_due", data);
+data = [{'x': 0.025, 'y': 7}, {'x': 0.07500000000000001, 'y': 0}, {'x': 0.125, 'y': 0}, {'x': 0.17500000000000002, 'y': 0}, {'x': 0.225, 'y': 0}, {'x': 0.275, 'y': 0}, {'x': 0.32500000000000007, 'y': 0}, {'x': 0.375, 'y': 0}, {'x': 0.42500000000000004, 'y': 0}, {'x': 0.475, 'y': 0}];
+    binWidth = 0.05;
+    drawHistogram("hist_viz_evidence_submission_count", data, binWidth);
+data = [{'label': 'file_0KHowoig6p...', 'value': 100.0}];
+    drawBarChart("bar_viz_evidence_receipt", data);
+data = [{'label': 'False', 'value': 70.0}, {'label': 'True', 'value': 30.0}];
+    drawBarChart("bar_viz_is_refundable", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_live", data);
+data = [{'label': 'subscription_ca...', 'value': 60.0}, {'label': 'general', 'value': 30.0}, {'label': 'product_unaccep...', 'value': 10.0}];
+    drawBarChart("bar_viz_dispute_reason", data);
+data = [{'label': 'lost', 'value': 70.0}, {'label': 'won', 'value': 30.0}];
+    drawBarChart("bar_viz_dispute_status", data);
+data = [{'label': '{"netsuite_cred...', 'value': 100.0}];
+    drawBarChart("bar_viz_additional_data", data);
+data = [];
+    drawBarChart("bar_viz_connected_account_id", data);
+data = [{'label': '2022-10-22 14:4...', 'value': 10.0}, {'label': '2022-09-15 05:3...', 'value': 10.0}, {'label': '2022-01-14 12:3...', 'value': 10.0}, {'label': '2022-10-31 10:3...', 'value': 10.0}, {'label': '2022-11-29 12:0...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_dispute_created_at", data);
+data = [{'x': 11495.8, 'y': 8}, {'x': 33087.399999999994, 'y': 0}, {'x': 54679.0, 'y': 0}, {'x': 76270.59999999999, 'y': 0}, {'x': 97862.2, 'y': 0}, {'x': 119453.79999999999, 'y': 0}, {'x': 141045.4, 'y': 0}, {'x': 162637.0, 'y': 0}, {'x': 184228.59999999998, 'y': 0}, {'x': 205820.2, 'y': 0}];
+    binWidth = 21591.6;
+    drawHistogram("hist_viz_disputed_amount", data, binWidth);
+data = [];
+    drawBarChart("bar_viz_evidence_access_log", data);
+data = [];
+    drawBarChart("bar_viz_evidence_cancellation_disclosure", data);
+data = [];
+    drawBarChart("bar_viz_evidence_cancellation_policy", data);
+data = [];
+    drawBarChart("bar_viz_evidence_cancellation_rebuttal", data);
+data = [];
+    drawBarChart("bar_viz_evidence_carrier", data);
+data = [];
+    drawBarChart("bar_viz_evidence_customer_signature", data);
+data = [{'label': '2022-11-13 23:5...', 'value': 30.0}, {'label': '2022-12-25 23:5...', 'value': 20.0}, {'label': '2022-11-12 23:5...', 'value': 10.0}, {'label': '2022-02-09 23:5...', 'value': 10.0}, {'label': '2023-04-26 23:5...', 'value': 10.0}, {'label': 'Other values', 'value': 20.0}];
+    drawBarChart("bar_viz_evidence_due_date", data);
+data = [];
+    drawBarChart("bar_viz_evidence_duplicate_charge_docs", data);
+data = [];
+    drawBarChart("bar_viz_evidence_duplicate_charge_explanation", data);
+data = [];
+    drawBarChart("bar_viz_evidence_duplicate_charge_id", data);
+data = [];
+    drawBarChart("bar_viz_evidence_ship_date", data);
+data = [];
+    drawBarChart("bar_viz_evidence_ship_docs", data);
+data = [];
+    drawBarChart("bar_viz_evidence_tracking", data);
+
+
+</script>
+</body>
+</html>

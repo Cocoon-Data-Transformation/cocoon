@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>project_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>notes</th>
+      <th>color</th>
+      <th>archived</th>
+      <th>_fivetran_deleted</th>
+      <th>name</th>
+      <th>created_at</th>
+      <th>public_</th>
+      <th>modified_at</th>
+      <th>owner_id</th>
+      <th>id</th>
+      <th>team_id</th>
+      <th>workspace_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>light-purple</td>
+      <td>False</td>
+      <td>False</td>
+      <td>75f4eda5755b226c07bdd5ef96624733</td>
+      <td>2019-10-02 16:02:54</td>
+      <td>NaN</td>
+      <td>2020-02-27 17:26:31</td>
+      <td>NaN</td>
+      <td>1142815262788834</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>dark-green</td>
+      <td>False</td>
+      <td>False</td>
+      <td>3a704e169290367034b7a33b86a6c894</td>
+      <td>2019-09-18 17:03:10</td>
+      <td>NaN</td>
+      <td>2020-02-27 17:25:56</td>
+      <td>NaN</td>
+      <td>339036947888917</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>f2872ac60b5baf3040b01ae77f699889</td>
+      <td>light-blue</td>
+      <td>False</td>
+      <td>False</td>
+      <td>35a0789351b1e8bea1efce4b7e1b6d58</td>
+      <td>2019-08-14 4:26:19</td>
+      <td>NaN</td>
+      <td>2020-02-27 17:26:24</td>
+      <td>NaN</td>
+      <td>1135568818569273</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>None</td>
+      <td>light-purple</td>
+      <td>False</td>
+      <td>False</td>
+      <td>5c7fac1b9516ef9ff51cbc30a6292a80</td>
+      <td>2019-09-13 18:17:47</td>
+      <td>NaN</td>
+      <td>2019-09-21 22:37:42</td>
+      <td>2.104505e+12</td>
+      <td>339036947888916</td>
+      <td>1130944552712711</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>None</td>
+      <td>light-purple</td>
+      <td>False</td>
+      <td>False</td>
+      <td>d3d4421c105c43597ec6bc36c21c7a05</td>
+      <td>2019-05-16 16:15:08</td>
+      <td>NaN</td>
+      <td>2019-05-16 16:15:10</td>
+      <td>2.349446e+12</td>
+      <td>1123411555652103</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>ea50dd49e3f04fc0b08874465c0568ed</td>
+      <td>2019-01-17 18:17:50</td>
+      <td>NaN</td>
+      <td>2019-09-21 22:27:55</td>
+      <td>2.349446e+12</td>
+      <td>994480050688368</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>44426ab2d0738bb56fec785a43de6e62</td>
+      <td>2017-05-10 18:58:18</td>
+      <td>NaN</td>
+      <td>2019-09-21 22:27:28</td>
+      <td>2.349446e+12</td>
+      <td>339036947888918</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>72d7ec4b0127c0b11876d57b054b1201</td>
+      <td>2017-05-10 17:07:21</td>
+      <td>NaN</td>
+      <td>2019-09-21 22:27:08</td>
+      <td>2.349446e+12</td>
+      <td>339014487764325</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>780efbde414f524f93e38332db3cc32d</td>
+      <td>2017-05-10 18:30:46</td>
+      <td>NaN</td>
+      <td>2019-09-21 22:27:17</td>
+      <td>2.349446e+12</td>
+      <td>339036947888913</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>f32c3edaacea72c0ddb30ecf0135c4de</td>
+      <td>2017-05-10 22:25:19</td>
+      <td>NaN</td>
+      <td>2019-09-21 22:27:21</td>
+      <td>2.349446e+12</td>
+      <td>339282757803825</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>f5e81e2cb4be3ae9d39fffc68d8af82c</td>
+      <td>2017-05-10 16:44:24</td>
+      <td>NaN</td>
+      <td>2019-09-21 22:27:15</td>
+      <td>2.349446e+12</td>
+      <td>338932209783787</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>None</td>
+      <td>light-blue</td>
+      <td>False</td>
+      <td>False</td>
+      <td>df021e8d790008ba29b535b898402cd0</td>
+      <td>2019-04-18 14:25:19</td>
+      <td>NaN</td>
+      <td>2019-04-18 14:25:21</td>
+      <td>2.349446e+12</td>
+      <td>1119233841877068</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>678884011246bebab096ff8b65f1b541</td>
+      <td>2019-01-28 6:14:18</td>
+      <td>NaN</td>
+      <td>2019-09-21 22:27:55</td>
+      <td>2.349446e+12</td>
+      <td>1103976536247089</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+      <td>dark-pink</td>
+      <td>False</td>
+      <td>False</td>
+      <td>d704501c4aadd255aa9245d2c926529d</td>
+      <td>2019-07-31 20:35:29</td>
+      <td>NaN</td>
+      <td>2020-02-27 17:26:23</td>
+      <td>3.389842e+14</td>
+      <td>1133789517942526</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>None</td>
+      <td>light-warm-gray</td>
+      <td>False</td>
+      <td>False</td>
+      <td>d704501c4aadd255aa9245d2c926529d</td>
+      <td>2019-06-19 5:04:03</td>
+      <td>NaN</td>
+      <td>2020-02-27 17:26:22</td>
+      <td>3.389842e+14</td>
+      <td>1127687633259843</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ccf334d79abdfd11da2d0cba23fb1108</td>
+      <td>light-blue</td>
+      <td>False</td>
+      <td>False</td>
+      <td>d704501c4aadd255aa9245d2c926529d</td>
+      <td>2019-09-04 0:06:05</td>
+      <td>NaN</td>
+      <td>2020-02-27 17:26:29</td>
+      <td>3.389842e+14</td>
+      <td>1138337102495418</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>project_notes</th>
+      <th>project_color</th>
+      <th>is_archived</th>
+      <th>is_deleted</th>
+      <th>project_name</th>
+      <th>creation_date</th>
+      <th>is_public</th>
+      <th>last_modified_date</th>
+      <th>owner_id</th>
+      <th>project_id</th>
+      <th>team_id</th>
+      <th>workspace_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>None</td>
+      <td>light-purple</td>
+      <td>False</td>
+      <td>False</td>
+      <td>75f4eda5755b226c07bdd5ef96624733</td>
+      <td>2019-10-02 16:02:54</td>
+      <td>None</td>
+      <td>2020-02-27 17:26:31</td>
+      <td>None</td>
+      <td>1142815262788834</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>None</td>
+      <td>dark-green</td>
+      <td>False</td>
+      <td>False</td>
+      <td>3a704e169290367034b7a33b86a6c894</td>
+      <td>2019-09-18 17:03:10</td>
+      <td>None</td>
+      <td>2020-02-27 17:25:56</td>
+      <td>None</td>
+      <td>339036947888917</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>f2872ac60b5baf3040b01ae77f699889</td>
+      <td>light-blue</td>
+      <td>False</td>
+      <td>False</td>
+      <td>35a0789351b1e8bea1efce4b7e1b6d58</td>
+      <td>2019-08-14 04:26:19</td>
+      <td>None</td>
+      <td>2020-02-27 17:26:24</td>
+      <td>None</td>
+      <td>1135568818569273</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>None</td>
+      <td>light-purple</td>
+      <td>False</td>
+      <td>False</td>
+      <td>5c7fac1b9516ef9ff51cbc30a6292a80</td>
+      <td>2019-09-13 18:17:47</td>
+      <td>None</td>
+      <td>2019-09-21 22:37:42</td>
+      <td>2104505001945.0</td>
+      <td>339036947888916</td>
+      <td>1130944552712711</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>None</td>
+      <td>light-purple</td>
+      <td>False</td>
+      <td>False</td>
+      <td>d3d4421c105c43597ec6bc36c21c7a05</td>
+      <td>2019-05-16 16:15:08</td>
+      <td>None</td>
+      <td>2019-05-16 16:15:10</td>
+      <td>2349446254454.0</td>
+      <td>1123411555652103</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>ea50dd49e3f04fc0b08874465c0568ed</td>
+      <td>2019-01-17 18:17:50</td>
+      <td>None</td>
+      <td>2019-09-21 22:27:55</td>
+      <td>2349446254454.0</td>
+      <td>994480050688368</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>44426ab2d0738bb56fec785a43de6e62</td>
+      <td>2017-05-10 18:58:18</td>
+      <td>None</td>
+      <td>2019-09-21 22:27:28</td>
+      <td>2349446254454.0</td>
+      <td>339036947888918</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>72d7ec4b0127c0b11876d57b054b1201</td>
+      <td>2017-05-10 17:07:21</td>
+      <td>None</td>
+      <td>2019-09-21 22:27:08</td>
+      <td>2349446254454.0</td>
+      <td>339014487764325</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>780efbde414f524f93e38332db3cc32d</td>
+      <td>2017-05-10 18:30:46</td>
+      <td>None</td>
+      <td>2019-09-21 22:27:17</td>
+      <td>2349446254454.0</td>
+      <td>339036947888913</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>f32c3edaacea72c0ddb30ecf0135c4de</td>
+      <td>2017-05-10 22:25:19</td>
+      <td>None</td>
+      <td>2019-09-21 22:27:21</td>
+      <td>2349446254454.0</td>
+      <td>339282757803825</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>f5e81e2cb4be3ae9d39fffc68d8af82c</td>
+      <td>2017-05-10 16:44:24</td>
+      <td>None</td>
+      <td>2019-09-21 22:27:15</td>
+      <td>2349446254454.0</td>
+      <td>338932209783787</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>None</td>
+      <td>light-blue</td>
+      <td>False</td>
+      <td>False</td>
+      <td>df021e8d790008ba29b535b898402cd0</td>
+      <td>2019-04-18 14:25:19</td>
+      <td>None</td>
+      <td>2019-04-18 14:25:21</td>
+      <td>2349446254454.0</td>
+      <td>1119233841877068</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>None</td>
+      <td>None</td>
+      <td>False</td>
+      <td>False</td>
+      <td>678884011246bebab096ff8b65f1b541</td>
+      <td>2019-01-28 06:14:18</td>
+      <td>None</td>
+      <td>2019-09-21 22:27:55</td>
+      <td>2349446254454.0</td>
+      <td>1103976536247089</td>
+      <td>2527546068509</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>None</td>
+      <td>dark-pink</td>
+      <td>False</td>
+      <td>False</td>
+      <td>d704501c4aadd255aa9245d2c926529d</td>
+      <td>2019-07-31 20:35:29</td>
+      <td>None</td>
+      <td>2020-02-27 17:26:23</td>
+      <td>338984235816349.0</td>
+      <td>1133789517942526</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>None</td>
+      <td>light-warm-gray</td>
+      <td>False</td>
+      <td>False</td>
+      <td>d704501c4aadd255aa9245d2c926529d</td>
+      <td>2019-06-19 05:04:03</td>
+      <td>None</td>
+      <td>2020-02-27 17:26:22</td>
+      <td>338984235816349.0</td>
+      <td>1127687633259843</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ccf334d79abdfd11da2d0cba23fb1108</td>
+      <td>light-blue</td>
+      <td>False</td>
+      <td>False</td>
+      <td>d704501c4aadd255aa9245d2c926529d</td>
+      <td>2019-09-04 00:06:05</td>
+      <td>None</td>
+      <td>2020-02-27 17:26:29</td>
+      <td>338984235816349.0</td>
+      <td>1138337102495418</td>
+      <td>1109585467162456</td>
+      <td>2104505001950</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">project_notes</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_project_notes"></div><b>📃 Summary:</b> Additional notes or comments about the project<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">project_color</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='light-blue'>light-blue</option><option value='light-purple'>light-purple</option><option value='dark-green'>dark-green</option><option value='dark-pink'>dark-pink</option><option value='light-warm-gray'>light-warm-gray</option><option value='dark-blue'>dark-blue</option><option value='dark-purple'>dark-purple</option><option value='light-green'>light-green</option><option value='light-pink'>light-pink</option><option value='dark-warm-gray'>dark-warm-gray</option><option value='light-red'>light-red</option><option value='dark-red'>dark-red</option><option value='light-orange'>light-orange</option><option value='dark-orange'>dark-orange</option><option value='light-yellow'>light-yellow</option><option value='dark-yellow'>dark-yellow</option><option value='light-gray'>light-gray</option><option value='dark-gray'>dark-gray</option><option value='light-cyan'>light-cyan</option><option value='dark-cyan'>dark-cyan</option></select></span><br><br><div id="bar_viz_project_color"></div><b>📃 Summary:</b> Color assigned to the project for visual identification<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_archived</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_archived"></div><b>📃 Summary:</b> Indicates if the project is archived<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record has been deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">project_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_project_name"></div><b>📃 Summary:</b> Name or title of the project<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_date"></div><b>📃 Summary:</b> Timestamp of project creation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_public</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_is_public"></div><b>📃 Summary:</b> Indicates if the project is publicly visible<br><b>❓ Missing:</b> Boolean flag; absence likely means project is not public.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_date"></div><b>📃 Summary:</b> Timestamp of last modification<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">owner_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_owner_id"></div><b>📃 Summary:</b> Identifier of the project owner<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">project_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_project_id"></div><b>📃 Summary:</b> Unique identifier for the project<br><b>🦄 Unique:</b> This column contains a unique identifier for each project. For this table, each row represents a unique project. project_id is designed to be unique across all projects, ensuring that no two projects have the same ID.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">team_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_team_id"></div><b>📃 Summary:</b> Identifier of the team associated with the project<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">workspace_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_workspace_id"></div><b>📃 Summary:</b> Identifier of the workspace containing the project<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about project data. It contains details such as project ID, name, creation date, modification date, color, status, due date, notes, owner ID, team ID, and workspace ID. Each row represents a unique project with its associated attributes. The table tracks project information including metadata like archival status and public visibility.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>11</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the project</td>
+      <td>project_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record has been deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>archived</td>
+      <td>Indicates if the project is archived</td>
+      <td>is_archived</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>color</td>
+      <td>Color assigned to the project for visual identification</td>
+      <td>project_color</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>created_at</td>
+      <td>Timestamp of project creation</td>
+      <td>creation_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>current_status</td>
+      <td>Current status of the project</td>
+      <td>project_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>due_date</td>
+      <td>Deadline or due date for the project</td>
+      <td>project_deadline</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>modified_at</td>
+      <td>Timestamp of last modification</td>
+      <td>last_modified_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>name</td>
+      <td>Name or title of the project</td>
+      <td>project_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>notes</td>
+      <td>Additional notes or comments about the project</td>
+      <td>project_notes</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>owner_id</td>
+      <td>Identifier of the project owner</td>
+      <td>owner_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>public_</td>
+      <td>Indicates if the project is publicly visible</td>
+      <td>is_public</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>team_id</td>
+      <td>Identifier of the team associated with the project</td>
+      <td>team_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>workspace_id</td>
+      <td>Identifier of the workspace containing the project</td>
+      <td>workspace_id</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>project_status</b>: The value '752e3db7344085cd1bdb19f63d241ca8' is unusual because it looks like an encoded or hashed value rather than a readable status.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'752e3db7344085cd1bdb19f63d241ca8'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🕵️‍♂️ 4. Disguised Missing Values</h2><br>
+                    🔍 <b>1</b> columns have disguised missing values<br>
+                    ✔️ <b>1</b> columns have been cleaned<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Disguised Missing Values</th>
+      <th>Impute to NULL?</th>
+      <th>Values to NULL (Sep By ,)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>project_notes</td>
+      <td>[d41d8cd98f00b204e9800998ecf8427e]</td>
+      <td>True</td>
+      <td>d41d8cd98f00b204e9800998ecf8427e</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 5. Data Type</h2><br>
+                    ✔️ <b>7</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>creation_date</td>
+      <td>CAST("creation_date" AS TIMESTAMP)</td>
+      <td>To transform the 'creation_date' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the given examples is already in a standard ISO 8601 format (YYYY-MM-DD HH:MM:SS), which is directly compatible with SQL TIMESTAMP type. Therefore, we don't need to use the strptime() function for parsing; a straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>is_public</td>
+      <td>CAST("is_public" AS VARCHAR)</td>
+      <td>To transform the data type of the 'is_public' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'is_public' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>last_modified_date</td>
+      <td>CAST("last_modified_date" AS TIMESTAMP)</td>
+      <td>To transform the 'last_modified_date' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date format in the provided values is already in a standard SQL timestamp format (YYYY-MM-DD HH:MM:SS), which DuckDB can automatically recognize and convert. Therefore, we don't need to use the strptime function for explicit parsing. A straightforward CAST to TIMESTAMP will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>owner_id</td>
+      <td>CAST("owner_id" AS VARCHAR)</td>
+      <td>To transform the 'owner_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value to its string representation. Since the values are large numbers with decimal points, we need to ensure the entire number, including any decimal places, is preserved in the string format.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>project_id</td>
+      <td>CAST("project_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'project_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>team_id</td>
+      <td>CAST("team_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'team_id' column from 'INT' to 'VARCHAR' in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting the integer values to their string representations. The CAST function in DuckDB follows the standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>workspace_id</td>
+      <td>CAST("workspace_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'workspace_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a variable-length character string type. The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 6. Missing Values</h2><br>
+                    🔍 <b>6</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>is_public</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Boolean flag; absence likely means project is not public.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>owner_id</td>
+      <td>18.75</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>project_color</td>
+      <td>43.75</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>project_deadline</td>
+      <td>93.75</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>project_notes</td>
+      <td>87.50</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>project_status</td>
+      <td>93.75</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>owner_id</td>
+      <td>18.75</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>project_color</td>
+      <td>43.75</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>project_deadline</td>
+      <td>93.75</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>project_notes</td>
+      <td>87.50</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>project_status</td>
+      <td>93.75</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'ccf334d79abdfd1...', 'value': 50.0}, {'label': 'f2872ac60b5baf3...', 'value': 50.0}];
+    drawBarChart("bar_viz_project_notes", data);
+data = [{'label': 'light-blue', 'value': 33.33333333333333}, {'label': 'light-purple', 'value': 33.33333333333333}, {'label': 'dark-pink', 'value': 11.11111111111111}, {'label': 'dark-green', 'value': 11.11111111111111}, {'label': 'light-warm-gray', 'value': 11.11111111111111}];
+    drawBarChart("bar_viz_project_color", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_archived", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': 'd704501c4aadd25...', 'value': 18.75}, {'label': '75f4eda5755b226...', 'value': 6.25}, {'label': '35a0789351b1e8b...', 'value': 6.25}, {'label': 'f5e81e2cb4be3ae...', 'value': 6.25}, {'label': '3a704e169290367...', 'value': 6.25}, {'label': 'Other values', 'value': 56.25}];
+    drawBarChart("bar_viz_project_name", data);
+data = [{'label': '2017-05-10 17:0...', 'value': 6.25}, {'label': '2017-05-10 18:3...', 'value': 6.25}, {'label': '2017-05-10 16:4...', 'value': 6.25}, {'label': '2019-07-31 20:3...', 'value': 6.25}, {'label': '2019-09-18 17:0...', 'value': 6.25}, {'label': 'Other values', 'value': 68.75}];
+    drawBarChart("bar_viz_creation_date", data);
+data = [];
+    drawBarChart("bar_viz_is_public", data);
+data = [{'label': '2019-09-21 22:2...', 'value': 12.5}, {'label': '2020-02-27 17:2...', 'value': 6.25}, {'label': '2020-02-27 17:2...', 'value': 6.25}, {'label': '2019-09-21 22:2...', 'value': 6.25}, {'label': '2019-09-21 22:2...', 'value': 6.25}, {'label': 'Other values', 'value': 62.5}];
+    drawBarChart("bar_viz_last_modified_date", data);
+data = [{'label': '2349446254454.0', 'value': 69.23076923076923}, {'label': '338984235816349...', 'value': 23.076923076923077}, {'label': '2104505001945.0', 'value': 7.6923076923076925}];
+    drawBarChart("bar_viz_owner_id", data);
+data = [{'label': '113556881856927...', 'value': 6.25}, {'label': '339036947888916', 'value': 6.25}, {'label': '339036947888918', 'value': 6.25}, {'label': '339014487764325', 'value': 6.25}, {'label': '339282757803825', 'value': 6.25}, {'label': 'Other values', 'value': 68.75}];
+    drawBarChart("bar_viz_project_id", data);
+data = [{'label': '2527546068509', 'value': 56.25}, {'label': '110958546716245...', 'value': 37.5}, {'label': '113094455271271...', 'value': 6.25}];
+    drawBarChart("bar_viz_team_id", data);
+data = [{'label': '2104505001950', 'value': 100.0}];
+    drawBarChart("bar_viz_workspace_id", data);
+
+
+</script>
+</body>
+</html>

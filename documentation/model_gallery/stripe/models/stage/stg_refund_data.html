@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>refund_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>amount</th>
+      <th>balance_transaction_id</th>
+      <th>charge_id</th>
+      <th>currency</th>
+      <th>reason</th>
+      <th>receipt_number</th>
+      <th>status</th>
+      <th>failure_balance_transaction_id</th>
+      <th>failure_reason</th>
+      <th>metadata</th>
+      <th>created</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>re_0IMJuLig6peNXzgDSLN6dNzl</td>
+      <td>675000</td>
+      <td>txn_0IMJuMig6peNXzgD8geSKVTA</td>
+      <td>ch_0IBft2ig6peNXzgDv3vdM6nM</td>
+      <td>usd</td>
+      <td>duplicate</td>
+      <td>5555-555</td>
+      <td>succeeded</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>2021-02-18 21:19:33</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>re_0INhCiig6peNXzgDWw7VVan8</td>
+      <td>13650</td>
+      <td>txn_0INhCiig6peNXzgDZSsC5kGs</td>
+      <td>ch_0IMD9sig6peNXzgDoUawu0L1</td>
+      <td>usd</td>
+      <td>requested_by_customer</td>
+      <td>5555-555</td>
+      <td>succeeded</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>2021-02-22 16:24:12</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>re_0IMKOqig6peNXzgDKcwfyQvJ</td>
+      <td>1541221</td>
+      <td>txn_0IMKOqig6peNXzgDwl0qbnLD</td>
+      <td>ch_0IMDADig6peNXzgDLUgpgKRp</td>
+      <td>usd</td>
+      <td>requested_by_customer</td>
+      <td>5555-555</td>
+      <td>succeeded</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>2021-02-18 21:51:04</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>re_0ISmXVig6peNXzgDtw7Hev23</td>
+      <td>161550</td>
+      <td>txn_0ISmXVig6peNXzgDO3k6vo6d</td>
+      <td>ch_0IMDKoig6peNXzgDec7KCChy</td>
+      <td>usd</td>
+      <td>requested_by_customer</td>
+      <td>5555-555</td>
+      <td>succeeded</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>2021-03-08 17:06:41</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>refund_id</th>
+      <th>refund_amount_cents</th>
+      <th>balance_transaction_id</th>
+      <th>charge_id</th>
+      <th>currency</th>
+      <th>refund_reason</th>
+      <th>receipt_number</th>
+      <th>refund_status</th>
+      <th>failure_balance_transaction_id</th>
+      <th>failure_reason</th>
+      <th>metadata</th>
+      <th>refund_created_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>re_0IMJuLig6peNXzgDSLN6dNzl</td>
+      <td>675000</td>
+      <td>txn_0IMJuMig6peNXzgD8geSKVTA</td>
+      <td>ch_0IBft2ig6peNXzgDv3vdM6nM</td>
+      <td>usd</td>
+      <td>duplicate</td>
+      <td>5555-555</td>
+      <td>succeeded</td>
+      <td>None</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>2021-02-18 21:19:33</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>re_0INhCiig6peNXzgDWw7VVan8</td>
+      <td>13650</td>
+      <td>txn_0INhCiig6peNXzgDZSsC5kGs</td>
+      <td>ch_0IMD9sig6peNXzgDoUawu0L1</td>
+      <td>usd</td>
+      <td>requested_by_customer</td>
+      <td>5555-555</td>
+      <td>succeeded</td>
+      <td>None</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>2021-02-22 16:24:12</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>re_0IMKOqig6peNXzgDKcwfyQvJ</td>
+      <td>1541221</td>
+      <td>txn_0IMKOqig6peNXzgDwl0qbnLD</td>
+      <td>ch_0IMDADig6peNXzgDLUgpgKRp</td>
+      <td>usd</td>
+      <td>requested_by_customer</td>
+      <td>5555-555</td>
+      <td>succeeded</td>
+      <td>None</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>2021-02-18 21:51:04</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>re_0ISmXVig6peNXzgDtw7Hev23</td>
+      <td>161550</td>
+      <td>txn_0ISmXVig6peNXzgDO3k6vo6d</td>
+      <td>ch_0IMDKoig6peNXzgDec7KCChy</td>
+      <td>usd</td>
+      <td>requested_by_customer</td>
+      <td>5555-555</td>
+      <td>succeeded</td>
+      <td>None</td>
+      <td>None</td>
+      <td>{"external_id":"80755622-45b3-40a6-9544-25af39e0e50c"}</td>
+      <td>2021-03-08 17:06:41</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">refund_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_refund_id"></div><b>📃 Summary:</b> Unique identifier for the refund<br><b>🦄 Unique:</b> This column represents a unique identifier for each refund. For this table, each row is for a single refund transaction. refund_id is unique across rows as it's designed to be a unique identifier for each refund.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">refund_amount_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_refund_amount_cents"></div><b>📃 Summary:</b> Refund amount in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">balance_transaction_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_balance_transaction_id"></div><b>📃 Summary:</b> Unique identifier for the balance transaction<br><b>🦄 Unique:</b> This column represents a unique identifier for each balance transaction associated with the refund. For this table, each row is for a single refund transaction. balance_transaction_id is likely unique across rows as each refund would typically have its own balance transaction.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">charge_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_charge_id"></div><b>📃 Summary:</b> Unique identifier for the associated charge<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency"></div><b>📃 Summary:</b> Currency of the refund<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">refund_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='requested_by_customer'>requested_by_customer</option><option value='duplicate'>duplicate</option><option value='item_not_received'>item_not_received</option><option value='item_defective'>item_defective</option><option value='wrong_item_shipped'>wrong_item_shipped</option><option value='arrived_too_late'>arrived_too_late</option><option value='no_longer_needed'>no_longer_needed</option><option value='better_price_found'>better_price_found</option><option value='not_as_described'>not_as_described</option><option value='changed_mind'>changed_mind</option><option value='unauthorized_purchase'>unauthorized_purchase</option><option value='damaged_in_transit'>damaged_in_transit</option><option value='quality_not_as_expected'>quality_not_as_expected</option><option value='missing_parts'>missing_parts</option><option value='incorrect_size'>incorrect_size</option><option value='allergic_reaction'>allergic_reaction</option><option value='subscription_cancellation'>subscription_cancellation</option><option value='technical_issues'>technical_issues</option><option value='pricing_error'>pricing_error</option><option value='product_recall'>product_recall</option></select></span><br><br><div id="bar_viz_refund_reason"></div><b>📃 Summary:</b> Reason for the refund<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">receipt_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_receipt_number"></div><b>📃 Summary:</b> Receipt number for the refund<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">refund_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='succeeded'>succeeded</option><option value='pending'>pending</option><option value='failed'>failed</option><option value='cancelled'>cancelled</option><option value='processing'>processing</option><option value='reversed'>reversed</option></select></span><br><br><div id="bar_viz_refund_status"></div><b>📃 Summary:</b> Current status of the refund<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">failure_balance_transaction_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_failure_balance_transaction_id"></div><b>📃 Summary:</b> ID of failed balance transaction, if any<br><b>❓ Missing:</b> Not applicable for successful transactions without failures.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">failure_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_failure_reason"></div><b>📃 Summary:</b> Reason for refund failure, if any<br><b>❓ Missing:</b> Not applicable for successful transactions without failures.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">metadata</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_metadata"></div><b>📃 Summary:</b> Additional information about the refund<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">refund_created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_refund_created_at"></div><b>📃 Summary:</b> Timestamp of when the refund was created<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about refund data. It contains details of refund transactions. Each row represents a refund with attributes like ID, amount, currency, and status. It includes information on the associated charge, reason for refund, and timestamp. The table also stores metadata and receipt numbers for each refund. All refunds in the sample have succeeded status and are in USD currency.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>6</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the refund</td>
+      <td>refund_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>amount</td>
+      <td>Refund amount in cents</td>
+      <td>refund_amount_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>balance_transaction_id</td>
+      <td>Unique identifier for the balance transaction</td>
+      <td>balance_transaction_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>charge_id</td>
+      <td>Unique identifier for the associated charge</td>
+      <td>charge_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>created</td>
+      <td>Timestamp of when the refund was created</td>
+      <td>refund_created_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>currency</td>
+      <td>Currency of the refund</td>
+      <td>currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>description</td>
+      <td>Description of the refund</td>
+      <td>refund_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>failure_balance_transaction_id</td>
+      <td>ID of failed balance transaction, if any</td>
+      <td>failure_balance_transaction_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>failure_reason</td>
+      <td>Reason for refund failure, if any</td>
+      <td>failure_reason</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>metadata</td>
+      <td>Additional information about the refund</td>
+      <td>metadata</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>reason</td>
+      <td>Reason for the refund</td>
+      <td>refund_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>receipt_number</td>
+      <td>Receipt number for the refund</td>
+      <td>receipt_number</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>status</td>
+      <td>Current status of the refund</td>
+      <td>refund_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>5</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>failure_balance_transaction_id</td>
+      <td>CAST("failure_balance_transaction_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'failure_balance_transaction_id' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert any numeric values in the column to their string representation. Since the column has no distinct values (it's empty or null), this cast operation will effectively change the column's data type without altering any data.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>failure_reason</td>
+      <td>CAST("failure_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the 'failure_reason' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>metadata</td>
+      <td>CAST("metadata" AS JSON)</td>
+      <td>To transform the 'metadata' column from VARCHAR to JSON, we need to use a simple CAST function. In DuckDB, we can directly cast a VARCHAR containing a valid JSON string to JSON data type. This will parse the string and convert it into a JSON object that can be queried and manipulated as JSON data.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>refund_created_at</td>
+      <td>CAST("refund_created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'refund_created_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The provided date-time values are already in a format that can be directly cast to TIMESTAMP without using strptime(). The format of the dates is 'YYYY-MM-DD HH:MM:SS', which is a standard format that can be automatically recognized by most SQL databases, including DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>refund_description</td>
+      <td>CAST("refund_description" AS VARCHAR)</td>
+      <td>To transform the data type of the 'refund_description' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the desired data type (VARCHAR in this case).\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>3</b> columns have missing values<br>
+                    ✔️ <b>2</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>failure_balance_transaction_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for successful transactions without failures.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>failure_reason</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for successful transactions without failures.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>refund_description</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>refund_description</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 're_0IMJuLig6peN...', 'value': 25.0}, {'label': 're_0INhCiig6peN...', 'value': 25.0}, {'label': 're_0IMKOqig6peN...', 'value': 25.0}, {'label': 're_0ISmXVig6peN...', 'value': 25.0}];
+    drawBarChart("bar_viz_refund_id", data);
+data = [{'x': 51839.275, 'y': 1}, {'x': 128217.82500000001, 'y': 1}, {'x': 204596.375, 'y': 0}, {'x': 280974.92500000005, 'y': 0}];
+    binWidth = 76378.55;
+    drawHistogram("hist_viz_refund_amount_cents", data, binWidth);
+data = [{'label': 'txn_0IMJuMig6pe...', 'value': 25.0}, {'label': 'txn_0IMKOqig6pe...', 'value': 25.0}, {'label': 'txn_0INhCiig6pe...', 'value': 25.0}, {'label': 'txn_0ISmXVig6pe...', 'value': 25.0}];
+    drawBarChart("bar_viz_balance_transaction_id", data);
+data = [{'label': 'ch_0IBft2ig6peN...', 'value': 25.0}, {'label': 'ch_0IMD9sig6peN...', 'value': 25.0}, {'label': 'ch_0IMDADig6peN...', 'value': 25.0}, {'label': 'ch_0IMDKoig6peN...', 'value': 25.0}];
+    drawBarChart("bar_viz_charge_id", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency", data);
+data = [{'label': 'requested_by_cu...', 'value': 75.0}, {'label': 'duplicate', 'value': 25.0}];
+    drawBarChart("bar_viz_refund_reason", data);
+data = [{'label': '5555-555', 'value': 100.0}];
+    drawBarChart("bar_viz_receipt_number", data);
+data = [{'label': 'succeeded', 'value': 100.0}];
+    drawBarChart("bar_viz_refund_status", data);
+data = [];
+    drawBarChart("bar_viz_failure_balance_transaction_id", data);
+data = [];
+    drawBarChart("bar_viz_failure_reason", data);
+data = [{'label': '{"external_id":...', 'value': 100.0}];
+    drawBarChart("bar_viz_metadata", data);
+data = [{'label': '2021-02-18 21:1...', 'value': 25.0}, {'label': '2021-02-18 21:5...', 'value': 25.0}, {'label': '2021-03-08 17:0...', 'value': 25.0}, {'label': '2021-02-22 16:2...', 'value': 25.0}];
+    drawBarChart("bar_viz_refund_created_at", data);
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,2986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>completedcard</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>card_id</th>
+      <th>disp_id</th>
+      <th>type</th>
+      <th>year_</th>
+      <th>month_</th>
+      <th>day_</th>
+      <th>fulldate</th>
+      <th>date_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V00001005</td>
+      <td>D00009285</td>
+      <td>VISA Signature</td>
+      <td>2013</td>
+      <td>11</td>
+      <td>7</td>
+      <td>2013-11-07</td>
+      <td>2013-11-07</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V00000104</td>
+      <td>D00000588</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>1</td>
+      <td>19</td>
+      <td>2014-01-19</td>
+      <td>2014-01-19</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V00000747</td>
+      <td>D00004915</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>2</td>
+      <td>5</td>
+      <td>2014-02-05</td>
+      <td>2014-02-05</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V00000070</td>
+      <td>D00000439</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>2</td>
+      <td>8</td>
+      <td>2014-02-08</td>
+      <td>2014-02-08</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V00000577</td>
+      <td>D00003687</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>2</td>
+      <td>15</td>
+      <td>2014-02-15</td>
+      <td>2014-02-15</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>V00000377</td>
+      <td>D00002429</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>3</td>
+      <td>3</td>
+      <td>2014-03-03</td>
+      <td>2014-03-03</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>V00000721</td>
+      <td>D00004680</td>
+      <td>VISA Standard</td>
+      <td>2014</td>
+      <td>4</td>
+      <td>5</td>
+      <td>2014-04-05</td>
+      <td>2014-04-05</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>V00000437</td>
+      <td>D00002762</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>6</td>
+      <td>1</td>
+      <td>2014-06-01</td>
+      <td>2014-06-01</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>V00000188</td>
+      <td>D00001146</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>6</td>
+      <td>19</td>
+      <td>2014-06-19</td>
+      <td>2014-06-19</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>V00000013</td>
+      <td>D00000087</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>6</td>
+      <td>29</td>
+      <td>2014-06-29</td>
+      <td>2014-06-29</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>V00000732</td>
+      <td>D00004763</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>7</td>
+      <td>21</td>
+      <td>2014-07-21</td>
+      <td>2014-07-21</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>V00000181</td>
+      <td>D00001066</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>8</td>
+      <td>19</td>
+      <td>2014-08-19</td>
+      <td>2014-08-19</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>V00000384</td>
+      <td>D00002475</td>
+      <td>VISA Standard</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>15</td>
+      <td>2014-09-15</td>
+      <td>2014-09-15</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>V00000309</td>
+      <td>D00001946</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>19</td>
+      <td>2014-09-19</td>
+      <td>2014-09-19</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>V00000478</td>
+      <td>D00003084</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>10</td>
+      <td>9</td>
+      <td>2014-10-09</td>
+      <td>2014-10-09</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>V00000563</td>
+      <td>D00003589</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>10</td>
+      <td>21</td>
+      <td>2014-10-21</td>
+      <td>2014-10-21</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>V00000369</td>
+      <td>D00002363</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>11</td>
+      <td>8</td>
+      <td>2014-11-08</td>
+      <td>2014-11-08</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>V00000376</td>
+      <td>D00002428</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>11</td>
+      <td>10</td>
+      <td>2014-11-10</td>
+      <td>2014-11-10</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>V00000483</td>
+      <td>D00003115</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>11</td>
+      <td>24</td>
+      <td>2014-11-24</td>
+      <td>2014-11-24</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>V00000174</td>
+      <td>D00001039</td>
+      <td>VISA Standard</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>4</td>
+      <td>2014-12-04</td>
+      <td>2014-12-04</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>V00000658</td>
+      <td>D00004251</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>25</td>
+      <td>2014-12-25</td>
+      <td>2014-12-25</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>V00000763</td>
+      <td>D00005138</td>
+      <td>VISA Standard</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>30</td>
+      <td>2014-12-30</td>
+      <td>2014-12-30</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>V00000778</td>
+      <td>D00005275</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2015-01-02</td>
+      <td>2015-01-02</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>V00001039</td>
+      <td>D00009837</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>7</td>
+      <td>2015-01-07</td>
+      <td>2015-01-07</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>V00000477</td>
+      <td>D00003082</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>16</td>
+      <td>2015-01-16</td>
+      <td>2015-01-16</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>V00000168</td>
+      <td>D00001018</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2015-01-24</td>
+      <td>2015-01-24</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>V00000314</td>
+      <td>D00001999</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2015-01-27</td>
+      <td>2015-01-27</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>V00000468</td>
+      <td>D00003023</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>30</td>
+      <td>2015-01-30</td>
+      <td>2015-01-30</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>V00000208</td>
+      <td>D00001246</td>
+      <td>VISA Infinite</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>8</td>
+      <td>2015-02-08</td>
+      <td>2015-02-08</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>V00000766</td>
+      <td>D00005200</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>11</td>
+      <td>2015-02-11</td>
+      <td>2015-02-11</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>V00000464</td>
+      <td>D00002984</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>21</td>
+      <td>2015-02-21</td>
+      <td>2015-02-21</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>V00000497</td>
+      <td>D00003184</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>3</td>
+      <td>2015-03-03</td>
+      <td>2015-03-03</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>V00000166</td>
+      <td>D00000999</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>5</td>
+      <td>2015-03-05</td>
+      <td>2015-03-05</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>V00000015</td>
+      <td>D00000114</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>5</td>
+      <td>2015-03-05</td>
+      <td>2015-03-05</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>V00000503</td>
+      <td>D00003225</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>8</td>
+      <td>2015-03-08</td>
+      <td>2015-03-08</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>V00001038</td>
+      <td>D00009787</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>30</td>
+      <td>2015-03-30</td>
+      <td>2015-03-30</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>V00000737</td>
+      <td>D00004791</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>13</td>
+      <td>2015-04-13</td>
+      <td>2015-04-13</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>V00000418</td>
+      <td>D00002623</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>14</td>
+      <td>2015-04-14</td>
+      <td>2015-04-14</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>V00000759</td>
+      <td>D00005117</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>18</td>
+      <td>2015-04-18</td>
+      <td>2015-04-18</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>V00000223</td>
+      <td>D00001353</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>18</td>
+      <td>2015-04-18</td>
+      <td>2015-04-18</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>V00000005</td>
+      <td>D00000051</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>24</td>
+      <td>2015-04-24</td>
+      <td>2015-04-24</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>V00000159</td>
+      <td>D00000946</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>1</td>
+      <td>2015-05-01</td>
+      <td>2015-05-01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>V00001223</td>
+      <td>D00013231</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>2</td>
+      <td>2015-05-02</td>
+      <td>2015-05-02</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>V00000662</td>
+      <td>D00004293</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>9</td>
+      <td>2015-05-09</td>
+      <td>2015-05-09</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>V00000779</td>
+      <td>D00005323</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>21</td>
+      <td>2015-05-21</td>
+      <td>2015-05-21</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>V00001040</td>
+      <td>D00009890</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>28</td>
+      <td>2015-05-28</td>
+      <td>2015-05-28</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>V00000545</td>
+      <td>D00003458</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>30</td>
+      <td>2015-05-30</td>
+      <td>2015-05-30</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>V00000467</td>
+      <td>D00003019</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>5</td>
+      <td>2015-06-05</td>
+      <td>2015-06-05</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>V00001247</td>
+      <td>D00013660</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>13</td>
+      <td>2015-06-13</td>
+      <td>2015-06-13</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>V00000652</td>
+      <td>D00004211</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>16</td>
+      <td>2015-06-16</td>
+      <td>2015-06-16</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>V00000559</td>
+      <td>D00003573</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>17</td>
+      <td>2015-06-17</td>
+      <td>2015-06-17</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>V00000719</td>
+      <td>D00004663</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>24</td>
+      <td>2015-06-24</td>
+      <td>2015-06-24</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>V00000397</td>
+      <td>D00002513</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>24</td>
+      <td>2015-06-24</td>
+      <td>2015-06-24</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>V00000107</td>
+      <td>D00000593</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>27</td>
+      <td>2015-06-27</td>
+      <td>2015-06-27</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>V00000661</td>
+      <td>D00004270</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>3</td>
+      <td>2015-07-03</td>
+      <td>2015-07-03</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>V00000484</td>
+      <td>D00003116</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>4</td>
+      <td>2015-07-04</td>
+      <td>2015-07-04</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>V00000501</td>
+      <td>D00003197</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>9</td>
+      <td>2015-07-09</td>
+      <td>2015-07-09</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>V00000422</td>
+      <td>D00002650</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>11</td>
+      <td>2015-07-11</td>
+      <td>2015-07-11</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>V00000705</td>
+      <td>D00004555</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>12</td>
+      <td>2015-07-12</td>
+      <td>2015-07-12</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>V00000410</td>
+      <td>D00002569</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>20</td>
+      <td>2015-07-20</td>
+      <td>2015-07-20</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>V00000136</td>
+      <td>D00000778</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>28</td>
+      <td>2015-07-28</td>
+      <td>2015-07-28</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>V00000592</td>
+      <td>D00003782</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>7</td>
+      <td>2015-08-07</td>
+      <td>2015-08-07</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>V00000262</td>
+      <td>D00001647</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>24</td>
+      <td>2015-08-24</td>
+      <td>2015-08-24</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>V00000018</td>
+      <td>D00000128</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>25</td>
+      <td>2015-08-25</td>
+      <td>2015-08-25</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>V00000003</td>
+      <td>D00000041</td>
+      <td>VISA Infinite</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>3</td>
+      <td>2015-09-03</td>
+      <td>2015-09-03</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>V00000098</td>
+      <td>D00000537</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>6</td>
+      <td>2015-09-06</td>
+      <td>2015-09-06</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>V00000167</td>
+      <td>D00001011</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>15</td>
+      <td>2015-09-15</td>
+      <td>2015-09-15</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>V00000097</td>
+      <td>D00000531</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>19</td>
+      <td>2015-09-19</td>
+      <td>2015-09-19</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>V00000699</td>
+      <td>D00004532</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>26</td>
+      <td>2015-09-26</td>
+      <td>2015-09-26</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>V00000342</td>
+      <td>D00002157</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>27</td>
+      <td>2015-09-27</td>
+      <td>2015-09-27</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>V00000713</td>
+      <td>D00004627</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>30</td>
+      <td>2015-09-30</td>
+      <td>2015-09-30</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>V00000118</td>
+      <td>D00000652</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>10</td>
+      <td>22</td>
+      <td>2015-10-22</td>
+      <td>2015-10-22</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>V00000783</td>
+      <td>D00005433</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>10</td>
+      <td>24</td>
+      <td>2015-10-24</td>
+      <td>2015-10-24</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>V00001103</td>
+      <td>D00011189</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>4</td>
+      <td>2015-11-04</td>
+      <td>2015-11-04</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>V00000504</td>
+      <td>D00003230</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>6</td>
+      <td>2015-11-06</td>
+      <td>2015-11-06</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>V00000261</td>
+      <td>D00001629</td>
+      <td>VISA Infinite</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>9</td>
+      <td>2015-11-09</td>
+      <td>2015-11-09</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>V00000296</td>
+      <td>D00001876</td>
+      <td>VISA Infinite</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>13</td>
+      <td>2015-11-13</td>
+      <td>2015-11-13</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>V00000113</td>
+      <td>D00000629</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>16</td>
+      <td>2015-11-16</td>
+      <td>2015-11-16</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>V00000092</td>
+      <td>D00000508</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>20</td>
+      <td>2015-11-20</td>
+      <td>2015-11-20</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>V00001225</td>
+      <td>D00013268</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>22</td>
+      <td>2015-11-22</td>
+      <td>2015-11-22</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>V00000393</td>
+      <td>D00002498</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>3</td>
+      <td>2015-12-03</td>
+      <td>2015-12-03</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>V00000695</td>
+      <td>D00004507</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>15</td>
+      <td>2015-12-15</td>
+      <td>2015-12-15</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>V00000666</td>
+      <td>D00004328</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>25</td>
+      <td>2015-12-25</td>
+      <td>2015-12-25</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>V00000462</td>
+      <td>D00002978</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>30</td>
+      <td>2015-12-30</td>
+      <td>2015-12-30</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>V00000085</td>
+      <td>D00000489</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>31</td>
+      <td>2015-12-31</td>
+      <td>2015-12-31</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>V00000337</td>
+      <td>D00002141</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2016-01-01</td>
+      <td>2016-01-01</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>V00000771</td>
+      <td>D00005233</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2016-01-08</td>
+      <td>2016-01-08</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>V00000379</td>
+      <td>D00002431</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>12</td>
+      <td>2016-01-12</td>
+      <td>2016-01-12</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>V00000106</td>
+      <td>D00000592</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2016-01-14</td>
+      <td>2016-01-14</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>V00000606</td>
+      <td>D00003883</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>22</td>
+      <td>2016-01-22</td>
+      <td>2016-01-22</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>V00000427</td>
+      <td>D00002688</td>
+      <td>VISA Infinite</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>25</td>
+      <td>2016-01-25</td>
+      <td>2016-01-25</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>V00000202</td>
+      <td>D00001228</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>4</td>
+      <td>2016-02-04</td>
+      <td>2016-02-04</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>V00000814</td>
+      <td>D00005911</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>15</td>
+      <td>2016-02-15</td>
+      <td>2016-02-15</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>V00001064</td>
+      <td>D00010328</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>17</td>
+      <td>2016-02-17</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>V00000014</td>
+      <td>D00000112</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>17</td>
+      <td>2016-02-17</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>V00000423</td>
+      <td>D00002657</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>19</td>
+      <td>2016-02-19</td>
+      <td>2016-02-19</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>V00000989</td>
+      <td>D00009119</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>21</td>
+      <td>2016-02-21</td>
+      <td>2016-02-21</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>V00000364</td>
+      <td>D00002329</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>29</td>
+      <td>2016-02-29</td>
+      <td>2016-02-29</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>V00000267</td>
+      <td>D00001691</td>
+      <td>VISA Standard</td>
+      <td>2016</td>
+      <td>3</td>
+      <td>9</td>
+      <td>2016-03-09</td>
+      <td>2016-03-09</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>V00000621</td>
+      <td>D00003970</td>
+      <td>VISA Standard</td>
+      <td>2016</td>
+      <td>3</td>
+      <td>19</td>
+      <td>2016-03-19</td>
+      <td>2016-03-19</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>card_id</th>
+      <th>display_id</th>
+      <th>card_type</th>
+      <th>transaction_year</th>
+      <th>transaction_month</th>
+      <th>transaction_day</th>
+      <th>remove_column</th>
+      <th>transaction_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>V00001005</td>
+      <td>D00009285</td>
+      <td>VISA Signature</td>
+      <td>2013</td>
+      <td>11</td>
+      <td>7</td>
+      <td>2013-11-07</td>
+      <td>2013-11-07</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>V00000104</td>
+      <td>D00000588</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>1</td>
+      <td>19</td>
+      <td>2014-01-19</td>
+      <td>2014-01-19</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>V00000747</td>
+      <td>D00004915</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>2</td>
+      <td>5</td>
+      <td>2014-02-05</td>
+      <td>2014-02-05</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>V00000070</td>
+      <td>D00000439</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>2</td>
+      <td>8</td>
+      <td>2014-02-08</td>
+      <td>2014-02-08</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>V00000577</td>
+      <td>D00003687</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>2</td>
+      <td>15</td>
+      <td>2014-02-15</td>
+      <td>2014-02-15</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>V00000377</td>
+      <td>D00002429</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>3</td>
+      <td>3</td>
+      <td>2014-03-03</td>
+      <td>2014-03-03</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>V00000721</td>
+      <td>D00004680</td>
+      <td>VISA Standard</td>
+      <td>2014</td>
+      <td>4</td>
+      <td>5</td>
+      <td>2014-04-05</td>
+      <td>2014-04-05</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>V00000437</td>
+      <td>D00002762</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>6</td>
+      <td>1</td>
+      <td>2014-06-01</td>
+      <td>2014-06-01</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>V00000188</td>
+      <td>D00001146</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>6</td>
+      <td>19</td>
+      <td>2014-06-19</td>
+      <td>2014-06-19</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>V00000013</td>
+      <td>D00000087</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>6</td>
+      <td>29</td>
+      <td>2014-06-29</td>
+      <td>2014-06-29</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>V00000732</td>
+      <td>D00004763</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>7</td>
+      <td>21</td>
+      <td>2014-07-21</td>
+      <td>2014-07-21</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>V00000181</td>
+      <td>D00001066</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>8</td>
+      <td>19</td>
+      <td>2014-08-19</td>
+      <td>2014-08-19</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>V00000384</td>
+      <td>D00002475</td>
+      <td>VISA Standard</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>15</td>
+      <td>2014-09-15</td>
+      <td>2014-09-15</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>V00000309</td>
+      <td>D00001946</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>9</td>
+      <td>19</td>
+      <td>2014-09-19</td>
+      <td>2014-09-19</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>V00000478</td>
+      <td>D00003084</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>10</td>
+      <td>9</td>
+      <td>2014-10-09</td>
+      <td>2014-10-09</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>V00000563</td>
+      <td>D00003589</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>10</td>
+      <td>21</td>
+      <td>2014-10-21</td>
+      <td>2014-10-21</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>V00000369</td>
+      <td>D00002363</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>11</td>
+      <td>8</td>
+      <td>2014-11-08</td>
+      <td>2014-11-08</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>V00000376</td>
+      <td>D00002428</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>11</td>
+      <td>10</td>
+      <td>2014-11-10</td>
+      <td>2014-11-10</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>V00000483</td>
+      <td>D00003115</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>11</td>
+      <td>24</td>
+      <td>2014-11-24</td>
+      <td>2014-11-24</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>V00000174</td>
+      <td>D00001039</td>
+      <td>VISA Standard</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>4</td>
+      <td>2014-12-04</td>
+      <td>2014-12-04</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>V00000658</td>
+      <td>D00004251</td>
+      <td>VISA Signature</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>25</td>
+      <td>2014-12-25</td>
+      <td>2014-12-25</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>V00000763</td>
+      <td>D00005138</td>
+      <td>VISA Standard</td>
+      <td>2014</td>
+      <td>12</td>
+      <td>30</td>
+      <td>2014-12-30</td>
+      <td>2014-12-30</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>V00000778</td>
+      <td>D00005275</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2015-01-02</td>
+      <td>2015-01-02</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>V00001039</td>
+      <td>D00009837</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>7</td>
+      <td>2015-01-07</td>
+      <td>2015-01-07</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>V00000477</td>
+      <td>D00003082</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>16</td>
+      <td>2015-01-16</td>
+      <td>2015-01-16</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>V00000168</td>
+      <td>D00001018</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>24</td>
+      <td>2015-01-24</td>
+      <td>2015-01-24</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>V00000314</td>
+      <td>D00001999</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>27</td>
+      <td>2015-01-27</td>
+      <td>2015-01-27</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>V00000468</td>
+      <td>D00003023</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>1</td>
+      <td>30</td>
+      <td>2015-01-30</td>
+      <td>2015-01-30</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>V00000208</td>
+      <td>D00001246</td>
+      <td>VISA Infinite</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>8</td>
+      <td>2015-02-08</td>
+      <td>2015-02-08</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>V00000766</td>
+      <td>D00005200</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>11</td>
+      <td>2015-02-11</td>
+      <td>2015-02-11</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>V00000464</td>
+      <td>D00002984</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>2</td>
+      <td>21</td>
+      <td>2015-02-21</td>
+      <td>2015-02-21</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>V00000497</td>
+      <td>D00003184</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>3</td>
+      <td>2015-03-03</td>
+      <td>2015-03-03</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>V00000166</td>
+      <td>D00000999</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>5</td>
+      <td>2015-03-05</td>
+      <td>2015-03-05</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>V00000015</td>
+      <td>D00000114</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>5</td>
+      <td>2015-03-05</td>
+      <td>2015-03-05</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>V00000503</td>
+      <td>D00003225</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>8</td>
+      <td>2015-03-08</td>
+      <td>2015-03-08</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>V00001038</td>
+      <td>D00009787</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>3</td>
+      <td>30</td>
+      <td>2015-03-30</td>
+      <td>2015-03-30</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>V00000737</td>
+      <td>D00004791</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>13</td>
+      <td>2015-04-13</td>
+      <td>2015-04-13</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>V00000418</td>
+      <td>D00002623</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>14</td>
+      <td>2015-04-14</td>
+      <td>2015-04-14</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>V00000759</td>
+      <td>D00005117</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>18</td>
+      <td>2015-04-18</td>
+      <td>2015-04-18</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>V00000223</td>
+      <td>D00001353</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>18</td>
+      <td>2015-04-18</td>
+      <td>2015-04-18</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>V00000005</td>
+      <td>D00000051</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>4</td>
+      <td>24</td>
+      <td>2015-04-24</td>
+      <td>2015-04-24</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>V00000159</td>
+      <td>D00000946</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>1</td>
+      <td>2015-05-01</td>
+      <td>2015-05-01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>V00001223</td>
+      <td>D00013231</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>2</td>
+      <td>2015-05-02</td>
+      <td>2015-05-02</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>V00000662</td>
+      <td>D00004293</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>9</td>
+      <td>2015-05-09</td>
+      <td>2015-05-09</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>V00000779</td>
+      <td>D00005323</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>21</td>
+      <td>2015-05-21</td>
+      <td>2015-05-21</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>V00001040</td>
+      <td>D00009890</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>28</td>
+      <td>2015-05-28</td>
+      <td>2015-05-28</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>V00000545</td>
+      <td>D00003458</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>5</td>
+      <td>30</td>
+      <td>2015-05-30</td>
+      <td>2015-05-30</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>V00000467</td>
+      <td>D00003019</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>5</td>
+      <td>2015-06-05</td>
+      <td>2015-06-05</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>V00001247</td>
+      <td>D00013660</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>13</td>
+      <td>2015-06-13</td>
+      <td>2015-06-13</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>V00000652</td>
+      <td>D00004211</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>16</td>
+      <td>2015-06-16</td>
+      <td>2015-06-16</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>V00000559</td>
+      <td>D00003573</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>17</td>
+      <td>2015-06-17</td>
+      <td>2015-06-17</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>V00000719</td>
+      <td>D00004663</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>24</td>
+      <td>2015-06-24</td>
+      <td>2015-06-24</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>V00000397</td>
+      <td>D00002513</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>24</td>
+      <td>2015-06-24</td>
+      <td>2015-06-24</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>V00000107</td>
+      <td>D00000593</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>6</td>
+      <td>27</td>
+      <td>2015-06-27</td>
+      <td>2015-06-27</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>V00000661</td>
+      <td>D00004270</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>3</td>
+      <td>2015-07-03</td>
+      <td>2015-07-03</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>V00000484</td>
+      <td>D00003116</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>4</td>
+      <td>2015-07-04</td>
+      <td>2015-07-04</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>V00000501</td>
+      <td>D00003197</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>9</td>
+      <td>2015-07-09</td>
+      <td>2015-07-09</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>V00000422</td>
+      <td>D00002650</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>11</td>
+      <td>2015-07-11</td>
+      <td>2015-07-11</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>V00000705</td>
+      <td>D00004555</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>12</td>
+      <td>2015-07-12</td>
+      <td>2015-07-12</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>V00000410</td>
+      <td>D00002569</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>20</td>
+      <td>2015-07-20</td>
+      <td>2015-07-20</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>V00000136</td>
+      <td>D00000778</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>7</td>
+      <td>28</td>
+      <td>2015-07-28</td>
+      <td>2015-07-28</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>V00000592</td>
+      <td>D00003782</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>7</td>
+      <td>2015-08-07</td>
+      <td>2015-08-07</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>V00000262</td>
+      <td>D00001647</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>24</td>
+      <td>2015-08-24</td>
+      <td>2015-08-24</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>V00000018</td>
+      <td>D00000128</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>8</td>
+      <td>25</td>
+      <td>2015-08-25</td>
+      <td>2015-08-25</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>V00000003</td>
+      <td>D00000041</td>
+      <td>VISA Infinite</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>3</td>
+      <td>2015-09-03</td>
+      <td>2015-09-03</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>V00000098</td>
+      <td>D00000537</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>6</td>
+      <td>2015-09-06</td>
+      <td>2015-09-06</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>V00000167</td>
+      <td>D00001011</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>15</td>
+      <td>2015-09-15</td>
+      <td>2015-09-15</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>V00000097</td>
+      <td>D00000531</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>19</td>
+      <td>2015-09-19</td>
+      <td>2015-09-19</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>V00000699</td>
+      <td>D00004532</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>26</td>
+      <td>2015-09-26</td>
+      <td>2015-09-26</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>V00000342</td>
+      <td>D00002157</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>27</td>
+      <td>2015-09-27</td>
+      <td>2015-09-27</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>V00000713</td>
+      <td>D00004627</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>9</td>
+      <td>30</td>
+      <td>2015-09-30</td>
+      <td>2015-09-30</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>V00000118</td>
+      <td>D00000652</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>10</td>
+      <td>22</td>
+      <td>2015-10-22</td>
+      <td>2015-10-22</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>V00000783</td>
+      <td>D00005433</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>10</td>
+      <td>24</td>
+      <td>2015-10-24</td>
+      <td>2015-10-24</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>V00001103</td>
+      <td>D00011189</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>4</td>
+      <td>2015-11-04</td>
+      <td>2015-11-04</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>V00000504</td>
+      <td>D00003230</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>6</td>
+      <td>2015-11-06</td>
+      <td>2015-11-06</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>V00000261</td>
+      <td>D00001629</td>
+      <td>VISA Infinite</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>9</td>
+      <td>2015-11-09</td>
+      <td>2015-11-09</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>V00000296</td>
+      <td>D00001876</td>
+      <td>VISA Infinite</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>13</td>
+      <td>2015-11-13</td>
+      <td>2015-11-13</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>V00000113</td>
+      <td>D00000629</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>16</td>
+      <td>2015-11-16</td>
+      <td>2015-11-16</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>V00000092</td>
+      <td>D00000508</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>20</td>
+      <td>2015-11-20</td>
+      <td>2015-11-20</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>V00001225</td>
+      <td>D00013268</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>11</td>
+      <td>22</td>
+      <td>2015-11-22</td>
+      <td>2015-11-22</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>V00000393</td>
+      <td>D00002498</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>3</td>
+      <td>2015-12-03</td>
+      <td>2015-12-03</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>V00000695</td>
+      <td>D00004507</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>15</td>
+      <td>2015-12-15</td>
+      <td>2015-12-15</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>V00000666</td>
+      <td>D00004328</td>
+      <td>VISA Standard</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>25</td>
+      <td>2015-12-25</td>
+      <td>2015-12-25</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>V00000462</td>
+      <td>D00002978</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>30</td>
+      <td>2015-12-30</td>
+      <td>2015-12-30</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>V00000085</td>
+      <td>D00000489</td>
+      <td>VISA Signature</td>
+      <td>2015</td>
+      <td>12</td>
+      <td>31</td>
+      <td>2015-12-31</td>
+      <td>2015-12-31</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>V00000337</td>
+      <td>D00002141</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2016-01-01</td>
+      <td>2016-01-01</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>V00000771</td>
+      <td>D00005233</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>8</td>
+      <td>2016-01-08</td>
+      <td>2016-01-08</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>V00000379</td>
+      <td>D00002431</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>12</td>
+      <td>2016-01-12</td>
+      <td>2016-01-12</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>V00000106</td>
+      <td>D00000592</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>14</td>
+      <td>2016-01-14</td>
+      <td>2016-01-14</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>V00000606</td>
+      <td>D00003883</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>22</td>
+      <td>2016-01-22</td>
+      <td>2016-01-22</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>V00000427</td>
+      <td>D00002688</td>
+      <td>VISA Infinite</td>
+      <td>2016</td>
+      <td>1</td>
+      <td>25</td>
+      <td>2016-01-25</td>
+      <td>2016-01-25</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>V00000202</td>
+      <td>D00001228</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>4</td>
+      <td>2016-02-04</td>
+      <td>2016-02-04</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>V00000814</td>
+      <td>D00005911</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>15</td>
+      <td>2016-02-15</td>
+      <td>2016-02-15</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>V00001064</td>
+      <td>D00010328</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>17</td>
+      <td>2016-02-17</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>V00000014</td>
+      <td>D00000112</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>17</td>
+      <td>2016-02-17</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>V00000423</td>
+      <td>D00002657</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>19</td>
+      <td>2016-02-19</td>
+      <td>2016-02-19</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>V00000989</td>
+      <td>D00009119</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>21</td>
+      <td>2016-02-21</td>
+      <td>2016-02-21</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>V00000364</td>
+      <td>D00002329</td>
+      <td>VISA Signature</td>
+      <td>2016</td>
+      <td>2</td>
+      <td>29</td>
+      <td>2016-02-29</td>
+      <td>2016-02-29</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>V00000267</td>
+      <td>D00001691</td>
+      <td>VISA Standard</td>
+      <td>2016</td>
+      <td>3</td>
+      <td>9</td>
+      <td>2016-03-09</td>
+      <td>2016-03-09</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>V00000621</td>
+      <td>D00003970</td>
+      <td>VISA Standard</td>
+      <td>2016</td>
+      <td>3</td>
+      <td>19</td>
+      <td>2016-03-19</td>
+      <td>2016-03-19</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">card_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_card_id"></div><b>📃 Summary:</b> Unique identifier for the credit card<br><b>🦄 Unique:</b> This column represents a unique identifier for each credit card. For this table, each row is a separate transaction. The card_id appears to be unique across rows in the sample, and logically, it should be unique for each credit card.<br><b>🎨 Patterns:</b><br><ul><li><code>V\d{8}</code><br><i>Values starting with 'V' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">display_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_display_id"></div><b>📃 Summary:</b> Unique display identifier for the transaction<br><b>🦄 Unique:</b> This column represents a unique display identifier for each transaction. For this table, each row is a separate transaction. The display_id appears to be unique across rows in the sample, and logically, it should be unique for each transaction.<br><b>🎨 Patterns:</b><br><ul><li><code>D\d{8}</code><br><i>Alphanumeric identifiers starting with 'D' followed by 8 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">card_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='VISA Signature'>VISA Signature</option><option value='VISA Standard'>VISA Standard</option><option value='VISA Infinite'>VISA Infinite</option><option value='VISA Platinum'>VISA Platinum</option><option value='Mastercard Standard'>Mastercard Standard</option><option value='Mastercard Gold'>Mastercard Gold</option><option value='Mastercard Platinum'>Mastercard Platinum</option><option value='Mastercard World'>Mastercard World</option><option value='Mastercard World Elite'>Mastercard World Elite</option><option value='American Express Green'>American Express Green</option><option value='American Express Gold'>American Express Gold</option><option value='American Express Platinum'>American Express Platinum</option><option value='American Express Centurion'>American Express Centurion</option><option value='Discover it'>Discover it</option><option value='Discover it Miles'>Discover it Miles</option><option value='Discover it Chrome'>Discover it Chrome</option><option value='JCB Standard'>JCB Standard</option><option value='JCB Gold'>JCB Gold</option><option value='JCB Platinum'>JCB Platinum</option><option value='Diners Club'>Diners Club</option></select></span><br><br><div id="bar_viz_card_type"></div><b>📃 Summary:</b> Type of credit card used<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_year</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_transaction_year"></div><b>📃 Summary:</b> Year when transaction occurred<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_month</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_transaction_month"></div><b>📃 Summary:</b> Month when transaction occurred (1-12)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_day</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_transaction_day"></div><b>📃 Summary:</b> Day of the month when transaction occurred<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">remove_column</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_remove_column"></div><b>📃 Summary:</b> Full date of transaction (redundant with date_)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_date"></div><b>📃 Summary:</b> Transaction date in YYYY-MM-DD format<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about completed credit card transactions. It contains details of each transaction including the card ID, display ID, card type, and the date of the transaction. The date is broken down into separate columns for year, month, and day, as well as full date formats. All transactions in the sample are for VISA Signature cards.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>7</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>card_id</td>
+      <td>Unique identifier for the credit card</td>
+      <td>card_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>disp_id</td>
+      <td>Unique display identifier for the transaction</td>
+      <td>display_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>type</td>
+      <td>Type of credit card used</td>
+      <td>card_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>year_</td>
+      <td>Year when transaction occurred</td>
+      <td>transaction_year</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>month_</td>
+      <td>Month when transaction occurred (1-12)</td>
+      <td>transaction_month</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>day_</td>
+      <td>Day of the month when transaction occurred</td>
+      <td>transaction_day</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>date_</td>
+      <td>Transaction date in YYYY-MM-DD format</td>
+      <td>transaction_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>fulldate</td>
+      <td>Full date of transaction (redundant with date_)</td>
+      <td>remove_column</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>2</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>remove_column</td>
+      <td>CAST("remove_column" AS DATE)</td>
+      <td>To transform the column from VARCHAR to DATE, we can use a simple CAST function in Snowflake. The data is already in the format 'YYYY-MM-DD', which is directly compatible with Snowflake's DATE type. Therefore, we don't need to use TO_DATE() function with a specific format string. A straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>transaction_date</td>
+      <td>CAST("transaction_date" AS DATE)</td>
+      <td>To transform the 'transaction_date' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the date strings ('YYYY-MM-DD') is already compatible with Snowflake's default date parsing, so we don't need to specify a format string. Snowflake will automatically interpret the string as a date in the ISO format.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'V00000734', 'value': 0.11210762331838565}, {'label': 'V00000844', 'value': 0.11210762331838565}, {'label': 'V00001199', 'value': 0.11210762331838565}, {'label': 'V00000002', 'value': 0.11210762331838565}, {'label': 'V00000535', 'value': 0.11210762331838565}, {'label': 'Other values', 'value': 99.43946188340807}];
+    drawBarChart("bar_viz_card_id", data);
+data = [{'label': 'D00002374', 'value': 0.11210762331838565}, {'label': 'D00013442', 'value': 0.11210762331838565}, {'label': 'D00001517', 'value': 0.11210762331838565}, {'label': 'D00004674', 'value': 0.11210762331838565}, {'label': 'D00002522', 'value': 0.11210762331838565}, {'label': 'Other values', 'value': 99.43946188340807}];
+    drawBarChart("bar_viz_display_id", data);
+data = [{'label': 'VISA Signature', 'value': 73.87892376681614}, {'label': 'VISA Standard', 'value': 16.255605381165918}, {'label': 'VISA Infinite', 'value': 9.865470852017937}];
+    drawBarChart("bar_viz_card_type", data);
+data = [{'x': 2013.125, 'y': 1}, {'x': 2013.375, 'y': 0}, {'x': 2013.625, 'y': 0}, {'x': 2013.875, 'y': 0}, {'x': 2014.125, 'y': 21}, {'x': 2014.375, 'y': 0}, {'x': 2014.625, 'y': 0}, {'x': 2014.875, 'y': 0}, {'x': 2015.125, 'y': 63}, {'x': 2015.375, 'y': 0}, {'x': 2015.625, 'y': 0}, {'x': 2015.875, 'y': 0}, {'x': 2016.125, 'y': 116}, {'x': 2016.375, 'y': 0}, {'x': 2016.625, 'y': 0}, {'x': 2016.875, 'y': 0}, {'x': 2017.125, 'y': 242}, {'x': 2017.375, 'y': 0}, {'x': 2017.625, 'y': 0}, {'x': 2017.875, 'y': 449}];
+    binWidth = 0.25;
+    drawHistogram("hist_viz_transaction_year", data, binWidth);
+data = [{'x': 1.275, 'y': 64}, {'x': 1.8250000000000002, 'y': 47}, {'x': 2.375, 'y': 0}, {'x': 2.9250000000000003, 'y': 49}, {'x': 3.475, 'y': 0}, {'x': 4.025, 'y': 54}, {'x': 4.575000000000001, 'y': 0}, {'x': 5.125, 'y': 68}, {'x': 5.675000000000001, 'y': 0}, {'x': 6.225, 'y': 74}, {'x': 6.775, 'y': 82}, {'x': 7.325000000000001, 'y': 0}, {'x': 7.875, 'y': 79}, {'x': 8.425, 'y': 0}, {'x': 8.975000000000001, 'y': 90}, {'x': 9.525, 'y': 0}, {'x': 10.075000000000001, 'y': 93}, {'x': 10.625, 'y': 0}, {'x': 11.175, 'y': 95}, {'x': 11.725000000000001, 'y': 97}];
+    binWidth = 0.55;
+    drawHistogram("hist_viz_transaction_month", data, binWidth);
+data = [{'x': 1.75, 'y': 58}, {'x': 3.25, 'y': 26}, {'x': 4.75, 'y': 47}, {'x': 6.25, 'y': 28}, {'x': 7.75, 'y': 70}, {'x': 9.25, 'y': 32}, {'x': 10.75, 'y': 63}, {'x': 12.25, 'y': 21}, {'x': 13.75, 'y': 53}, {'x': 15.25, 'y': 23}, {'x': 16.75, 'y': 68}, {'x': 18.25, 'y': 26}, {'x': 19.75, 'y': 63}, {'x': 21.25, 'y': 29}, {'x': 22.75, 'y': 61}, {'x': 24.25, 'y': 37}, {'x': 25.75, 'y': 62}, {'x': 27.25, 'y': 17}, {'x': 28.75, 'y': 58}, {'x': 30.25, 'y': 50}];
+    binWidth = 1.5;
+    drawHistogram("hist_viz_transaction_day", data, binWidth);
+data = [{'label': '2018-09-29', 'value': 0.7847533632286996}, {'label': '2018-09-25', 'value': 0.4484304932735426}, {'label': '2017-05-17', 'value': 0.4484304932735426}, {'label': '2018-04-16', 'value': 0.4484304932735426}, {'label': '2018-10-01', 'value': 0.4484304932735426}, {'label': 'Other values', 'value': 97.42152466367713}];
+    drawBarChart("bar_viz_remove_column", data);
+data = [{'label': '2018-09-29', 'value': 0.7847533632286996}, {'label': '2018-09-25', 'value': 0.4484304932735426}, {'label': '2017-05-17', 'value': 0.4484304932735426}, {'label': '2018-04-16', 'value': 0.4484304932735426}, {'label': '2018-10-01', 'value': 0.4484304932735426}, {'label': 'Other values', 'value': 97.42152466367713}];
+    drawBarChart("bar_viz_transaction_date", data);
+
+
+</script>
+</body>
+</html>

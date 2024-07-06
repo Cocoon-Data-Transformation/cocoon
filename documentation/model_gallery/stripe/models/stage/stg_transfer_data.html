@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>transfer_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>amount</th>
+      <th>amount_reversed</th>
+      <th>balance_transaction_id</th>
+      <th>currency</th>
+      <th>description</th>
+      <th>destination</th>
+      <th>livemode</th>
+      <th>reversed</th>
+      <th>source_type</th>
+      <th>destination_payment</th>
+      <th>destination_payment_id</th>
+      <th>metadata</th>
+      <th>created</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>po_0Njtvzig6peNXzgD6RPBasht</td>
+      <td>1447318</td>
+      <td>0</td>
+      <td>txn_0Njtw0ig6peNXzgDXY3mJGwC</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_0MkB7Nig6peNXzgDBFL0SIgk</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>"{"netsuite_deposit_id":"3975560","netsuite_deposit_link":"https://en.wikipedia.org/wiki/Beyonc%C3%A9"}"</td>
+      <td>2023-08-28 01:08:03</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>po_0NjXKxig6peNXzgDgn8MqQuZ</td>
+      <td>2660278</td>
+      <td>0</td>
+      <td>txn_0NjXKyig6peNXzgDbmNVE84K</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_0MkB7Nig6peNXzgDBFL0SIgk</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2023-08-27 01:00:19</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>po_0NkGNTig6peNXzgDJWfkSimX</td>
+      <td>760313</td>
+      <td>0</td>
+      <td>txn_0NkGNTig6peNXzgDTsXXisyE</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_0MkB7Nig6peNXzgDBFL0SIgk</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2023-08-29 01:05:55</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>po_0NkcrHig6peNXzgDwoDFU4Yi</td>
+      <td>1944407</td>
+      <td>0</td>
+      <td>txn_0NkcrHig6peNXzgD7eFO2jc7</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_0MkB7Nig6peNXzgDBFL0SIgk</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2023-08-30 01:06:11</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>po_0Mbvvvig6peNXzgDNH6Wf3ha</td>
+      <td>7251977</td>
+      <td>0</td>
+      <td>txn_0Mbvvvig6peNXzgDJAGJCdpN</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2023-02-16 01:06:47</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>po_0LunJvig6peNXzgD41QBrw1m</td>
+      <td>-1426166</td>
+      <td>0</td>
+      <td>txn_0LunJwig6peNXzgDCnBflWPl</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2022-10-20 01:13:15</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>po_0MRQ1gig6peNXzgD138jhQS7</td>
+      <td>7332491</td>
+      <td>0</td>
+      <td>txn_0MRQ1gig6peNXzgDchKTwIPQ</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2023-01-18 01:01:16</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>po_0MRmW1ig6peNXzgDUPQSnmYw</td>
+      <td>6108653</td>
+      <td>0</td>
+      <td>txn_0MRmW1ig6peNXzgDFqR0yaFa</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2023-01-19 01:02:05</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>po_0MJ5C6ig6peNXzgDyic22YlD</td>
+      <td>3456033</td>
+      <td>0</td>
+      <td>txn_0MJ5C7ig6peNXzgDfWTszRUw</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2022-12-26 01:09:34</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>po_0MDe3Sig6peNXzgDJHinDGmA</td>
+      <td>3330213</td>
+      <td>0</td>
+      <td>txn_0MDe3Tig6peNXzgDSyxtRpRH</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2022-12-11 01:10:10</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>payout_id</th>
+      <th>payout_amount_cents</th>
+      <th>reversed_amount_cents</th>
+      <th>balance_transaction_id</th>
+      <th>currency</th>
+      <th>payout_description</th>
+      <th>destination_bank_account_id</th>
+      <th>is_live_mode</th>
+      <th>is_reversed</th>
+      <th>payment_source_type</th>
+      <th>destination_payment</th>
+      <th>destination_payment_id</th>
+      <th>metadata</th>
+      <th>payout_created_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>po_0Njtvzig6peNXzgD6RPBasht</td>
+      <td>1447318</td>
+      <td>0</td>
+      <td>txn_0Njtw0ig6peNXzgDXY3mJGwC</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_0MkB7Nig6peNXzgDBFL0SIgk</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>{"netsuite_deposit_id":"3975560","netsuite_deposit_link":"https://en.wikipedia.org/wiki/Beyonc%C3%A9"}</td>
+      <td>2023-08-28 01:08:03</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>po_0NjXKxig6peNXzgDgn8MqQuZ</td>
+      <td>2660278</td>
+      <td>0</td>
+      <td>txn_0NjXKyig6peNXzgDbmNVE84K</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_0MkB7Nig6peNXzgDBFL0SIgk</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2023-08-27 01:00:19</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>po_0NkGNTig6peNXzgDJWfkSimX</td>
+      <td>760313</td>
+      <td>0</td>
+      <td>txn_0NkGNTig6peNXzgDTsXXisyE</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_0MkB7Nig6peNXzgDBFL0SIgk</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2023-08-29 01:05:55</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>po_0NkcrHig6peNXzgDwoDFU4Yi</td>
+      <td>1944407</td>
+      <td>0</td>
+      <td>txn_0NkcrHig6peNXzgD7eFO2jc7</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_0MkB7Nig6peNXzgDBFL0SIgk</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2023-08-30 01:06:11</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>po_0Mbvvvig6peNXzgDNH6Wf3ha</td>
+      <td>7251977</td>
+      <td>0</td>
+      <td>txn_0Mbvvvig6peNXzgDJAGJCdpN</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2023-02-16 01:06:47</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>po_0LunJvig6peNXzgD41QBrw1m</td>
+      <td>-1426166</td>
+      <td>0</td>
+      <td>txn_0LunJwig6peNXzgDCnBflWPl</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-10-20 01:13:15</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>po_0MRQ1gig6peNXzgD138jhQS7</td>
+      <td>7332491</td>
+      <td>0</td>
+      <td>txn_0MRQ1gig6peNXzgDchKTwIPQ</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2023-01-18 01:01:16</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>po_0MRmW1ig6peNXzgDUPQSnmYw</td>
+      <td>6108653</td>
+      <td>0</td>
+      <td>txn_0MRmW1ig6peNXzgDFqR0yaFa</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2023-01-19 01:02:05</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>po_0MJ5C6ig6peNXzgDyic22YlD</td>
+      <td>3456033</td>
+      <td>0</td>
+      <td>txn_0MJ5C7ig6peNXzgDfWTszRUw</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-12-26 01:09:34</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>po_0MDe3Sig6peNXzgDJHinDGmA</td>
+      <td>3330213</td>
+      <td>0</td>
+      <td>txn_0MDe3Tig6peNXzgDSyxtRpRH</td>
+      <td>usd</td>
+      <td>STRIPE PAYOUT</td>
+      <td>ba_1S2vcDBpbM03IU</td>
+      <td>True</td>
+      <td>False</td>
+      <td>card</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2022-12-11 01:10:10</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payout_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_payout_id"></div><b>📃 Summary:</b> Unique identifier for the payout<br><b>🦄 Unique:</b> This column represents a unique identifier for each payout. For this table, each row is for a single payout transaction. payout_id is unique across rows as it's specifically designed to be a unique identifier for each payout.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payout_amount_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_payout_amount_cents"></div><b>📃 Summary:</b> Payout amount in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reversed_amount_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_reversed_amount_cents"></div><b>📃 Summary:</b> Amount reversed in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">balance_transaction_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_balance_transaction_id"></div><b>📃 Summary:</b> Unique identifier for the balance transaction<br><b>🦄 Unique:</b> This column represents a unique identifier for each balance transaction associated with a payout. For this table, each row is for a single payout transaction. balance_transaction_id is unique across rows as it's specifically designed to be a unique identifier for each transaction.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='usd'>usd</option><option value='eur'>eur</option><option value='gbp'>gbp</option><option value='jpy'>jpy</option><option value='cny'>cny</option><option value='chf'>chf</option><option value='cad'>cad</option><option value='aud'>aud</option><option value='nzd'>nzd</option><option value='inr'>inr</option><option value='krw'>krw</option><option value='sgd'>sgd</option><option value='hkd'>hkd</option><option value='mxn'>mxn</option><option value='brl'>brl</option><option value='zar'>zar</option><option value='sek'>sek</option><option value='nok'>nok</option><option value='dkk'>dkk</option><option value='rub'>rub</option></select></span><br><br><div id="bar_viz_currency"></div><b>📃 Summary:</b> Currency of the payout<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payout_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_payout_description"></div><b>📃 Summary:</b> Brief description of the payout<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">destination_bank_account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_destination_bank_account_id"></div><b>📃 Summary:</b> Destination bank account identifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_live_mode</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_live_mode"></div><b>📃 Summary:</b> Indicates if the payout is live or test<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_reversed</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_reversed"></div><b>📃 Summary:</b> Indicates if the payout was reversed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payment_source_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='card'>card</option><option value='cash'>cash</option><option value='bank transfer'>bank transfer</option><option value='digital wallet'>digital wallet</option><option value='cryptocurrency'>cryptocurrency</option><option value='check'>check</option><option value='money order'>money order</option><option value='gift card'>gift card</option><option value='store credit'>store credit</option><option value='mobile payment'>mobile payment</option><option value='paypal'>paypal</option><option value='wire transfer'>wire transfer</option><option value='direct debit'>direct debit</option><option value='prepaid card'>prepaid card</option></select></span><br><br><div id="bar_viz_payment_source_type"></div><b>📃 Summary:</b> Type of payment source<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">destination_payment</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_destination_payment"></div><b>📃 Summary:</b> Unused field for destination payment<br><b>❓ Missing:</b> Not applicable for direct bank account payouts.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">destination_payment_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_destination_payment_id"></div><b>📃 Summary:</b> Unused field for destination payment ID<br><b>❓ Missing:</b> Not applicable for direct bank account payouts.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">metadata</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_metadata"></div><b>📃 Summary:</b> Additional information in JSON format<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payout_created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_payout_created_at"></div><b>📃 Summary:</b> Date and time of payout creation<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about Stripe payouts. It includes details such as payout amount, currency, creation date, destination bank account, and transaction IDs. Each row represents a single payout. The table contains metadata fields, including references to NetSuite deposit IDs and links. All payouts are in USD and have not been reversed. The destination bank account is consistent across most entries.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>9</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the payout</td>
+      <td>payout_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>amount</td>
+      <td>Payout amount in cents</td>
+      <td>payout_amount_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>amount_reversed</td>
+      <td>Amount reversed in cents</td>
+      <td>reversed_amount_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>balance_transaction_id</td>
+      <td>Unique identifier for the balance transaction</td>
+      <td>balance_transaction_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>created</td>
+      <td>Date and time of payout creation</td>
+      <td>payout_created_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>currency</td>
+      <td>Currency of the payout</td>
+      <td>currency</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>description</td>
+      <td>Brief description of the payout</td>
+      <td>payout_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>destination</td>
+      <td>Destination bank account identifier</td>
+      <td>destination_bank_account_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>destination_payment</td>
+      <td>Unused field for destination payment</td>
+      <td>destination_payment</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>destination_payment_id</td>
+      <td>Unused field for destination payment ID</td>
+      <td>destination_payment_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>livemode</td>
+      <td>Indicates if the payout is live or test</td>
+      <td>is_live_mode</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>metadata</td>
+      <td>Additional information in JSON format</td>
+      <td>metadata</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>reversed</td>
+      <td>Indicates if the payout was reversed</td>
+      <td>is_reversed</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>source_transaction</td>
+      <td>Unused field for source transaction</td>
+      <td>source_transaction</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>source_transaction_id</td>
+      <td>Unused field for source transaction ID</td>
+      <td>source_transaction_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>source_type</td>
+      <td>Type of payment source</td>
+      <td>payment_source_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>transfer_group</td>
+      <td>Unused field for transfer group</td>
+      <td>transfer_group</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>7</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>destination_payment</td>
+      <td>CAST("destination_payment" AS VARCHAR)</td>
+      <td>To transform the data type of the 'destination_payment' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since DuckDB follows SQL standards, the CAST syntax is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>destination_payment_id</td>
+      <td>CAST("destination_payment_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'destination_payment_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword to explicitly convert the column to VARCHAR data type.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>metadata</td>
+      <td>CAST(TRIM("metadata", '"') AS JSON)</td>
+      <td>To transform the 'metadata' column from VARCHAR to JSON, we need to use a simple CAST function. In DuckDB, we can directly cast a VARCHAR containing a valid JSON string to a JSON data type. The CAST function will automatically parse the string and convert it to a JSON object.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>payout_created_at</td>
+      <td>CAST("payout_created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'payout_created_at' column from VARCHAR to TIMESTAMP, we need to use a simple CAST function. The date-time format in the given examples is already in a standard format that can be directly cast to TIMESTAMP without needing to use strptime(). The format is 'YYYY-MM-DD HH:MM:SS', which is directly compatible with SQL TIMESTAMP data type.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>source_transaction</td>
+      <td>CAST("source_transaction" AS VARCHAR)</td>
+      <td>To transform the data type of the 'source_transaction' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>source_transaction_id</td>
+      <td>CAST("source_transaction_id" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'source_transaction_id' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we'll proceed with the cast as requested.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>transfer_group</td>
+      <td>CAST("transfer_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'transfer_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. Since the column already contains distinct values, we can directly cast it to VARCHAR without any additional processing. This transformation will convert the numeric values to their string representations.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>6</b> columns have missing values<br>
+                    ✔️ <b>2</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>destination_payment</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for direct bank account payouts.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>destination_payment_id</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for direct bank account payouts.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>metadata</td>
+      <td>90</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>source_transaction</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>source_transaction_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>transfer_group</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>metadata</td>
+      <td>90</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>source_transaction</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>source_transaction_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>transfer_group</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'po_0Mbvvvig6peN...', 'value': 10.0}, {'label': 'po_0NkcrHig6peN...', 'value': 10.0}, {'label': 'po_0LunJvig6peN...', 'value': 10.0}, {'label': 'po_0MRQ1gig6peN...', 'value': 10.0}, {'label': 'po_0Njtvzig6peN...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_payout_id", data);
+data = [{'x': -1207199.575, 'y': 1}, {'x': -769266.7250000001, 'y': 0}, {'x': -331333.8750000001, 'y': 0}, {'x': 106598.97499999986, 'y': 0}, {'x': 544531.825, 'y': 1}, {'x': 982464.6749999998, 'y': 0}, {'x': 1420397.5249999997, 'y': 1}, {'x': 1858330.3749999998, 'y': 1}, {'x': 2296263.2249999996, 'y': 0}, {'x': 2734196.075, 'y': 1}];
+    binWidth = 437932.85;
+    drawHistogram("hist_viz_payout_amount_cents", data, binWidth);
+data = [{'x': 0, 'y': 10}];
+    binWidth = 0;
+    drawHistogram("hist_viz_reversed_amount_cents", data, binWidth);
+data = [{'label': 'txn_0NkcrHig6pe...', 'value': 10.0}, {'label': 'txn_0NkGNTig6pe...', 'value': 10.0}, {'label': 'txn_0MRQ1gig6pe...', 'value': 10.0}, {'label': 'txn_0MRmW1ig6pe...', 'value': 10.0}, {'label': 'txn_0Mbvvvig6pe...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_balance_transaction_id", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency", data);
+data = [{'label': 'STRIPE PAYOUT', 'value': 100.0}];
+    drawBarChart("bar_viz_payout_description", data);
+data = [{'label': 'ba_1S2vcDBpbM03...', 'value': 60.0}, {'label': 'ba_0MkB7Nig6peN...', 'value': 40.0}];
+    drawBarChart("bar_viz_destination_bank_account_id", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_live_mode", data);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_reversed", data);
+data = [{'label': 'card', 'value': 100.0}];
+    drawBarChart("bar_viz_payment_source_type", data);
+data = [];
+    drawBarChart("bar_viz_destination_payment", data);
+data = [];
+    drawBarChart("bar_viz_destination_payment_id", data);
+data = [{'label': '{"netsuite_depo...', 'value': 100.0}];
+    drawBarChart("bar_viz_metadata", data);
+data = [{'label': '2023-08-28 01:0...', 'value': 10.0}, {'label': '2023-08-29 01:0...', 'value': 10.0}, {'label': '2023-08-30 01:0...', 'value': 10.0}, {'label': '2022-10-20 01:1...', 'value': 10.0}, {'label': '2022-12-26 01:0...', 'value': 10.0}, {'label': 'Other values', 'value': 50.0}];
+    drawBarChart("bar_viz_payout_created_at", data);
+
+
+</script>
+</body>
+</html>

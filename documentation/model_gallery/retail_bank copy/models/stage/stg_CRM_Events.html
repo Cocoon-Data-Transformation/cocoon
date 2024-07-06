@@ -1,0 +1,4048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>CRM_Events</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>product</th>
+      <th>sub_product</th>
+      <th>issue</th>
+      <th>tags</th>
+      <th>submitted_via</th>
+      <th>company_response_to_consumer</th>
+      <th>timely_response</th>
+      <th>consumer_disputed</th>
+      <th>complaint_id</th>
+      <th>client_id</th>
+      <th>date_received</th>
+      <th>date_sent_to_company</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0922485</td>
+      <td>1925.0</td>
+      <td>2014-07-03</td>
+      <td>2014-07-09</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Bank account or service</td>
+      <td>Savings account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0057298</td>
+      <td>3141.0</td>
+      <td>2012-04-12</td>
+      <td>2012-04-13</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed without relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0043811</td>
+      <td>297.0</td>
+      <td>2012-04-03</td>
+      <td>2012-04-03</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0035411</td>
+      <td>4275.0</td>
+      <td>2012-03-14</td>
+      <td>2012-03-14</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0030939</td>
+      <td>900.0</td>
+      <td>2012-03-05</td>
+      <td>2012-03-06</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0030070</td>
+      <td>11596.0</td>
+      <td>2012-03-05</td>
+      <td>2012-03-05</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Other fee</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed without relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0013328</td>
+      <td>2716.0</td>
+      <td>2012-02-23</td>
+      <td>2012-02-24</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2347888</td>
+      <td>11252.0</td>
+      <td>2017-02-16</td>
+      <td>2017-02-22</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Bank account or service</td>
+      <td>(CD) Certificate of deposit</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2327253</td>
+      <td>7366.0</td>
+      <td>2017-02-03</td>
+      <td>2017-02-07</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Other</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2319065</td>
+      <td>4459.0</td>
+      <td>2017-01-31</td>
+      <td>2017-02-03</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2318000</td>
+      <td>2463.0</td>
+      <td>2017-01-30</td>
+      <td>2017-02-02</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Other</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2281296</td>
+      <td>1075.0</td>
+      <td>2017-01-09</td>
+      <td>2017-01-10</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Credit line increase/decrease</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2254957</td>
+      <td>3048.0</td>
+      <td>2016-12-19</td>
+      <td>2016-12-19</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2241469</td>
+      <td>3061.0</td>
+      <td>2016-12-08</td>
+      <td>2016-12-09</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2241293</td>
+      <td>2563.0</td>
+      <td>2016-12-08</td>
+      <td>2016-12-09</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2239563</td>
+      <td>2298.0</td>
+      <td>2016-12-07</td>
+      <td>2016-12-08</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Late fee</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2230679</td>
+      <td>2771.0</td>
+      <td>2016-12-01</td>
+      <td>2016-12-02</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2225814</td>
+      <td>1537.0</td>
+      <td>2016-11-28</td>
+      <td>2016-11-29</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2214250</td>
+      <td>10077.0</td>
+      <td>2016-11-17</td>
+      <td>2016-11-18</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2208613</td>
+      <td>1768.0</td>
+      <td>2016-11-16</td>
+      <td>2016-11-16</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Bank account or service</td>
+      <td>(CD) Certificate of deposit</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2200226</td>
+      <td>1671.0</td>
+      <td>2016-11-08</td>
+      <td>2016-11-09</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Sale of account</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2195804</td>
+      <td>2994.0</td>
+      <td>2016-11-04</td>
+      <td>2016-11-07</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2192368</td>
+      <td>3098.0</td>
+      <td>2016-11-02</td>
+      <td>2016-11-15</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Collection debt dispute</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed without relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0003732</td>
+      <td>146.0</td>
+      <td>2011-12-07</td>
+      <td>2012-02-29</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2405000</td>
+      <td>778.0</td>
+      <td>2017-03-27</td>
+      <td>2017-03-27</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Other</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2398334</td>
+      <td>706.0</td>
+      <td>2017-03-21</td>
+      <td>2017-03-21</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>In progress</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2395319</td>
+      <td>2065.0</td>
+      <td>2017-03-20</td>
+      <td>2017-03-21</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2375209</td>
+      <td>298.0</td>
+      <td>2017-03-07</td>
+      <td>2017-03-09</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2371479</td>
+      <td>2926.0</td>
+      <td>2017-03-03</td>
+      <td>2017-03-08</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2368953</td>
+      <td>3552.0</td>
+      <td>2017-03-02</td>
+      <td>2017-03-06</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Bank account or service</td>
+      <td>Savings account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2353277</td>
+      <td>438.0</td>
+      <td>2017-02-21</td>
+      <td>2017-02-24</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2190357</td>
+      <td>3203.0</td>
+      <td>2016-11-02</td>
+      <td>2016-11-14</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2184843</td>
+      <td>10041.0</td>
+      <td>2016-10-28</td>
+      <td>2016-10-31</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2150336</td>
+      <td>1791.0</td>
+      <td>2016-10-06</td>
+      <td>2016-10-12</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Bank account or service</td>
+      <td>(CD) Certificate of deposit</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2147799</td>
+      <td>5050.0</td>
+      <td>2016-10-05</td>
+      <td>2016-10-14</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2146555</td>
+      <td>3330.0</td>
+      <td>2016-10-04</td>
+      <td>2016-10-06</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2140531</td>
+      <td>3003.0</td>
+      <td>2016-09-30</td>
+      <td>2016-10-14</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2132541</td>
+      <td>489.0</td>
+      <td>2016-09-26</td>
+      <td>2016-09-28</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2128698</td>
+      <td>1520.0</td>
+      <td>2016-09-23</td>
+      <td>2016-09-27</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2125933</td>
+      <td>3001.0</td>
+      <td>2016-09-22</td>
+      <td>2016-09-26</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Balance transfer fee</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2106749</td>
+      <td>11329.0</td>
+      <td>2016-09-12</td>
+      <td>2016-09-14</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2089516</td>
+      <td>3317.0</td>
+      <td>2016-08-31</td>
+      <td>2016-09-06</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2083797</td>
+      <td>1600.0</td>
+      <td>2016-08-26</td>
+      <td>2016-08-30</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Bank account or service</td>
+      <td>Savings account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2081319</td>
+      <td>572.0</td>
+      <td>2016-08-25</td>
+      <td>2016-08-30</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2075840</td>
+      <td>119.0</td>
+      <td>2016-08-22</td>
+      <td>2016-08-24</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2053856</td>
+      <td>3819.0</td>
+      <td>2016-08-09</td>
+      <td>2016-08-29</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2047406</td>
+      <td>3069.0</td>
+      <td>2016-08-04</td>
+      <td>2016-08-08</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Bank account or service</td>
+      <td>(CD) Certificate of deposit</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2036377</td>
+      <td>524.0</td>
+      <td>2016-07-28</td>
+      <td>2016-08-02</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2019528</td>
+      <td>697.0</td>
+      <td>2016-07-19</td>
+      <td>2016-07-20</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2017443</td>
+      <td>4643.0</td>
+      <td>2016-07-18</td>
+      <td>2016-07-19</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2015196</td>
+      <td>137.0</td>
+      <td>2016-07-15</td>
+      <td>2016-07-16</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1994567</td>
+      <td>7011.0</td>
+      <td>2016-07-01</td>
+      <td>2016-07-11</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1952426</td>
+      <td>3837.0</td>
+      <td>2016-06-02</td>
+      <td>2016-06-06</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1943347</td>
+      <td>2799.0</td>
+      <td>2016-05-26</td>
+      <td>2016-05-27</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1942158</td>
+      <td>3834.0</td>
+      <td>2016-05-25</td>
+      <td>2016-05-31</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1941865</td>
+      <td>5180.0</td>
+      <td>2016-05-25</td>
+      <td>2016-05-31</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1938865</td>
+      <td>1699.0</td>
+      <td>2016-05-24</td>
+      <td>2016-05-31</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1936930</td>
+      <td>3632.0</td>
+      <td>2016-05-23</td>
+      <td>2016-05-24</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1932270</td>
+      <td>2463.0</td>
+      <td>2016-05-19</td>
+      <td>2016-05-31</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1924106</td>
+      <td>4493.0</td>
+      <td>2016-05-13</td>
+      <td>2016-05-13</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Customer service / Customer relations</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1913916</td>
+      <td>3116.0</td>
+      <td>2016-05-06</td>
+      <td>2016-05-11</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1912930</td>
+      <td>2324.0</td>
+      <td>2016-05-06</td>
+      <td>2016-05-16</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1905472</td>
+      <td>1579.0</td>
+      <td>2016-05-02</td>
+      <td>2016-05-02</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1894861</td>
+      <td>3039.0</td>
+      <td>2016-04-25</td>
+      <td>2016-04-28</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1885950</td>
+      <td>4294.0</td>
+      <td>2016-04-19</td>
+      <td>2016-04-21</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1884968</td>
+      <td>12358.0</td>
+      <td>2016-04-18</td>
+      <td>2016-04-18</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1881766</td>
+      <td>462.0</td>
+      <td>2016-04-15</td>
+      <td>2016-04-15</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1882476</td>
+      <td>13417.0</td>
+      <td>2016-04-15</td>
+      <td>2016-04-15</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1869568</td>
+      <td>1445.0</td>
+      <td>2016-04-07</td>
+      <td>2016-04-11</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>Older American, Servicemember</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1863969</td>
+      <td>2209.0</td>
+      <td>2016-04-04</td>
+      <td>2016-04-06</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>Servicemember</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1845683</td>
+      <td>6256.0</td>
+      <td>2016-03-23</td>
+      <td>2016-03-23</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1826636</td>
+      <td>472.0</td>
+      <td>2016-03-10</td>
+      <td>2016-03-10</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1822084</td>
+      <td>3977.0</td>
+      <td>2016-03-08</td>
+      <td>2016-03-08</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1809285</td>
+      <td>3372.0</td>
+      <td>2016-02-29</td>
+      <td>2016-03-01</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1791074</td>
+      <td>11906.0</td>
+      <td>2016-02-17</td>
+      <td>2016-02-18</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1789593</td>
+      <td>9236.0</td>
+      <td>2016-02-16</td>
+      <td>2016-03-21</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Other</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1784697</td>
+      <td>9458.0</td>
+      <td>2016-02-11</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>Servicemember</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1775172</td>
+      <td>4445.0</td>
+      <td>2016-02-05</td>
+      <td>2016-02-05</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1773179</td>
+      <td>3283.0</td>
+      <td>2016-02-04</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1773807</td>
+      <td>2129.0</td>
+      <td>2016-02-04</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1764286</td>
+      <td>2084.0</td>
+      <td>2016-01-29</td>
+      <td>2016-02-01</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Other</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1762648</td>
+      <td>4449.0</td>
+      <td>2016-01-28</td>
+      <td>2016-01-29</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR1756498</td>
+      <td>2296.0</td>
+      <td>2016-01-25</td>
+      <td>2016-01-26</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1756563</td>
+      <td>2642.0</td>
+      <td>2016-01-25</td>
+      <td>2016-02-01</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1744554</td>
+      <td>3532.0</td>
+      <td>2016-01-15</td>
+      <td>2016-01-20</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1734737</td>
+      <td>4387.0</td>
+      <td>2016-01-08</td>
+      <td>2016-01-12</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1729929</td>
+      <td>2727.0</td>
+      <td>2016-01-06</td>
+      <td>2016-01-07</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1725606</td>
+      <td>3241.0</td>
+      <td>2016-01-04</td>
+      <td>2016-01-04</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1713275</td>
+      <td>1316.0</td>
+      <td>2015-12-22</td>
+      <td>2015-12-23</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1708290</td>
+      <td>11064.0</td>
+      <td>2015-12-18</td>
+      <td>2015-12-18</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1676436</td>
+      <td>520.0</td>
+      <td>2015-11-30</td>
+      <td>2015-12-04</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Other</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1660760</td>
+      <td>3092.0</td>
+      <td>2015-11-18</td>
+      <td>2015-12-14</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1645849</td>
+      <td>1323.0</td>
+      <td>2015-11-09</td>
+      <td>2015-11-09</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1645852</td>
+      <td>482.0</td>
+      <td>2015-11-09</td>
+      <td>2015-11-10</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1631076</td>
+      <td>2709.0</td>
+      <td>2015-10-29</td>
+      <td>2015-10-30</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Other</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1621364</td>
+      <td>6924.0</td>
+      <td>2015-10-23</td>
+      <td>2015-10-26</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1621318</td>
+      <td>1129.0</td>
+      <td>2015-10-23</td>
+      <td>2015-10-27</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1592064</td>
+      <td>3450.0</td>
+      <td>2015-10-05</td>
+      <td>2015-10-07</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1590438</td>
+      <td>2755.0</td>
+      <td>2015-10-02</td>
+      <td>2015-10-06</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1573466</td>
+      <td>2409.0</td>
+      <td>2015-09-21</td>
+      <td>2015-09-24</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>financial_product</th>
+      <th>specific_product</th>
+      <th>complaint_category</th>
+      <th>tags</th>
+      <th>submission_method</th>
+      <th>resolution_type</th>
+      <th>timely_response</th>
+      <th>consumer_disputed</th>
+      <th>complaint_id</th>
+      <th>client_id</th>
+      <th>date_received</th>
+      <th>date_sent_to_company</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0922485</td>
+      <td>1925.0</td>
+      <td>2014-07-03</td>
+      <td>2014-07-09</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Bank account or service</td>
+      <td>Savings account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0057298</td>
+      <td>3141.0</td>
+      <td>2012-04-12</td>
+      <td>2012-04-13</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed without relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0043811</td>
+      <td>297.0</td>
+      <td>2012-04-03</td>
+      <td>2012-04-03</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0035411</td>
+      <td>4275.0</td>
+      <td>2012-03-14</td>
+      <td>2012-03-14</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0030939</td>
+      <td>900.0</td>
+      <td>2012-03-05</td>
+      <td>2012-03-06</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed with relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0030070</td>
+      <td>11596.0</td>
+      <td>2012-03-05</td>
+      <td>2012-03-05</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Miscellaneous fee issues</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed without relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0013328</td>
+      <td>2716.0</td>
+      <td>2012-02-23</td>
+      <td>2012-02-24</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2347888</td>
+      <td>11252.0</td>
+      <td>2017-02-16</td>
+      <td>2017-02-22</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Bank account or service</td>
+      <td>(CD) Certificate of deposit</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2327253</td>
+      <td>7366.0</td>
+      <td>2017-02-03</td>
+      <td>2017-02-07</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Miscellaneous issues</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2319065</td>
+      <td>4459.0</td>
+      <td>2017-01-31</td>
+      <td>2017-02-03</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2318000</td>
+      <td>2463.0</td>
+      <td>2017-01-30</td>
+      <td>2017-02-02</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Miscellaneous issues</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2281296</td>
+      <td>1075.0</td>
+      <td>2017-01-09</td>
+      <td>2017-01-10</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Credit line increase/decrease</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2254957</td>
+      <td>3048.0</td>
+      <td>2016-12-19</td>
+      <td>2016-12-19</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2241469</td>
+      <td>3061.0</td>
+      <td>2016-12-08</td>
+      <td>2016-12-09</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2241293</td>
+      <td>2563.0</td>
+      <td>2016-12-08</td>
+      <td>2016-12-09</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2239563</td>
+      <td>2298.0</td>
+      <td>2016-12-07</td>
+      <td>2016-12-08</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Late fee</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2230679</td>
+      <td>2771.0</td>
+      <td>2016-12-01</td>
+      <td>2016-12-02</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2225814</td>
+      <td>1537.0</td>
+      <td>2016-11-28</td>
+      <td>2016-11-29</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2214250</td>
+      <td>10077.0</td>
+      <td>2016-11-17</td>
+      <td>2016-11-18</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2208613</td>
+      <td>1768.0</td>
+      <td>2016-11-16</td>
+      <td>2016-11-16</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Bank account or service</td>
+      <td>(CD) Certificate of deposit</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2200226</td>
+      <td>1671.0</td>
+      <td>2016-11-08</td>
+      <td>2016-11-09</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Sale of account</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2195804</td>
+      <td>2994.0</td>
+      <td>2016-11-04</td>
+      <td>2016-11-07</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2192368</td>
+      <td>3098.0</td>
+      <td>2016-11-02</td>
+      <td>2016-11-15</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Debt collection issues</td>
+      <td>None</td>
+      <td>Email</td>
+      <td>Closed without relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR0003732</td>
+      <td>146.0</td>
+      <td>2011-12-07</td>
+      <td>2012-02-29</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2405000</td>
+      <td>778.0</td>
+      <td>2017-03-27</td>
+      <td>2017-03-27</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Miscellaneous issues</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2398334</td>
+      <td>706.0</td>
+      <td>2017-03-21</td>
+      <td>2017-03-21</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>In progress</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2395319</td>
+      <td>2065.0</td>
+      <td>2017-03-20</td>
+      <td>2017-03-21</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2375209</td>
+      <td>298.0</td>
+      <td>2017-03-07</td>
+      <td>2017-03-09</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2371479</td>
+      <td>2926.0</td>
+      <td>2017-03-03</td>
+      <td>2017-03-08</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2368953</td>
+      <td>3552.0</td>
+      <td>2017-03-02</td>
+      <td>2017-03-06</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Bank account or service</td>
+      <td>Savings account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR2353277</td>
+      <td>438.0</td>
+      <td>2017-02-21</td>
+      <td>2017-02-24</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2190357</td>
+      <td>3203.0</td>
+      <td>2016-11-02</td>
+      <td>2016-11-14</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2184843</td>
+      <td>10041.0</td>
+      <td>2016-10-28</td>
+      <td>2016-10-31</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2150336</td>
+      <td>1791.0</td>
+      <td>2016-10-06</td>
+      <td>2016-10-12</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Bank account or service</td>
+      <td>(CD) Certificate of deposit</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2147799</td>
+      <td>5050.0</td>
+      <td>2016-10-05</td>
+      <td>2016-10-14</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2146555</td>
+      <td>3330.0</td>
+      <td>2016-10-04</td>
+      <td>2016-10-06</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2140531</td>
+      <td>3003.0</td>
+      <td>2016-09-30</td>
+      <td>2016-10-14</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2132541</td>
+      <td>489.0</td>
+      <td>2016-09-26</td>
+      <td>2016-09-28</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2128698</td>
+      <td>1520.0</td>
+      <td>2016-09-23</td>
+      <td>2016-09-27</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2125933</td>
+      <td>3001.0</td>
+      <td>2016-09-22</td>
+      <td>2016-09-26</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Balance transfer fee</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2106749</td>
+      <td>11329.0</td>
+      <td>2016-09-12</td>
+      <td>2016-09-14</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2089516</td>
+      <td>3317.0</td>
+      <td>2016-08-31</td>
+      <td>2016-09-06</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2083797</td>
+      <td>1600.0</td>
+      <td>2016-08-26</td>
+      <td>2016-08-30</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Bank account or service</td>
+      <td>Savings account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2081319</td>
+      <td>572.0</td>
+      <td>2016-08-25</td>
+      <td>2016-08-30</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2075840</td>
+      <td>119.0</td>
+      <td>2016-08-22</td>
+      <td>2016-08-24</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR2053856</td>
+      <td>3819.0</td>
+      <td>2016-08-09</td>
+      <td>2016-08-29</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2047406</td>
+      <td>3069.0</td>
+      <td>2016-08-04</td>
+      <td>2016-08-08</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Bank account or service</td>
+      <td>(CD) Certificate of deposit</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2036377</td>
+      <td>524.0</td>
+      <td>2016-07-28</td>
+      <td>2016-08-02</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2019528</td>
+      <td>697.0</td>
+      <td>2016-07-19</td>
+      <td>2016-07-20</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2017443</td>
+      <td>4643.0</td>
+      <td>2016-07-18</td>
+      <td>2016-07-19</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR2015196</td>
+      <td>137.0</td>
+      <td>2016-07-15</td>
+      <td>2016-07-16</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1994567</td>
+      <td>7011.0</td>
+      <td>2016-07-01</td>
+      <td>2016-07-11</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1952426</td>
+      <td>3837.0</td>
+      <td>2016-06-02</td>
+      <td>2016-06-06</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1943347</td>
+      <td>2799.0</td>
+      <td>2016-05-26</td>
+      <td>2016-05-27</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1942158</td>
+      <td>3834.0</td>
+      <td>2016-05-25</td>
+      <td>2016-05-31</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1941865</td>
+      <td>5180.0</td>
+      <td>2016-05-25</td>
+      <td>2016-05-31</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1938865</td>
+      <td>1699.0</td>
+      <td>2016-05-24</td>
+      <td>2016-05-31</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1936930</td>
+      <td>3632.0</td>
+      <td>2016-05-23</td>
+      <td>2016-05-24</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1932270</td>
+      <td>2463.0</td>
+      <td>2016-05-19</td>
+      <td>2016-05-31</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1924106</td>
+      <td>4493.0</td>
+      <td>2016-05-13</td>
+      <td>2016-05-13</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Customer service issues</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1913916</td>
+      <td>3116.0</td>
+      <td>2016-05-06</td>
+      <td>2016-05-11</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1912930</td>
+      <td>2324.0</td>
+      <td>2016-05-06</td>
+      <td>2016-05-16</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1905472</td>
+      <td>1579.0</td>
+      <td>2016-05-02</td>
+      <td>2016-05-02</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1894861</td>
+      <td>3039.0</td>
+      <td>2016-04-25</td>
+      <td>2016-04-28</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1885950</td>
+      <td>4294.0</td>
+      <td>2016-04-19</td>
+      <td>2016-04-21</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1884968</td>
+      <td>12358.0</td>
+      <td>2016-04-18</td>
+      <td>2016-04-18</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1881766</td>
+      <td>462.0</td>
+      <td>2016-04-15</td>
+      <td>2016-04-15</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1882476</td>
+      <td>13417.0</td>
+      <td>2016-04-15</td>
+      <td>2016-04-15</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1869568</td>
+      <td>1445.0</td>
+      <td>2016-04-07</td>
+      <td>2016-04-11</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>Older American, Servicemember</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1863969</td>
+      <td>2209.0</td>
+      <td>2016-04-04</td>
+      <td>2016-04-06</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>Servicemember</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1845683</td>
+      <td>6256.0</td>
+      <td>2016-03-23</td>
+      <td>2016-03-23</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1826636</td>
+      <td>472.0</td>
+      <td>2016-03-10</td>
+      <td>2016-03-10</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1822084</td>
+      <td>3977.0</td>
+      <td>2016-03-08</td>
+      <td>2016-03-08</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1809285</td>
+      <td>3372.0</td>
+      <td>2016-02-29</td>
+      <td>2016-03-01</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1791074</td>
+      <td>11906.0</td>
+      <td>2016-02-17</td>
+      <td>2016-02-18</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1789593</td>
+      <td>9236.0</td>
+      <td>2016-02-16</td>
+      <td>2016-03-21</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Miscellaneous issues</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1784697</td>
+      <td>9458.0</td>
+      <td>2016-02-11</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>Servicemember</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1775172</td>
+      <td>4445.0</td>
+      <td>2016-02-05</td>
+      <td>2016-02-05</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1773179</td>
+      <td>3283.0</td>
+      <td>2016-02-04</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1773807</td>
+      <td>2129.0</td>
+      <td>2016-02-04</td>
+      <td>2016-02-17</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1764286</td>
+      <td>2084.0</td>
+      <td>2016-01-29</td>
+      <td>2016-02-01</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Miscellaneous issues</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1762648</td>
+      <td>4449.0</td>
+      <td>2016-01-28</td>
+      <td>2016-01-29</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>None</td>
+      <td>CR1756498</td>
+      <td>2296.0</td>
+      <td>2016-01-25</td>
+      <td>2016-01-26</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1756563</td>
+      <td>2642.0</td>
+      <td>2016-01-25</td>
+      <td>2016-02-01</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1744554</td>
+      <td>3532.0</td>
+      <td>2016-01-15</td>
+      <td>2016-01-20</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1734737</td>
+      <td>4387.0</td>
+      <td>2016-01-08</td>
+      <td>2016-01-12</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1729929</td>
+      <td>2727.0</td>
+      <td>2016-01-06</td>
+      <td>2016-01-07</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1725606</td>
+      <td>3241.0</td>
+      <td>2016-01-04</td>
+      <td>2016-01-04</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1713275</td>
+      <td>1316.0</td>
+      <td>2015-12-22</td>
+      <td>2015-12-23</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1708290</td>
+      <td>11064.0</td>
+      <td>2015-12-18</td>
+      <td>2015-12-18</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Account opening, closing, or management</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1676436</td>
+      <td>520.0</td>
+      <td>2015-11-30</td>
+      <td>2015-12-04</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Miscellaneous issues</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1660760</td>
+      <td>3092.0</td>
+      <td>2015-11-18</td>
+      <td>2015-12-14</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Account opening, closing, or management</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1645849</td>
+      <td>1323.0</td>
+      <td>2015-11-09</td>
+      <td>2015-11-09</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1645852</td>
+      <td>482.0</td>
+      <td>2015-11-09</td>
+      <td>2015-11-10</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Deposits and withdrawals</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1631076</td>
+      <td>2709.0</td>
+      <td>2015-10-29</td>
+      <td>2015-10-30</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Miscellaneous issues</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1621364</td>
+      <td>6924.0</td>
+      <td>2015-10-23</td>
+      <td>2015-10-26</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Identity theft / Fraud / Embezzlement</td>
+      <td>Older American</td>
+      <td>Fax</td>
+      <td>Closed</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1621318</td>
+      <td>1129.0</td>
+      <td>2015-10-23</td>
+      <td>2015-10-27</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Credit card</td>
+      <td>None</td>
+      <td>Billing disputes</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with monetary relief</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>CR1592064</td>
+      <td>3450.0</td>
+      <td>2015-10-05</td>
+      <td>2015-10-07</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Bank account or service</td>
+      <td>Checking account</td>
+      <td>Problems caused by my funds being low</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with explanation</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1590438</td>
+      <td>2755.0</td>
+      <td>2015-10-02</td>
+      <td>2015-10-06</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Bank account or service</td>
+      <td>Other bank product/service</td>
+      <td>Making/receiving payments, sending money</td>
+      <td>None</td>
+      <td>Fax</td>
+      <td>Closed with non-monetary relief</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>CR1573466</td>
+      <td>2409.0</td>
+      <td>2015-09-21</td>
+      <td>2015-09-24</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">financial_product</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Bank account or service'>Bank account or service</option><option value='Credit card'>Credit card</option><option value='Mortgage'>Mortgage</option><option value='Personal loan'>Personal loan</option><option value='Auto loan'>Auto loan</option><option value='Student loan'>Student loan</option><option value='Home equity loan or line of credit'>Home equity loan or line of credit</option><option value='Investment account'>Investment account</option><option value='Savings account'>Savings account</option><option value='Checking account'>Checking account</option><option value='Certificate of deposit (CD)'>Certificate of deposit (CD)</option><option value='Money market account'>Money market account</option><option value='Retirement account (e.g., 401(k), IRA)'>Retirement account (e.g., 401(k), IRA)</option><option value='Insurance product'>Insurance product</option><option value='Foreign exchange service'>Foreign exchange service</option></select></span><br><br><div id="bar_viz_financial_product"></div><b>📃 Summary:</b> Financial product or service involved<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">specific_product</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Checking account'>Checking account</option><option value='Savings account'>Savings account</option><option value='(CD) Certificate of deposit'>(CD) Certificate of deposit</option><option value='Money market account'>Money market account</option><option value='Individual Retirement Account (IRA)'>Individual Retirement Account (IRA)</option><option value='Personal loan'>Personal loan</option><option value='Mortgage loan'>Mortgage loan</option><option value='Home equity line of credit (HELOC)'>Home equity line of credit (HELOC)</option><option value='Credit card'>Credit card</option><option value='Debit card'>Debit card</option><option value='Online banking service'>Online banking service</option><option value='Mobile banking app'>Mobile banking app</option><option value='Wire transfer service'>Wire transfer service</option><option value='Foreign currency exchange'>Foreign currency exchange</option><option value='Safe deposit box'>Safe deposit box</option><option value='Cashing a check without an account'>Cashing a check without an account</option><option value='Notary services'>Notary services</option><option value='Investment/brokerage services'>Investment/brokerage services</option><option value='Other bank product/service'>Other bank product/service</option></select></span><br><br><div id="bar_viz_specific_product"></div><b>📃 Summary:</b> Specific type of financial product<br><b>❓ Missing:</b> Not applicable for general financial products like credit cards.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">complaint_category</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_complaint_category"></div><b>📃 Summary:</b> Main category of the complaint<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tags</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Older American'>Older American</option><option value='Servicemember'>Servicemember</option><option value='Older American, Servicemember'>Older American, Servicemember</option><option value='Student'>Student</option><option value='Veteran'>Veteran</option><option value='Active Duty'>Active Duty</option><option value='Reservist'>Reservist</option><option value='Dependent'>Dependent</option><option value='Guard'>Guard</option><option value='Retired'>Retired</option><option value='Disabled'>Disabled</option><option value='Low Income'>Low Income</option><option value='Immigrant'>Immigrant</option><option value='Rural'>Rural</option><option value='Minor'>Minor</option></select></span><br><br><div id="bar_viz_tags"></div><b>📃 Summary:</b> Additional labels or categories for the complaint<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">submission_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Postal mail'>Postal mail</option><option value='Fax'>Fax</option><option value='Email'>Email</option><option value='Phone'>Phone</option><option value='Web form'>Web form</option><option value='In person'>In person</option><option value='Mobile app'>Mobile app</option></select></span><br><br><div id="bar_viz_submission_method"></div><b>📃 Summary:</b> Method used to submit the complaint<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">resolution_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Closed with explanation'>Closed with explanation</option><option value='Closed with monetary relief'>Closed with monetary relief</option><option value='Closed with non-monetary relief'>Closed with non-monetary relief</option><option value='In progress'>In progress</option><option value='Closed with relief'>Closed with relief</option><option value='Closed'>Closed</option><option value='Closed without relief'>Closed without relief</option><option value='Withdrawn by consumer'>Withdrawn by consumer</option><option value='Resolved'>Resolved</option><option value='Administratively closed'>Administratively closed</option><option value='Pending'>Pending</option><option value='Referred to other agency'>Referred to other agency</option></select></span><br><br><div id="bar_viz_resolution_type"></div><b>📃 Summary:</b> How the company resolved the complaint<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">timely_response</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Yes'>Yes</option><option value='No'>No</option></select></span><br><br><div id="bar_viz_timely_response"></div><b>📃 Summary:</b> Whether company responded within expected timeframe<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">consumer_disputed</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='No'>No</option><option value='Yes'>Yes</option></select></span><br><br><div id="bar_viz_consumer_disputed"></div><b>📃 Summary:</b> Whether consumer disagreed with resolution<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">complaint_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_complaint_id"></div><b>📃 Summary:</b> Unique identifier for the complaint<br><b>🦄 Unique:</b> This column represents a unique identifier for each complaint. For this table, each row is for a specific complaint, and complaint_id is unique across rows.<br><b>🎨 Patterns:</b><br><ul><li><code>CR\d{7}</code><br><i>Complaint ID values starting with 'CR' followed by 7 digits</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_client_id"></div><b>📃 Summary:</b> Unique identifier for the client<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">date_received</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_date_received"></div><b>📃 Summary:</b> Date when the complaint was received<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">date_sent_to_company</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_date_sent_to_company"></div><b>📃 Summary:</b> Date when complaint was forwarded to company<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about customer complaints to financial institutions. It includes details like the date received, product type, issue, how it was submitted, the company's response, and whether it was resolved. Each row represents a unique complaint with an ID. The table tracks the timeline and outcome of each complaint, including whether the consumer disputed the resolution.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>8</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>date_received</td>
+      <td>Date when the complaint was received</td>
+      <td>date_received</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>product</td>
+      <td>Financial product or service involved</td>
+      <td>financial_product</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>sub_product</td>
+      <td>Specific type of financial product</td>
+      <td>specific_product</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>issue</td>
+      <td>Main category of the complaint</td>
+      <td>complaint_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>sub_issue</td>
+      <td>Specific subcategory of the complaint</td>
+      <td>complaint_subcategory</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>consumer_complaint_narrative</td>
+      <td>Details of the complaint provided by consumer</td>
+      <td>complaint_details</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>tags</td>
+      <td>Additional labels or categories for the complaint</td>
+      <td>tags</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>consumer_consent_provided</td>
+      <td>Whether consumer agreed to share complaint publicly</td>
+      <td>public_consent</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>submitted_via</td>
+      <td>Method used to submit the complaint</td>
+      <td>submission_method</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>date_sent_to_company</td>
+      <td>Date when complaint was forwarded to company</td>
+      <td>date_sent_to_company</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>company_response_to_consumer</td>
+      <td>How the company resolved the complaint</td>
+      <td>resolution_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>timely_response</td>
+      <td>Whether company responded within expected timeframe</td>
+      <td>timely_response</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>consumer_disputed</td>
+      <td>Whether consumer disagreed with resolution</td>
+      <td>consumer_disputed</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>complaint_id</td>
+      <td>Unique identifier for the complaint</td>
+      <td>complaint_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>client_id</td>
+      <td>Unique identifier for the client</td>
+      <td>client_id</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>1</b> columns have erroneous values<br><ol><li><b>complaint_category</b>: 'Closing/Cancelling account' and 'Account opening, closing, or management' overlap. 'Other' and 'Other fee' are vague categories.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Closing/Cancelling account</td>
+      <td>Account opening, closing, or management</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Other</td>
+      <td>Miscellaneous issues</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Other fee</td>
+      <td>Miscellaneous fee issues</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>APR or interest rate</td>
+      <td>Interest rate issues</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Customer service / Customer relations</td>
+      <td>Customer service issues</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Credit card protection / Debt protection</td>
+      <td>Credit protection issues</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Forbearance / Workout plans</td>
+      <td>Repayment plans</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Collection debt dispute</td>
+      <td>Debt collection issues</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>5</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>complaint_details</td>
+      <td>CAST("complaint_details" AS VARCHAR)</td>
+      <td>To transform the data type of the 'complaint_details' column from FLOAT to VARCHAR in Snowflake, we need to use a simple CAST function. This will convert the floating-point values to their string representation. Since the column currently contains FLOAT values, casting to VARCHAR will ensure that all data is preserved in string format.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>complaint_subcategory</td>
+      <td>CAST("complaint_subcategory" AS VARCHAR)</td>
+      <td>To transform the data type of the 'complaint_subcategory' column from FLOAT to VARCHAR in Snowflake, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the column currently contains FLOAT values, casting to VARCHAR will preserve the data while changing its type to a string format.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>date_received</td>
+      <td>CAST("date_received" AS DATE)</td>
+      <td>To transform the 'date_received' column from VARCHAR to DATE in Snowflake, we can use a simple CAST function. The data is already in the format 'YYYY-MM-DD', which is directly compatible with Snowflake's DATE data type. Therefore, we don't need to use TO_DATE() function with a specific format string. A straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>date_sent_to_company</td>
+      <td>CAST("date_sent_to_company" AS DATE)</td>
+      <td>To transform the 'date_sent_to_company' column from VARCHAR to DATE in Snowflake, we can use a simple CAST function. The current format of the dates in the column is already in the 'YYYY-MM-DD' format, which is directly compatible with Snowflake's DATE type. Therefore, we don't need to use TO_DATE() function with a specific format string. A straightforward CAST will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>public_consent</td>
+      <td>CAST("public_consent" AS VARCHAR)</td>
+      <td>To transform the data type of the 'public_consent' column from FLOAT to VARCHAR in Snowflake, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the column 'public_consent' has no distinct values (it's empty), this transformation will not affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>6</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>complaint_details</td>
+      <td>100.0</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>complaint_subcategory</td>
+      <td>100.0</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>consumer_disputed</td>
+      <td>5.3</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>public_consent</td>
+      <td>100.0</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>specific_product</td>
+      <td>40.5</td>
+      <td>True</td>
+      <td>Not applicable for general financial products like credit cards.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>tags</td>
+      <td>83.0</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>complaint_details</td>
+      <td>100.0</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>complaint_subcategory</td>
+      <td>100.0</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>consumer_disputed</td>
+      <td>5.3</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>public_consent</td>
+      <td>100.0</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>tags</td>
+      <td>83.0</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'Bank account or...', 'value': 59.5}, {'label': 'Credit card', 'value': 40.5}];
+    drawBarChart("bar_viz_financial_product", data);
+data = [{'label': 'Checking accoun...', 'value': 49.411764705882355}, {'label': 'Other bank prod...', 'value': 38.31932773109244}, {'label': 'Savings account', 'value': 6.050420168067227}, {'label': '(CD) Certificat...', 'value': 5.88235294117647}, {'label': 'Cashing a check...', 'value': 0.33613445378151263}];
+    drawBarChart("bar_viz_specific_product", data);
+data = [{'label': 'Account opening...', 'value': 37.1}, {'label': 'Deposits and wi...', 'value': 17.2}, {'label': 'Billing dispute...', 'value': 7.3999999999999995}, {'label': 'Identity theft ...', 'value': 6.4}, {'label': 'Miscellaneous i...', 'value': 5.6000000000000005}, {'label': 'Other values', 'value': 26.3}];
+    drawBarChart("bar_viz_complaint_category", data);
+data = [{'label': 'Older American', 'value': 71.76470588235294}, {'label': 'Older American,...', 'value': 14.705882352941178}, {'label': 'Servicemember', 'value': 13.529411764705882}];
+    drawBarChart("bar_viz_tags", data);
+data = [{'label': 'Postal mail', 'value': 69.39999999999999}, {'label': 'Fax', 'value': 29.799999999999997}, {'label': 'Email', 'value': 0.8}];
+    drawBarChart("bar_viz_submission_method", data);
+data = [{'label': 'Closed with exp...', 'value': 74.7}, {'label': 'Closed with mon...', 'value': 14.799999999999999}, {'label': 'Closed with non...', 'value': 7.1}, {'label': 'In progress', 'value': 1.3}, {'label': 'Closed with rel...', 'value': 0.8999999999999999}, {'label': 'Other values', 'value': 1.2}];
+    drawBarChart("bar_viz_resolution_type", data);
+data = [{'label': 'Yes', 'value': 99.5}, {'label': 'No', 'value': 0.5}];
+    drawBarChart("bar_viz_timely_response", data);
+data = [{'label': 'No', 'value': 77.29672650475185}, {'label': 'Yes', 'value': 22.70327349524815}];
+    drawBarChart("bar_viz_consumer_disputed", data);
+data = [{'label': 'CR1816814', 'value': 0.1}, {'label': 'CR1988571', 'value': 0.1}, {'label': 'CR1974115', 'value': 0.1}, {'label': 'CR1940052', 'value': 0.1}, {'label': 'CR1919975', 'value': 0.1}, {'label': 'Other values', 'value': 99.5}];
+    drawBarChart("bar_viz_complaint_id", data);
+data = [{'label': '8726', 'value': 0.2}, {'label': '1649', 'value': 0.2}, {'label': '2800', 'value': 0.2}, {'label': '1593', 'value': 0.2}, {'label': '680', 'value': 0.2}, {'label': 'Other values', 'value': 99.0}];
+    drawBarChart("bar_viz_client_id", data);
+data = [{'label': '2015-07-23', 'value': 0.6}, {'label': '2016-09-21', 'value': 0.6}, {'label': '2016-05-25', 'value': 0.6}, {'label': '2015-07-31', 'value': 0.6}, {'label': '2014-04-03', 'value': 0.5}, {'label': 'Other values', 'value': 97.1}];
+    drawBarChart("bar_viz_date_received", data);
+data = [{'label': '2016-05-31', 'value': 0.7000000000000001}, {'label': '2014-02-07', 'value': 0.7000000000000001}, {'label': '2015-07-24', 'value': 0.6}, {'label': '2014-02-18', 'value': 0.6}, {'label': '2014-07-31', 'value': 0.5}, {'label': 'Other values', 'value': 96.89999999999999}];
+    drawBarChart("bar_viz_date_sent_to_company", data);
+
+
+</script>
+</body>
+</html>
