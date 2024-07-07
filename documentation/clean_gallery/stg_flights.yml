@@ -1,0 +1,73 @@
+version: 2
+models:
+- name: stg_flights
+  description: The table is about flights, with details of their schedules and actual
+    times. Each row represents a flight with a unique ID. It includes information
+    on the source, flight number, scheduled and actual departure times, and scheduled
+    and actual arrival times. Some flights have missing data for actual arrival times,
+    indicating they may not have landed yet or the data is unavailable.
+  columns:
+  - name: flight_id
+    description: Unique identifier for each flight record
+    tests:
+    - not_null
+    - unique
+    cocoon_meta:
+      uniqueness: This column represents a unique identifier for each flight record.
+        For this table, each row corresponds to a single flight. The flight_id appears
+        to be unique across rows, as it's described as a "unique identifier for each
+        flight record."
+  - name: airline_code
+    description: Source or airline code
+    tests:
+    - not_null
+  - name: flight_code
+    description: Flight code including airline, number, and route
+    tests:
+    - not_null
+  - name: scheduled_departure_time
+    description: Scheduled departure time of the flight
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: \d{1,2}:\d{2}\s?(a\.m\.|p\.m\.)
+        summary: Time values in 12-hour format with a.m./p.m. (e.g., 7:10 a.m., 4:00
+          p.m.)
+      - regex: \d{1,2}:\d{2}[ap]
+        summary: Time values in 24-hour format (e.g., 12:57p, 2:46p)
+      - regex: Not Available
+        summary: Special case for "Not Available"
+  - name: actual_departure_time
+    description: Actual departure time of the flight
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: \d{1,2}:\d{2}\s(a\.m\.|p\.m\.)
+        summary: Time values in 12-hour format (e.g., "7:22 a.m.", "3:36 p.m.")
+  - name: scheduled_arrival_time
+    description: Scheduled arrival time of the flight
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: \d{1,2}:\d{2}\s(?:a\.m\.|p\.m\.)
+        summary: Time values in 12-hour format (HH:MM a.m./p.m.)
+      - regex: \d{2}/\d{2}\s\d{1,2}:\d{2}\sa\.m\.
+        summary: Time values with date prefix (MM/DD HH:MM a.m.)
+      - regex: \d{2}/\d{2}\s+\d{1,2}:\d{2}\s+p\.m\.
+        summary: Date and time values in the format of MM/DD H:MM p.m. or MM/DD HH:MM
+          p.m.
+  - name: actual_arrival_time
+    description: Actual arrival time of the flight
+    cocoon_meta:
+      missing_acceptable: Flight hasn't arrived yet for future or in-progress flights.
+      patterns:
+      - regex: \d{1,2}:\d{2}\s(?:a\.m\.|p\.m\.)
+        summary: Time values in 12-hour format with a.m./p.m. indicators
+      - regex: Not Available|Contact Airline
+        summary: Special values for unavailable times
+      - regex: \d{1,2}:\d{2}A
+        summary: Time values in the format of H:MMA (single-digit hour) or HH:MMA
+          (double-digit hour)

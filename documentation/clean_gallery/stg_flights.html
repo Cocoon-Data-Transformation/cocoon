@@ -1,0 +1,7344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>flights</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>tuple_id</th>
+      <th>src</th>
+      <th>flight</th>
+      <th>sched_dep_time</th>
+      <th>act_dep_time</th>
+      <th>sched_arr_time</th>
+      <th>act_arr_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>aa</td>
+      <td>AA-3859-IAH-ORD</td>
+      <td>7:10 a.m.</td>
+      <td>7:16 a.m.</td>
+      <td>9:40 a.m.</td>
+      <td>9:32 a.m.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>aa</td>
+      <td>AA-1733-ORD-PHX</td>
+      <td>7:45 p.m.</td>
+      <td>7:58 p.m.</td>
+      <td>10:30 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>aa</td>
+      <td>AA-1640-MIA-MCO</td>
+      <td>6:30 p.m.</td>
+      <td>None</td>
+      <td>7:25 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>aa</td>
+      <td>AA-518-MIA-JFK</td>
+      <td>6:40 a.m.</td>
+      <td>6:54 a.m.</td>
+      <td>9:25 a.m.</td>
+      <td>9:28 a.m.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>aa</td>
+      <td>AA-3756-ORD-SLC</td>
+      <td>12:15 p.m.</td>
+      <td>12:41 p.m.</td>
+      <td>2:45 p.m.</td>
+      <td>2:50 p.m.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>aa</td>
+      <td>AA-204-LAX-MCO</td>
+      <td>11:25 p.m.</td>
+      <td>None</td>
+      <td>12/02/2011 6:55 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>aa</td>
+      <td>AA-3468-CVG-MIA</td>
+      <td>7:00 a.m.</td>
+      <td>7:25 a.m.</td>
+      <td>9:55 a.m.</td>
+      <td>9:45 a.m.</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>aa</td>
+      <td>AA-484-DFW-MIA</td>
+      <td>4:15 p.m.</td>
+      <td>4:29 p.m.</td>
+      <td>7:55 p.m.</td>
+      <td>7:39 p.m.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>aa</td>
+      <td>AA-446-DFW-PHL</td>
+      <td>11:50 a.m.</td>
+      <td>12:12 p.m.</td>
+      <td>3:50 p.m.</td>
+      <td>4:09 p.m.</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>aa</td>
+      <td>AA-466-IAH-MIA</td>
+      <td>6:00 a.m.</td>
+      <td>6:08 a.m.</td>
+      <td>9:20 a.m.</td>
+      <td>9:05 a.m.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>aa</td>
+      <td>AA-1886-BOS-MIA</td>
+      <td>10:45 a.m.</td>
+      <td>10:55 a.m.</td>
+      <td>2:20 p.m.</td>
+      <td>1:40 p.m.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>aa</td>
+      <td>AA-2957-DFW-CVG</td>
+      <td>7:55 a.m.</td>
+      <td>8:04 a.m.</td>
+      <td>11:05 a.m.</td>
+      <td>11:01 a.m.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>aa</td>
+      <td>AA-1664-MIA-ATL</td>
+      <td>10:15 a.m.</td>
+      <td>10:18 a.m.</td>
+      <td>12:10 p.m.</td>
+      <td>11:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>aa</td>
+      <td>AA-3979-CVG-ORD</td>
+      <td>7:30 a.m.</td>
+      <td>8:04 a.m.</td>
+      <td>8:00 a.m.</td>
+      <td>8:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>aa</td>
+      <td>AA-1279-DFW-PHX</td>
+      <td>1:00 p.m.</td>
+      <td>2:04 p.m.</td>
+      <td>2:35 p.m.</td>
+      <td>3:30 p.m.</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>aa</td>
+      <td>AA-616-DFW-DTW</td>
+      <td>9:05 a.m.</td>
+      <td>10:10 a.m.</td>
+      <td>12:35 p.m.</td>
+      <td>1:27 p.m.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>aa</td>
+      <td>AA-4344-ORD-DTW</td>
+      <td>11:45 a.m.</td>
+      <td>12:13 p.m.</td>
+      <td>2:00 p.m.</td>
+      <td>2:10 p.m.</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>aa</td>
+      <td>AA-2525-DFW-MIA</td>
+      <td>7:25 a.m.</td>
+      <td>7:39 a.m.</td>
+      <td>11:10 a.m.</td>
+      <td>11:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>aa</td>
+      <td>AA-404-MIA-MCO</td>
+      <td>6:45 a.m.</td>
+      <td>6:57 a.m.</td>
+      <td>7:45 a.m.</td>
+      <td>7:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>aa</td>
+      <td>AA-271-MIA-LAX</td>
+      <td>11:35 a.m.</td>
+      <td>11:52 a.m.</td>
+      <td>2:25 p.m.</td>
+      <td>2:27 p.m.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>aa</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>10:40 a.m.</td>
+      <td>11:05 a.m.</td>
+      <td>2:45 p.m.</td>
+      <td>2:46 p.m.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>aa</td>
+      <td>AA-4330-CVG-ORD</td>
+      <td>3:35 p.m.</td>
+      <td>3:36 p.m.</td>
+      <td>4:00 p.m.</td>
+      <td>3:33 p.m.</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>aa</td>
+      <td>AA-1434-DFW-MCO</td>
+      <td>7:15 a.m.</td>
+      <td>7:21 a.m.</td>
+      <td>10:35 a.m.</td>
+      <td>10:36 a.m.</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>aa</td>
+      <td>AA-4307-ORD-DTW</td>
+      <td>6:45 p.m.</td>
+      <td>6:55 p.m.</td>
+      <td>9:10 p.m.</td>
+      <td>8:53 p.m.</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>aa</td>
+      <td>AA-3-JFK-LAX</td>
+      <td>12:00 p.m.</td>
+      <td>12:11 p.m.</td>
+      <td>3:15 p.m.</td>
+      <td>3:16 p.m.</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>aa</td>
+      <td>AA-3842-MSP-ORD</td>
+      <td>6:00 a.m.</td>
+      <td>6:56 a.m.</td>
+      <td>7:30 a.m.</td>
+      <td>7:51 a.m.</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>aa</td>
+      <td>AA-643-MIA-ORD</td>
+      <td>7:10 a.m.</td>
+      <td>7:30 a.m.</td>
+      <td>9:35 a.m.</td>
+      <td>9:31 a.m.</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>aa</td>
+      <td>AA-1007-MIA-PHX</td>
+      <td>4:55 p.m.</td>
+      <td>5:08 p.m.</td>
+      <td>8:05 p.m.</td>
+      <td>7:55 p.m.</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>aa</td>
+      <td>AA-1221-MCO-ORD</td>
+      <td>8:00 p.m.</td>
+      <td>8:23 p.m.</td>
+      <td>9:45 p.m.</td>
+      <td>9:53 p.m.</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>aa</td>
+      <td>AA-400-DFW-JFK</td>
+      <td>10:40 a.m.</td>
+      <td>11:01 a.m.</td>
+      <td>2:59 p.m.</td>
+      <td>3:04 p.m.</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>aa</td>
+      <td>AA-4198-ORD-CLE</td>
+      <td>10:40 a.m.</td>
+      <td>10:54 a.m.</td>
+      <td>12:55 p.m.</td>
+      <td>12:50 p.m.</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>aa</td>
+      <td>AA-1522-SFO-ORD</td>
+      <td>11:55 p.m.</td>
+      <td>None</td>
+      <td>12/02/2011 5:50 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>aa</td>
+      <td>AA-3823-LAX-DEN</td>
+      <td>9:00 p.m.</td>
+      <td>None</td>
+      <td>12/02/2011 12:15 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>aa</td>
+      <td>AA-2312-DFW-DTW</td>
+      <td>8:25 p.m.</td>
+      <td>None</td>
+      <td>11:50 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>aa</td>
+      <td>AA-1165-JFK-MIA</td>
+      <td>6:59 a.m.</td>
+      <td>7:22 a.m.</td>
+      <td>10:34 a.m.</td>
+      <td>10:04 a.m.</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>aa</td>
+      <td>AA-431-MIA-SFO</td>
+      <td>8:35 a.m.</td>
+      <td>8:51 a.m.</td>
+      <td>11:50 a.m.</td>
+      <td>11:44 a.m.</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>aa</td>
+      <td>AA-649-ORD-SNA</td>
+      <td>1:30 p.m.</td>
+      <td>None</td>
+      <td>3:50 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>aa</td>
+      <td>AA-3063-SLC-LAX</td>
+      <td>8:20 p.m.</td>
+      <td>8:39 p.m.</td>
+      <td>9:20 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>aa</td>
+      <td>AA-3804-PHL-ORD</td>
+      <td>2:35 p.m.</td>
+      <td>2:44 p.m.</td>
+      <td>4:05 p.m.</td>
+      <td>3:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>aa</td>
+      <td>AA-1917-JFK-MCO</td>
+      <td>2:55 p.m.</td>
+      <td>3:27 p.m.</td>
+      <td>5:55 p.m.</td>
+      <td>5:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>aa</td>
+      <td>AA-2268-PHX-ORD</td>
+      <td>7:15 a.m.</td>
+      <td>7:22 a.m.</td>
+      <td>11:35 a.m.</td>
+      <td>11:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>aa</td>
+      <td>AA-4277-CVG-JFK</td>
+      <td>12:10 p.m.</td>
+      <td>12:10 p.m.</td>
+      <td>2:15 p.m.</td>
+      <td>1:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>aa</td>
+      <td>AA-789-ORD-DEN</td>
+      <td>1:05 p.m.</td>
+      <td>1:19 p.m.</td>
+      <td>2:35 p.m.</td>
+      <td>3:13 p.m.</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>aa</td>
+      <td>AA-415-BOS-ORD</td>
+      <td>8:35 a.m.</td>
+      <td>8:56 a.m.</td>
+      <td>10:40 a.m.</td>
+      <td>10:16 a.m.</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>aa</td>
+      <td>AA-85-JFK-SFO</td>
+      <td>3:05 p.m.</td>
+      <td>3:36 p.m.</td>
+      <td>6:30 p.m.</td>
+      <td>6:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>aa</td>
+      <td>AA-1544-SAN-ORD</td>
+      <td>11:25 a.m.</td>
+      <td>11:40 a.m.</td>
+      <td>5:25 p.m.</td>
+      <td>4:56 p.m.</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>aa</td>
+      <td>AA-3786-IAH-ORD</td>
+      <td>4:00 p.m.</td>
+      <td>4:12 p.m.</td>
+      <td>6:40 p.m.</td>
+      <td>6:15 p.m.</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>aa</td>
+      <td>AA-222-LAX-BOS</td>
+      <td>7:10 a.m.</td>
+      <td>7:31 a.m.</td>
+      <td>3:30 p.m.</td>
+      <td>3:14 p.m.</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>aa</td>
+      <td>AA-3809-PHX-LAX</td>
+      <td>6:00 a.m.</td>
+      <td>6:10 a.m.</td>
+      <td>6:40 a.m.</td>
+      <td>6:19 a.m.</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>aa</td>
+      <td>AA-59-JFK-SFO</td>
+      <td>7:10 a.m.</td>
+      <td>7:39 a.m.</td>
+      <td>10:45 a.m.</td>
+      <td>11:12 a.m.</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>helloflight</td>
+      <td>AA-3859-IAH-ORD</td>
+      <td>None</td>
+      <td>7:16 a.m.</td>
+      <td>None</td>
+      <td>9:22 a.m.</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>helloflight</td>
+      <td>CO-1586-IAH-MCO</td>
+      <td>7:00 p.m.</td>
+      <td>None</td>
+      <td>10:15 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>helloflight</td>
+      <td>AA-518-MIA-JFK</td>
+      <td>None</td>
+      <td>6:54 a.m.</td>
+      <td>None</td>
+      <td>9:14 a.m.</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>helloflight</td>
+      <td>UA-397-JFK-SFO</td>
+      <td>None</td>
+      <td>8:48 a.m.</td>
+      <td>None</td>
+      <td>11:30 a.m.</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>helloflight</td>
+      <td>UA-3925-IAD-ORF</td>
+      <td>None</td>
+      <td>9:00 a.m.</td>
+      <td>None</td>
+      <td>9:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>helloflight</td>
+      <td>AA-1733-ORD-PHX</td>
+      <td>None</td>
+      <td>7:59 p.m.</td>
+      <td>None</td>
+      <td>10:31 p.m.</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>helloflight</td>
+      <td>UA-2830-MCO-CLT</td>
+      <td>None</td>
+      <td>3:50 p.m.</td>
+      <td>None</td>
+      <td>5:14 p.m.</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>helloflight</td>
+      <td>CO-58-DEN-IAH</td>
+      <td>11:25 a.m.</td>
+      <td>None</td>
+      <td>2:50 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>helloflight</td>
+      <td>AA-1544-SAN-ORD</td>
+      <td>None</td>
+      <td>11:41 a.m.</td>
+      <td>None</td>
+      <td>4:54 p.m.</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>helloflight</td>
+      <td>UA-5487-SFO-MRY</td>
+      <td>None</td>
+      <td>10:53 a.m.</td>
+      <td>None</td>
+      <td>11:11 a.m.</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>helloflight</td>
+      <td>AA-204-LAX-MCO</td>
+      <td>None</td>
+      <td>11:29 p.m.</td>
+      <td>None</td>
+      <td>12/2/11 6:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>helloflight</td>
+      <td>UA-414-LAX-SFO</td>
+      <td>None</td>
+      <td>6:10 a.m.</td>
+      <td>None</td>
+      <td>7:04 a.m.</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>helloflight</td>
+      <td>CO-1614-LAX-IAH</td>
+      <td>12:30 a.m.</td>
+      <td>None</td>
+      <td>5:35 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>helloflight</td>
+      <td>UA-2726-FLL-PHL</td>
+      <td>None</td>
+      <td>4:10 p.m.</td>
+      <td>None</td>
+      <td>6:25 p.m.</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>helloflight</td>
+      <td>CO-52-IAH-LAX</td>
+      <td>7:35 a.m.</td>
+      <td>None</td>
+      <td>9:21 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>helloflight</td>
+      <td>CO-1090-BOS-IAH</td>
+      <td>9:45 a.m.</td>
+      <td>None</td>
+      <td>1:16 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>helloflight</td>
+      <td>AA-616-DFW-DTW</td>
+      <td>None</td>
+      <td>10:11 a.m.</td>
+      <td>None</td>
+      <td>1:11 p.m.</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>helloflight</td>
+      <td>UA-3515-IAD-MSP</td>
+      <td>None</td>
+      <td>8:26 a.m.</td>
+      <td>None</td>
+      <td>9:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>helloflight</td>
+      <td>AA-3468-CVG-MIA</td>
+      <td>None</td>
+      <td>7:25 a.m.</td>
+      <td>None</td>
+      <td>9:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>helloflight</td>
+      <td>AA-484-DFW-MIA</td>
+      <td>None</td>
+      <td>4:29 p.m.</td>
+      <td>None</td>
+      <td>7:37 p.m.</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>helloflight</td>
+      <td>AA-1886-BOS-MIA</td>
+      <td>None</td>
+      <td>10:54 a.m.</td>
+      <td>None</td>
+      <td>1:36 p.m.</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>helloflight</td>
+      <td>CO-62-IAH-EWR</td>
+      <td>2:30 p.m.</td>
+      <td>None</td>
+      <td>7:03 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>helloflight</td>
+      <td>CO-1561-PHX-IAH</td>
+      <td>8:05 a.m.</td>
+      <td>None</td>
+      <td>11:35 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>helloflight</td>
+      <td>UA-2314-ATL-PHL</td>
+      <td>None</td>
+      <td>3:04 p.m.</td>
+      <td>None</td>
+      <td>4:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>helloflight</td>
+      <td>AA-446-DFW-PHL</td>
+      <td>None</td>
+      <td>12:13 p.m.</td>
+      <td>None</td>
+      <td>4:08 p.m.</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>helloflight</td>
+      <td>CO-1023-IAH-DEN</td>
+      <td>11:40 a.m.</td>
+      <td>None</td>
+      <td>1:17 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>helloflight</td>
+      <td>AA-466-IAH-MIA</td>
+      <td>None</td>
+      <td>6:09 a.m.</td>
+      <td>None</td>
+      <td>8:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>helloflight</td>
+      <td>UA-3050-PHX-CLT</td>
+      <td>None</td>
+      <td>11:45 a.m.</td>
+      <td>None</td>
+      <td>5:00 p.m.</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>helloflight</td>
+      <td>CO-89-IAH-EWR</td>
+      <td>6:00 a.m.</td>
+      <td>None</td>
+      <td>10:20 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>helloflight</td>
+      <td>CO-1088-CLE-IAH</td>
+      <td>8:40 a.m.</td>
+      <td>None</td>
+      <td>10:54 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>helloflight</td>
+      <td>AA-1664-MIA-ATL</td>
+      <td>None</td>
+      <td>10:19 a.m.</td>
+      <td>None</td>
+      <td>11:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>helloflight</td>
+      <td>AA-1279-DFW-PHX</td>
+      <td>None</td>
+      <td>2:03 p.m.</td>
+      <td>None</td>
+      <td>3:13 p.m.</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>helloflight</td>
+      <td>UA-854-SFO-IAH</td>
+      <td>None</td>
+      <td>8:07 a.m.</td>
+      <td>None</td>
+      <td>1:23 p.m.</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>helloflight</td>
+      <td>UA-382-IAD-LAX</td>
+      <td>None</td>
+      <td>12:56 p.m.</td>
+      <td>None</td>
+      <td>3:09 p.m.</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>helloflight</td>
+      <td>AA-4344-ORD-DTW</td>
+      <td>None</td>
+      <td>12:14 p.m.</td>
+      <td>None</td>
+      <td>1:55 p.m.</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>helloflight</td>
+      <td>UA-257-JFK-SFO</td>
+      <td>None</td>
+      <td>2:43 p.m.</td>
+      <td>None</td>
+      <td>5:22 p.m.</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>helloflight</td>
+      <td>UA-2945-PHL-CLT</td>
+      <td>None</td>
+      <td>12:07 p.m.</td>
+      <td>None</td>
+      <td>1:11 p.m.</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>helloflight</td>
+      <td>CO-63-EWR-IAH</td>
+      <td>5:25 p.m.</td>
+      <td>None</td>
+      <td>8:22 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>helloflight</td>
+      <td>CO-47-IAH-LAX</td>
+      <td>7:10 p.m.</td>
+      <td>None</td>
+      <td>8:56 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>helloflight</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>None</td>
+      <td>11:06 a.m.</td>
+      <td>None</td>
+      <td>2:39 p.m.</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>helloflight</td>
+      <td>UA-248-PHX-ORD</td>
+      <td>None</td>
+      <td>1:43 p.m.</td>
+      <td>None</td>
+      <td>5:24 p.m.</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>helloflight</td>
+      <td>AA-4330-CVG-ORD</td>
+      <td>3:35 p.m.</td>
+      <td>None</td>
+      <td>4:00 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>helloflight</td>
+      <td>AA-1434-DFW-MCO</td>
+      <td>None</td>
+      <td>7:22 a.m.</td>
+      <td>None</td>
+      <td>10:34 a.m.</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>helloflight</td>
+      <td>AA-1640-MIA-MCO</td>
+      <td>None</td>
+      <td>6:47 p.m.</td>
+      <td>None</td>
+      <td>7:25 p.m.</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>helloflight</td>
+      <td>AA-4307-ORD-DTW</td>
+      <td>None</td>
+      <td>6:56 p.m.</td>
+      <td>None</td>
+      <td>8:38 p.m.</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>helloflight</td>
+      <td>AA-3-JFK-LAX</td>
+      <td>None</td>
+      <td>12:12 p.m.</td>
+      <td>None</td>
+      <td>3:04 p.m.</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>helloflight</td>
+      <td>CO-1694-LAX-IAH</td>
+      <td>7:15 p.m.</td>
+      <td>None</td>
+      <td>12/2/11 12:21 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>helloflight</td>
+      <td>UA-843-LAX-ORD</td>
+      <td>None</td>
+      <td>2:04 p.m.</td>
+      <td>None</td>
+      <td>7:20 p.m.</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>helloflight</td>
+      <td>CO-1193-EWR-MCO</td>
+      <td>9:15 a.m.</td>
+      <td>None</td>
+      <td>12:18 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>100</td>
+      <td>helloflight</td>
+      <td>AA-3842-MSP-ORD</td>
+      <td>None</td>
+      <td>6:57 a.m.</td>
+      <td>None</td>
+      <td>7:49 a.m.</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>flight_id</th>
+      <th>airline_code</th>
+      <th>flight_code</th>
+      <th>scheduled_departure_time</th>
+      <th>actual_departure_time</th>
+      <th>scheduled_arrival_time</th>
+      <th>actual_arrival_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>G4</td>
+      <td>AA-59-JFK-SFO</td>
+      <td>7:10 a.m.</td>
+      <td>7:16 a.m.</td>
+      <td>10:45 a.m.</td>
+      <td>9:32 a.m.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>G4</td>
+      <td>AA-1733-ORD-PHX</td>
+      <td>7:45 p.m.</td>
+      <td>7:58 p.m.</td>
+      <td>10:30 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>AA</td>
+      <td>AA-1640-MIA-MCO</td>
+      <td>6:30 p.m.</td>
+      <td>None</td>
+      <td>7:25 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>AA</td>
+      <td>AA-518-MIA-JFK</td>
+      <td>6:40 a.m.</td>
+      <td>6:54 a.m.</td>
+      <td>9:25 a.m.</td>
+      <td>9:28 a.m.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>G4</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>10:40 a.m.</td>
+      <td>12:41 p.m.</td>
+      <td>2:45 p.m.</td>
+      <td>2:50 p.m.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>AA</td>
+      <td>AA-204-LAX-MCO</td>
+      <td>11:25 p.m.</td>
+      <td>None</td>
+      <td>6:55 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>AA</td>
+      <td>AA-3468-CVG-MIA</td>
+      <td>7:00 a.m.</td>
+      <td>7:25 a.m.</td>
+      <td>9:55 a.m.</td>
+      <td>9:45 a.m.</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>AA</td>
+      <td>AA-484-DFW-MIA</td>
+      <td>4:15 p.m.</td>
+      <td>4:29 p.m.</td>
+      <td>7:55 p.m.</td>
+      <td>7:39 p.m.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>AA</td>
+      <td>AA-3-JFK-LAX</td>
+      <td>12:00 p.m.</td>
+      <td>12:12 p.m.</td>
+      <td>3:15 p.m.</td>
+      <td>4:09 p.m.</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>AA</td>
+      <td>AA-466-IAH-MIA</td>
+      <td>6:00 a.m.</td>
+      <td>6:08 a.m.</td>
+      <td>9:20 a.m.</td>
+      <td>9:05 a.m.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>G4</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>10:40 a.m.</td>
+      <td>10:55 a.m.</td>
+      <td>2:45 p.m.</td>
+      <td>1:40 p.m.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>AA</td>
+      <td>AA-3979-CVG-ORD</td>
+      <td>7:30 a.m.</td>
+      <td>8:04 a.m.</td>
+      <td>8:00 a.m.</td>
+      <td>11:01 a.m.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>CO</td>
+      <td>AA-1664-MIA-ATL</td>
+      <td>10:15 a.m.</td>
+      <td>10:18 a.m.</td>
+      <td>12:10 p.m.</td>
+      <td>11:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>AA</td>
+      <td>AA-3979-CVG-ORD</td>
+      <td>7:30 a.m.</td>
+      <td>8:04 a.m.</td>
+      <td>8:00 a.m.</td>
+      <td>8:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>AA</td>
+      <td>AA-789-ORD-DEN</td>
+      <td>1:05 p.m.</td>
+      <td>2:04 p.m.</td>
+      <td>2:35 p.m.</td>
+      <td>3:30 p.m.</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>G4</td>
+      <td>AA-616-DFW-DTW</td>
+      <td>9:05 a.m.</td>
+      <td>10:10 a.m.</td>
+      <td>12:35 p.m.</td>
+      <td>1:27 p.m.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>AA</td>
+      <td>AA-446-DFW-PHL</td>
+      <td>11:50 a.m.</td>
+      <td>12:13 p.m.</td>
+      <td>3:50 p.m.</td>
+      <td>2:10 p.m.</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>AA</td>
+      <td>AA-2525-DFW-MIA</td>
+      <td>7:25 a.m.</td>
+      <td>7:39 a.m.</td>
+      <td>11:10 a.m.</td>
+      <td>11:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>AA</td>
+      <td>AA-404-MIA-MCO</td>
+      <td>6:45 a.m.</td>
+      <td>6:57 a.m.</td>
+      <td>7:45 a.m.</td>
+      <td>7:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>AA</td>
+      <td>AA-271-MIA-LAX</td>
+      <td>11:35 a.m.</td>
+      <td>11:52 a.m.</td>
+      <td>2:25 p.m.</td>
+      <td>2:27 p.m.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>G4</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>10:40 a.m.</td>
+      <td>11:05 a.m.</td>
+      <td>2:45 p.m.</td>
+      <td>2:46 p.m.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>AA</td>
+      <td>AA-4330-CVG-ORD</td>
+      <td>3:35 p.m.</td>
+      <td>3:36 p.m.</td>
+      <td>4:00 p.m.</td>
+      <td>3:33 p.m.</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>AA</td>
+      <td>AA-1434-DFW-MCO</td>
+      <td>7:15 a.m.</td>
+      <td>7:21 a.m.</td>
+      <td>10:35 a.m.</td>
+      <td>10:36 a.m.</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>G4</td>
+      <td>AA-4307-ORD-DTW</td>
+      <td>6:45 p.m.</td>
+      <td>6:55 p.m.</td>
+      <td>9:10 p.m.</td>
+      <td>8:53 p.m.</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>AA</td>
+      <td>AA-4277-CVG-JFK</td>
+      <td>12:10 p.m.</td>
+      <td>12:11 p.m.</td>
+      <td>2:15 p.m.</td>
+      <td>3:16 p.m.</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>AA</td>
+      <td>AA-466-IAH-MIA</td>
+      <td>6:00 a.m.</td>
+      <td>6:56 a.m.</td>
+      <td>9:20 a.m.</td>
+      <td>7:51 a.m.</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>G4</td>
+      <td>AA-59-JFK-SFO</td>
+      <td>7:10 a.m.</td>
+      <td>7:30 a.m.</td>
+      <td>10:45 a.m.</td>
+      <td>9:31 a.m.</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>G4</td>
+      <td>AA-1007-MIA-PHX</td>
+      <td>4:55 p.m.</td>
+      <td>5:08 p.m.</td>
+      <td>8:05 p.m.</td>
+      <td>7:55 p.m.</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>AA</td>
+      <td>AA-1221-MCO-ORD</td>
+      <td>8:00 p.m.</td>
+      <td>8:23 p.m.</td>
+      <td>9:45 p.m.</td>
+      <td>9:53 p.m.</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>G4</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>10:40 a.m.</td>
+      <td>11:01 a.m.</td>
+      <td>2:45 p.m.</td>
+      <td>3:04 p.m.</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>G4</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>10:40 a.m.</td>
+      <td>10:54 a.m.</td>
+      <td>2:45 p.m.</td>
+      <td>12:50 p.m.</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>AA</td>
+      <td>AA-1522-SFO-ORD</td>
+      <td>11:55 p.m.</td>
+      <td>None</td>
+      <td>5:50 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>AA</td>
+      <td>AA-3823-LAX-DEN</td>
+      <td>9:00 p.m.</td>
+      <td>None</td>
+      <td>12:15 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>AA</td>
+      <td>AA-2312-DFW-DTW</td>
+      <td>8:25 p.m.</td>
+      <td>None</td>
+      <td>11:50 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>AA</td>
+      <td>AA-1434-DFW-MCO</td>
+      <td>7:15 a.m.</td>
+      <td>7:22 a.m.</td>
+      <td>10:35 a.m.</td>
+      <td>10:04 a.m.</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>AA</td>
+      <td>AA-431-MIA-SFO</td>
+      <td>8:35 a.m.</td>
+      <td>8:51 a.m.</td>
+      <td>11:50 a.m.</td>
+      <td>11:44 a.m.</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>AA</td>
+      <td>AA-446-DFW-PHL</td>
+      <td>11:50 a.m.</td>
+      <td>None</td>
+      <td>3:50 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>G4</td>
+      <td>AA-3063-SLC-LAX</td>
+      <td>8:20 p.m.</td>
+      <td>8:39 p.m.</td>
+      <td>9:20 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>AA</td>
+      <td>AA-3804-PHL-ORD</td>
+      <td>2:35 p.m.</td>
+      <td>2:44 p.m.</td>
+      <td>4:05 p.m.</td>
+      <td>3:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>G4</td>
+      <td>AA-1917-JFK-MCO</td>
+      <td>2:55 p.m.</td>
+      <td>3:27 p.m.</td>
+      <td>5:55 p.m.</td>
+      <td>5:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>AA</td>
+      <td>AA-1434-DFW-MCO</td>
+      <td>7:15 a.m.</td>
+      <td>7:22 a.m.</td>
+      <td>10:35 a.m.</td>
+      <td>11:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>AA</td>
+      <td>AA-4277-CVG-JFK</td>
+      <td>12:10 p.m.</td>
+      <td>12:10 p.m.</td>
+      <td>2:15 p.m.</td>
+      <td>1:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>AA</td>
+      <td>AA-789-ORD-DEN</td>
+      <td>1:05 p.m.</td>
+      <td>1:19 p.m.</td>
+      <td>2:35 p.m.</td>
+      <td>3:13 p.m.</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>AA</td>
+      <td>AA-431-MIA-SFO</td>
+      <td>8:35 a.m.</td>
+      <td>8:56 a.m.</td>
+      <td>11:50 a.m.</td>
+      <td>10:16 a.m.</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>AA</td>
+      <td>AA-4330-CVG-ORD</td>
+      <td>3:35 p.m.</td>
+      <td>3:36 p.m.</td>
+      <td>4:00 p.m.</td>
+      <td>6:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>G4</td>
+      <td>AA-1544-SAN-ORD</td>
+      <td>11:25 a.m.</td>
+      <td>11:40 a.m.</td>
+      <td>5:25 p.m.</td>
+      <td>4:56 p.m.</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>AA</td>
+      <td>AA-3786-IAH-ORD</td>
+      <td>4:00 p.m.</td>
+      <td>4:12 p.m.</td>
+      <td>6:40 p.m.</td>
+      <td>6:15 p.m.</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>G4</td>
+      <td>AA-59-JFK-SFO</td>
+      <td>7:10 a.m.</td>
+      <td>7:31 a.m.</td>
+      <td>10:45 a.m.</td>
+      <td>3:14 p.m.</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>AA</td>
+      <td>AA-466-IAH-MIA</td>
+      <td>6:00 a.m.</td>
+      <td>6:10 a.m.</td>
+      <td>9:20 a.m.</td>
+      <td>6:19 a.m.</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>AA</td>
+      <td>AA-2525-DFW-MIA</td>
+      <td>7:25 a.m.</td>
+      <td>7:39 a.m.</td>
+      <td>11:10 a.m.</td>
+      <td>11:12 a.m.</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>G4</td>
+      <td>AA-59-JFK-SFO</td>
+      <td>7:10 a.m.</td>
+      <td>7:16 a.m.</td>
+      <td>10:45 a.m.</td>
+      <td>9:22 a.m.</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>G4</td>
+      <td>CO-1586-IAH-MCO</td>
+      <td>7:00 p.m.</td>
+      <td>None</td>
+      <td>10:15 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>AA</td>
+      <td>AA-518-MIA-JFK</td>
+      <td>6:40 a.m.</td>
+      <td>6:54 a.m.</td>
+      <td>9:25 a.m.</td>
+      <td>9:14 a.m.</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>G4</td>
+      <td>UA-397-JFK-SFO</td>
+      <td>8:00 a.m.</td>
+      <td>8:48 a.m.</td>
+      <td>11:55 a.m.</td>
+      <td>11:30 a.m.</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>G4</td>
+      <td>UA-3925-IAD-ORF</td>
+      <td>8:41 a.m.</td>
+      <td>9:00 a.m.</td>
+      <td>9:54 a.m.</td>
+      <td>9:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>G4</td>
+      <td>AA-1733-ORD-PHX</td>
+      <td>7:45 p.m.</td>
+      <td>7:59 p.m.</td>
+      <td>10:30 p.m.</td>
+      <td>10:31 p.m.</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>G4</td>
+      <td>UA-2830-MCO-CLT</td>
+      <td>3:27 p.m.</td>
+      <td>3:50 p.m.</td>
+      <td>5:05 p.m.</td>
+      <td>5:14 p.m.</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>G4</td>
+      <td>AA-1544-SAN-ORD</td>
+      <td>11:25 a.m.</td>
+      <td>None</td>
+      <td>5:25 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>G4</td>
+      <td>AA-1544-SAN-ORD</td>
+      <td>11:25 a.m.</td>
+      <td>11:41 a.m.</td>
+      <td>5:25 p.m.</td>
+      <td>4:54 p.m.</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>G4</td>
+      <td>UA-5487-SFO-MRY</td>
+      <td>10:39 a.m.</td>
+      <td>10:53 a.m.</td>
+      <td>11:19 a.m.</td>
+      <td>11:11 a.m.</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>AA</td>
+      <td>AA-204-LAX-MCO</td>
+      <td>11:25 p.m.</td>
+      <td>11:29 p.m.</td>
+      <td>6:55 a.m.</td>
+      <td>6:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>AA</td>
+      <td>AA-466-IAH-MIA</td>
+      <td>6:00 a.m.</td>
+      <td>6:10 a.m.</td>
+      <td>9:20 a.m.</td>
+      <td>7:04 a.m.</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>CO</td>
+      <td>CO-1614-LAX-IAH</td>
+      <td>12:30 a.m.</td>
+      <td>None</td>
+      <td>5:35 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>AA</td>
+      <td>AA-3786-IAH-ORD</td>
+      <td>4:00 p.m.</td>
+      <td>4:10 p.m.</td>
+      <td>6:40 p.m.</td>
+      <td>6:25 p.m.</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>G4</td>
+      <td>UA-6273-YYC-SFO</td>
+      <td>7:35 a.m.</td>
+      <td>None</td>
+      <td>9:43 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>G4</td>
+      <td>CO-1090-BOS-IAH</td>
+      <td>9:45 a.m.</td>
+      <td>None</td>
+      <td>1:16 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>G4</td>
+      <td>AA-616-DFW-DTW</td>
+      <td>9:05 a.m.</td>
+      <td>10:11 a.m.</td>
+      <td>12:35 p.m.</td>
+      <td>1:11 p.m.</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>UA</td>
+      <td>UA-3515-IAD-MSP</td>
+      <td>8:15 a.m.</td>
+      <td>8:26 a.m.</td>
+      <td>10:06 a.m.</td>
+      <td>9:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>AA</td>
+      <td>AA-3468-CVG-MIA</td>
+      <td>7:00 a.m.</td>
+      <td>7:25 a.m.</td>
+      <td>9:55 a.m.</td>
+      <td>9:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>AA</td>
+      <td>AA-484-DFW-MIA</td>
+      <td>4:15 p.m.</td>
+      <td>4:29 p.m.</td>
+      <td>7:55 p.m.</td>
+      <td>7:37 p.m.</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>G4</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>10:40 a.m.</td>
+      <td>10:54 a.m.</td>
+      <td>2:45 p.m.</td>
+      <td>1:36 p.m.</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>G4</td>
+      <td>UA-257-JFK-SFO</td>
+      <td>2:30 p.m.</td>
+      <td>None</td>
+      <td>7:03 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>CO</td>
+      <td>CO-1561-PHX-IAH</td>
+      <td>8:05 a.m.</td>
+      <td>None</td>
+      <td>11:35 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>G4</td>
+      <td>AA-1917-JFK-MCO</td>
+      <td>2:55 p.m.</td>
+      <td>3:04 p.m.</td>
+      <td>5:55 p.m.</td>
+      <td>4:43 p.m.</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>AA</td>
+      <td>AA-446-DFW-PHL</td>
+      <td>11:50 a.m.</td>
+      <td>12:13 p.m.</td>
+      <td>3:50 p.m.</td>
+      <td>4:08 p.m.</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>G4</td>
+      <td>CO-1023-IAH-DEN</td>
+      <td>11:40 a.m.</td>
+      <td>None</td>
+      <td>1:17 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>AA</td>
+      <td>AA-466-IAH-MIA</td>
+      <td>6:00 a.m.</td>
+      <td>6:09 a.m.</td>
+      <td>9:20 a.m.</td>
+      <td>8:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>G4</td>
+      <td>UA-3050-PHX-CLT</td>
+      <td>11:05 a.m.</td>
+      <td>11:45 a.m.</td>
+      <td>4:57 p.m.</td>
+      <td>5:00 p.m.</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>AA</td>
+      <td>AA-466-IAH-MIA</td>
+      <td>6:00 a.m.</td>
+      <td>None</td>
+      <td>9:20 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>CO</td>
+      <td>CO-1088-CLE-IAH</td>
+      <td>8:40 a.m.</td>
+      <td>None</td>
+      <td>10:54 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>CO</td>
+      <td>AA-1664-MIA-ATL</td>
+      <td>10:15 a.m.</td>
+      <td>10:19 a.m.</td>
+      <td>12:10 p.m.</td>
+      <td>11:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>AA</td>
+      <td>AA-789-ORD-DEN</td>
+      <td>1:05 p.m.</td>
+      <td>2:03 p.m.</td>
+      <td>2:35 p.m.</td>
+      <td>3:13 p.m.</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>G4</td>
+      <td>UA-854-SFO-IAH</td>
+      <td>7:53 a.m.</td>
+      <td>8:07 a.m.</td>
+      <td>1:39 p.m.</td>
+      <td>1:23 p.m.</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>G4</td>
+      <td>UA-382-IAD-LAX</td>
+      <td>12:30 p.m.</td>
+      <td>12:56 p.m.</td>
+      <td>3:19 p.m.</td>
+      <td>3:09 p.m.</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>G4</td>
+      <td>AA-4344-ORD-DTW</td>
+      <td>11:45 a.m.</td>
+      <td>12:14 p.m.</td>
+      <td>2:00 p.m.</td>
+      <td>1:55 p.m.</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>G4</td>
+      <td>UA-257-JFK-SFO</td>
+      <td>2:30 p.m.</td>
+      <td>2:43 p.m.</td>
+      <td>7:03 p.m.</td>
+      <td>5:22 p.m.</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>AA</td>
+      <td>AA-3-JFK-LAX</td>
+      <td>12:00 p.m.</td>
+      <td>12:07 p.m.</td>
+      <td>3:15 p.m.</td>
+      <td>1:11 p.m.</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>G4</td>
+      <td>CO-63-EWR-IAH</td>
+      <td>5:25 p.m.</td>
+      <td>None</td>
+      <td>8:22 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>CO</td>
+      <td>CO-47-IAH-LAX</td>
+      <td>7:10 p.m.</td>
+      <td>None</td>
+      <td>8:56 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>G4</td>
+      <td>AA-2050-ORD-MIA</td>
+      <td>10:40 a.m.</td>
+      <td>11:06 a.m.</td>
+      <td>2:45 p.m.</td>
+      <td>2:39 p.m.</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>UA</td>
+      <td>UA-248-PHX-ORD</td>
+      <td>12:57 p.m.</td>
+      <td>1:43 p.m.</td>
+      <td>5:15 p.m.</td>
+      <td>5:24 p.m.</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>AA</td>
+      <td>AA-4330-CVG-ORD</td>
+      <td>3:35 p.m.</td>
+      <td>None</td>
+      <td>4:00 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>AA</td>
+      <td>AA-1434-DFW-MCO</td>
+      <td>7:15 a.m.</td>
+      <td>7:22 a.m.</td>
+      <td>10:35 a.m.</td>
+      <td>10:34 a.m.</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>AA</td>
+      <td>AA-1640-MIA-MCO</td>
+      <td>6:30 p.m.</td>
+      <td>6:47 p.m.</td>
+      <td>7:25 p.m.</td>
+      <td>7:25 p.m.</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>G4</td>
+      <td>AA-4307-ORD-DTW</td>
+      <td>6:45 p.m.</td>
+      <td>6:56 p.m.</td>
+      <td>9:10 p.m.</td>
+      <td>8:38 p.m.</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>AA</td>
+      <td>AA-3-JFK-LAX</td>
+      <td>12:00 p.m.</td>
+      <td>12:12 p.m.</td>
+      <td>3:15 p.m.</td>
+      <td>3:04 p.m.</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>CO</td>
+      <td>CO-1694-LAX-IAH</td>
+      <td>7:15 p.m.</td>
+      <td>None</td>
+      <td>12:21 a.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>AA</td>
+      <td>AA-789-ORD-DEN</td>
+      <td>1:05 p.m.</td>
+      <td>2:04 p.m.</td>
+      <td>2:35 p.m.</td>
+      <td>7:20 p.m.</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>CO</td>
+      <td>CO-1193-EWR-MCO</td>
+      <td>9:15 a.m.</td>
+      <td>None</td>
+      <td>12:18 p.m.</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>100</td>
+      <td>AA</td>
+      <td>AA-404-MIA-MCO</td>
+      <td>6:45 a.m.</td>
+      <td>6:57 a.m.</td>
+      <td>7:45 a.m.</td>
+      <td>7:49 a.m.</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">flight_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_flight_id"></div><b>📃 Summary:</b> Unique identifier for each flight record<br><b>🦄 Unique:</b> This column represents a unique identifier for each flight record. For this table, each row corresponds to a single flight. The flight_id appears to be unique across rows, as it's described as a "unique identifier for each flight record."<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">airline_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_airline_code"></div><b>📃 Summary:</b> Source or airline code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">flight_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_flight_code"></div><b>📃 Summary:</b> Flight code including airline, number, and route<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">scheduled_departure_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_scheduled_departure_time"></div><b>📃 Summary:</b> Scheduled departure time of the flight<br><b>🎨 Patterns:</b><br><ul><li><code>\d{1,2}:\d{2}\s?(a\.m\.|p\.m\.)</code><br><i>Time values in 12-hour format with a.m./p.m. (e.g., 7:10 a.m., 4:00 p.m.)</i></li><li><code>\d{1,2}:\d{2}[ap]</code><br><i>Time values in 24-hour format (e.g., 12:57p, 2:46p)</i></li><li><code>Not Available</code><br><i>Special case for "Not Available"</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">actual_departure_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_actual_departure_time"></div><b>📃 Summary:</b> Actual departure time of the flight<br><b>🎨 Patterns:</b><br><ul><li><code>\d{1,2}:\d{2}\s(a\.m\.|p\.m\.)</code><br><i>Time values in 12-hour format (e.g., "7:22 a.m.", "3:36 p.m.")</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">scheduled_arrival_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_scheduled_arrival_time"></div><b>📃 Summary:</b> Scheduled arrival time of the flight<br><b>🎨 Patterns:</b><br><ul><li><code>\d{1,2}:\d{2}\s(?:a\.m\.|p\.m\.)</code><br><i>Time values in 12-hour format (HH:MM a.m./p.m.)</i></li><li><code>\d{2}/\d{2}\s\d{1,2}:\d{2}\sa\.m\.</code><br><i>Time values with date prefix (MM/DD HH:MM a.m.)</i></li><li><code>\d{2}/\d{2}\s+\d{1,2}:\d{2}\s+p\.m\.</code><br><i>Date and time values in the format of MM/DD H:MM p.m. or MM/DD HH:MM p.m.</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">actual_arrival_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_actual_arrival_time"></div><b>📃 Summary:</b> Actual arrival time of the flight<br><b>❓ Missing:</b> Flight hasn't arrived yet for future or in-progress flights.<br><b>🎨 Patterns:</b><br><ul><li><code>\d{1,2}:\d{2}\s(?:a\.m\.|p\.m\.)</code><br><i>Time values in 12-hour format with a.m./p.m. indicators</i></li><li><code>Not Available|Contact Airline</code><br><i>Special values for unavailable times</i></li><li><code>\d{1,2}:\d{2}A</code><br><i>Time values in the format of H:MMA (single-digit hour) or HH:MMA (double-digit hour)</i></li></ul><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about flights, with details of their schedules and actual times. Each row represents a flight with a unique ID. It includes information on the source, flight number, scheduled and actual departure times, and scheduled and actual arrival times. Some flights have missing data for actual arrival times, indicating they may not have landed yet or the data is unavailable.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>7</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>tuple_id</td>
+      <td>Unique identifier for each flight record</td>
+      <td>flight_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>src</td>
+      <td>Source or airline code</td>
+      <td>airline_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>flight</td>
+      <td>Flight code including airline, number, and route</td>
+      <td>flight_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>sched_dep_time</td>
+      <td>Scheduled departure time of the flight</td>
+      <td>scheduled_departure_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>act_dep_time</td>
+      <td>Actual departure time of the flight</td>
+      <td>actual_departure_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>sched_arr_time</td>
+      <td>Scheduled arrival time of the flight</td>
+      <td>scheduled_arrival_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>act_arr_time</td>
+      <td>Actual arrival time of the flight</td>
+      <td>actual_arrival_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>5</b> columns have erroneous values<br><ol><li><b>airline_code</b>: Inconsistent capitalization (e.g., 'CO' vs 'ua'). Mix of airport codes, airline codes, and website names.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>airtravelcenter</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>allegiantair</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>boston</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>businesstravellogue</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>flights</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>flightview</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>flylouisville</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>flytecomm</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>foxbusiness</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>gofox</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>helloflight</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>myrateplan</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>panynj</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>orbitz</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>flightstats</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>quicktrip</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>weather</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>travelocity</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>flightaware</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>wunderground</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>flightexplorer</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>flightarrival</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>world-flight-tracker</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>usatoday</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>aa</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>mytripandmore</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>ifly</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>ua</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>ord</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>flightwise</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>mco</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>sfo</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>den</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>dfw</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>mia</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>phl</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>iad</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>scheduled_departure_time</b>: Values like '6:00aDec 1', '11/30 11:08 p.m.', 'Thu  20:00', and '9:05 a.m. (-00:00)' are unusual due to inconsistent formatting and unnecessary information.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>6:00aDec 1</td>
+      <td>6:00 a.m.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>11/30 11:08 p.m.</td>
+      <td>11:08 p.m.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Thu  20:00</td>
+      <td>8:00 p.m.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>9:05 a.m. (-00:00)</td>
+      <td>9:05 a.m.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>7:10aDec 1</td>
+      <td>7:10 a.m.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>8:35aDec 1</td>
+      <td>8:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>10:40aDec 1</td>
+      <td>10:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>11:25aDec 1</td>
+      <td>11:25 a.m.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>10:39aDec 1</td>
+      <td>10:39 a.m.</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>11:05aDec 1</td>
+      <td>11:05 a.m.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11:40aDec 1</td>
+      <td>11:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>11:45aDec 1</td>
+      <td>11:45 a.m.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>12:00noon</td>
+      <td>12:00 p.m.</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>12:30aDec 1</td>
+      <td>12:30 a.m.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>6:45aDec 1</td>
+      <td>6:45 a.m.</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>6:59aDec 1</td>
+      <td>6:59 a.m.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>7:00aDec 1</td>
+      <td>7:00 a.m.</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>7:05aDec 1</td>
+      <td>7:05 a.m.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>7:15aDec 1</td>
+      <td>7:15 a.m.</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>7:25aDec 1</td>
+      <td>7:25 a.m.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>7:30aDec 1</td>
+      <td>7:30 a.m.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>7:35aDec 1</td>
+      <td>7:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>11/30 11:25 a.m.</td>
+      <td>11:25a</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>11/30 11:55 p.m.</td>
+      <td>11:55p</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>11/30 12:57 p.m.</td>
+      <td>12:57p</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>11/30 1:55 p.m.</td>
+      <td>1:55p</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>11/30 4:00 p.m.</td>
+      <td>4:00p</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>11/30 4:16 p.m.</td>
+      <td>4:16p</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>11/30 6:45 p.m.</td>
+      <td>6:45p</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>11/30 7:45 p.m.</td>
+      <td>7:45p</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>11/30 8:00 p.m.</td>
+      <td>8:00p</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>12:00 a.m.</td>
+      <td>12:00a</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>12:30</td>
+      <td>12:30p</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>1:09 p.m.</td>
+      <td>1:09p</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>2:22 p.m.</td>
+      <td>2:22p</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>2:46 p.m.</td>
+      <td>2:46p</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>8:41aDec 1</td>
+      <td>8:41a</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>9:05aDec 1</td>
+      <td>9:05a</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>9:45aDec 1</td>
+      <td>9:45a</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>10:00aDec 1</td>
+      <td>10:00a</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>10:15aDec 1</td>
+      <td>10:15a</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>10:25aDec 1</td>
+      <td>10:25a</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>10:45aDec 1</td>
+      <td>10:45a</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>11:15aDec 1</td>
+      <td>11:15a</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>11:35aDec 1</td>
+      <td>11:35a</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>11:50aDec 1</td>
+      <td>11:50a</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>11:55aDec 1</td>
+      <td>11:55a</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>6:14aDec 1</td>
+      <td>6:14a</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>6:40aDec 1</td>
+      <td>6:40a</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>7:53aDec 1</td>
+      <td>7:53a</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>7:55aDec 1</td>
+      <td>7:55a</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>8:05aDec 1</td>
+      <td>8:05a</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>8:15aDec 1</td>
+      <td>8:15a</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>8:19aDec 1</td>
+      <td>8:19a</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>8:40aDec 1</td>
+      <td>8:40a</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>8:55aDec 1</td>
+      <td>8:55a</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>9:15aDec 1</td>
+      <td>9:15a</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>actual_departure_time</b>: Inconsistent formats ('7:22 a.m.', '7:10aDec 1'), redundant representations ('12:41 p.m.', '12:41aDec 1'), and unusual entries ('Contact Airline', 'Not Available').<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>7:10aDec 1</td>
+      <td>7:10 a.m.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>12:41aDec 1</td>
+      <td>12:41 p.m.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Not Available</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Contact Airline</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4:28 p.m. (Estimated runway)</td>
+      <td>4:28 p.m.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>7:15 p.m. (Estimated)</td>
+      <td>7:15 p.m.</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>12:10 a.m. (Estimated runway)</td>
+      <td>12:10 a.m.</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1:50 p.m. (+8:00)</td>
+      <td>1:50 p.m.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>8:29 p.m. (Estimated runway)</td>
+      <td>8:29 p.m.</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>9:06 p.m. (Estimated runway)</td>
+      <td>9:06 p.m.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11:29 p.m. (Estimated runway)</td>
+      <td>11:29 p.m.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>6:47 p.m. (Estimated runway)</td>
+      <td>6:47 p.m.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>10:19aDec 1</td>
+      <td>10:19 a.m.</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>11:20aDec 1</td>
+      <td>11:20 a.m.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>11:30aDec 1</td>
+      <td>11:30 a.m.</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>11:47aDec 1</td>
+      <td>11:47 a.m.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>11:51aDec 1</td>
+      <td>11:51 a.m.</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>11:54aDec 1</td>
+      <td>11:54 a.m.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>11:56aDec 1</td>
+      <td>11:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>5:30 p.m. (Estimated)</td>
+      <td>5:30 p.m.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>5:58aDec 1</td>
+      <td>5:58 a.m.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>5:59aDec 1</td>
+      <td>5:59 a.m.</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>6:41aDec 1</td>
+      <td>6:41 a.m.</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>6:56aDec 1</td>
+      <td>6:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>7:04aDec 1</td>
+      <td>7:04 a.m.</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>7:07aDec 1</td>
+      <td>7:07 a.m.</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>7:14aDec 1</td>
+      <td>7:14 a.m.</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>7:22aDec 1</td>
+      <td>7:22 a.m.</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>7:28aDec 1</td>
+      <td>7:28 a.m.</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>8:31aDec 1</td>
+      <td>8:31 a.m.</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>8:32aDec 1</td>
+      <td>8:32 a.m.</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>8:52aDec 1</td>
+      <td>8:52 a.m.</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>10:10aDec 1</td>
+      <td>10:10 a.m.</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>10:20aDec 1</td>
+      <td>10:20 a.m.</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>10:35aDec 1</td>
+      <td>10:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>10:42aDec 1</td>
+      <td>10:42 a.m.</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>10:46aDec 1</td>
+      <td>10:46 a.m.</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>10:47aDec 1</td>
+      <td>10:47 a.m.</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>11/30/2011 11:34 p.m.</td>
+      <td>11:34 p.m.</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>11:08 p.m.            On Time</td>
+      <td>11:08 p.m.</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>11:15aDec 1</td>
+      <td>11:15 a.m.</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>11:33aDec 1</td>
+      <td>11:33 a.m.</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>11:37aDec 1</td>
+      <td>11:37 a.m.</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>11:43aDec 1</td>
+      <td>11:43 a.m.</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>12:30</td>
+      <td>12:30 p.m.</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>12:35 p.m.            Delayed</td>
+      <td>12:35 p.m.</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>1:32 p.m.            Delayed</td>
+      <td>1:32 p.m.</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>1:41 p.m. (Estimated runway)</td>
+      <td>1:41 p.m.</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>1:48 p.m.            Delayed</td>
+      <td>1:48 p.m.</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>4:28 p.m.            Delayed</td>
+      <td>4:28 p.m.</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>5:56aDec 1</td>
+      <td>5:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>6:02aDec 1</td>
+      <td>6:02 a.m.</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>6:09aDec 1</td>
+      <td>6:09 a.m.</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>6:40aDec 1</td>
+      <td>6:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>7:02aDec 1</td>
+      <td>7:02 a.m.</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>7:05aDec 1</td>
+      <td>7:05 a.m.</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>7:08aDec 1</td>
+      <td>7:08 a.m.</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>7:27aDec 1</td>
+      <td>7:27 a.m.</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>7:49aDec 1</td>
+      <td>7:49 a.m.</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>7:51aDec 1</td>
+      <td>7:51 a.m.</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>8:00aDec 1</td>
+      <td>8:00 a.m.</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>8:12aDec 1</td>
+      <td>8:12 a.m.</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>8:40aDec 1</td>
+      <td>8:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>8:48aDec 1</td>
+      <td>8:48 a.m.</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>9:14aDec 1</td>
+      <td>9:14 a.m.</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>9:16 a.m.            Delayed</td>
+      <td>9:16 a.m.</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>9:16aDec 1</td>
+      <td>9:16 a.m.</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>9:59aDec 1</td>
+      <td>9:59 a.m.</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>scheduled_arrival_time</b>: Inconsistent time formats ('10:35a', '10:35 a.m.', '10:35aDec 1'), typos ('5:11aDec 2'), and redundant date representations ('12/2/2011', 'Dec 02', 'Fri 02-Dec-2011').<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Not Available</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>10:35a</td>
+      <td>10:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>10:35aDec 1</td>
+      <td>10:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>5:11aDec 2</td>
+      <td>5:11 a.m.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>12/2/2011</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Dec 02</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Fri 02-Dec-2011</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>12:21 a.m. Dec 02</td>
+      <td>12:21 a.m.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>12:29 a.m. Dec 02</td>
+      <td>12:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>5:11 a.m.Dec 02</td>
+      <td>5:11 a.m.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>12:15 a.m. Dec 02</td>
+      <td>12:15 a.m.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>6:55 a.m. Dec 02</td>
+      <td>6:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>5:50 a.m. Dec 02</td>
+      <td>5:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>12/2/11 12:21 a.m.</td>
+      <td>12:21 a.m.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>12/2/11 5:11 a.m.</td>
+      <td>5:11 a.m.</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>12:15 a.m.  Fri 02-Dec-2011</td>
+      <td>12:15 a.m.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>12:21 a.m.  Fri 02-Dec-2011</td>
+      <td>12:21 a.m.</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>12:29 a.m.  Fri 02-Dec-2011</td>
+      <td>12:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>5:50 a.m.  Fri 02-Dec-2011</td>
+      <td>5:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>6:55 a.m.  Fri 02-Dec-2011</td>
+      <td>6:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>10:31aDec 1</td>
+      <td>10:31 a.m.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>10:34aDec 1</td>
+      <td>10:34 a.m.</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>10:40aDec 1</td>
+      <td>10:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>10:45aDec 1</td>
+      <td>10:45 a.m.</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>11:10aDec 1</td>
+      <td>11:10 a.m.</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>11:19aDec 1</td>
+      <td>11:19 a.m.</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>11:35aDec 1</td>
+      <td>11:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>11:50aDec 1</td>
+      <td>11:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>11:53aDec 1</td>
+      <td>11:53 a.m.</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>12:29aDec 2</td>
+      <td>12:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>5:35aDec 1</td>
+      <td>5:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>6:55aDec 2</td>
+      <td>6:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>7:30aDec 1</td>
+      <td>7:30 a.m.</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>7:45aDec 1</td>
+      <td>7:45 a.m.</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>8:00aDec 1</td>
+      <td>8:00 a.m.</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>9:20aDec 1</td>
+      <td>9:20 a.m.</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>9:35aDec 1</td>
+      <td>9:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>9:54aDec 1</td>
+      <td>9:54 a.m.</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>9:55aDec 1</td>
+      <td>9:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Dec 02 12:15 a.m.</td>
+      <td>12:15 a.m.</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>10:06aDec 1</td>
+      <td>10:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>10:20aDec 1</td>
+      <td>10:20 a.m.</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>10:34A 12-01-11</td>
+      <td>10:34 a.m.</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>10:54aDec 1</td>
+      <td>10:54 a.m.</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>11/30 10:30 p.m.</td>
+      <td>10:30 p.m.</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>11/30 5:15 p.m.</td>
+      <td>5:15 p.m.</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>11/30 5:25 p.m.</td>
+      <td>5:25 p.m.</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>11/30 6:40 p.m.</td>
+      <td>6:40 p.m.</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>11/30 7:35 p.m.</td>
+      <td>7:35 p.m.</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>11/30 7:53 p.m.</td>
+      <td>7:53 p.m.</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>11:05aDec 1</td>
+      <td>12/01 11:05 a.m.</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>11:10A 12-01-11</td>
+      <td>12/01 11:10 a.m.</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>11:55aDec 1</td>
+      <td>12/01 11:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>12/02/2011 12:15 a.m.</td>
+      <td>12/02 12:15 a.m.</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>12/02/2011 5:50 a.m.</td>
+      <td>12/02 5:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>12/02/2011 6:55 a.m.</td>
+      <td>12/02 6:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>12/2/2011 12:15 a.m.</td>
+      <td>12/02 12:15 a.m.</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>12/2/2011 12:29 a.m.</td>
+      <td>12/02 12:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>12/2/2011 5:50 a.m.</td>
+      <td>12/02 5:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>12/2/2011 6:55 a.m.</td>
+      <td>12/02 6:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>12:15aDec 2</td>
+      <td>12/02 12:15 a.m.</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>12:21aDec 2</td>
+      <td>12/02 12:21 a.m.</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>2:45P 12-01-11</td>
+      <td>12/01 2:45 p.m.</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>5:50 a.m.Dec 02</td>
+      <td>12/02 5:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>5:50aDec 2</td>
+      <td>12/02 5:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>6:40aDec 1</td>
+      <td>12/01 6:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>7:23aDec 1</td>
+      <td>12/01 7:23 a.m.</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>7:55P 12-01-11</td>
+      <td>12/01 7:55 p.m.</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>8:27aDec 1</td>
+      <td>12/01 8:27 a.m.</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>9:20A 12-01-11</td>
+      <td>12/01 9:20 a.m.</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>9:21aDec 2</td>
+      <td>12/02 9:21 a.m.</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>9:25aDec 1</td>
+      <td>12/01 9:25 a.m.</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>9:40aDec 1</td>
+      <td>12/01 9:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>9:43aDec 1</td>
+      <td>12/01 9:43 a.m.</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Dec 02 12:21 a.m.</td>
+      <td>12/02 12:21 a.m.</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Dec 02 5:50 a.m.</td>
+      <td>12/02 5:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Dec 02 6:55 a.m.</td>
+      <td>12/02 6:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Fri Dec 2 12:29 a.m.</td>
+      <td>12/02 12:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Fri Dec 2 5:11 a.m.</td>
+      <td>12/02 5:11 a.m.</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Thu  10:35</td>
+      <td>10:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>Thu  12:18</td>
+      <td>12:18 p.m.</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Thu  17:55</td>
+      <td>5:55 p.m.</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Thu  19:25</td>
+      <td>7:25 p.m.</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Thu  22:15</td>
+      <td>10:15 p.m.</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Thu  6:55</td>
+      <td>6:55 a.m.</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Thu  7:45</td>
+      <td>7:45 a.m.</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>actual_arrival_time</b>: Inconsistent formats ('7:10 p.m.' vs '10:08A'), unusual notations ('11:06aDec 1'), and typos ('10:39 p.m.&nbsp(Estimated)') make some values unusual.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>10:08A</td>
+      <td>10:08 a.m.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>11:06aDec 1</td>
+      <td>11:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>10:39 p.m.&amp;nbsp(Estimated)</td>
+      <td>10:39 p.m.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3:21PM</td>
+      <td>3:21 p.m.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>9:14AM</td>
+      <td>9:14 a.m.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>8:45 AM</td>
+      <td>8:45 a.m.</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>11:32am</td>
+      <td>11:32 a.m.</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2:10pm</td>
+      <td>2:10 p.m.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>5:26AM</td>
+      <td>5:26 a.m.</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>12:01 a.m. (Estimated runway)</td>
+      <td>12:01 a.m.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>12:21 a.m. (Estimated)</td>
+      <td>12:21 a.m.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>10:30 p.m. (Estimated)</td>
+      <td>10:30 p.m.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>11:35 p.m. (Estimated runway)</td>
+      <td>11:35 p.m.</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>11:49 p.m. (Estimated runway)</td>
+      <td>11:49 p.m.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>12/2/11 12:01 a.m.</td>
+      <td>12:01 a.m.</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>12/2/11 6:35 a.m.</td>
+      <td>6:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>5:42 a.m. (Estimated runway)</td>
+      <td>5:42 a.m.</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>9:19 p.m. (Estimated)</td>
+      <td>9:19 p.m.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Dec 02 Not Available</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>3:20 p.m. (Runway)</td>
+      <td>3:20 p.m.</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>3:20 p.m. (runway)</td>
+      <td>3:20 p.m.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>6:35 a.m. (Estimated runway)</td>
+      <td>6:35 a.m.</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>7:25 p.m. (Estimated runway)</td>
+      <td>7:25 p.m.</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>10:04aDec 1</td>
+      <td>10:04 a.m.</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>10:16aDec 1</td>
+      <td>10:16 a.m.</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>10:47aDec 1</td>
+      <td>10:47 a.m.</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>11:12aDec 1</td>
+      <td>11:12 a.m.</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>11:44aDec 1</td>
+      <td>11:44 a.m.</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>5:26aDec 1</td>
+      <td>5:26 a.m.</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>6:40 p.m. (Estimated)</td>
+      <td>6:40 p.m.</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>7:40aDec 1</td>
+      <td>7:40 a.m.</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>7:51aDec 1</td>
+      <td>7:51 a.m.</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>8:06aDec 1</td>
+      <td>8:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>9:05aDec 1</td>
+      <td>9:05 a.m.</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>9:31aDec 1</td>
+      <td>9:31 a.m.</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>9:45aDec 1</td>
+      <td>9:45 a.m.</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>9:52 p.m. (Estimated)</td>
+      <td>9:52 p.m.</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>10:27aDec 1</td>
+      <td>10:27 a.m.</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>10:30 p.m.*</td>
+      <td>10:30 p.m.</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>10:36aDec 1</td>
+      <td>10:36 a.m.</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>10:56aDec 1</td>
+      <td>10:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>11:01aDec 1</td>
+      <td>11:01 a.m.</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>11:06A</td>
+      <td>11:06 a.m.</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>11:32aDec 1</td>
+      <td>11:32 a.m.</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>11:56aDec 1</td>
+      <td>11:56 a.m.</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>11:58aDec 1</td>
+      <td>11:58 a.m.</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>2:46P</td>
+      <td>2:46 p.m.</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>3:29 p.m. (Estimated runway)</td>
+      <td>3:29 p.m.</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>6:19aDec 1</td>
+      <td>6:19 a.m.</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>7:17aDec 1</td>
+      <td>7:17A</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>7:39P</td>
+      <td>7:39 p.m.</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>8:02aDec 1</td>
+      <td>8:02A</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>8:45aDec 1</td>
+      <td>8:45A</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>9:04A</td>
+      <td>9:04 a.m.</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>9:19 p.m.*</td>
+      <td>9:19 p.m.</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>9:28aDec 1</td>
+      <td>9:28A</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>9:32aDec 1</td>
+      <td>9:32A</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>9:56aDec 1</td>
+      <td>9:56A</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Dec 02 Contact Airline</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Fri Dec 2 12:29 a.m.</td>
+      <td>12:29 a.m.</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Fri Dec 2 5:11 a.m.</td>
+      <td>5:11 a.m.</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Thu  10:28</td>
+      <td>10:28 a.m.</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Thu  17:40</td>
+      <td>5:40 p.m.</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Thu  19:33</td>
+      <td>7:33 p.m.</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Thu  22:25</td>
+      <td>10:25 p.m.</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Thu  6:50</td>
+      <td>6:50 a.m.</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Thu  7:31</td>
+      <td>7:31 a.m.</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>4</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>scheduled_departure_time</td>
+      <td>"scheduled_departure_time"</td>
+      <td>Fail to cast</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>actual_departure_time</td>
+      <td>"actual_departure_time"</td>
+      <td>Fail to cast</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>scheduled_arrival_time</td>
+      <td>"scheduled_arrival_time"</td>
+      <td>Fail to cast</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>actual_arrival_time</td>
+      <td>"actual_arrival_time"</td>
+      <td>Fail to cast</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔗 5. Functional Dependencies</h2><br>
+                🔍 <b>5</b> functional dependencies found<br><ol><li><b>flight_code</b> determines:<br><b>scheduled_departure_time</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>flight_code</th>
+      <th>scheduled_departure_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>AA-518-MIA-JFK</td>
+      <td>2024-07-07 06:40:00</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>AA-4344-ORD-DTW</td>
+      <td>2024-07-07 11:45:00</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>AA-1434-DFW-MCO</td>
+      <td>2024-07-07 07:15:00</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>AA-4277-CVG-JFK</td>
+      <td>2024-07-07 12:10:00</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>AA-415-BOS-ORD</td>
+      <td>2024-07-07 08:35:00</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>AA-222-LAX-BOS</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>AA-3809-PHX-LAX</td>
+      <td>2024-07-07 06:00:00</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>AA-59-JFK-SFO</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>UA-397-JFK-SFO</td>
+      <td>2024-07-07 08:00:00</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>CO-52-IAH-LAX</td>
+      <td>2024-07-07 07:35:00</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>UA-2314-ATL-PHL</td>
+      <td>2024-07-07 14:55:00</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>UA-854-SFO-IAH</td>
+      <td>2024-07-07 07:53:00</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>UA-2945-PHL-CLT</td>
+      <td>2024-07-07 12:00:00</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>UA-3373-IAD-PHL</td>
+      <td>2024-07-07 08:29:00</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>CO-4888-IAH-DAL</td>
+      <td>2024-07-07 17:30:00</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>UA-2704-DTW-PHX</td>
+      <td>2024-07-07 11:15:00</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>AA-3859-IAH-ORD</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>AA-3756-ORD-SLC</td>
+      <td>2024-07-07 12:15:00</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>AA-204-LAX-MCO</td>
+      <td>2024-07-07 23:25:00</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>AA-616-DFW-DTW</td>
+      <td>2024-07-07 09:05:00</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>AA-400-DFW-JFK</td>
+      <td>2024-07-07 10:40:00</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>AA-4198-ORD-CLE</td>
+      <td>2024-07-07 10:40:00</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>AA-1522-SFO-ORD</td>
+      <td>2024-07-07 23:55:00</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>AA-431-MIA-SFO</td>
+      <td>2024-07-07 08:35:00</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>AA-3063-SLC-LAX</td>
+      <td>2024-07-07 20:20:00</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>AA-1544-SAN-ORD</td>
+      <td>2024-07-07 11:25:00</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>AA-3786-IAH-ORD</td>
+      <td>2024-07-07 16:00:00</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>CO-1586-IAH-MCO</td>
+      <td>2024-07-07 19:00:00</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>UA-3925-IAD-ORF</td>
+      <td>2024-07-07 08:41:00</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>UA-2830-MCO-CLT</td>
+      <td>2024-07-07 15:27:00</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>CO-58-DEN-IAH</td>
+      <td>2024-07-07 11:25:00</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>UA-3515-IAD-MSP</td>
+      <td>2024-07-07 08:15:00</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>CO-1561-PHX-IAH</td>
+      <td>2024-07-07 08:05:00</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>UA-3050-PHX-CLT</td>
+      <td>2024-07-07 11:05:00</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>CO-89-IAH-EWR</td>
+      <td>2024-07-07 06:00:00</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>UA-248-PHX-ORD</td>
+      <td>2024-07-07 12:57:00</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>UA-843-LAX-ORD</td>
+      <td>2024-07-07 13:55:00</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>UA-938-DEN-ORD</td>
+      <td>2024-07-07 16:16:00</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>UA-2515-DFW-CLT</td>
+      <td>2024-07-07 07:05:00</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>UA-62-IAH-EWR</td>
+      <td>2024-07-07 14:30:00</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>UA-3099-PHX-PHL</td>
+      <td>2024-07-07 11:55:00</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>AA-1640-MIA-MCO</td>
+      <td>2024-07-07 18:30:00</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>AA-484-DFW-MIA</td>
+      <td>2024-07-07 16:15:00</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>AA-446-DFW-PHL</td>
+      <td>2024-07-07 11:50:00</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>AA-466-IAH-MIA</td>
+      <td>2024-07-07 06:00:00</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>AA-2957-DFW-CVG</td>
+      <td>2024-07-07 07:55:00</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>AA-1664-MIA-ATL</td>
+      <td>2024-07-07 10:15:00</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>AA-1279-DFW-PHX</td>
+      <td>2024-07-07 13:00:00</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>AA-2525-DFW-MIA</td>
+      <td>2024-07-07 07:25:00</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>AA-271-MIA-LAX</td>
+      <td>2024-07-07 11:35:00</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>AA-2050-ORD-MIA</td>
+      <td>2024-07-07 10:40:00</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>AA-4307-ORD-DTW</td>
+      <td>2024-07-07 18:45:00</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>AA-3-JFK-LAX</td>
+      <td>2024-07-07 12:00:00</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>AA-3842-MSP-ORD</td>
+      <td>2024-07-07 06:00:00</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>AA-643-MIA-ORD</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>AA-3823-LAX-DEN</td>
+      <td>2024-07-07 21:00:00</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>AA-2312-DFW-DTW</td>
+      <td>2024-07-07 20:25:00</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>AA-1917-JFK-MCO</td>
+      <td>2024-07-07 14:55:00</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>AA-85-JFK-SFO</td>
+      <td>2024-07-07 15:05:00</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>UA-5487-SFO-MRY</td>
+      <td>2024-07-07 10:39:00</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>UA-414-LAX-SFO</td>
+      <td>2024-07-07 06:00:00</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>UA-2726-FLL-PHL</td>
+      <td>2024-07-07 16:00:00</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>CO-62-IAH-EWR</td>
+      <td>2024-07-07 14:30:00</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>UA-382-IAD-LAX</td>
+      <td>2024-07-07 12:30:00</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>CO-63-EWR-IAH</td>
+      <td>2024-07-07 17:25:00</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>UA-664-ORD-PHL</td>
+      <td>2024-07-07 13:33:00</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>CO-1250-MIA-IAH</td>
+      <td>2024-07-07 14:53:00</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>UA-6273-YYC-SFO</td>
+      <td>2024-07-07 07:35:00</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>UA-858-PVG-SFO</td>
+      <td>2024-07-07 13:45:00</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>UA-37-EDI-EWR</td>
+      <td>2024-07-07 09:05:00</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>CO-50-CLE-EWR</td>
+      <td>2024-07-07 14:55:00</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>AA-1733-ORD-PHX</td>
+      <td>2024-07-07 19:45:00</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>AA-3468-CVG-MIA</td>
+      <td>2024-07-07 07:00:00</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>AA-1886-BOS-MIA</td>
+      <td>2024-07-07 10:45:00</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>AA-3979-CVG-ORD</td>
+      <td>2024-07-07 07:30:00</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>AA-404-MIA-MCO</td>
+      <td>2024-07-07 06:45:00</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>AA-4330-CVG-ORD</td>
+      <td>2024-07-07 15:35:00</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>AA-1007-MIA-PHX</td>
+      <td>2024-07-07 16:55:00</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>AA-1221-MCO-ORD</td>
+      <td>2024-07-07 20:00:00</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>AA-1165-JFK-MIA</td>
+      <td>2024-07-07 06:59:00</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>AA-649-ORD-SNA</td>
+      <td>2024-07-07 13:30:00</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>AA-3804-PHL-ORD</td>
+      <td>2024-07-07 14:35:00</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>AA-2268-PHX-ORD</td>
+      <td>2024-07-07 07:15:00</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>AA-789-ORD-DEN</td>
+      <td>2024-07-07 13:05:00</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>CO-1614-LAX-IAH</td>
+      <td>2024-07-07 00:30:00</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>CO-1090-BOS-IAH</td>
+      <td>2024-07-07 09:45:00</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>CO-1023-IAH-DEN</td>
+      <td>2024-07-07 11:40:00</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>CO-1088-CLE-IAH</td>
+      <td>2024-07-07 08:40:00</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>UA-257-JFK-SFO</td>
+      <td>2024-07-07 14:30:00</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>CO-47-IAH-LAX</td>
+      <td>2024-07-07 19:10:00</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>CO-1193-EWR-MCO</td>
+      <td>2024-07-07 09:15:00</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>UA-2906-PHL-MCO</td>
+      <td>2024-07-07 15:50:00</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>CO-16-LAX-EWR</td>
+      <td>2024-07-07 10:25:00</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>UA-37-EWR-MCO</td>
+      <td>2024-07-07 13:29:00</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>UA-233-LAX-JFK</td>
+      <td>2024-07-07 16:25:00</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>UA-828-SFO-ORD</td>
+      <td>2024-07-07 23:08:00</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>UA-2708-EWR-CLT</td>
+      <td>2024-07-07 14:55:00</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>UA-1500-IAH-GUA</td>
+      <td>2024-07-07 08:55:00</td>
+    </tr>
+  </tbody>
+</table><br><b>scheduled_arrival_time</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>flight_code</th>
+      <th>scheduled_arrival_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>AA-1640-MIA-MCO</td>
+      <td>2024-07-07 19:25:00</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>AA-484-DFW-MIA</td>
+      <td>2024-07-07 19:55:00</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>AA-446-DFW-PHL</td>
+      <td>2024-07-07 15:50:00</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>AA-466-IAH-MIA</td>
+      <td>2024-07-07 09:20:00</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>AA-2957-DFW-CVG</td>
+      <td>2024-07-07 11:05:00</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>AA-1664-MIA-ATL</td>
+      <td>2024-07-07 12:10:00</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>AA-1279-DFW-PHX</td>
+      <td>2024-07-07 14:35:00</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>AA-2525-DFW-MIA</td>
+      <td>2024-07-07 11:10:00</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>AA-271-MIA-LAX</td>
+      <td>2024-07-07 14:25:00</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>AA-2050-ORD-MIA</td>
+      <td>2024-07-07 14:45:00</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>AA-4307-ORD-DTW</td>
+      <td>2024-07-07 21:10:00</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>AA-3-JFK-LAX</td>
+      <td>2024-07-07 15:15:00</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>AA-3842-MSP-ORD</td>
+      <td>2024-07-07 07:30:00</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>AA-643-MIA-ORD</td>
+      <td>2024-07-07 09:35:00</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>AA-3823-LAX-DEN</td>
+      <td>2024-07-07 00:15:00</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>AA-2312-DFW-DTW</td>
+      <td>2024-07-07 23:50:00</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>AA-1917-JFK-MCO</td>
+      <td>2024-07-07 17:55:00</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>AA-85-JFK-SFO</td>
+      <td>2024-07-07 18:30:00</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>UA-5487-SFO-MRY</td>
+      <td>2024-07-07 11:19:00</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>UA-414-LAX-SFO</td>
+      <td>2024-07-07 07:23:00</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>UA-2726-FLL-PHL</td>
+      <td>2024-07-07 18:46:00</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>CO-62-IAH-EWR</td>
+      <td>2024-07-07 19:03:00</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>UA-382-IAD-LAX</td>
+      <td>2024-07-07 15:19:00</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>CO-63-EWR-IAH</td>
+      <td>2024-07-07 20:22:00</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>CO-1694-LAX-IAH</td>
+      <td>2024-07-07 00:21:00</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>UA-664-ORD-PHL</td>
+      <td>2024-07-07 16:31:00</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>CO-1250-MIA-IAH</td>
+      <td>2024-07-07 16:48:00</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>UA-6273-YYC-SFO</td>
+      <td>2024-07-07 09:43:00</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>UA-858-PVG-SFO</td>
+      <td>2024-07-07 08:27:00</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>UA-37-EDI-EWR</td>
+      <td>2024-07-07 11:53:00</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>CO-50-CLE-EWR</td>
+      <td>2024-07-07 16:49:00</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>AA-3859-IAH-ORD</td>
+      <td>2024-07-07 09:40:00</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>AA-3756-ORD-SLC</td>
+      <td>2024-07-07 14:45:00</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>AA-204-LAX-MCO</td>
+      <td>2024-07-07 06:55:00</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>AA-616-DFW-DTW</td>
+      <td>2024-07-07 12:35:00</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>AA-400-DFW-JFK</td>
+      <td>2024-07-07 14:59:00</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>AA-4198-ORD-CLE</td>
+      <td>2024-07-07 12:55:00</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>AA-1522-SFO-ORD</td>
+      <td>2024-07-07 05:50:00</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>AA-431-MIA-SFO</td>
+      <td>2024-07-07 11:50:00</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>AA-3063-SLC-LAX</td>
+      <td>2024-07-07 21:20:00</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>AA-1544-SAN-ORD</td>
+      <td>2024-07-07 17:25:00</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>AA-3786-IAH-ORD</td>
+      <td>2024-07-07 18:40:00</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>CO-1586-IAH-MCO</td>
+      <td>2024-07-07 22:15:00</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>UA-3925-IAD-ORF</td>
+      <td>2024-07-07 09:54:00</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>UA-2830-MCO-CLT</td>
+      <td>2024-07-07 17:05:00</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>CO-58-DEN-IAH</td>
+      <td>2024-07-07 14:50:00</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>UA-3515-IAD-MSP</td>
+      <td>2024-07-07 10:06:00</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>CO-1561-PHX-IAH</td>
+      <td>2024-07-07 11:35:00</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>UA-3050-PHX-CLT</td>
+      <td>2024-07-07 16:57:00</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>CO-89-IAH-EWR</td>
+      <td>2024-07-07 10:20:00</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>UA-248-PHX-ORD</td>
+      <td>2024-07-07 17:15:00</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>UA-843-LAX-ORD</td>
+      <td>2024-07-07 19:53:00</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>UA-938-DEN-ORD</td>
+      <td>2024-07-07 19:35:00</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>UA-2515-DFW-CLT</td>
+      <td>2024-07-07 10:31:00</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>UA-62-IAH-EWR</td>
+      <td>2024-07-07 19:03:00</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>UA-3099-PHX-PHL</td>
+      <td>2024-07-07 18:17:00</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>AA-518-MIA-JFK</td>
+      <td>2024-07-07 09:25:00</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>AA-4344-ORD-DTW</td>
+      <td>2024-07-07 14:00:00</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>AA-1434-DFW-MCO</td>
+      <td>2024-07-07 10:35:00</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>AA-4277-CVG-JFK</td>
+      <td>2024-07-07 14:15:00</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>AA-415-BOS-ORD</td>
+      <td>2024-07-07 10:40:00</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>AA-222-LAX-BOS</td>
+      <td>2024-07-07 15:30:00</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>AA-3809-PHX-LAX</td>
+      <td>2024-07-07 06:40:00</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>AA-59-JFK-SFO</td>
+      <td>2024-07-07 10:45:00</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>UA-397-JFK-SFO</td>
+      <td>2024-07-07 11:55:00</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>CO-52-IAH-LAX</td>
+      <td>2024-07-07 09:21:00</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>UA-2314-ATL-PHL</td>
+      <td>2024-07-07 17:00:00</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>UA-854-SFO-IAH</td>
+      <td>2024-07-07 13:39:00</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>UA-2945-PHL-CLT</td>
+      <td>2024-07-07 13:45:00</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>UA-3373-IAD-PHL</td>
+      <td>2024-07-07 09:24:00</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>CO-4888-IAH-DAL</td>
+      <td>2024-07-07 18:40:00</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>UA-2704-DTW-PHX</td>
+      <td>2024-07-07 13:40:00</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>AA-1733-ORD-PHX</td>
+      <td>2024-07-07 22:30:00</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>AA-3468-CVG-MIA</td>
+      <td>2024-07-07 09:55:00</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>AA-1886-BOS-MIA</td>
+      <td>2024-07-07 14:20:00</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>AA-3979-CVG-ORD</td>
+      <td>2024-07-07 08:00:00</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>AA-404-MIA-MCO</td>
+      <td>2024-07-07 07:45:00</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>AA-4330-CVG-ORD</td>
+      <td>2024-07-07 16:00:00</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>AA-1007-MIA-PHX</td>
+      <td>2024-07-07 20:05:00</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>AA-1221-MCO-ORD</td>
+      <td>2024-07-07 21:45:00</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>AA-1165-JFK-MIA</td>
+      <td>2024-07-07 10:34:00</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>AA-649-ORD-SNA</td>
+      <td>2024-07-07 15:50:00</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>AA-3804-PHL-ORD</td>
+      <td>2024-07-07 16:05:00</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>AA-2268-PHX-ORD</td>
+      <td>2024-07-07 11:35:00</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>AA-789-ORD-DEN</td>
+      <td>2024-07-07 14:35:00</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>CO-1614-LAX-IAH</td>
+      <td>2024-07-07 05:35:00</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>CO-1090-BOS-IAH</td>
+      <td>2024-07-07 13:16:00</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>CO-1023-IAH-DEN</td>
+      <td>2024-07-07 13:17:00</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>CO-1088-CLE-IAH</td>
+      <td>2024-07-07 10:54:00</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>UA-257-JFK-SFO</td>
+      <td>2024-07-07 18:15:00</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>CO-47-IAH-LAX</td>
+      <td>2024-07-07 20:56:00</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>CO-1193-EWR-MCO</td>
+      <td>2024-07-07 12:18:00</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>UA-2906-PHL-MCO</td>
+      <td>2024-07-07 18:23:00</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>CO-16-LAX-EWR</td>
+      <td>2024-07-07 18:44:00</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>UA-37-EWR-MCO</td>
+      <td>2024-07-07 16:17:00</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>UA-233-LAX-JFK</td>
+      <td>2024-07-07 00:29:00</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>UA-828-SFO-ORD</td>
+      <td>2024-07-07 05:11:00</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>UA-2708-EWR-CLT</td>
+      <td>2024-07-07 16:53:00</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>UA-1500-IAH-GUA</td>
+      <td>2024-07-07 11:45:00</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>CO-45-EWR-MIA</td>
+      <td>2024-07-07 19:05:00</td>
+    </tr>
+  </tbody>
+</table><br><b>Explanation:</b> For each value in 'flight_code', there possibly is a unique value in ['scheduled_departure_time', 'scheduled_arrival_time']. This is because flight schedules are typically consistent for a given flight code. A specific flight (identified by its flight code) usually has a set scheduled departure and arrival time, which remains the same unless there are major changes to the airline's schedule. However, it's important to note that flight codes can sometimes be reused for different routes or times on different days, which could potentially lead to multiple scheduled times for the same flight code.
+<br></li><li><b>scheduled_departure_time</b> determines:<br><b>flight_code</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>scheduled_departure_time</th>
+      <th>flight_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 12:00:00</td>
+      <td>AA-3-JFK-LAX</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 16:00:00</td>
+      <td>AA-3786-IAH-ORD</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 10:40:00</td>
+      <td>AA-2050-ORD-MIA</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 08:35:00</td>
+      <td>AA-431-MIA-SFO</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2024-07-07 11:25:00</td>
+      <td>AA-1544-SAN-ORD</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2024-07-07 06:00:00</td>
+      <td>AA-466-IAH-MIA</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2024-07-07 09:05:00</td>
+      <td>AA-616-DFW-DTW</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2024-07-07 07:15:00</td>
+      <td>AA-1434-DFW-MCO</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>2024-07-07 07:35:00</td>
+      <td>UA-6273-YYC-SFO</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2024-07-07 07:10:00</td>
+      <td>AA-59-JFK-SFO</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>2024-07-07 14:55:00</td>
+      <td>AA-1917-JFK-MCO</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>2024-07-07 14:30:00</td>
+      <td>UA-257-JFK-SFO</td>
+    </tr>
+  </tbody>
+</table><br><b>scheduled_arrival_time</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>scheduled_departure_time</th>
+      <th>scheduled_arrival_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 06:00:00</td>
+      <td>2024-07-07 09:20:00</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 09:05:00</td>
+      <td>2024-07-07 12:35:00</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 07:15:00</td>
+      <td>2024-07-07 10:35:00</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 07:35:00</td>
+      <td>2024-07-07 09:43:00</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2024-07-07 10:40:00</td>
+      <td>2024-07-07 14:45:00</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2024-07-07 08:35:00</td>
+      <td>2024-07-07 11:50:00</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2024-07-07 11:25:00</td>
+      <td>2024-07-07 17:25:00</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2024-07-07 12:00:00</td>
+      <td>2024-07-07 15:15:00</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>2024-07-07 16:00:00</td>
+      <td>2024-07-07 18:40:00</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2024-07-07 07:10:00</td>
+      <td>2024-07-07 10:45:00</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>2024-07-07 14:55:00</td>
+      <td>2024-07-07 17:55:00</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>2024-07-07 14:30:00</td>
+      <td>2024-07-07 19:03:00</td>
+    </tr>
+  </tbody>
+</table><br><b>Explanation:</b> For each value in 'scheduled_departure_time', there possibly is a unique value in ['flight_code', 'scheduled_arrival_time']. This is because: 1. A flight with a specific scheduled departure time typically has a unique flight code. 2. Each scheduled departure time usually corresponds to a specific scheduled arrival time. However, this relationship might not be strictly one-to-one because: 1. Different flights (with different flight codes) could potentially have the same scheduled departure time, especially if they're departing from different airports. 2. There could be cases where flights with the same scheduled departure time have different scheduled arrival times due to different destinations or routes. Without seeing the actual data, we cannot be certain of a strict one-to-one relationship, but it's likely to be close to one-to-one in most cases.
+<br></li><li><b>actual_departure_time</b> determines:<br><b>airline_code</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>actual_departure_time</th>
+      <th>airline_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 19:58:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 06:54:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 06:08:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 08:04:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2024-07-07 10:10:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2024-07-07 15:36:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2024-07-07 20:23:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2024-07-07 11:01:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>2024-07-07 20:39:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2024-07-07 13:19:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>2024-07-07 16:12:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>2024-07-07 19:59:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>2024-07-07 10:53:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>2024-07-07 08:26:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>2024-07-07 06:09:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>2024-07-07 11:45:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>2024-07-07 12:56:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2024-07-07 11:06:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>2024-07-07 18:56:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>2024-07-07 17:38:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>2024-07-07 15:38:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>2024-07-07 11:55:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>2024-07-07 06:11:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>2024-07-07 08:49:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>2024-07-07 00:58:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>2024-07-07 07:56:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>2024-07-07 16:30:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>2024-07-07 08:18:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>2024-07-07 09:58:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>2024-07-07 16:46:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2024-07-07 14:01:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2024-07-07 09:05:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>2024-07-07 19:14:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>2024-07-07 08:29:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>2024-07-07 14:48:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>2024-07-07 08:40:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2024-07-07 20:25:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2024-07-07 09:14:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2024-07-07 10:20:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>2024-07-07 14:26:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>2024-07-07 10:33:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>2024-07-07 09:16:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>2024-07-07 07:16:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>2024-07-07 07:25:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>2024-07-07 12:12:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>2024-07-07 10:55:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>2024-07-07 12:13:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>2024-07-07 06:57:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>2024-07-07 11:52:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>2024-07-07 11:05:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>2024-07-07 12:11:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>2024-07-07 06:56:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>2024-07-07 17:08:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>2024-07-07 14:44:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>2024-07-07 11:40:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>2024-07-07 06:10:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>2024-07-07 15:50:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>2024-07-07 11:41:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>2024-07-07 12:14:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>2024-07-07 14:43:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>2024-07-07 17:09:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>2024-07-07 12:42:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>2024-07-07 16:28:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>2024-07-07 08:52:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>2024-07-07 15:28:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>2024-07-07 13:20:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>2024-07-07 10:35:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>2024-07-07 14:59:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>2024-07-07 06:17:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>2024-07-07 12:08:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>2024-07-07 14:38:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>2024-07-07 10:37:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>2024-07-07 09:43:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>2024-07-07 05:56:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>2024-07-07 15:58:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>2024-07-07 08:12:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>2024-07-07 13:32:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>2024-07-07 19:15:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>2024-07-07 17:30:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>2024-07-07 15:31:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>2024-07-07 07:27:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>2024-07-07 07:05:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>2024-07-07 12:41:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>2024-07-07 10:18:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>2024-07-07 07:39:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>2024-07-07 07:21:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>2024-07-07 10:54:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>2024-07-07 08:51:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>2024-07-07 15:27:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>2024-07-07 16:10:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>2024-07-07 10:11:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>2024-07-07 11:02:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>2024-07-07 13:48:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>2024-07-07 07:23:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>2024-07-07 08:37:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>2024-07-07 11:47:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>2024-07-07 06:58:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>2024-07-07 07:32:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>2024-07-07 20:36:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>2024-07-07 15:17:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>2024-07-07 08:05:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>2024-07-07 16:02:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>102</th>
+      <td>2024-07-07 13:45:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>2024-07-07 07:29:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>104</th>
+      <td>2024-07-07 11:56:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>2024-07-07 12:35:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>106</th>
+      <td>2024-07-07 08:00:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>107</th>
+      <td>2024-07-07 14:10:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>108</th>
+      <td>2024-07-07 13:31:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>109</th>
+      <td>2024-07-07 15:01:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>110</th>
+      <td>2024-07-07 16:29:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>111</th>
+      <td>2024-07-07 14:04:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>112</th>
+      <td>2024-07-07 18:55:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>2024-07-07 07:30:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>114</th>
+      <td>2024-07-07 07:22:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>115</th>
+      <td>2024-07-07 12:10:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>116</th>
+      <td>2024-07-07 08:56:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>117</th>
+      <td>2024-07-07 07:31:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>118</th>
+      <td>2024-07-07 15:04:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>119</th>
+      <td>2024-07-07 10:19:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>120</th>
+      <td>2024-07-07 08:07:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>121</th>
+      <td>2024-07-07 13:43:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>122</th>
+      <td>2024-07-07 16:37:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>123</th>
+      <td>2024-07-07 07:41:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>124</th>
+      <td>2024-07-07 20:40:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>125</th>
+      <td>2024-07-07 07:40:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>126</th>
+      <td>2024-07-07 19:42:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>127</th>
+      <td>2024-07-07 09:01:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>128</th>
+      <td>2024-07-07 12:37:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>129</th>
+      <td>2024-07-07 12:06:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>130</th>
+      <td>2024-07-07 16:15:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>131</th>
+      <td>2024-07-07 08:42:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>132</th>
+      <td>2024-07-07 11:32:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>133</th>
+      <td>2024-07-07 00:41:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>134</th>
+      <td>2024-07-07 17:22:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>135</th>
+      <td>2024-07-07 11:30:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>136</th>
+      <td>2024-07-07 06:02:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>137</th>
+      <td>2024-07-07 11:15:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>138</th>
+      <td>2024-07-07 07:49:00</td>
+      <td>UA</td>
+    </tr>
+  </tbody>
+</table><br><b>flight_code</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>actual_departure_time</th>
+      <th>flight_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 12:41:00</td>
+      <td>AA-3756-ORD-SLC</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 07:39:00</td>
+      <td>AA-2525-DFW-MIA</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 10:54:00</td>
+      <td>AA-2050-ORD-MIA</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 08:51:00</td>
+      <td>AA-431-MIA-SFO</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2024-07-07 15:27:00</td>
+      <td>AA-1917-JFK-MCO</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2024-07-07 13:48:00</td>
+      <td>UA-664-ORD-PHL</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2024-07-07 07:23:00</td>
+      <td>AA-1165-JFK-MIA</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2024-07-07 11:47:00</td>
+      <td>UA-2704-DTW-PHX</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>2024-07-07 16:35:00</td>
+      <td>UA-233-LAX-JFK</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2024-07-07 11:54:00</td>
+      <td>AA-3-JFK-LAX</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>2024-07-07 12:12:00</td>
+      <td>AA-3-JFK-LAX</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>2024-07-07 10:55:00</td>
+      <td>AA-2050-ORD-MIA</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>2024-07-07 12:13:00</td>
+      <td>AA-446-DFW-PHL</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>2024-07-07 06:57:00</td>
+      <td>AA-404-MIA-MCO</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>2024-07-07 12:11:00</td>
+      <td>AA-4277-CVG-JFK</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>2024-07-07 06:56:00</td>
+      <td>AA-466-IAH-MIA</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>2024-07-07 16:28:00</td>
+      <td>UA-233-LAX-JFK</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2024-07-07 08:52:00</td>
+      <td>AA-431-MIA-SFO</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>2024-07-07 15:28:00</td>
+      <td>AA-1917-JFK-MCO</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>2024-07-07 10:35:00</td>
+      <td>CO-1090-BOS-IAH</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>2024-07-07 13:32:00</td>
+      <td>UA-248-PHX-ORD</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>2024-07-07 07:05:00</td>
+      <td>AA-59-JFK-SFO</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>2024-07-07 08:04:00</td>
+      <td>AA-3979-CVG-ORD</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>2024-07-07 10:10:00</td>
+      <td>AA-616-DFW-DTW</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>2024-07-07 15:36:00</td>
+      <td>AA-4330-CVG-ORD</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>2024-07-07 08:26:00</td>
+      <td>UA-3515-IAD-MSP</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>2024-07-07 18:56:00</td>
+      <td>AA-4307-ORD-DTW</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>2024-07-07 17:38:00</td>
+      <td>CO-63-EWR-IAH</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>2024-07-07 16:30:00</td>
+      <td>AA-484-DFW-MIA</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>2024-07-07 14:04:00</td>
+      <td>AA-1279-DFW-PHX</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2024-07-07 07:30:00</td>
+      <td>AA-59-JFK-SFO</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2024-07-07 07:22:00</td>
+      <td>AA-1434-DFW-MCO</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>2024-07-07 12:10:00</td>
+      <td>AA-4277-CVG-JFK</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>2024-07-07 07:31:00</td>
+      <td>AA-59-JFK-SFO</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>2024-07-07 10:19:00</td>
+      <td>AA-1664-MIA-ATL</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>2024-07-07 07:40:00</td>
+      <td>AA-59-JFK-SFO</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2024-07-07 09:01:00</td>
+      <td>UA-3925-IAD-ORF</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2024-07-07 16:15:00</td>
+      <td>UA-938-DEN-ORD</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2024-07-07 07:10:00</td>
+      <td>AA-59-JFK-SFO</td>
+    </tr>
+  </tbody>
+</table><br><b>scheduled_departure_time</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>actual_departure_time</th>
+      <th>scheduled_departure_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 12:12:00</td>
+      <td>2024-07-07 12:00:00</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 10:55:00</td>
+      <td>2024-07-07 10:40:00</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 12:13:00</td>
+      <td>2024-07-07 11:50:00</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 06:57:00</td>
+      <td>2024-07-07 06:45:00</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2024-07-07 12:11:00</td>
+      <td>2024-07-07 12:10:00</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2024-07-07 06:56:00</td>
+      <td>2024-07-07 06:00:00</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2024-07-07 16:28:00</td>
+      <td>2024-07-07 16:25:00</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2024-07-07 08:52:00</td>
+      <td>2024-07-07 08:35:00</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>2024-07-07 15:28:00</td>
+      <td>2024-07-07 14:55:00</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2024-07-07 10:35:00</td>
+      <td>2024-07-07 09:45:00</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>2024-07-07 13:32:00</td>
+      <td>2024-07-07 12:57:00</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>2024-07-07 07:05:00</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>2024-07-07 12:41:00</td>
+      <td>2024-07-07 12:15:00</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>2024-07-07 07:39:00</td>
+      <td>2024-07-07 07:25:00</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>2024-07-07 10:54:00</td>
+      <td>2024-07-07 10:40:00</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>2024-07-07 08:51:00</td>
+      <td>2024-07-07 08:35:00</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>2024-07-07 15:27:00</td>
+      <td>2024-07-07 14:55:00</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2024-07-07 13:48:00</td>
+      <td>2024-07-07 13:33:00</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>2024-07-07 07:23:00</td>
+      <td>2024-07-07 06:59:00</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>2024-07-07 11:47:00</td>
+      <td>2024-07-07 11:15:00</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>2024-07-07 16:35:00</td>
+      <td>2024-07-07 16:25:00</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>2024-07-07 11:54:00</td>
+      <td>2024-07-07 12:00:00</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>2024-07-07 08:04:00</td>
+      <td>2024-07-07 07:30:00</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>2024-07-07 10:10:00</td>
+      <td>2024-07-07 09:05:00</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>2024-07-07 15:36:00</td>
+      <td>2024-07-07 15:35:00</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>2024-07-07 08:26:00</td>
+      <td>2024-07-07 08:15:00</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>2024-07-07 18:56:00</td>
+      <td>2024-07-07 18:45:00</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>2024-07-07 17:38:00</td>
+      <td>2024-07-07 17:25:00</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>2024-07-07 16:30:00</td>
+      <td>2024-07-07 16:15:00</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>2024-07-07 14:04:00</td>
+      <td>2024-07-07 13:00:00</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2024-07-07 07:30:00</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2024-07-07 07:22:00</td>
+      <td>2024-07-07 07:15:00</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>2024-07-07 12:10:00</td>
+      <td>2024-07-07 12:10:00</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>2024-07-07 07:31:00</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>2024-07-07 10:19:00</td>
+      <td>2024-07-07 10:15:00</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>2024-07-07 07:40:00</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2024-07-07 09:01:00</td>
+      <td>2024-07-07 08:41:00</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2024-07-07 16:15:00</td>
+      <td>2024-07-07 16:16:00</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2024-07-07 07:10:00</td>
+      <td>2024-07-07 07:10:00</td>
+    </tr>
+  </tbody>
+</table><br><b>scheduled_arrival_time</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>actual_departure_time</th>
+      <th>scheduled_arrival_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 12:41:00</td>
+      <td>2024-07-07 14:45:00</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 07:39:00</td>
+      <td>2024-07-07 11:10:00</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 10:54:00</td>
+      <td>2024-07-07 14:45:00</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 08:51:00</td>
+      <td>2024-07-07 11:50:00</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2024-07-07 15:27:00</td>
+      <td>2024-07-07 17:55:00</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2024-07-07 13:48:00</td>
+      <td>2024-07-07 16:31:00</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2024-07-07 07:23:00</td>
+      <td>2024-07-07 10:34:00</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2024-07-07 11:47:00</td>
+      <td>2024-07-07 13:40:00</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>2024-07-07 16:35:00</td>
+      <td>2024-07-07 00:29:00</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2024-07-07 11:54:00</td>
+      <td>2024-07-07 15:15:00</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>2024-07-07 12:12:00</td>
+      <td>2024-07-07 15:15:00</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>2024-07-07 10:55:00</td>
+      <td>2024-07-07 14:45:00</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>2024-07-07 12:13:00</td>
+      <td>2024-07-07 15:50:00</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>2024-07-07 06:57:00</td>
+      <td>2024-07-07 07:45:00</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>2024-07-07 12:11:00</td>
+      <td>2024-07-07 14:15:00</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>2024-07-07 06:56:00</td>
+      <td>2024-07-07 09:20:00</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>2024-07-07 16:28:00</td>
+      <td>2024-07-07 00:29:00</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2024-07-07 08:52:00</td>
+      <td>2024-07-07 11:50:00</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>2024-07-07 15:28:00</td>
+      <td>2024-07-07 17:55:00</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>2024-07-07 10:35:00</td>
+      <td>2024-07-07 13:16:00</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>2024-07-07 13:32:00</td>
+      <td>2024-07-07 17:15:00</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>2024-07-07 07:05:00</td>
+      <td>2024-07-07 10:45:00</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>2024-07-07 08:04:00</td>
+      <td>2024-07-07 08:00:00</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>2024-07-07 10:10:00</td>
+      <td>2024-07-07 12:35:00</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>2024-07-07 15:36:00</td>
+      <td>2024-07-07 16:00:00</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>2024-07-07 08:26:00</td>
+      <td>2024-07-07 10:06:00</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>2024-07-07 18:56:00</td>
+      <td>2024-07-07 21:10:00</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>2024-07-07 17:38:00</td>
+      <td>2024-07-07 20:22:00</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>2024-07-07 16:30:00</td>
+      <td>2024-07-07 19:55:00</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>2024-07-07 14:04:00</td>
+      <td>2024-07-07 14:35:00</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2024-07-07 07:30:00</td>
+      <td>2024-07-07 10:45:00</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2024-07-07 07:22:00</td>
+      <td>2024-07-07 10:35:00</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>2024-07-07 12:10:00</td>
+      <td>2024-07-07 14:15:00</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>2024-07-07 07:31:00</td>
+      <td>2024-07-07 10:45:00</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>2024-07-07 10:19:00</td>
+      <td>2024-07-07 12:10:00</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>2024-07-07 07:40:00</td>
+      <td>2024-07-07 10:45:00</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2024-07-07 09:01:00</td>
+      <td>2024-07-07 09:54:00</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2024-07-07 16:15:00</td>
+      <td>2024-07-07 19:35:00</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2024-07-07 07:10:00</td>
+      <td>2024-07-07 10:45:00</td>
+    </tr>
+  </tbody>
+</table><br><b>Explanation:</b> For each value in 'actual_departure_time', there possibly is a unique value in the combination of 'airline_code', 'flight_code', 'scheduled_departure_time', and 'scheduled_arrival_time'. This is because: 1. Each flight typically has a unique combination of airline code and flight code. 2. The scheduled departure and arrival times are part of the flight's planned schedule. 3. The actual departure time is when the flight actually takes off, which can differ from the scheduled time due to various factors like delays. 4. It's highly unlikely that two different flights with the same airline code, flight code, and scheduled times would have the exact same actual departure time. However, it's important to note that without seeing the actual data, we can't be absolutely certain. There could be edge cases or data anomalies that might break this assumption.
+<br></li><li><b>scheduled_arrival_time</b> determines:<br><b>airline_code</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>scheduled_arrival_time</th>
+      <th>airline_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 14:45:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 06:55:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 20:05:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 05:50:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2024-07-07 11:50:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>2024-07-07 22:15:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>2024-07-07 11:55:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>2024-07-07 11:35:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>2024-07-07 13:17:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>2024-07-07 14:00:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>2024-07-07 00:21:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>2024-07-07 16:31:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>2024-07-07 00:29:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>2024-07-07 11:45:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>2024-07-07 19:53:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>2024-07-07 10:45:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>2024-07-07 19:55:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>2024-07-07 15:15:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>2024-07-07 08:00:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>2024-07-07 14:35:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>2024-07-07 12:35:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>2024-07-07 00:15:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>2024-07-07 23:50:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>2024-07-07 18:40:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>2024-07-07 17:05:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>2024-07-07 10:06:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>2024-07-07 10:54:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>2024-07-07 09:25:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>2024-07-07 12:10:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>2024-07-07 11:10:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>2024-07-07 07:45:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>2024-07-07 14:15:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>2024-07-07 21:20:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>2024-07-07 16:05:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>2024-07-07 17:25:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>2024-07-07 05:35:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>2024-07-07 16:57:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>2024-07-07 13:39:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>2024-07-07 18:23:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>2024-07-07 16:17:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>2024-07-07 10:34:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>2024-07-07 08:27:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>2024-07-07 13:40:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>2024-07-07 22:30:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>2024-07-07 19:25:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>2024-07-07 09:55:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>2024-07-07 09:20:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>2024-07-07 15:50:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>2024-07-07 14:25:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>2024-07-07 16:00:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>2024-07-07 10:35:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>2024-07-07 21:10:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>2024-07-07 21:45:00</td>
+      <td>AA</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>2024-07-07 17:55:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>2024-07-07 09:54:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>2024-07-07 11:19:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>2024-07-07 09:43:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>2024-07-07 13:16:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>2024-07-07 19:03:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>2024-07-07 15:19:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>2024-07-07 20:22:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>2024-07-07 20:56:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>2024-07-07 17:15:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>2024-07-07 12:18:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>2024-07-07 19:35:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>2024-07-07 18:44:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>2024-07-07 09:24:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>2024-07-07 16:48:00</td>
+      <td>CO</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>2024-07-07 05:11:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>2024-07-07 18:30:00</td>
+      <td>G4</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>2024-07-07 18:17:00</td>
+      <td>UA</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>2024-07-07 11:05:00</td>
+      <td>G4</td>
+    </tr>
+  </tbody>
+</table><br><b>flight_code</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>scheduled_arrival_time</th>
+      <th>flight_code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 15:50:00</td>
+      <td>AA-446-DFW-PHL</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 14:45:00</td>
+      <td>AA-2050-ORD-MIA</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 14:35:00</td>
+      <td>AA-789-ORD-DEN</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 18:40:00</td>
+      <td>AA-3786-IAH-ORD</td>
+    </tr>
+  </tbody>
+</table><br><b>scheduled_departure_time</b>:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>scheduled_arrival_time</th>
+      <th>scheduled_departure_time</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2024-07-07 14:45:00</td>
+      <td>2024-07-07 10:40:00</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2024-07-07 15:50:00</td>
+      <td>2024-07-07 11:50:00</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2024-07-07 14:35:00</td>
+      <td>2024-07-07 13:05:00</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2024-07-07 18:40:00</td>
+      <td>2024-07-07 16:00:00</td>
+    </tr>
+  </tbody>
+</table><br><b>Explanation:</b> For each value in 'scheduled_arrival_time', there possibly is a unique value in the combination of 'airline_code', 'flight_code', and 'scheduled_departure_time'. This is because: 1. Each flight typically has a unique combination of airline code and flight number. 2. The same flight (airline code + flight number) usually operates on a regular schedule, with a specific departure time corresponding to a specific arrival time. 3. However, it's important to note that airlines may operate the same flight number on different days with slightly different schedules, which could result in different arrival times for the same flight number and departure time. 4. Without more specific information about the data or airline operations, we cannot be absolutely certain of a one-to-one relationship.
+<br></li></ol><br><h2>❓ 6. Missing Values</h2><br>
+                    🔍 <b>3</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>actual_arrival_time</td>
+      <td>16.29</td>
+      <td>True</td>
+      <td>Flight hasn't arrived yet for future or in-progress flights.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>actual_departure_time</td>
+      <td>17.17</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>airline_code</td>
+      <td>0.55</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 60.375, 'y': 119}, {'x': 179.125, 'y': 119}, {'x': 297.875, 'y': 119}, {'x': 416.625, 'y': 118}, {'x': 535.375, 'y': 119}, {'x': 654.125, 'y': 119}, {'x': 772.875, 'y': 119}, {'x': 891.625, 'y': 118}, {'x': 1010.375, 'y': 119}, {'x': 1129.125, 'y': 119}, {'x': 1247.875, 'y': 119}, {'x': 1366.625, 'y': 118}, {'x': 1485.375, 'y': 119}, {'x': 1604.125, 'y': 119}, {'x': 1722.875, 'y': 119}, {'x': 1841.625, 'y': 118}, {'x': 1960.375, 'y': 119}, {'x': 2079.125, 'y': 119}, {'x': 2197.875, 'y': 119}, {'x': 2316.625, 'y': 119}];
+    binWidth = 118.75;
+    drawHistogram("hist_viz_flight_id", data, binWidth);
+data = [{'label': 'G4', 'value': 44.30808294540838}, {'label': 'AA', 'value': 38.55268726195514}, {'label': 'UA', 'value': 8.590774439272112}, {'label': 'CO', 'value': 8.548455353364368}];
+    drawBarChart("bar_viz_airline_code", data);
+data = [{'label': 'AA-59-JFK-SFO', 'value': 4.924242424242424}, {'label': 'AA-2050-ORD-MIA', 'value': 4.882154882154882}, {'label': 'AA-466-IAH-MIA', 'value': 4.882154882154882}, {'label': 'AA-1917-JFK-MCO', 'value': 4.040404040404041}, {'label': 'AA-3786-IAH-ORD', 'value': 3.577441077441077}, {'label': 'Other values', 'value': 77.6936026936027}];
+    drawBarChart("bar_viz_flight_code", data);
+data = [{'label': '7:10 a.m.', 'value': 4.924242424242424}, {'label': '6:00 a.m.', 'value': 4.882154882154882}, {'label': '10:40 a.m.', 'value': 4.882154882154882}, {'label': '2:55 p.m.', 'value': 4.040404040404041}, {'label': '4:00 p.m.', 'value': 3.577441077441077}, {'label': 'Other values', 'value': 77.6936026936027}];
+    drawBarChart("bar_viz_scheduled_departure_time", data);
+data = [{'label': '7:22 a.m.', 'value': 1.7784552845528454}, {'label': '8:04 a.m.', 'value': 1.6260162601626018}, {'label': '7:31 a.m.', 'value': 1.4735772357723578}, {'label': '3:36 p.m.', 'value': 1.3719512195121952}, {'label': '10:55 a.m.', 'value': 1.2703252032520325}, {'label': 'Other values', 'value': 92.47967479674797}];
+    drawBarChart("bar_viz_actual_departure_time", data);
+data = [{'label': '10:45 a.m.', 'value': 4.924242424242424}, {'label': '9:20 a.m.', 'value': 4.882154882154882}, {'label': '2:45 p.m.', 'value': 4.882154882154882}, {'label': '5:55 p.m.', 'value': 4.040404040404041}, {'label': '6:40 p.m.', 'value': 3.577441077441077}, {'label': 'Other values', 'value': 77.6936026936027}];
+    drawBarChart("bar_viz_scheduled_arrival_time", data);
+data = [{'label': '7:10 p.m.', 'value': 1.3574660633484164}, {'label': '12:09 p.m.', 'value': 1.3071895424836601}, {'label': '11:06 a.m.', 'value': 1.256913021618904}, {'label': '9:45 a.m.', 'value': 1.206636500754148}, {'label': '5:34 p.m.', 'value': 1.206636500754148}, {'label': 'Other values', 'value': 93.66515837104072}];
+    drawBarChart("bar_viz_actual_arrival_time", data);
+
+
+</script>
+</body>
+</html>

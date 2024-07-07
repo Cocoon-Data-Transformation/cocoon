@@ -1,0 +1,6321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>beers</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>index</th>
+      <th>id</th>
+      <th>beer_name</th>
+      <th>style</th>
+      <th>ibu</th>
+      <th>brewery_id</th>
+      <th>brewery_name</th>
+      <th>city</th>
+      <th>state</th>
+      <th>ounces</th>
+      <th>abv</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>1436</td>
+      <td>Pub Beer</td>
+      <td>American Pale Lager</td>
+      <td>NaN</td>
+      <td>408</td>
+      <td>10 Barrel Brewing Company</td>
+      <td>Bend</td>
+      <td>OR</td>
+      <td>12.0 oz</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>2265</td>
+      <td>Devil's Cup</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 oz.</td>
+      <td>0.066</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>2264</td>
+      <td>Rise of the Phoenix</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 ounce</td>
+      <td>0.071</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>2263</td>
+      <td>Sinister</td>
+      <td>American Double / Imperial IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 oz</td>
+      <td>0.09%</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>2262</td>
+      <td>Sex and Candy</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 OZ.</td>
+      <td>0.075</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>2261</td>
+      <td>Black Exodus</td>
+      <td>Oatmeal Stout</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 oz</td>
+      <td>0.077</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>2260</td>
+      <td>Lake Street Express</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 oz.</td>
+      <td>0.045%</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>2259</td>
+      <td>Foreman</td>
+      <td>American Porter</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 ounce</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>2258</td>
+      <td>Jade</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 oz.</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>2131</td>
+      <td>Cone Crusher</td>
+      <td>American Double / Imperial IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 ounce</td>
+      <td>0.086</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>2099</td>
+      <td>Sophomoric Saison</td>
+      <td>Saison / Farmhouse Ale</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 oz.</td>
+      <td>0.072</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>2098</td>
+      <td>Regional Ring Of Fire</td>
+      <td>Saison / Farmhouse Ale</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 oz.</td>
+      <td>0.073</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>2097</td>
+      <td>Garce Selé</td>
+      <td>Saison / Farmhouse Ale</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 OZ.</td>
+      <td>0.069%</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>1980</td>
+      <td>Troll Destroyer</td>
+      <td>Belgian IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 oz.</td>
+      <td>0.085</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>1979</td>
+      <td>Bitter Bitch</td>
+      <td>American Pale Ale (APA)</td>
+      <td>60.0</td>
+      <td>177</td>
+      <td>18th Street Brewery</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0 ounce</td>
+      <td>0.061%</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>2318</td>
+      <td>Ginja Ninja</td>
+      <td>Cider</td>
+      <td>NaN</td>
+      <td>154</td>
+      <td>2 Towns Ciderhouse</td>
+      <td>Corvallis</td>
+      <td>OR</td>
+      <td>12.0 ounce</td>
+      <td>0.06</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>2170</td>
+      <td>Cherried Away</td>
+      <td>Cider</td>
+      <td>NaN</td>
+      <td>154</td>
+      <td>2 Towns Ciderhouse</td>
+      <td>Corvallis</td>
+      <td>OR</td>
+      <td>12.0 oz.</td>
+      <td>0.06</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>2169</td>
+      <td>Rhubarbarian</td>
+      <td>Cider</td>
+      <td>NaN</td>
+      <td>154</td>
+      <td>2 Towns Ciderhouse</td>
+      <td>Corvallis</td>
+      <td>OR</td>
+      <td>12.0 oz. Alumi-Tek</td>
+      <td>0.06</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>1502</td>
+      <td>BrightCider</td>
+      <td>Cider</td>
+      <td>NaN</td>
+      <td>154</td>
+      <td>2 Towns Ciderhouse</td>
+      <td>Corvallis</td>
+      <td>OR</td>
+      <td>12.0 ounce</td>
+      <td>0.06</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>1593</td>
+      <td>He Said Baltic-Style Porter</td>
+      <td>Baltic Porter</td>
+      <td>NaN</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.082</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>1592</td>
+      <td>He Said Belgian-Style Tripel</td>
+      <td>Tripel</td>
+      <td>NaN</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco CA</td>
+      <td>None</td>
+      <td>12.0 oz.</td>
+      <td>0.082</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>1036</td>
+      <td>Lower De Boom</td>
+      <td>American Barleywine</td>
+      <td>92.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>8.4 ounce</td>
+      <td>0.099</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>1024</td>
+      <td>Fireside Chat</td>
+      <td>Winter Warmer</td>
+      <td>45.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 OZ.</td>
+      <td>0.079</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>976</td>
+      <td>Marooned On Hog Island</td>
+      <td>American Stout</td>
+      <td>NaN</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.079</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>876</td>
+      <td>Bitter American</td>
+      <td>American Pale Ale (APA)</td>
+      <td>42.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz</td>
+      <td>0.044</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>802</td>
+      <td>Hell or High Watermelon Wheat (2009)</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>17.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 ounce</td>
+      <td>0.049</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>801</td>
+      <td>Hell or High Watermelon Wheat (2009)</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>17.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.049%</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>800</td>
+      <td>21st Amendment Watermelon Wheat Beer (2006)</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>17.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.049</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>799</td>
+      <td>21st Amendment IPA (2006)</td>
+      <td>American IPA</td>
+      <td>70.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.07</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>797</td>
+      <td>Brew Free! or Die IPA (2008)</td>
+      <td>American IPA</td>
+      <td>70.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 OZ.</td>
+      <td>0.07%</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>796</td>
+      <td>Brew Free! or Die IPA (2009)</td>
+      <td>American IPA</td>
+      <td>70.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.07%</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>531</td>
+      <td>Special Edition: Allies Win The War!</td>
+      <td>English Strong Ale</td>
+      <td>52.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.085</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>432</td>
+      <td>Hop Crisis</td>
+      <td>American Double / Imperial IPA</td>
+      <td>94.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.097</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>353</td>
+      <td>Bitter American (2011)</td>
+      <td>American Pale Ale (APA)</td>
+      <td>42.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz</td>
+      <td>0.044</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>321</td>
+      <td>Fireside Chat (2010)</td>
+      <td>Winter Warmer</td>
+      <td>45.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 ounce</td>
+      <td>0.079%</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>173</td>
+      <td>Back in Black</td>
+      <td>American Black Ale</td>
+      <td>65.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 ounce</td>
+      <td>0.068%</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>11</td>
+      <td>Monk's Blood</td>
+      <td>Belgian Dark Ale</td>
+      <td>35.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 OZ.</td>
+      <td>0.083</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>10</td>
+      <td>Brew Free! or Die IPA</td>
+      <td>American IPA</td>
+      <td>65.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.07</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>9</td>
+      <td>Hell or High Watermelon Wheat</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>17.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewery</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.049</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>2519</td>
+      <td>Bimini Twist</td>
+      <td>American IPA</td>
+      <td>82.0</td>
+      <td>67</td>
+      <td>3 Daughters Brewing</td>
+      <td>St Petersburg</td>
+      <td>FL</td>
+      <td>12.0 ounce</td>
+      <td>0.07</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>2518</td>
+      <td>Beach Blonde</td>
+      <td>American Blonde Ale</td>
+      <td>NaN</td>
+      <td>67</td>
+      <td>3 Daughters Brewing</td>
+      <td>St Petersburg</td>
+      <td>FL</td>
+      <td>12.0 oz.</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>2517</td>
+      <td>Rod Bender Red</td>
+      <td>American Amber / Red Ale</td>
+      <td>NaN</td>
+      <td>67</td>
+      <td>3 Daughters Brewing</td>
+      <td>St Petersburg</td>
+      <td>FL</td>
+      <td>12.0 oz.</td>
+      <td>0.059</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>2545</td>
+      <td>Passion Fruit Prussia</td>
+      <td>Berliner Weissbier</td>
+      <td>11.0</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0 oz</td>
+      <td>0.035</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>2544</td>
+      <td>Send Help</td>
+      <td>American Blonde Ale</td>
+      <td>18.0</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0 oz</td>
+      <td>0.045%</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>2324</td>
+      <td>Cast Iron Oatmeal Brown</td>
+      <td>American Brown Ale</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0 oz</td>
+      <td>0.055%</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>2288</td>
+      <td>Reprise Centennial Red</td>
+      <td>American Amber / Red Ale</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0 oz.</td>
+      <td>0.06</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>2287</td>
+      <td>Alter Ego</td>
+      <td>American Black Ale</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0 oz.</td>
+      <td>0.055%</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>2286</td>
+      <td>Divided Sky</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis MO</td>
+      <td>None</td>
+      <td>12.0 oz</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>2285</td>
+      <td>Resurrected</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0 oz.</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>1870</td>
+      <td>Contact High</td>
+      <td>American Pale Wheat Ale</td>
+      <td>28.0</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0 oz.</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>2603</td>
+      <td>Galaxyfest</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0 ounce</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>2602</td>
+      <td>Citrafest</td>
+      <td>American IPA</td>
+      <td>45.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0 ounce</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>2220</td>
+      <td>Barn Yeti</td>
+      <td>Belgian Strong Dark Ale</td>
+      <td>NaN</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0 oz.</td>
+      <td>0.09</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>2219</td>
+      <td>Scarecrow</td>
+      <td>American IPA</td>
+      <td>65.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0 oz.</td>
+      <td>0.069</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>2218</td>
+      <td>Ironman</td>
+      <td>English Strong Ale</td>
+      <td>50.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0 oz. Alumi-Tek</td>
+      <td>0.09%</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>2217</td>
+      <td>Honey Kolsch</td>
+      <td>Kölsch</td>
+      <td>15.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0 ounce</td>
+      <td>0.046%</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>2216</td>
+      <td>Copperhead Amber</td>
+      <td>Belgian Dark Ale</td>
+      <td>18.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0 oz</td>
+      <td>0.052000000000000005%</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>972</td>
+      <td>Rude Parrot IPA</td>
+      <td>American IPA</td>
+      <td>75.0</td>
+      <td>481</td>
+      <td>7 Seas Brewing Company</td>
+      <td>Gig Harbor</td>
+      <td>WA</td>
+      <td>16.0 oz</td>
+      <td>0.059</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>866</td>
+      <td>British Pale Ale (2010)</td>
+      <td>English Pale Ale</td>
+      <td>30.0</td>
+      <td>481</td>
+      <td>7 Seas Brewing Company</td>
+      <td>Gig Harbor</td>
+      <td>WA</td>
+      <td>16.0 oz</td>
+      <td>0.054</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>48</td>
+      <td>British Pale Ale</td>
+      <td>English Pale Ale</td>
+      <td>30.0</td>
+      <td>481</td>
+      <td>7 Seas Brewing Company</td>
+      <td>Gig Harbor</td>
+      <td>WA</td>
+      <td>16.0 ounce</td>
+      <td>0.054</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>47</td>
+      <td>Ballz Deep Double IPA</td>
+      <td>American Double / Imperial IPA</td>
+      <td>82.0</td>
+      <td>481</td>
+      <td>7 Seas Brewing Company</td>
+      <td>Gig Harbor</td>
+      <td>WA</td>
+      <td>16.0 oz.</td>
+      <td>0.084</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>1583</td>
+      <td>Wolfman's Berliner</td>
+      <td>Berliner Weissbier</td>
+      <td>NaN</td>
+      <td>373</td>
+      <td>7venth Sun</td>
+      <td>Dunedin</td>
+      <td>FL</td>
+      <td>12.0 oz.</td>
+      <td>0.038</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>1165</td>
+      <td>Colorado Native</td>
+      <td>American Amber / Red Lager</td>
+      <td>26.0</td>
+      <td>462</td>
+      <td>AC Golden Brewing Company</td>
+      <td>Golden</td>
+      <td>CO</td>
+      <td>12.0 oz</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>431</td>
+      <td>Colorado Native (2011)</td>
+      <td>American Amber / Red Lager</td>
+      <td>26.0</td>
+      <td>462</td>
+      <td>AC Golden Brewing Company</td>
+      <td>Golden</td>
+      <td>CO</td>
+      <td>12.0 ounce</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>516</td>
+      <td>Jockamo IPA</td>
+      <td>American IPA</td>
+      <td>52.0</td>
+      <td>533</td>
+      <td>Abita Brewing Company</td>
+      <td>Abita Springs</td>
+      <td>LA</td>
+      <td>12.0 oz.</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>515</td>
+      <td>Purple Haze</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>13.0</td>
+      <td>533</td>
+      <td>Abita Brewing Company</td>
+      <td>Abita Springs</td>
+      <td>LA</td>
+      <td>12.0 oz</td>
+      <td>0.042</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>514</td>
+      <td>Abita Amber</td>
+      <td>American Amber / Red Lager</td>
+      <td>17.0</td>
+      <td>533</td>
+      <td>Abita Brewing Company</td>
+      <td>Abita Springs</td>
+      <td>LA</td>
+      <td>12.0 oz.</td>
+      <td>0.045</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>2540</td>
+      <td>Citra Ass Down</td>
+      <td>American IPA</td>
+      <td>68.0</td>
+      <td>62</td>
+      <td>Against The Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 ounce</td>
+      <td>0.082</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>2539</td>
+      <td>The Brown Note</td>
+      <td>American Brown Ale</td>
+      <td>20.0</td>
+      <td>62</td>
+      <td>Against The Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 ounce</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>2686</td>
+      <td>Citra Ass Down</td>
+      <td>American Double / Imperial IPA</td>
+      <td>68.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 ounce</td>
+      <td>0.08</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>2685</td>
+      <td>London Balling</td>
+      <td>English Barleywine</td>
+      <td>80.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 oz.</td>
+      <td>0.125%</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>2684</td>
+      <td>35 K</td>
+      <td>Milk / Sweet Stout</td>
+      <td>25.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 OZ.</td>
+      <td>0.077</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>2683</td>
+      <td>A Beer</td>
+      <td>American Pale Ale (APA)</td>
+      <td>42.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 oz.</td>
+      <td>0.042</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>2682</td>
+      <td>Rules are Rules</td>
+      <td>German Pilsener</td>
+      <td>25.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 oz</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>2681</td>
+      <td>Flesh Gourd'n</td>
+      <td>Pumpkin Ale</td>
+      <td>21.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 ounce</td>
+      <td>0.066</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>2680</td>
+      <td>Sho'nuff</td>
+      <td>Belgian Pale Ale</td>
+      <td>13.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 oz</td>
+      <td>0.04</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>2679</td>
+      <td>Bloody Show</td>
+      <td>American Pilsner</td>
+      <td>17.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 oz.</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>2678</td>
+      <td>Rico Sauvin</td>
+      <td>American Double / Imperial IPA</td>
+      <td>68.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 ounce</td>
+      <td>0.076</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>2677</td>
+      <td>Coq de la Marche</td>
+      <td>Saison / Farmhouse Ale</td>
+      <td>38.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 OZ.</td>
+      <td>0.051%</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>2676</td>
+      <td>Kamen Knuddeln</td>
+      <td>American Wild Ale</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 ounce</td>
+      <td>0.065%</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>2675</td>
+      <td>Pile of Face</td>
+      <td>American IPA</td>
+      <td>65.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 oz.</td>
+      <td>0.06</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>2674</td>
+      <td>The Brown Note</td>
+      <td>English Brown Ale</td>
+      <td>20.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0 oz</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>1594</td>
+      <td>Maylani's Coconut Stout</td>
+      <td>American Stout</td>
+      <td>35.0</td>
+      <td>367</td>
+      <td>Airways Brewing Company</td>
+      <td>Kent</td>
+      <td>WA</td>
+      <td>16.0 ounce</td>
+      <td>0.053</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>1162</td>
+      <td>Oatmeal PSA</td>
+      <td>American Pale Ale (APA)</td>
+      <td>35.0</td>
+      <td>367</td>
+      <td>Airways Brewing Company</td>
+      <td>Kent</td>
+      <td>WA</td>
+      <td>16.0 OZ.</td>
+      <td>0.05</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>1137</td>
+      <td>Pre Flight Pilsner</td>
+      <td>American Pilsner</td>
+      <td>33.0</td>
+      <td>367</td>
+      <td>Airways Brewing Company</td>
+      <td>Kent</td>
+      <td>WA</td>
+      <td>16.0 oz.</td>
+      <td>0.052</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>2403</td>
+      <td>P-Town Pilsner</td>
+      <td>American Pilsner</td>
+      <td>20.0</td>
+      <td>117</td>
+      <td>Alameda Brewing</td>
+      <td>Portland</td>
+      <td>OR</td>
+      <td>12.0 OZ.</td>
+      <td>0.04</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>2402</td>
+      <td>Klickitat Pale Ale</td>
+      <td>American Pale Ale (APA)</td>
+      <td>36.0</td>
+      <td>117</td>
+      <td>Alameda Brewing</td>
+      <td>Portland</td>
+      <td>OR</td>
+      <td>12.0 oz. Alumi-Tek</td>
+      <td>0.053</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>2401</td>
+      <td>Yellow Wolf Imperial IPA</td>
+      <td>American Double / Imperial IPA</td>
+      <td>103.0</td>
+      <td>117</td>
+      <td>Alameda Brewing</td>
+      <td>Portland</td>
+      <td>OR</td>
+      <td>12.0 oz</td>
+      <td>0.082</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>1921</td>
+      <td>Freeride APA</td>
+      <td>American Pale Ale (APA)</td>
+      <td>40.0</td>
+      <td>270</td>
+      <td>Alaskan Brewing Company</td>
+      <td>Juneau</td>
+      <td>AK</td>
+      <td>12.0 oz.</td>
+      <td>0.053</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>1920</td>
+      <td>Alaskan Amber</td>
+      <td>Altbier</td>
+      <td>18.0</td>
+      <td>270</td>
+      <td>Alaskan Brewing Company</td>
+      <td>Juneau</td>
+      <td>AK</td>
+      <td>12.0 OZ.</td>
+      <td>0.053</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>2501</td>
+      <td>Hopalicious</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>73</td>
+      <td>Ale Asylum</td>
+      <td>Madison WI</td>
+      <td>None</td>
+      <td>12.0 OZ.</td>
+      <td>0.057</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>1535</td>
+      <td>Kentucky Kölsch</td>
+      <td>Kölsch</td>
+      <td>NaN</td>
+      <td>388</td>
+      <td>Alltech's Lexington Brewing Company</td>
+      <td>Lexington</td>
+      <td>KY</td>
+      <td>16.0 oz</td>
+      <td>0.043</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>1149</td>
+      <td>Kentucky IPA</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>388</td>
+      <td>Alltech's Lexington Brewing Company</td>
+      <td>Lexington</td>
+      <td>KY</td>
+      <td>16.0 OZ.</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>1474</td>
+      <td>Dusty Trail Pale Ale</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>401</td>
+      <td>Amnesia Brewing Company</td>
+      <td>Washougal</td>
+      <td>WA</td>
+      <td>16.0 oz. Alumi-Tek</td>
+      <td>0.054</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>1473</td>
+      <td>Damnesia</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>401</td>
+      <td>Amnesia Brewing Company</td>
+      <td>Washougal</td>
+      <td>WA</td>
+      <td>16.0 oz</td>
+      <td>0.062</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>837</td>
+      <td>Desolation IPA</td>
+      <td>American IPA</td>
+      <td>43.0</td>
+      <td>401</td>
+      <td>Amnesia Brewing Company</td>
+      <td>Washougal</td>
+      <td>WA</td>
+      <td>16.0 ounce</td>
+      <td>0.062</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>2592</td>
+      <td>Liberty Ale</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>Anchor Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz. Alumi-Tek</td>
+      <td>0.059000000000000004%</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>2578</td>
+      <td>IPA</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>Anchor Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 ounce</td>
+      <td>0.065%</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>2577</td>
+      <td>Summer Wheat</td>
+      <td>American Pale Wheat Ale</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>Anchor Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz</td>
+      <td>0.045%</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>100</td>
+      <td>2103</td>
+      <td>California Lager</td>
+      <td>American Amber / Red Lager</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>Anchor Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0 oz.</td>
+      <td>0.049</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>row_number</th>
+      <th>beer_id</th>
+      <th>beer_name</th>
+      <th>beer_style</th>
+      <th>bitterness</th>
+      <th>brewery_id</th>
+      <th>brewery_name</th>
+      <th>brewery_city</th>
+      <th>brewery_state</th>
+      <th>volume_oz</th>
+      <th>alcohol_content</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>1436</td>
+      <td>Pub Beer</td>
+      <td>American Pale Lager</td>
+      <td>NaN</td>
+      <td>408</td>
+      <td>10 Barrel Brewing Company</td>
+      <td>Bend</td>
+      <td>OR</td>
+      <td>12.0</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>2265</td>
+      <td>Devil's Cup</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.066</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>3</td>
+      <td>2264</td>
+      <td>Rise of the Phoenix</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.071</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>4</td>
+      <td>2263</td>
+      <td>Sinister</td>
+      <td>American Double / Imperial IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.090</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>5</td>
+      <td>2262</td>
+      <td>Sex and Candy</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.075</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>6</td>
+      <td>2261</td>
+      <td>Black Exodus</td>
+      <td>Oatmeal Stout</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.077</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7</td>
+      <td>2260</td>
+      <td>Lake Street Express</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.045</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8</td>
+      <td>2259</td>
+      <td>Foreman</td>
+      <td>American Porter</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>9</td>
+      <td>2258</td>
+      <td>Jade</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>10</td>
+      <td>2131</td>
+      <td>Cone Crusher</td>
+      <td>American Double / Imperial IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.086</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>11</td>
+      <td>2099</td>
+      <td>Sophomoric Saison</td>
+      <td>Saison / Farmhouse Ale</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.072</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>12</td>
+      <td>2098</td>
+      <td>Regional Ring Of Fire</td>
+      <td>Saison / Farmhouse Ale</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.073</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>2097</td>
+      <td>Garce Selé</td>
+      <td>Saison / Farmhouse Ale</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.069</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>1980</td>
+      <td>Troll Destroyer</td>
+      <td>Belgian IPA</td>
+      <td>NaN</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.085</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>1979</td>
+      <td>Bitter Bitch</td>
+      <td>American Pale Ale (APA)</td>
+      <td>60.0</td>
+      <td>177</td>
+      <td>18th Street Brewing Company</td>
+      <td>Gary</td>
+      <td>IN</td>
+      <td>12.0</td>
+      <td>0.061</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>2318</td>
+      <td>Ginja Ninja</td>
+      <td>Cider</td>
+      <td>NaN</td>
+      <td>154</td>
+      <td>2 Towns Ciderhouse</td>
+      <td>Corvallis</td>
+      <td>OR</td>
+      <td>12.0</td>
+      <td>0.060</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>2170</td>
+      <td>Cherried Away</td>
+      <td>Cider</td>
+      <td>NaN</td>
+      <td>154</td>
+      <td>2 Towns Ciderhouse</td>
+      <td>Corvallis</td>
+      <td>OR</td>
+      <td>12.0</td>
+      <td>0.060</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>18</td>
+      <td>2169</td>
+      <td>Rhubarbarian</td>
+      <td>Cider</td>
+      <td>NaN</td>
+      <td>154</td>
+      <td>2 Towns Ciderhouse</td>
+      <td>Corvallis</td>
+      <td>OR</td>
+      <td>12.0</td>
+      <td>0.060</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>19</td>
+      <td>1502</td>
+      <td>BrightCider</td>
+      <td>Cider</td>
+      <td>NaN</td>
+      <td>154</td>
+      <td>2 Towns Ciderhouse</td>
+      <td>Corvallis</td>
+      <td>OR</td>
+      <td>12.0</td>
+      <td>0.060</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>20</td>
+      <td>1593</td>
+      <td>He Said Baltic-Style Porter</td>
+      <td>Baltic Porter</td>
+      <td>NaN</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.082</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>21</td>
+      <td>1592</td>
+      <td>He Said Belgian-Style Tripel</td>
+      <td>Tripel</td>
+      <td>NaN</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco, CA</td>
+      <td>None</td>
+      <td>12.0</td>
+      <td>0.082</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>22</td>
+      <td>1036</td>
+      <td>Lower De Boom</td>
+      <td>American Barleywine</td>
+      <td>92.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>8.4</td>
+      <td>0.099</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>23</td>
+      <td>1024</td>
+      <td>Fireside Chat</td>
+      <td>Winter Warmer</td>
+      <td>45.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.079</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>24</td>
+      <td>976</td>
+      <td>Marooned On Hog Island</td>
+      <td>American Stout</td>
+      <td>NaN</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.079</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>25</td>
+      <td>876</td>
+      <td>Bitter American</td>
+      <td>American Pale Ale (APA)</td>
+      <td>42.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.044</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>26</td>
+      <td>802</td>
+      <td>Hell or High Watermelon Wheat (2009)</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>17.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.049</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>27</td>
+      <td>801</td>
+      <td>Hell or High Watermelon Wheat (2009)</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>17.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.049</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>28</td>
+      <td>800</td>
+      <td>21st Amendment Watermelon Wheat Beer (2006)</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>17.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.049</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>29</td>
+      <td>799</td>
+      <td>21st Amendment IPA (2006)</td>
+      <td>American IPA</td>
+      <td>70.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.070</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>30</td>
+      <td>797</td>
+      <td>Brew Free! or Die IPA (2008)</td>
+      <td>American IPA</td>
+      <td>70.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.070</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>31</td>
+      <td>796</td>
+      <td>Brew Free! or Die IPA (2009)</td>
+      <td>American IPA</td>
+      <td>70.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.070</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>32</td>
+      <td>531</td>
+      <td>Special Edition: Allies Win The War!</td>
+      <td>English Strong Ale</td>
+      <td>52.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.085</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>33</td>
+      <td>432</td>
+      <td>Hop Crisis</td>
+      <td>American Double / Imperial IPA</td>
+      <td>94.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.097</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>34</td>
+      <td>353</td>
+      <td>Bitter American (2011)</td>
+      <td>American Pale Ale (APA)</td>
+      <td>42.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.044</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>35</td>
+      <td>321</td>
+      <td>Fireside Chat (2010)</td>
+      <td>Winter Warmer</td>
+      <td>45.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.079</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>36</td>
+      <td>173</td>
+      <td>Back in Black</td>
+      <td>American Black Ale</td>
+      <td>65.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.068</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>37</td>
+      <td>11</td>
+      <td>Monk's Blood</td>
+      <td>Belgian Dark Ale</td>
+      <td>35.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.083</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>38</td>
+      <td>10</td>
+      <td>Brew Free! or Die IPA</td>
+      <td>American IPA</td>
+      <td>65.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.070</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>39</td>
+      <td>9</td>
+      <td>Hell or High Watermelon Wheat</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>17.0</td>
+      <td>368</td>
+      <td>21st Amendment Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.049</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>40</td>
+      <td>2519</td>
+      <td>Bimini Twist</td>
+      <td>American IPA</td>
+      <td>82.0</td>
+      <td>67</td>
+      <td>3 Daughters Brewing</td>
+      <td>St. Petersburg, FL</td>
+      <td>FL</td>
+      <td>12.0</td>
+      <td>0.070</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>41</td>
+      <td>2518</td>
+      <td>Beach Blonde</td>
+      <td>American Blonde Ale</td>
+      <td>NaN</td>
+      <td>67</td>
+      <td>3 Daughters Brewing</td>
+      <td>St. Petersburg, FL</td>
+      <td>FL</td>
+      <td>12.0</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>42</td>
+      <td>2517</td>
+      <td>Rod Bender Red</td>
+      <td>American Amber / Red Ale</td>
+      <td>NaN</td>
+      <td>67</td>
+      <td>3 Daughters Brewing</td>
+      <td>St. Petersburg, FL</td>
+      <td>FL</td>
+      <td>12.0</td>
+      <td>0.059</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>43</td>
+      <td>2545</td>
+      <td>Passion Fruit Prussia</td>
+      <td>Berliner Weissbier</td>
+      <td>11.0</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0</td>
+      <td>0.035</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>44</td>
+      <td>2544</td>
+      <td>Send Help</td>
+      <td>American Blonde Ale</td>
+      <td>18.0</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0</td>
+      <td>0.045</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>45</td>
+      <td>2324</td>
+      <td>Cast Iron Oatmeal Brown</td>
+      <td>American Brown Ale</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>46</td>
+      <td>2288</td>
+      <td>Reprise Centennial Red</td>
+      <td>American Amber / Red Ale</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0</td>
+      <td>0.060</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>47</td>
+      <td>2287</td>
+      <td>Alter Ego</td>
+      <td>American Black Ale</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>48</td>
+      <td>2286</td>
+      <td>Divided Sky</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>None</td>
+      <td>12.0</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>49</td>
+      <td>2285</td>
+      <td>Resurrected</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>50</td>
+      <td>1870</td>
+      <td>Contact High</td>
+      <td>American Pale Wheat Ale</td>
+      <td>28.0</td>
+      <td>60</td>
+      <td>4 Hands Brewing Company</td>
+      <td>Saint Louis</td>
+      <td>MO</td>
+      <td>12.0</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>51</td>
+      <td>2603</td>
+      <td>Galaxyfest</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>52</td>
+      <td>2602</td>
+      <td>Citrafest</td>
+      <td>American IPA</td>
+      <td>45.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>53</td>
+      <td>2220</td>
+      <td>Barn Yeti</td>
+      <td>Belgian Strong Dark Ale</td>
+      <td>NaN</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0</td>
+      <td>0.090</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>54</td>
+      <td>2219</td>
+      <td>Scarecrow</td>
+      <td>American IPA</td>
+      <td>65.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0</td>
+      <td>0.069</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>55</td>
+      <td>2218</td>
+      <td>Ironman</td>
+      <td>English Strong Ale</td>
+      <td>50.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0</td>
+      <td>0.090</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>56</td>
+      <td>2217</td>
+      <td>Honey Kolsch</td>
+      <td>Kölsch</td>
+      <td>15.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0</td>
+      <td>0.046</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>57</td>
+      <td>2216</td>
+      <td>Copperhead Amber</td>
+      <td>Belgian Dark Ale</td>
+      <td>18.0</td>
+      <td>27</td>
+      <td>450 North Brewing Company</td>
+      <td>Columbus</td>
+      <td>IN</td>
+      <td>16.0</td>
+      <td>0.052</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>58</td>
+      <td>972</td>
+      <td>Rude Parrot IPA</td>
+      <td>American IPA</td>
+      <td>75.0</td>
+      <td>481</td>
+      <td>7 Seas Brewing Company</td>
+      <td>Gig Harbor</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.059</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>59</td>
+      <td>866</td>
+      <td>British Pale Ale (2010)</td>
+      <td>English Pale Ale</td>
+      <td>30.0</td>
+      <td>481</td>
+      <td>7 Seas Brewing Company</td>
+      <td>Gig Harbor</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.054</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>60</td>
+      <td>48</td>
+      <td>British Pale Ale</td>
+      <td>English Pale Ale</td>
+      <td>30.0</td>
+      <td>481</td>
+      <td>7 Seas Brewing Company</td>
+      <td>Gig Harbor</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.054</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>61</td>
+      <td>47</td>
+      <td>Ballz Deep Double IPA</td>
+      <td>American Double / Imperial IPA</td>
+      <td>82.0</td>
+      <td>481</td>
+      <td>7 Seas Brewing Company</td>
+      <td>Gig Harbor</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.084</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>62</td>
+      <td>1583</td>
+      <td>Wolfman's Berliner</td>
+      <td>Berliner Weissbier</td>
+      <td>NaN</td>
+      <td>373</td>
+      <td>7venth Sun Brewing Company</td>
+      <td>Dunedin FL</td>
+      <td>FL</td>
+      <td>12.0</td>
+      <td>0.038</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>63</td>
+      <td>1165</td>
+      <td>Colorado Native</td>
+      <td>American Amber / Red Lager</td>
+      <td>26.0</td>
+      <td>462</td>
+      <td>AC Golden Brewing Company</td>
+      <td>Golden, CO</td>
+      <td>CO</td>
+      <td>12.0</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>64</td>
+      <td>431</td>
+      <td>Colorado Native (2011)</td>
+      <td>American Amber / Red Lager</td>
+      <td>26.0</td>
+      <td>462</td>
+      <td>AC Golden Brewing Company</td>
+      <td>Golden, CO</td>
+      <td>CO</td>
+      <td>12.0</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>65</td>
+      <td>516</td>
+      <td>Jockamo IPA</td>
+      <td>American IPA</td>
+      <td>52.0</td>
+      <td>533</td>
+      <td>Abita Brewing Company</td>
+      <td>Abita Springs</td>
+      <td>LA</td>
+      <td>12.0</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>66</td>
+      <td>515</td>
+      <td>Purple Haze</td>
+      <td>Fruit / Vegetable Beer</td>
+      <td>13.0</td>
+      <td>533</td>
+      <td>Abita Brewing Company</td>
+      <td>Abita Springs</td>
+      <td>LA</td>
+      <td>12.0</td>
+      <td>0.042</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>67</td>
+      <td>514</td>
+      <td>Abita Amber</td>
+      <td>American Amber / Red Lager</td>
+      <td>17.0</td>
+      <td>533</td>
+      <td>Abita Brewing Company</td>
+      <td>Abita Springs</td>
+      <td>LA</td>
+      <td>12.0</td>
+      <td>0.045</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>68</td>
+      <td>2540</td>
+      <td>Citra Ass Down</td>
+      <td>American IPA</td>
+      <td>68.0</td>
+      <td>62</td>
+      <td>Against The Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.082</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>69</td>
+      <td>2539</td>
+      <td>The Brown Note</td>
+      <td>American Brown Ale</td>
+      <td>20.0</td>
+      <td>62</td>
+      <td>Against The Grain Brewery</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>70</td>
+      <td>2686</td>
+      <td>Citra Ass Down</td>
+      <td>American Double / Imperial IPA</td>
+      <td>68.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.080</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>71</td>
+      <td>2685</td>
+      <td>London Balling</td>
+      <td>English Barleywine</td>
+      <td>80.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.125</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>72</td>
+      <td>2684</td>
+      <td>35 K</td>
+      <td>Milk / Sweet Stout</td>
+      <td>25.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.077</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>73</td>
+      <td>2683</td>
+      <td>A Beer</td>
+      <td>American Pale Ale (APA)</td>
+      <td>42.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.042</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>74</td>
+      <td>2682</td>
+      <td>Rules are Rules</td>
+      <td>German Pilsener</td>
+      <td>25.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>75</td>
+      <td>2681</td>
+      <td>Flesh Gourd'n</td>
+      <td>Pumpkin Ale</td>
+      <td>21.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.066</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>76</td>
+      <td>2680</td>
+      <td>Sho'nuff</td>
+      <td>Belgian Pale Ale</td>
+      <td>13.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.040</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>77</td>
+      <td>2679</td>
+      <td>Bloody Show</td>
+      <td>American Pilsner</td>
+      <td>17.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>78</td>
+      <td>2678</td>
+      <td>Rico Sauvin</td>
+      <td>American Double / Imperial IPA</td>
+      <td>68.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.076</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>79</td>
+      <td>2677</td>
+      <td>Coq de la Marche</td>
+      <td>Saison / Farmhouse Ale</td>
+      <td>38.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.051</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>80</td>
+      <td>2676</td>
+      <td>Kamen Knuddeln</td>
+      <td>American Wild Ale</td>
+      <td>NaN</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>81</td>
+      <td>2675</td>
+      <td>Pile of Face</td>
+      <td>American IPA</td>
+      <td>65.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.060</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>82</td>
+      <td>2674</td>
+      <td>The Brown Note</td>
+      <td>English Brown Ale</td>
+      <td>20.0</td>
+      <td>1</td>
+      <td>Against the Grain Brewing Company</td>
+      <td>Louisville</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>83</td>
+      <td>1594</td>
+      <td>Maylani's Coconut Stout</td>
+      <td>American Stout</td>
+      <td>35.0</td>
+      <td>367</td>
+      <td>Airways Brewing Company</td>
+      <td>Kent</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.053</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>84</td>
+      <td>1162</td>
+      <td>Oatmeal PSA</td>
+      <td>American Pale Ale (APA)</td>
+      <td>35.0</td>
+      <td>367</td>
+      <td>Airways Brewing Company</td>
+      <td>Kent</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>85</td>
+      <td>1137</td>
+      <td>Pre Flight Pilsner</td>
+      <td>American Pilsner</td>
+      <td>33.0</td>
+      <td>367</td>
+      <td>Airways Brewing Company</td>
+      <td>Kent</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.052</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>86</td>
+      <td>2403</td>
+      <td>P-Town Pilsner</td>
+      <td>American Pilsner</td>
+      <td>20.0</td>
+      <td>117</td>
+      <td>Alameda Brewing Company</td>
+      <td>Portland</td>
+      <td>OR</td>
+      <td>12.0</td>
+      <td>0.040</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>87</td>
+      <td>2402</td>
+      <td>Klickitat Pale Ale</td>
+      <td>American Pale Ale (APA)</td>
+      <td>36.0</td>
+      <td>117</td>
+      <td>Alameda Brewing Company</td>
+      <td>Portland</td>
+      <td>OR</td>
+      <td>12.0</td>
+      <td>0.053</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>88</td>
+      <td>2401</td>
+      <td>Yellow Wolf Imperial IPA</td>
+      <td>American Double / Imperial IPA</td>
+      <td>103.0</td>
+      <td>117</td>
+      <td>Alameda Brewing Company</td>
+      <td>Portland</td>
+      <td>OR</td>
+      <td>12.0</td>
+      <td>0.082</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>89</td>
+      <td>1921</td>
+      <td>Freeride APA</td>
+      <td>American Pale Ale (APA)</td>
+      <td>40.0</td>
+      <td>270</td>
+      <td>Alaskan Brewing Company</td>
+      <td>Juneau, AK</td>
+      <td>AK</td>
+      <td>12.0</td>
+      <td>0.053</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>90</td>
+      <td>1920</td>
+      <td>Alaskan Amber</td>
+      <td>Altbier</td>
+      <td>18.0</td>
+      <td>270</td>
+      <td>Alaskan Brewing Company</td>
+      <td>Juneau, AK</td>
+      <td>AK</td>
+      <td>12.0</td>
+      <td>0.053</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>91</td>
+      <td>2501</td>
+      <td>Hopalicious</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>73</td>
+      <td>Ale Asylum Brewing Company</td>
+      <td>Madison, WI</td>
+      <td>None</td>
+      <td>12.0</td>
+      <td>0.057</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>92</td>
+      <td>1535</td>
+      <td>Kentucky Kölsch</td>
+      <td>Kölsch</td>
+      <td>NaN</td>
+      <td>388</td>
+      <td>Alltech's Lexington Brewing Company</td>
+      <td>Lexington</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.043</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>93</td>
+      <td>1149</td>
+      <td>Kentucky IPA</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>388</td>
+      <td>Alltech's Lexington Brewing Company</td>
+      <td>Lexington</td>
+      <td>KY</td>
+      <td>16.0</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>94</td>
+      <td>1474</td>
+      <td>Dusty Trail Pale Ale</td>
+      <td>American Pale Ale (APA)</td>
+      <td>NaN</td>
+      <td>401</td>
+      <td>Amnesia Brewing Company</td>
+      <td>Washougal</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.054</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>95</td>
+      <td>1473</td>
+      <td>Damnesia</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>401</td>
+      <td>Amnesia Brewing Company</td>
+      <td>Washougal</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.062</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>96</td>
+      <td>837</td>
+      <td>Desolation IPA</td>
+      <td>American IPA</td>
+      <td>43.0</td>
+      <td>401</td>
+      <td>Amnesia Brewing Company</td>
+      <td>Washougal</td>
+      <td>WA</td>
+      <td>16.0</td>
+      <td>0.062</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>97</td>
+      <td>2592</td>
+      <td>Liberty Ale</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>Anchor Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.059</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>98</td>
+      <td>2578</td>
+      <td>IPA</td>
+      <td>American IPA</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>Anchor Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>99</td>
+      <td>2577</td>
+      <td>Summer Wheat</td>
+      <td>American Pale Wheat Ale</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>Anchor Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.045</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>100</td>
+      <td>2103</td>
+      <td>California Lager</td>
+      <td>American Amber / Red Lager</td>
+      <td>NaN</td>
+      <td>35</td>
+      <td>Anchor Brewing Company</td>
+      <td>San Francisco</td>
+      <td>CA</td>
+      <td>12.0</td>
+      <td>0.049</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_number"></div><b>📃 Summary:</b> Row index in the dataset<br><b>🦄 Unique:</b> This column represents the row index in the dataset. For this table, each row is for a unique beer. row_number is unique across rows as it's a sequential identifier.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">beer_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_beer_id"></div><b>📃 Summary:</b> Unique identifier for the beer<br><b>🦄 Unique:</b> This column is a unique identifier for each beer. For this table, each row represents a unique beer, and beer_id is designed to be unique across all beers.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">beer_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_beer_name"></div><b>📃 Summary:</b> Name of the beer<br><b>🎨 Patterns:</b><br><ul><li><code>^\d+\s.*$</code><br><i>Beer names starting with a number followed by a space and text</i></li><li><code>^#\d+.*$</code><br><i>Beer names starting with a hash symbol followed by a number</i></li><li><code>.*''.*</code><br><i>Beer names containing apostrophes</i></li><li><code>.*&.*</code><br><i>Beer names containing ampersands</i></li><li><code>.*\(\d{4}\).*</code><br><i>Beer names with parentheses containing a year</i></li></ul><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">beer_style</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_beer_style"></div><b>📃 Summary:</b> Style or category of the beer<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">bitterness</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_bitterness"></div><b>📃 Summary:</b> International Bitterness Units of the beer<br><b>❓ Missing:</b> Some beer styles may not have a measurable bitterness.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brewery_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_brewery_id"></div><b>📃 Summary:</b> Unique identifier for the brewery<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brewery_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_brewery_name"></div><b>📃 Summary:</b> Name of the brewery<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brewery_city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_brewery_city"></div><b>📃 Summary:</b> City where the brewery is located<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brewery_state</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_brewery_state"></div><b>📃 Summary:</b> State where the brewery is located<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">volume_oz</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_volume_oz"></div><b>📃 Summary:</b> Volume of the beer in ounces<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">alcohol_content</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_alcohol_content"></div><b>📃 Summary:</b> Alcohol by volume of the beer<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about different beers. It includes details such as the beer's name, style, volume, alcohol content (ABV), and bitterness (IBU). It also provides information about the brewery that produces each beer, including the brewery's name, city, and state. Each beer has a unique ID, and each brewery has its own ID as well.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>8</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>index</td>
+      <td>Row index in the dataset</td>
+      <td>row_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>id</td>
+      <td>Unique identifier for the beer</td>
+      <td>beer_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>beer_name</td>
+      <td>Name of the beer</td>
+      <td>beer_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>style</td>
+      <td>Style or category of the beer</td>
+      <td>beer_style</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>ounces</td>
+      <td>Volume of the beer in ounces</td>
+      <td>volume_oz</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>abv</td>
+      <td>Alcohol by volume of the beer</td>
+      <td>alcohol_content</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>ibu</td>
+      <td>International Bitterness Units of the beer</td>
+      <td>bitterness</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>brewery_id</td>
+      <td>Unique identifier for the brewery</td>
+      <td>brewery_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>brewery_name</td>
+      <td>Name of the brewery</td>
+      <td>brewery_name</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>city</td>
+      <td>City where the brewery is located</td>
+      <td>brewery_city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>state</td>
+      <td>State where the brewery is located</td>
+      <td>brewery_state</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>5</b> columns have erroneous values<br><ol><li><b>beer_name</b>: 'Czich' in 'Blonde Czich' may be a typo. '312 Urban Wheat Ale' appears twice. Some beers have year variations listed inconsistently.<br>❌ The column has not been cleaned<br><br></li><li><b>volume_oz</b>: Inconsistent use of 'oz.', 'oz', 'ounce', 'OZ.'. Variations like 'Alumi-Tek' and 'Silo Can' add inconsistency.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>12.0 oz</td>
+      <td>12.0 oz.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>12.0 ounce</td>
+      <td>12.0 oz.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>16.0 oz</td>
+      <td>16.0 oz.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>16.0 ounce</td>
+      <td>16.0 oz.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>12.0 OZ.</td>
+      <td>12.0 oz.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>12.0 oz. Alumi-Tek</td>
+      <td>12.0 oz.</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>16.0 OZ.</td>
+      <td>16.0 oz.</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>16.0 oz. Alumi-Tek</td>
+      <td>16.0 oz.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>12.0 oz. Silo Can</td>
+      <td>12.0 oz.</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>24.0 ounce</td>
+      <td>24.0 oz.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>16.0 oz. Silo Can</td>
+      <td>16.0 oz.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>19.2 OZ.</td>
+      <td>19.2 oz.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>19.2 oz</td>
+      <td>19.2 oz.</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>24.0 oz</td>
+      <td>24.0 oz.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>24.0 oz. Alumi-Tek</td>
+      <td>24.0 oz.</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16.9 OZ.</td>
+      <td>16.9 oz.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>19.2 oz. Alumi-Tek</td>
+      <td>19.2 oz.</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>32.0 OZ.</td>
+      <td>32.0 oz.</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>32.0 oz. Alumi-Tek</td>
+      <td>32.0 oz.</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>8.4 ounce</td>
+      <td>8.4 oz.</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>alcohol_content</b>: Inconsistent format: '0.05' vs '0.05%'. Redundant: '0.055999999999999994%' and '0.056'. Inconsistent precision: '0.05' vs '0.052'.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0.05%</td>
+      <td>0.050</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0.055%</td>
+      <td>0.055</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.065%</td>
+      <td>0.065</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.06%</td>
+      <td>0.060</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0.07%</td>
+      <td>0.070</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>0.08%</td>
+      <td>0.080</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>0.055999999999999994%</td>
+      <td>0.056</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>0.057999999999999996%</td>
+      <td>0.058</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>0.052000000000000005%</td>
+      <td>0.052</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>0.045%</td>
+      <td>0.045</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>0.049%</td>
+      <td>0.049</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>0.048%</td>
+      <td>0.048</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>0.047%</td>
+      <td>0.047</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>0.051%</td>
+      <td>0.051</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>0.057%</td>
+      <td>0.057</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>0.068%</td>
+      <td>0.068</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>0.054000000000000006%</td>
+      <td>0.054</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>0.09</td>
+      <td>0.090%</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>0.071</td>
+      <td>0.071%</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>0.044</td>
+      <td>0.044%</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>0.059000000000000004%</td>
+      <td>0.059%</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>0.066</td>
+      <td>0.066%</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>0.073</td>
+      <td>0.073%</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>0.077</td>
+      <td>0.077%</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>0.092</td>
+      <td>0.092%</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>0.039</td>
+      <td>0.039%</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>0.07200000000000001%</td>
+      <td>0.072%</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>0.043</td>
+      <td>0.043%</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>0.078</td>
+      <td>0.078%</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>0.087</td>
+      <td>0.087%</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>0.083</td>
+      <td>0.083%</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>0.088</td>
+      <td>0.088%</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>0.041</td>
+      <td>0.041%</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>0.079</td>
+      <td>0.079%</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>0.08199999999999999%</td>
+      <td>0.082%</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>0.095</td>
+      <td>0.095%</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>0.035</td>
+      <td>0.035%</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>0.037</td>
+      <td>0.037%</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>0.040999999999999995%</td>
+      <td>0.041%</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>0.074</td>
+      <td>0.074%</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>0.07400000000000001%</td>
+      <td>0.074%</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>0.076</td>
+      <td>0.076%</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>0.081</td>
+      <td>0.081%</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>0.093</td>
+      <td>0.093%</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>0.032</td>
+      <td>0.032%</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>0.038</td>
+      <td>0.038%</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>0.044000000000000004%</td>
+      <td>0.044%</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>0.091%</td>
+      <td>0.091</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>0.027000000000000003%</td>
+      <td>0.027</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>0.035%</td>
+      <td>0.035</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>0.077%</td>
+      <td>0.077</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>0.078%</td>
+      <td>0.078</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>0.079%</td>
+      <td>0.079</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>0.083%</td>
+      <td>0.083</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>0.085%</td>
+      <td>0.085</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>0.087%</td>
+      <td>0.087</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>0.092%</td>
+      <td>0.092</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>0.096%</td>
+      <td>0.096</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>0.09699999999999999%</td>
+      <td>0.097</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>0.001%</td>
+      <td>0.001</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>0.076%</td>
+      <td>0.076</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>0.086%</td>
+      <td>0.086</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>0.08900000000000001%</td>
+      <td>0.089</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>0.09300000000000001%</td>
+      <td>0.093</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>0.10400000000000001%</td>
+      <td>0.104</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>0.125%</td>
+      <td>0.125</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>0.128%</td>
+      <td>0.128</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>brewery_name</b>: Some names are truncated (e.g., 'Southern Prohibition Brewing Com...'). Inconsistent use of 'Brewing Company' vs 'Brewery'.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Oskar Blues Brewery</td>
+      <td>Oskar Blues Brewing Company</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Sixpoint Craft Ales</td>
+      <td>Sixpoint Brewing Company</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Hopworks Urban Brewery</td>
+      <td>Hopworks Urban Brewing Company</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Stevens Point Brewery</td>
+      <td>Stevens Point Brewing Company</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>21st Amendment Brewery</td>
+      <td>21st Amendment Brewing Company</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Great Crescent Brewery</td>
+      <td>Great Crescent Brewing Company</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Great River Brewery</td>
+      <td>Great River Brewing Company</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Golden Road Brewing</td>
+      <td>Golden Road Brewing Company</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>18th Street Brewery</td>
+      <td>18th Street Brewing Company</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Against the Grain Brewery</td>
+      <td>Against the Grain Brewing Company</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Minhas Craft Brewery</td>
+      <td>Minhas Brewing Company</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Fort George Brewery</td>
+      <td>Fort George Brewing Company</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Harpoon Brewery</td>
+      <td>Harpoon Brewing Company</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Burn 'Em Brewing</td>
+      <td>Burn 'Em Brewing Company</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Capital Brewery</td>
+      <td>Capital Brewing Company</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Finch's Beer Company</td>
+      <td>Finch's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Southern Prohibition Brewing Com...</td>
+      <td>Southern Prohibition Brewing Company</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Mikerphone Brewing</td>
+      <td>Mikerphone Brewing Company</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Modern Times Beer</td>
+      <td>Modern Times Beer Company</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Revolution Brewing</td>
+      <td>Revolution Brewing Company</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Rhinegeist Brewery</td>
+      <td>Rhinegeist Brewing Company</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>TailGate Beer</td>
+      <td>TailGate Brewing Company</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Blackrocks Brewery</td>
+      <td>Blackrocks Brewing Company</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Cisco Brewers</td>
+      <td>Cisco Brewing Company</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Destihl Brewery</td>
+      <td>Destihl Brewing Company</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Eddyline Brewery &amp; Restaurant</td>
+      <td>Eddyline Brewing Company</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Round Guys Brewing</td>
+      <td>Round Guys Brewing Company</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Atwater Brewery</td>
+      <td>Atwater Brewing Company</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Bell's Brewery</td>
+      <td>Bell's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>New Orleans Lager &amp; Ale Brewing ...</td>
+      <td>New Orleans Lager &amp; Ale Brewing Company</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Oskar Blues Brewery (North Carol...</td>
+      <td>Oskar Blues Brewery (North Carolina)</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Mehana Brewing Co.</td>
+      <td>Mehana Brewing Company</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Base Camp Brewing Co.</td>
+      <td>Base Camp Brewing Company</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Brooklyn Brewery</td>
+      <td>Brooklyn Brewing Company</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Cedar Creek Brewery</td>
+      <td>Cedar Creek Brewing Company</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Dolores River Brewery</td>
+      <td>Dolores River Brewing Company</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>Evil Czech Brewery</td>
+      <td>Evil Czech Brewing Company</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Natian Brewery</td>
+      <td>Natian Brewing Company</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>The Alchemist</td>
+      <td>The Alchemist Brewing Company</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Voodoo Brewery</td>
+      <td>Voodoo Brewing Company</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Austin Beerworks</td>
+      <td>Austin Beerworks Brewing Company</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Big Wood Brewery</td>
+      <td>Big Wood Brewing Company</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Blue Mountain Brewery</td>
+      <td>Blue Mountain Brewing Company</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Bohemian Brewery</td>
+      <td>Bohemian Brewing Company</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Evil Twin Brewing</td>
+      <td>Evil Twin Brewing Company</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Hilliard's Beer</td>
+      <td>Hilliard's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Jack's Abby Craft Lagers</td>
+      <td>Jack's Abby Brewing Company</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Jackie O's Pub &amp; Brewery</td>
+      <td>Jackie O's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Morgan Street Brewery</td>
+      <td>Morgan Street Brewing Company</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Hawai'i Nui Brewing Co.</td>
+      <td>Hawai'i Nui Brewing Company</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Red Shedman Farm Brewery and Hop...</td>
+      <td>Red Shedman Farm Brewery and Hopyard</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Center of the Universe Brewing C...</td>
+      <td>Center of the Universe Brewing Company</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Swamp Head Brewery</td>
+      <td>Swamp Head Brewing Company</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Breckenridge Brewery</td>
+      <td>Breckenridge Brewing Company</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Epic Brewing</td>
+      <td>Epic Brewing Company</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Hops &amp; Grain Brewery</td>
+      <td>Hops &amp; Grain Brewing Company</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Chapman's Brewing</td>
+      <td>Chapman's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Devil's Canyon Brewery</td>
+      <td>Devil's Canyon Brewing Company</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Liquid Hero Brewery</td>
+      <td>Liquid Hero Brewing Company</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Lost Nation Brewing</td>
+      <td>Lost Nation Brewing Company</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Mission Brewery</td>
+      <td>Mission Brewing Company</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Moab Brewery</td>
+      <td>Moab Brewing Company</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Oakshire Brewing</td>
+      <td>Oakshire Brewing Company</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Petoskey Brewing</td>
+      <td>Petoskey Brewing Company</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Saint Archer Brewery</td>
+      <td>Saint Archer Brewing Company</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Starr Hill Brewery</td>
+      <td>Starr Hill Brewing Company</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Straub Brewery</td>
+      <td>Straub Brewing Company</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Texian Brewing Co.</td>
+      <td>Texian Brewing Company</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Third Street Brewhouse</td>
+      <td>Third Street Brewing Company</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Three Pints Brewing</td>
+      <td>Three Pints Brewing Company</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Union Craft Brewing</td>
+      <td>Union Craft Brewing Company</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>West Sixth Brewing</td>
+      <td>West Sixth Brewing Company</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>White Birch Brewing</td>
+      <td>White Birch Brewing Company</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Alameda Brewing</td>
+      <td>Alameda Brewing Company</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Big Elm Brewing</td>
+      <td>Big Elm Brewing Company</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Bitter Root Brewing</td>
+      <td>Bitter Root Brewing Company</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Bold City Brewery</td>
+      <td>Bold City Brewing Company</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>Carolina Beer &amp; Beverage</td>
+      <td>Carolina Beer and Beverage</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Carolina Brewery</td>
+      <td>Carolina Brewing Company</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>Flat 12 Bierwerks</td>
+      <td>Flat 12 Brewing Company</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>French Broad Brewery</td>
+      <td>French Broad Brewing Company</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>Grapevine Craft Brewery</td>
+      <td>Grapevine Craft Brewing Company</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Hardywood Park Craft Brewery</td>
+      <td>Hardywood Park Craft Brewing Company</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>Heavy Seas Beer</td>
+      <td>Heavy Seas Brewing Company</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>High Noon Saloon And Brewery</td>
+      <td>High Noon Saloon and Brewing Company</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Horny Goat Brew Pub</td>
+      <td>Horny Goat Brewing Company</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Intuition Ale Works</td>
+      <td>Intuition Ale Works Brewing Company</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Mavericks Beer Company</td>
+      <td>Mavericks Brewing Company</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>MillKing It Productions</td>
+      <td>MillKing It Brewing Company</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Monkey Paw Pub &amp; Brewery</td>
+      <td>Monkey Paw Brewing Company</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>O'Fallon Brewery</td>
+      <td>O'Fallon Brewing Company</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Redhook Brewery</td>
+      <td>Redhook Brewing Company</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Santa Cruz Mountain Brewing</td>
+      <td>Santa Cruz Mountain Brewing Company</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Schilling &amp; Company</td>
+      <td>Schilling and Company</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Silverton Brewery</td>
+      <td>Silverton Brewing Company</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Stillwater Artisanal Ales</td>
+      <td>Stillwater Artisanal Ales Brewing Company</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Straight to Ale</td>
+      <td>Straight to Ale Brewing Company</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Tapistry Brewing</td>
+      <td>Tapistry Brewing Company</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>The Right Brain Brewery</td>
+      <td>The Right Brain Brewing Company</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Three Creeks Brewing</td>
+      <td>Three Creeks Brewing Company</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>Big Lake Brewing</td>
+      <td>Big Lake Brewing Company</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>Big Muddy Brewing</td>
+      <td>Big Muddy Brewing Company</td>
+    </tr>
+    <tr>
+      <th>102</th>
+      <td>Bolero Snort Brewery</td>
+      <td>Bolero Snort Brewing Company</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>Cape Cod Beer</td>
+      <td>Cape Cod Beer Company</td>
+    </tr>
+    <tr>
+      <th>104</th>
+      <td>Catawba Island Brewing</td>
+      <td>Catawba Island Brewing Company</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>Chatham Brewing</td>
+      <td>Chatham Brewing Company</td>
+    </tr>
+    <tr>
+      <th>106</th>
+      <td>Ciderboys</td>
+      <td>Ciderboys Cider Company</td>
+    </tr>
+    <tr>
+      <th>107</th>
+      <td>Jack's Hard Cider (Hauser Estate...</td>
+      <td>Jack's Hard Cider (Hauser Estate Winery)</td>
+    </tr>
+    <tr>
+      <th>108</th>
+      <td>Moat Mountain Smoke House &amp; Brew...</td>
+      <td>Moat Mountain Smoke House &amp; Brewing Company</td>
+    </tr>
+    <tr>
+      <th>109</th>
+      <td>Dad &amp; Dude's Breweria</td>
+      <td>Dad &amp; Dude's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>110</th>
+      <td>David's Ale Works</td>
+      <td>David's Ale Works Brewing Company</td>
+    </tr>
+    <tr>
+      <th>111</th>
+      <td>Everybody's Brewing</td>
+      <td>Everybody's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>112</th>
+      <td>Fat Head's Brewery</td>
+      <td>Fat Head's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>Flying Dog Brewery</td>
+      <td>Flying Dog Brewing Company</td>
+    </tr>
+    <tr>
+      <th>114</th>
+      <td>Forgotten Boardwalk</td>
+      <td>Forgotten Boardwalk Brewing Company</td>
+    </tr>
+    <tr>
+      <th>115</th>
+      <td>Hale's Ales</td>
+      <td>Hale's Ales Brewing Company</td>
+    </tr>
+    <tr>
+      <th>116</th>
+      <td>Half Full Brewery</td>
+      <td>Half Full Brewing Company</td>
+    </tr>
+    <tr>
+      <th>117</th>
+      <td>Hangar 24 Craft Brewery</td>
+      <td>Hangar 24 Craft Brewing Company</td>
+    </tr>
+    <tr>
+      <th>118</th>
+      <td>Mother's Brewing</td>
+      <td>Mother's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>119</th>
+      <td>Northwoods Brewpub</td>
+      <td>Northwoods Brewing Company</td>
+    </tr>
+    <tr>
+      <th>120</th>
+      <td>Orpheus Brewing</td>
+      <td>Orpheus Brewing Company</td>
+    </tr>
+    <tr>
+      <th>121</th>
+      <td>Mikkeller</td>
+      <td>Mikkeller Brewing Company</td>
+    </tr>
+    <tr>
+      <th>122</th>
+      <td>Pine Street Brewery</td>
+      <td>Pine Street Brewing Company</td>
+    </tr>
+    <tr>
+      <th>123</th>
+      <td>Pyramid Breweries</td>
+      <td>Pyramid Brewing Company</td>
+    </tr>
+    <tr>
+      <th>124</th>
+      <td>River North Brewery</td>
+      <td>River North Brewing Company</td>
+    </tr>
+    <tr>
+      <th>125</th>
+      <td>Seven Brides Brewery</td>
+      <td>Seven Brides Brewing Company</td>
+    </tr>
+    <tr>
+      <th>126</th>
+      <td>Seattle Cider Company</td>
+      <td>Seattle Cider Brewing Company</td>
+    </tr>
+    <tr>
+      <th>127</th>
+      <td>Tommyknocker Brewery</td>
+      <td>Tommyknocker Brewing Company</td>
+    </tr>
+    <tr>
+      <th>128</th>
+      <td>Uncle Billy's Brewery and Smokeh...</td>
+      <td>Uncle Billy's Brewery and Smokehouse</td>
+    </tr>
+    <tr>
+      <th>129</th>
+      <td>Wingman Brewers</td>
+      <td>Wingman Brewing Company</td>
+    </tr>
+    <tr>
+      <th>130</th>
+      <td>Woodstock Inn, Station &amp; Brewery</td>
+      <td>Woodstock Inn Station and Brewing Company</td>
+    </tr>
+    <tr>
+      <th>131</th>
+      <td>7venth Sun</td>
+      <td>7venth Sun Brewing Company</td>
+    </tr>
+    <tr>
+      <th>132</th>
+      <td>Ale Asylum</td>
+      <td>Ale Asylum Brewing Company</td>
+    </tr>
+    <tr>
+      <th>133</th>
+      <td>Angry Minnow</td>
+      <td>Angry Minnow Brewing Company</td>
+    </tr>
+    <tr>
+      <th>134</th>
+      <td>Arctic Craft Brewery</td>
+      <td>Arctic Craft Brewing Company</td>
+    </tr>
+    <tr>
+      <th>135</th>
+      <td>Bare Hands Brewery</td>
+      <td>Bare Hands Brewing Company</td>
+    </tr>
+    <tr>
+      <th>136</th>
+      <td>Black Acre Brewing Co.</td>
+      <td>Black Acre Brewing Company</td>
+    </tr>
+    <tr>
+      <th>137</th>
+      <td>Breakside Brewery</td>
+      <td>Breakside Brewing Company</td>
+    </tr>
+    <tr>
+      <th>138</th>
+      <td>Brew Link Brewing</td>
+      <td>Brew Link Brewing Company</td>
+    </tr>
+    <tr>
+      <th>139</th>
+      <td>Burnside Brewing Co.</td>
+      <td>Burnside Brewing Company</td>
+    </tr>
+    <tr>
+      <th>140</th>
+      <td>College Street Brewhouse and Pub</td>
+      <td>College Street Brewing Company</td>
+    </tr>
+    <tr>
+      <th>141</th>
+      <td>Cottrell Brewing</td>
+      <td>Cottrell Brewing Company</td>
+    </tr>
+    <tr>
+      <th>142</th>
+      <td>Covington Brewhouse</td>
+      <td>Covington Brewing Company</td>
+    </tr>
+    <tr>
+      <th>143</th>
+      <td>Dave's Brewfarm</td>
+      <td>Dave's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>144</th>
+      <td>Dead Armadillo Craft Brewing</td>
+      <td>Dead Armadillo Brewing Company</td>
+    </tr>
+    <tr>
+      <th>145</th>
+      <td>Deschutes Brewery</td>
+      <td>Deschutes Brewing Company</td>
+    </tr>
+    <tr>
+      <th>146</th>
+      <td>Dock Street Brewery</td>
+      <td>Dock Street Brewing Company</td>
+    </tr>
+    <tr>
+      <th>147</th>
+      <td>Emerald City Beer Company</td>
+      <td>Emerald City Brewing Company</td>
+    </tr>
+    <tr>
+      <th>148</th>
+      <td>Engine 15 Brewing</td>
+      <td>Engine 15 Brewing Company</td>
+    </tr>
+    <tr>
+      <th>149</th>
+      <td>Engine House 9</td>
+      <td>Engine House 9 Brewing Company</td>
+    </tr>
+    <tr>
+      <th>150</th>
+      <td>Fullsteam Brewery</td>
+      <td>Fullsteam Brewing Company</td>
+    </tr>
+    <tr>
+      <th>151</th>
+      <td>Gonzo's BiggDogg Brewing</td>
+      <td>Gonzo's BiggDogg Brewing Company</td>
+    </tr>
+    <tr>
+      <th>152</th>
+      <td>Goodlife Brewing Co.</td>
+      <td>Goodlife Brewing Company</td>
+    </tr>
+    <tr>
+      <th>153</th>
+      <td>Goose Island Brewery Company</td>
+      <td>Goose Island Brewing Company</td>
+    </tr>
+    <tr>
+      <th>154</th>
+      <td>Gore Range Brewery</td>
+      <td>Gore Range Brewing Company</td>
+    </tr>
+    <tr>
+      <th>155</th>
+      <td>Green Room Brewing</td>
+      <td>Green Room Brewing Company</td>
+    </tr>
+    <tr>
+      <th>156</th>
+      <td>Grimm Brothers Brewhouse</td>
+      <td>Grimm Brothers Brewing Company</td>
+    </tr>
+    <tr>
+      <th>157</th>
+      <td>Hinterland Brewery</td>
+      <td>Hinterland Brewing Company</td>
+    </tr>
+    <tr>
+      <th>158</th>
+      <td>Indiana City Brewing</td>
+      <td>Indiana City Brewing Company</td>
+    </tr>
+    <tr>
+      <th>159</th>
+      <td>Ipswich Ale Brewery</td>
+      <td>Ipswich Brewing Company</td>
+    </tr>
+    <tr>
+      <th>160</th>
+      <td>Iron Hill Brewery &amp; Restaurant</td>
+      <td>Iron Hill Brewing Company</td>
+    </tr>
+    <tr>
+      <th>161</th>
+      <td>Krebs Brewing Company (Pete's Pl...</td>
+      <td>Krebs Brewing Company (Pete's Place)</td>
+    </tr>
+    <tr>
+      <th>162</th>
+      <td>Kulshan Brewery</td>
+      <td>Kulshan Brewing Company</td>
+    </tr>
+    <tr>
+      <th>163</th>
+      <td>Lazy Monk Brewing</td>
+      <td>Lazy Monk Brewing Company</td>
+    </tr>
+    <tr>
+      <th>164</th>
+      <td>Mickey Finn's Brewery</td>
+      <td>Mickey Finn's Brewing Company</td>
+    </tr>
+    <tr>
+      <th>165</th>
+      <td>Modern Monks Brewery</td>
+      <td>Modern Monks Brewing Company</td>
+    </tr>
+    <tr>
+      <th>166</th>
+      <td>Mother Earth Brew Company</td>
+      <td>Mother Earth Brewing Company</td>
+    </tr>
+    <tr>
+      <th>167</th>
+      <td>Night Shift Brewing</td>
+      <td>Night Shift Brewing Company</td>
+    </tr>
+    <tr>
+      <th>168</th>
+      <td>Northampton Brewery</td>
+      <td>Northampton Brewing Company</td>
+    </tr>
+    <tr>
+      <th>169</th>
+      <td>Phoenix Ale Brewery</td>
+      <td>Phoenix Ale Brewing Company</td>
+    </tr>
+    <tr>
+      <th>170</th>
+      <td>Portside Brewery</td>
+      <td>Portside Brewing Company</td>
+    </tr>
+    <tr>
+      <th>171</th>
+      <td>Refuge Brewery</td>
+      <td>Refuge Brewing Company</td>
+    </tr>
+    <tr>
+      <th>172</th>
+      <td>Right Brain Brewery</td>
+      <td>Right Brain Brewing Company</td>
+    </tr>
+    <tr>
+      <th>173</th>
+      <td>Roanoke Railhouse Brewery</td>
+      <td>Roanoke Railhouse Brewing Company</td>
+    </tr>
+    <tr>
+      <th>174</th>
+      <td>Rogue Ales</td>
+      <td>Rogue Brewing Company</td>
+    </tr>
+    <tr>
+      <th>175</th>
+      <td>Seabright Brewery</td>
+      <td>Seabright Brewing Company</td>
+    </tr>
+    <tr>
+      <th>176</th>
+      <td>Sherwood Forest Brewers</td>
+      <td>Sherwood Forest Brewing Company</td>
+    </tr>
+    <tr>
+      <th>177</th>
+      <td>Southampton Publick House</td>
+      <td>Southampton Brewing Company</td>
+    </tr>
+    <tr>
+      <th>178</th>
+      <td>Speakasy Ales &amp; Lagers</td>
+      <td>Speakeasy Brewing Company</td>
+    </tr>
+    <tr>
+      <th>179</th>
+      <td>Spilker Ales</td>
+      <td>Spilker Brewing Company</td>
+    </tr>
+    <tr>
+      <th>180</th>
+      <td>Stillmank Beer Company</td>
+      <td>Stillmank Brewing Company</td>
+    </tr>
+    <tr>
+      <th>181</th>
+      <td>The Lion Brewery</td>
+      <td>The Lion Brewing Company</td>
+    </tr>
+    <tr>
+      <th>182</th>
+      <td>The Manhattan Brewing Company</td>
+      <td>Manhattan Brewing Company</td>
+    </tr>
+    <tr>
+      <th>183</th>
+      <td>The Traveler Beer Company</td>
+      <td>Traveler Brewing Company</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>brewery_city</b>: Inconsistent state abbreviations (e.g., 'Portland OR' vs 'Boise ID'). Redundant entries like 'Chicago' and 'Chicago IL'.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Portland OR</td>
+      <td>Portland</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Boise ID</td>
+      <td>Boise</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Chicago IL</td>
+      <td>Chicago</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Portland ME</td>
+      <td>Portland</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Saint Louis MO</td>
+      <td>Saint Louis</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Minneapolis MN</td>
+      <td>Minneapolis</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>San Antonio TX</td>
+      <td>San Antonio</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Anchorage AK</td>
+      <td>Anchorage</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Lincoln NE</td>
+      <td>Lincoln</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Louisville KY</td>
+      <td>Louisville</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Birmingham AL</td>
+      <td>Birmingham</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Gary IN</td>
+      <td>Gary</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Conroe TX</td>
+      <td>Conroe</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Export PA</td>
+      <td>Export</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Los Angeles CA</td>
+      <td>Los Angeles</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Pottstown PA</td>
+      <td>Pottstown</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Brooklyn Center MN</td>
+      <td>Brooklyn Center</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Lahaina HI</td>
+      <td>Lahaina</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Lyons CO</td>
+      <td>Lyons</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>Monroe WI</td>
+      <td>Monroe</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>Bend OR</td>
+      <td>Bend</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>Dallas TX</td>
+      <td>Dallas</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>Hilo HI</td>
+      <td>Hilo</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>Houston TX</td>
+      <td>Houston</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>Bucryus</td>
+      <td>Bucyrus</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>Brevard</td>
+      <td>Brevard, NC</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>Charleston</td>
+      <td>Charleston, SC</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>Comstock Park</td>
+      <td>Comstock Park, MI</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>Dillon</td>
+      <td>Dillon, CO</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>Dolores</td>
+      <td>Dolores, CO</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>Estacada</td>
+      <td>Estacada, OR</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>Eugene</td>
+      <td>Eugene, OR</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>Fuquay-Varina</td>
+      <td>Fuquay-Varina, NC</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>Lake Havasu City</td>
+      <td>Lake Havasu City, AZ</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>Lansdale</td>
+      <td>Lansdale, PA</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>Mishawaka</td>
+      <td>Mishawaka, IN</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>New Orleans</td>
+      <td>New Orleans, LA</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>Reno</td>
+      <td>Reno, NV</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>Seven Points</td>
+      <td>Seven Points, TX</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>Sheridan</td>
+      <td>Sheridan, WY</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>Spirit Lake</td>
+      <td>Spirit Lake, IA</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>Waterbury</td>
+      <td>Waterbury, VT</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>Airway Heights</td>
+      <td>Airway Heights, WA</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>Alpine</td>
+      <td>Alpine, TX</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>Asheville</td>
+      <td>Asheville, NC</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>Belfast</td>
+      <td>Belfast, ME</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>Bozeman</td>
+      <td>Bozeman, MT</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>Bridgewater Corners</td>
+      <td>Bridgewater Corners, VT</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>Charlottesville</td>
+      <td>Charlottesville, VA</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>Detroit</td>
+      <td>Detroit, MI</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>Duluth</td>
+      <td>Duluth, MN</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>Flagstaff</td>
+      <td>Flagstaff, AZ</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>Gainesville</td>
+      <td>Gainesville, FL</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>Meadville</td>
+      <td>Meadville, PA</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>Midvale</td>
+      <td>Midvale, UT</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>Mt. Airy</td>
+      <td>Mt. Airy, MD</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>Mustang</td>
+      <td>Mustang, OK</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>Newport</td>
+      <td>Newport, OR</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>Papillion</td>
+      <td>Papillion, NE</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>Raleigh</td>
+      <td>Raleigh, NC</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>Sacramento</td>
+      <td>Sacramento, CA</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>Santee</td>
+      <td>Santee, CA</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>Spring Lake</td>
+      <td>Spring Lake, MI</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>Stratford</td>
+      <td>Stratford, CT</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>Temecula</td>
+      <td>Temecula, CA</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>Torrance</td>
+      <td>Torrance, CA</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>Traverse City</td>
+      <td>Traverse City, MI</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>Vadnais Heights</td>
+      <td>Vadnais Heights, MN</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>Avon</td>
+      <td>Avon, CO</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>Bellingham</td>
+      <td>Bellingham, WA</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>Brooklyn NY</td>
+      <td>Brooklyn, NY</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>Broomfield</td>
+      <td>Broomfield, CO</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>Carlsbad</td>
+      <td>Carlsbad, CA</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>Cold Spring</td>
+      <td>Cold Spring, MN</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>Indianapolis IN</td>
+      <td>Indianapolis</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>Boulder CO</td>
+      <td>Boulder</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>Denver CO</td>
+      <td>Denver</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>South Austin</td>
+      <td>Austin</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>Longmont CO</td>
+      <td>Longmont, CO</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>San Diego CA</td>
+      <td>San Diego, CA</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>St Petersburg</td>
+      <td>St. Petersburg, FL</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>St. John's</td>
+      <td>St. John's, NL</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>Menominie</td>
+      <td>Menomonie, WI</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>O'Fallon</td>
+      <td>O'Fallon, MO</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>Bloomington IL</td>
+      <td>Bloomington, IL</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>Cincinnati OH</td>
+      <td>Cincinnati, OH</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>Fort Worth TX</td>
+      <td>Fort Worth, TX</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>Belt</td>
+      <td>Belt, MT</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>Biglerville</td>
+      <td>Biglerville, PA</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>Black Mountain</td>
+      <td>Black Mountain, NC</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>Buellton</td>
+      <td>Buellton, CA</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>Burlington</td>
+      <td>Burlington, VT</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>Chatham</td>
+      <td>Chatham, MA</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>Chattanooga</td>
+      <td>Chattanooga, TN</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>Cherry Hill</td>
+      <td>Cherry Hill, NJ</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>Croydon</td>
+      <td>Croydon, PA</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>Des Moines</td>
+      <td>Des Moines, IA</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>Diamond Springs</td>
+      <td>Diamond Springs, CA</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>Elmira</td>
+      <td>Elmira, NY</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>Erie</td>
+      <td>Erie, PA</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>Evanston</td>
+      <td>Evanston, IL</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>Frankenmuth</td>
+      <td>Frankenmuth, MI</td>
+    </tr>
+    <tr>
+      <th>102</th>
+      <td>Frederick</td>
+      <td>Frederick, MD</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>Fredericksburg</td>
+      <td>Fredericksburg, VA</td>
+    </tr>
+    <tr>
+      <th>104</th>
+      <td>Gadsden</td>
+      <td>Gadsden, AL</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>Glendale</td>
+      <td>Glendale, CA</td>
+    </tr>
+    <tr>
+      <th>106</th>
+      <td>Golden</td>
+      <td>Golden, CO</td>
+    </tr>
+    <tr>
+      <th>107</th>
+      <td>Green Bay</td>
+      <td>Green Bay, WI</td>
+    </tr>
+    <tr>
+      <th>108</th>
+      <td>Hardy</td>
+      <td>Hardy, VA</td>
+    </tr>
+    <tr>
+      <th>109</th>
+      <td>Hays</td>
+      <td>Hays, KS</td>
+    </tr>
+    <tr>
+      <th>110</th>
+      <td>Hayward</td>
+      <td>Hayward, CA</td>
+    </tr>
+    <tr>
+      <th>111</th>
+      <td>Holland</td>
+      <td>Holland, MI</td>
+    </tr>
+    <tr>
+      <th>112</th>
+      <td>Hyannis</td>
+      <td>Hyannis, MA</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>Juneau</td>
+      <td>Juneau, AK</td>
+    </tr>
+    <tr>
+      <th>114</th>
+      <td>Kalona</td>
+      <td>Kalona, IA</td>
+    </tr>
+    <tr>
+      <th>115</th>
+      <td>Kinston</td>
+      <td>Kinston, NC</td>
+    </tr>
+    <tr>
+      <th>116</th>
+      <td>Kirkwood</td>
+      <td>Kirkwood, MO</td>
+    </tr>
+    <tr>
+      <th>117</th>
+      <td>Lake Geneva</td>
+      <td>Lake Geneva, WI</td>
+    </tr>
+    <tr>
+      <th>118</th>
+      <td>Lakeside</td>
+      <td>Lakeside, CA</td>
+    </tr>
+    <tr>
+      <th>119</th>
+      <td>Lancaster</td>
+      <td>Lancaster, PA</td>
+    </tr>
+    <tr>
+      <th>120</th>
+      <td>Lenoir</td>
+      <td>Lenoir, NC</td>
+    </tr>
+    <tr>
+      <th>121</th>
+      <td>Leominster</td>
+      <td>Leominster, MA</td>
+    </tr>
+    <tr>
+      <th>122</th>
+      <td>Lewisburg</td>
+      <td>Lewisburg, PA</td>
+    </tr>
+    <tr>
+      <th>123</th>
+      <td>Lockland</td>
+      <td>Lockland, OH</td>
+    </tr>
+    <tr>
+      <th>124</th>
+      <td>Macon</td>
+      <td>Macon, GA</td>
+    </tr>
+    <tr>
+      <th>125</th>
+      <td>Marietta</td>
+      <td>Marietta, GA</td>
+    </tr>
+    <tr>
+      <th>126</th>
+      <td>Medford</td>
+      <td>Medford, OR</td>
+    </tr>
+    <tr>
+      <th>127</th>
+      <td>Meridian</td>
+      <td>Meridian, ID</td>
+    </tr>
+    <tr>
+      <th>128</th>
+      <td>Middleburg Heights</td>
+      <td>Middleburg Heights, OH</td>
+    </tr>
+    <tr>
+      <th>129</th>
+      <td>Mooresville NC</td>
+      <td>Mooresville, NC</td>
+    </tr>
+    <tr>
+      <th>130</th>
+      <td>Utica NY</td>
+      <td>Utica, NY</td>
+    </tr>
+    <tr>
+      <th>131</th>
+      <td>Afton VA</td>
+      <td>Afton, VA</td>
+    </tr>
+    <tr>
+      <th>132</th>
+      <td>Albuquerque NM</td>
+      <td>Albuquerque, NM</td>
+    </tr>
+    <tr>
+      <th>133</th>
+      <td>Angola IN</td>
+      <td>Angola, IN</td>
+    </tr>
+    <tr>
+      <th>134</th>
+      <td>Asheville NC</td>
+      <td>Asheville, NC</td>
+    </tr>
+    <tr>
+      <th>135</th>
+      <td>Ashland OR</td>
+      <td>Ashland, OR</td>
+    </tr>
+    <tr>
+      <th>136</th>
+      <td>Athens GA</td>
+      <td>Athens, GA</td>
+    </tr>
+    <tr>
+      <th>137</th>
+      <td>Atlantic Highlands NJ</td>
+      <td>Atlantic Highlands, NJ</td>
+    </tr>
+    <tr>
+      <th>138</th>
+      <td>Aurora IN</td>
+      <td>Aurora, IN</td>
+    </tr>
+    <tr>
+      <th>139</th>
+      <td>Baltimore MD</td>
+      <td>Baltimore, MD</td>
+    </tr>
+    <tr>
+      <th>140</th>
+      <td>Belmont CA</td>
+      <td>Belmont, CA</td>
+    </tr>
+    <tr>
+      <th>141</th>
+      <td>Boston MA</td>
+      <td>Boston, MA</td>
+    </tr>
+    <tr>
+      <th>142</th>
+      <td>Buellton CA</td>
+      <td>Buellton, CA</td>
+    </tr>
+    <tr>
+      <th>143</th>
+      <td>Middlebury</td>
+      <td>Middlebury, VT</td>
+    </tr>
+    <tr>
+      <th>144</th>
+      <td>Mill Valley</td>
+      <td>Mill Valley, CA</td>
+    </tr>
+    <tr>
+      <th>145</th>
+      <td>Minnetonka</td>
+      <td>Minnetonka, MN</td>
+    </tr>
+    <tr>
+      <th>146</th>
+      <td>Montauk</td>
+      <td>Montauk, NY</td>
+    </tr>
+    <tr>
+      <th>147</th>
+      <td>Murphysboro</td>
+      <td>Murphysboro, IL</td>
+    </tr>
+    <tr>
+      <th>148</th>
+      <td>North Conway</td>
+      <td>North Conway, NH</td>
+    </tr>
+    <tr>
+      <th>149</th>
+      <td>Odessa</td>
+      <td>Odessa, TX</td>
+    </tr>
+    <tr>
+      <th>150</th>
+      <td>Pacific</td>
+      <td>Pacific, MO</td>
+    </tr>
+    <tr>
+      <th>151</th>
+      <td>Palisade</td>
+      <td>Palisade, CO</td>
+    </tr>
+    <tr>
+      <th>152</th>
+      <td>Pinedale</td>
+      <td>Pinedale, WY</td>
+    </tr>
+    <tr>
+      <th>153</th>
+      <td>Pittsburgh</td>
+      <td>Pittsburgh, PA</td>
+    </tr>
+    <tr>
+      <th>154</th>
+      <td>Port Clinton</td>
+      <td>Port Clinton, OH</td>
+    </tr>
+    <tr>
+      <th>155</th>
+      <td>Prescott</td>
+      <td>Prescott, AZ</td>
+    </tr>
+    <tr>
+      <th>156</th>
+      <td>Redlands</td>
+      <td>Redlands, CA</td>
+    </tr>
+    <tr>
+      <th>157</th>
+      <td>Ridgefield Park</td>
+      <td>Ridgefield Park, NJ</td>
+    </tr>
+    <tr>
+      <th>158</th>
+      <td>Savannah</td>
+      <td>Savannah, GA</td>
+    </tr>
+    <tr>
+      <th>159</th>
+      <td>Shreveport</td>
+      <td>Shreveport, LA</td>
+    </tr>
+    <tr>
+      <th>160</th>
+      <td>South Deerfield</td>
+      <td>South Deerfield, MA</td>
+    </tr>
+    <tr>
+      <th>161</th>
+      <td>South Lyon</td>
+      <td>South Lyon, MI</td>
+    </tr>
+    <tr>
+      <th>162</th>
+      <td>St. Paul</td>
+      <td>St. Paul, MN</td>
+    </tr>
+    <tr>
+      <th>163</th>
+      <td>Stamford</td>
+      <td>Stamford, CT</td>
+    </tr>
+    <tr>
+      <th>164</th>
+      <td>Stevensville</td>
+      <td>Stevensville, MT</td>
+    </tr>
+    <tr>
+      <th>165</th>
+      <td>Stillwater</td>
+      <td>Stillwater, MN</td>
+    </tr>
+    <tr>
+      <th>166</th>
+      <td>Troutville</td>
+      <td>Troutville, VA</td>
+    </tr>
+    <tr>
+      <th>167</th>
+      <td>White Salmon</td>
+      <td>White Salmon, WA</td>
+    </tr>
+    <tr>
+      <th>168</th>
+      <td>Whitefish</td>
+      <td>Whitefish, MT</td>
+    </tr>
+    <tr>
+      <th>169</th>
+      <td>Windsor</td>
+      <td>Windsor, CA</td>
+    </tr>
+    <tr>
+      <th>170</th>
+      <td>Yakima</td>
+      <td>Yakima, WA</td>
+    </tr>
+    <tr>
+      <th>171</th>
+      <td>Abingdon</td>
+      <td>Abingdon, VA</td>
+    </tr>
+    <tr>
+      <th>172</th>
+      <td>Ada</td>
+      <td>Ada, MI</td>
+    </tr>
+    <tr>
+      <th>173</th>
+      <td>Ann Arbor</td>
+      <td>Ann Arbor, MI</td>
+    </tr>
+    <tr>
+      <th>174</th>
+      <td>Arrington</td>
+      <td>Arrington, VA</td>
+    </tr>
+    <tr>
+      <th>175</th>
+      <td>Bargersville</td>
+      <td>Bargersville, IN</td>
+    </tr>
+    <tr>
+      <th>176</th>
+      <td>Boynton Beach</td>
+      <td>Boynton Beach, FL</td>
+    </tr>
+    <tr>
+      <th>177</th>
+      <td>Cambridge</td>
+      <td>Cambridge MA</td>
+    </tr>
+    <tr>
+      <th>178</th>
+      <td>Centralia</td>
+      <td>Centralia WA</td>
+    </tr>
+    <tr>
+      <th>179</th>
+      <td>Claremont</td>
+      <td>Claremont CA</td>
+    </tr>
+    <tr>
+      <th>180</th>
+      <td>Colorado Springs</td>
+      <td>Colorado Springs CO</td>
+    </tr>
+    <tr>
+      <th>181</th>
+      <td>Conestoga</td>
+      <td>Conestoga PA</td>
+    </tr>
+    <tr>
+      <th>182</th>
+      <td>Cortland</td>
+      <td>Cortland NY</td>
+    </tr>
+    <tr>
+      <th>183</th>
+      <td>Covington</td>
+      <td>Covington KY</td>
+    </tr>
+    <tr>
+      <th>184</th>
+      <td>Denton</td>
+      <td>Denton TX</td>
+    </tr>
+    <tr>
+      <th>185</th>
+      <td>Douglas</td>
+      <td>Douglas GA</td>
+    </tr>
+    <tr>
+      <th>186</th>
+      <td>Dunedin</td>
+      <td>Dunedin FL</td>
+    </tr>
+    <tr>
+      <th>187</th>
+      <td>East Windsor</td>
+      <td>East Windsor CT</td>
+    </tr>
+    <tr>
+      <th>188</th>
+      <td>Everett</td>
+      <td>Everett WA</td>
+    </tr>
+    <tr>
+      <th>189</th>
+      <td>Fort Wayne</td>
+      <td>Fort Wayne IN</td>
+    </tr>
+    <tr>
+      <th>190</th>
+      <td>Granger</td>
+      <td>Granger IN</td>
+    </tr>
+    <tr>
+      <th>191</th>
+      <td>Hudsonville</td>
+      <td>Hudsonville MI</td>
+    </tr>
+    <tr>
+      <th>192</th>
+      <td>Idaho Springs</td>
+      <td>Idaho Springs CO</td>
+    </tr>
+    <tr>
+      <th>193</th>
+      <td>Jacksonville Beach</td>
+      <td>Jacksonville Beach FL</td>
+    </tr>
+    <tr>
+      <th>194</th>
+      <td>Kansas City</td>
+      <td>Kansas City MO</td>
+    </tr>
+    <tr>
+      <th>195</th>
+      <td>Knoxville</td>
+      <td>Knoxville TN</td>
+    </tr>
+    <tr>
+      <th>196</th>
+      <td>Krebs</td>
+      <td>Krebs OK</td>
+    </tr>
+    <tr>
+      <th>197</th>
+      <td>Madison WI</td>
+      <td>Madison, WI</td>
+    </tr>
+    <tr>
+      <th>198</th>
+      <td>Manhattan KS</td>
+      <td>Manhattan, KS</td>
+    </tr>
+    <tr>
+      <th>199</th>
+      <td>Marietta GA</td>
+      <td>Marietta, GA</td>
+    </tr>
+    <tr>
+      <th>200</th>
+      <td>Meadville PA</td>
+      <td>Meadville, PA</td>
+    </tr>
+    <tr>
+      <th>201</th>
+      <td>Mill Valley CA</td>
+      <td>Mill Valley, CA</td>
+    </tr>
+    <tr>
+      <th>202</th>
+      <td>Myrtle Beach</td>
+      <td>Myrtle Beach, SC</td>
+    </tr>
+    <tr>
+      <th>203</th>
+      <td>Myrtle Beach SC</td>
+      <td>Myrtle Beach, SC</td>
+    </tr>
+    <tr>
+      <th>204</th>
+      <td>Nellysford VA</td>
+      <td>Nellysford, VA</td>
+    </tr>
+    <tr>
+      <th>205</th>
+      <td>North Woodstock</td>
+      <td>North Woodstock, NH</td>
+    </tr>
+    <tr>
+      <th>206</th>
+      <td>North Woodstock NH</td>
+      <td>North Woodstock, NH</td>
+    </tr>
+    <tr>
+      <th>207</th>
+      <td>Northamtpon</td>
+      <td>Northampton, MA</td>
+    </tr>
+    <tr>
+      <th>208</th>
+      <td>Oklahoma City OK</td>
+      <td>Oklahoma City, OK</td>
+    </tr>
+    <tr>
+      <th>209</th>
+      <td>Paonia CO</td>
+      <td>Paonia, CO</td>
+    </tr>
+    <tr>
+      <th>210</th>
+      <td>Paso Robles CA</td>
+      <td>Paso Robles, CA</td>
+    </tr>
+    <tr>
+      <th>211</th>
+      <td>Petoskey MI</td>
+      <td>Petoskey, MI</td>
+    </tr>
+    <tr>
+      <th>212</th>
+      <td>Pineland ME</td>
+      <td>Pineland, ME</td>
+    </tr>
+    <tr>
+      <th>213</th>
+      <td>Pittsburgh PA</td>
+      <td>Pittsburgh, PA</td>
+    </tr>
+    <tr>
+      <th>214</th>
+      <td>Plainfield IN</td>
+      <td>Plainfield, IN</td>
+    </tr>
+    <tr>
+      <th>215</th>
+      <td>Reno NV</td>
+      <td>Reno, NV</td>
+    </tr>
+    <tr>
+      <th>216</th>
+      <td>Rochester MI</td>
+      <td>Rochester, MI</td>
+    </tr>
+    <tr>
+      <th>217</th>
+      <td>San Francisco CA</td>
+      <td>San Francisco, CA</td>
+    </tr>
+    <tr>
+      <th>218</th>
+      <td>San Luis Obispo CA</td>
+      <td>San Luis Obispo, CA</td>
+    </tr>
+    <tr>
+      <th>219</th>
+      <td>Santa Cruz CA</td>
+      <td>Santa Cruz, CA</td>
+    </tr>
+    <tr>
+      <th>220</th>
+      <td>Silverton OR</td>
+      <td>Silverton, OR</td>
+    </tr>
+    <tr>
+      <th>221</th>
+      <td>Soldotna AK</td>
+      <td>Soldotna, AK</td>
+    </tr>
+    <tr>
+      <th>222</th>
+      <td>South Bend</td>
+      <td>South Bend, IN</td>
+    </tr>
+    <tr>
+      <th>223</th>
+      <td>South San Francisco</td>
+      <td>South San Francisco, CA</td>
+    </tr>
+    <tr>
+      <th>224</th>
+      <td>Southampton</td>
+      <td>Southampton, NY</td>
+    </tr>
+    <tr>
+      <th>225</th>
+      <td>Springdale AR</td>
+      <td>Springdale, AR</td>
+    </tr>
+    <tr>
+      <th>226</th>
+      <td>St Paul</td>
+      <td>St. Paul, MN</td>
+    </tr>
+    <tr>
+      <th>227</th>
+      <td>St. Paul MN</td>
+      <td>St. Paul, MN</td>
+    </tr>
+    <tr>
+      <th>228</th>
+      <td>Stevens Point WI</td>
+      <td>Stevens Point, WI</td>
+    </tr>
+    <tr>
+      <th>229</th>
+      <td>Stevensville MT</td>
+      <td>Stevensville, MT</td>
+    </tr>
+    <tr>
+      <th>230</th>
+      <td>Tampa Bay</td>
+      <td>Tampa, FL</td>
+    </tr>
+    <tr>
+      <th>231</th>
+      <td>Tampa Bay FL</td>
+      <td>Tampa, FL</td>
+    </tr>
+    <tr>
+      <th>232</th>
+      <td>Tampa FL</td>
+      <td>Tampa, FL</td>
+    </tr>
+    <tr>
+      <th>233</th>
+      <td>Tulsa</td>
+      <td>Tulsa, OK</td>
+    </tr>
+    <tr>
+      <th>234</th>
+      <td>Ukiah</td>
+      <td>Ukiah, CA</td>
+    </tr>
+    <tr>
+      <th>235</th>
+      <td>Virginia Beach</td>
+      <td>Virginia Beach, VA</td>
+    </tr>
+    <tr>
+      <th>236</th>
+      <td>Vista</td>
+      <td>Vista, CA</td>
+    </tr>
+    <tr>
+      <th>237</th>
+      <td>Waterbury VT</td>
+      <td>Waterbury, VT</td>
+    </tr>
+    <tr>
+      <th>238</th>
+      <td>Waynesville</td>
+      <td>Waynesville, NC</td>
+    </tr>
+    <tr>
+      <th>239</th>
+      <td>Westminster MA</td>
+      <td>Westminster, MA</td>
+    </tr>
+    <tr>
+      <th>240</th>
+      <td>Wilkes-Barre</td>
+      <td>Wilkes-Barre, PA</td>
+    </tr>
+    <tr>
+      <th>241</th>
+      <td>Wilmington</td>
+      <td>Wilmington, DE</td>
+    </tr>
+    <tr>
+      <th>242</th>
+      <td>Wilson</td>
+      <td>Wilson, NC</td>
+    </tr>
+    <tr>
+      <th>243</th>
+      <td>Wolcott</td>
+      <td>Wolcott, VT</td>
+    </tr>
+    <tr>
+      <th>244</th>
+      <td>Worcester</td>
+      <td>Worcester, MA</td>
+    </tr>
+    <tr>
+      <th>245</th>
+      <td>Yardley</td>
+      <td>Yardley, PA</td>
+    </tr>
+    <tr>
+      <th>246</th>
+      <td>York PA</td>
+      <td>York, PA</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>2</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>volume_oz</td>
+      <td>CAST(REGEXP_EXTRACT("volume_oz", '(\d+(\.\d+)?)') AS DECIMAL)</td>
+      <td>To transform the 'volume_oz' column from VARCHAR to DECIMAL, we need to extract the numeric part from the string and cast it to DECIMAL. The values in the column already have a consistent format where the numeric part comes first, followed by ' oz.'. We can use REGEXP_EXTRACT to get the numeric part and then cast it to DECIMAL.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>alcohol_content</td>
+      <td>CASE\n    WHEN regexp_full_match("alcohol_content", '0\.\d{2,3}%') THEN CAST(REGEXP_EXTRACT("alcohol_content", '(0\.\d{2,3})') AS DECIMAL)\n    WHEN regexp_full_match("alcohol_content", '0\.\d{2,3}') THEN CAST("alcohol_content" AS DECIMAL)\n    WHEN regexp_full_match("alcohol_content", '0\.\d') THEN CAST("alcohol_content" AS DECIMAL)\nEND</td>
+      <td>To transform the 'alcohol_content' column from VARCHAR to DECIMAL, we need to: 1. Remove the '%' sign from the end of the string. 2. Cast the remaining numeric string to DECIMAL.\nWe can achieve this using the REGEXP_EXTRACT function to extract the numeric part,  and then cast it to DECIMAL. The regex pattern '0\.\d{2,3}' will match the numeric  part of the alcohol content without the '%' sign.\n\nTo transform the 'alcohol_content' column from VARCHAR to DECIMAL, we can use a simple CAST function. Since the values already match the pattern '0.\d{2,3}' (a decimal number with 2 or 3 digits after the decimal point), we don't need to use REGEXP_EXTRACT. The values are already in the correct format for a decimal number, so a straightforward CAST will work.\n\nTo transform the 'alcohol_content' column from VARCHAR to DECIMAL, we can use a simple CAST function. Since the data already follows the pattern '0.\d' and contains only numeric values (e.g., '0.1'), we don't need to use REGEXP_EXTRACT. We can directly cast the column to DECIMAL.\n\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔗 5. Functional Dependencies</h2><br>
+                🔍 <b>5</b> functional dependencies found<br><ol></ol><br><h2>❓ 6. Missing Values</h2><br>
+                    🔍 <b>4</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>alcohol_content</td>
+      <td>2.57</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>beer_style</td>
+      <td>0.21</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>bitterness</td>
+      <td>41.70</td>
+      <td>True</td>
+      <td>Some beer styles may not have a measurable bitterness.</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>brewery_state</td>
+      <td>5.27</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 61.225, 'y': 121}, {'x': 181.675, 'y': 120}, {'x': 302.125, 'y': 121}, {'x': 422.57500000000005, 'y': 120}, {'x': 543.025, 'y': 121}, {'x': 663.475, 'y': 120}, {'x': 783.925, 'y': 121}, {'x': 904.375, 'y': 120}, {'x': 1024.825, 'y': 121}, {'x': 1145.275, 'y': 120}, {'x': 1265.725, 'y': 120}, {'x': 1386.1750000000002, 'y': 121}, {'x': 1506.625, 'y': 120}, {'x': 1627.075, 'y': 121}, {'x': 1747.525, 'y': 120}, {'x': 1867.975, 'y': 121}, {'x': 1988.4250000000002, 'y': 120}, {'x': 2108.875, 'y': 121}, {'x': 2229.325, 'y': 120}, {'x': 2349.775, 'y': 121}];
+    binWidth = 120.45;
+    drawHistogram("hist_viz_row_number", data, binWidth);
+data = [{'x': 68.275, 'y': 121}, {'x': 202.82500000000002, 'y': 46}, {'x': 337.375, 'y': 85}, {'x': 471.92500000000007, 'y': 109}, {'x': 606.475, 'y': 120}, {'x': 741.0250000000001, 'y': 122}, {'x': 875.575, 'y': 107}, {'x': 1010.1250000000001, 'y': 131}, {'x': 1144.6750000000002, 'y': 131}, {'x': 1279.225, 'y': 131}, {'x': 1413.775, 'y': 128}, {'x': 1548.3250000000003, 'y': 129}, {'x': 1682.875, 'y': 134}, {'x': 1817.4250000000002, 'y': 126}, {'x': 1951.9750000000004, 'y': 133}, {'x': 2086.525, 'y': 128}, {'x': 2221.0750000000003, 'y': 130}, {'x': 2355.625, 'y': 132}, {'x': 2490.175, 'y': 135}, {'x': 2624.7250000000004, 'y': 132}];
+    binWidth = 134.55;
+    drawHistogram("hist_viz_beer_id", data, binWidth);
+data = [{'label': 'Nonstop Hef Hop', 'value': 0.49792531120331945}, {'label': "Dale's Pale Ale", 'value': 0.24896265560165973}, {'label': 'Oktoberfest', 'value': 0.24896265560165973}, {'label': 'Longboard Islan...', 'value': 0.16597510373443983}, {'label': "1327 Pod's ESB", 'value': 0.12448132780082986}, {'label': 'Other values', 'value': 98.7136929460581}];
+    drawBarChart("bar_viz_beer_name", data);
+data = [{'label': 'American IPA', 'value': 17.62993762993763}, {'label': 'American Pale A...', 'value': 10.187110187110187}, {'label': 'American Amber ...', 'value': 5.53014553014553}, {'label': 'American Blonde...', 'value': 4.490644490644491}, {'label': 'American Double...', 'value': 4.365904365904366}, {'label': 'Other values', 'value': 57.7962577962578}];
+    drawBarChart("bar_viz_beer_style", data);
+data = [{'x': 7.35, 'y': 58}, {'x': 14.049999999999999, 'y': 141}, {'x': 20.75, 'y': 245}, {'x': 27.450000000000003, 'y': 169}, {'x': 34.15, 'y': 136}, {'x': 40.85, 'y': 98}, {'x': 47.55, 'y': 90}, {'x': 54.25, 'y': 54}, {'x': 60.95, 'y': 68}, {'x': 67.65, 'y': 133}, {'x': 74.35, 'y': 56}, {'x': 81.05000000000001, 'y': 31}, {'x': 87.75, 'y': 53}, {'x': 94.45, 'y': 16}, {'x': 101.15, 'y': 37}, {'x': 107.85, 'y': 6}, {'x': 114.55000000000001, 'y': 6}, {'x': 121.25, 'y': 4}, {'x': 127.95000000000002, 'y': 2}, {'x': 134.65, 'y': 2}];
+    binWidth = 6.7;
+    drawHistogram("hist_viz_bitterness", data, binWidth);
+data = [{'x': 13.925, 'y': 224}, {'x': 41.775000000000006, 'y': 174}, {'x': 69.625, 'y': 169}, {'x': 97.47500000000001, 'y': 110}, {'x': 125.325, 'y': 154}, {'x': 153.175, 'y': 193}, {'x': 181.02500000000003, 'y': 138}, {'x': 208.875, 'y': 113}, {'x': 236.72500000000002, 'y': 102}, {'x': 264.575, 'y': 90}, {'x': 292.425, 'y': 119}, {'x': 320.27500000000003, 'y': 99}, {'x': 348.125, 'y': 93}, {'x': 375.975, 'y': 160}, {'x': 403.82500000000005, 'y': 88}, {'x': 431.675, 'y': 87}, {'x': 459.52500000000003, 'y': 83}, {'x': 487.375, 'y': 75}, {'x': 515.225, 'y': 72}, {'x': 543.075, 'y': 67}];
+    binWidth = 27.85;
+    drawHistogram("hist_viz_brewery_id", data, binWidth);
+data = [{'label': 'Brewery Vivant', 'value': 2.572614107883817}, {'label': 'Oskar Blues Bre...', 'value': 1.9087136929460582}, {'label': 'Sun King Brewin...', 'value': 1.5767634854771784}, {'label': 'Cigar City Brew...', 'value': 1.0373443983402488}, {'label': 'Sixpoint Brewin...', 'value': 0.9958506224066389}, {'label': 'Other values', 'value': 91.90871369294605}];
+    drawBarChart("bar_viz_brewery_name", data);
+data = [{'label': 'Grand Rapids', 'value': 2.6970954356846475}, {'label': 'Portland', 'value': 2.6556016597510372}, {'label': 'Chicago', 'value': 2.2821576763485476}, {'label': 'Indianapolis', 'value': 1.784232365145228}, {'label': 'Boulder', 'value': 1.7012448132780082}, {'label': 'Other values', 'value': 88.87966804979253}];
+    drawBarChart("bar_viz_brewery_city", data);
+data = [{'label': 'CO', 'value': 10.862899693385895}, {'label': 'CA', 'value': 7.4463425317564615}, {'label': 'MI', 'value': 6.876916338151555}, {'label': 'IN', 'value': 5.7380639509417435}, {'label': 'TX', 'value': 5.387647831800263}, {'label': 'Other values', 'value': 63.68812965396409}];
+    drawBarChart("bar_viz_brewery_state", data);
+data = [{'x': 8.99, 'y': 1}, {'x': 10.170000000000002, 'y': 0}, {'x': 11.350000000000001, 'y': 0}, {'x': 12.530000000000001, 'y': 1525}, {'x': 13.71, 'y': 0}, {'x': 14.89, 'y': 0}, {'x': 16.07, 'y': 841}, {'x': 17.250000000000004, 'y': 1}, {'x': 18.430000000000003, 'y': 0}, {'x': 19.610000000000003, 'y': 15}, {'x': 20.790000000000003, 'y': 0}, {'x': 21.970000000000002, 'y': 0}, {'x': 23.150000000000002, 'y': 0}, {'x': 24.330000000000002, 'y': 22}, {'x': 25.51, 'y': 0}, {'x': 26.69, 'y': 0}, {'x': 27.87, 'y': 0}, {'x': 29.05, 'y': 0}, {'x': 30.23, 'y': 0}, {'x': 31.41, 'y': 5}];
+    binWidth = 1.1800000000000002;
+    drawHistogram("hist_viz_volume_oz", data, binWidth);
+data = [{'x': 0.004175, 'y': 1}, {'x': 0.010525, 'y': 0}, {'x': 0.016875, 'y': 0}, {'x': 0.023225, 'y': 0}, {'x': 0.029575, 'y': 6}, {'x': 0.035925, 'y': 32}, {'x': 0.04227499999999999, 'y': 202}, {'x': 0.048625, 'y': 497}, {'x': 0.054974999999999996, 'y': 559}, {'x': 0.061325000000000005, 'y': 298}, {'x': 0.067675, 'y': 344}, {'x': 0.074025, 'y': 142}, {'x': 0.080375, 'y': 108}, {'x': 0.086725, 'y': 51}, {'x': 0.09307499999999999, 'y': 60}, {'x': 0.099425, 'y': 44}, {'x': 0.105775, 'y': 1}, {'x': 0.112125, 'y': 0}, {'x': 0.118475, 'y': 1}, {'x': 0.12482499999999999, 'y': 2}];
+    binWidth = 0.00635;
+    drawHistogram("hist_viz_alcohol_content", data, binWidth);
+
+
+</script>
+</body>
+</html>

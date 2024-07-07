@@ -1,0 +1,135 @@
+version: 2
+models:
+- name: stg_rayyan
+  description: The table is about academic articles. It includes details such as article
+    title, language, journal information, publication date, and author list. Each
+    row represents a unique article with its ID. The table contains bibliographic
+    data for various scientific publications across different fields and languages.
+  columns:
+  - name: article_language
+    description: Language of the article
+    tests:
+    - not_null
+  - name: journal_issn
+    description: International Standard Serial Number of the journal
+    tests:
+    - not_null
+  - name: journal_title
+    description: Full title of the journal
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: '[A-Za-z0-9\s.,&:\(\)\-]+'
+        summary: A loose pattern to match journal titles, allowing for a mix of letters,
+          numbers, spaces, common punctuation, and special characters.
+      - regex: '[^:]+:\s[^:]+'
+        summary: Journal titles containing a colon, indicating a main title followed
+          by a subtitle or description.
+      - regex: .+:\sOfficial\sJournal\sof\sthe\s.+
+        summary: Journal titles that include the format "Official Journal of the [Organization
+          Name]".
+      - regex: "(Revista|Rinsh\u014D|Zeitschrift)\\s.+"
+        summary: "Journal titles with a language-specific term for 'Journal', such\
+          \ as 'Revista', 'Zeitschrift', or 'Rinsh\u014D'."
+      - regex: ".+\\s\\([A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\xFF\\s]+\\)"
+        summary: Journal titles that include a location name, often in parentheses.
+      - regex: ".+\\sde\\s[A-Z\xC0-\xD6\xD8-\xF6\xF8-\xFF][a-z\xE0-\xF6\xF8-\xFF]+"
+        summary: Journal titles with a specific topic or field of study, often ending
+          with 'de [Topic]'.
+      - regex: (Critical\sReviews|Cost\sEffectiveness\sand\sResource\sAllocation)\s.+
+        summary: Journal titles that include a term indicating a review or critical
+          analysis, such as 'Critical Reviews' or 'Cost Effectiveness and Resource
+          Allocation'.
+      - regex: "[A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\xFF0-9]+(?:[ .&''/-][A-Za-z\xC0-\xD6\
+          \xD8-\xF6\xF8-\xFF0-9]+)*"
+        summary: Common pattern for journal titles, matching a sequence of words,
+          spaces, punctuation, and special characters.
+  - name: article_id
+    description: Unique identifier for the article
+    tests:
+    - not_null
+    - unique
+    cocoon_meta:
+      uniqueness: This column is a unique identifier for the article. For this table,
+        each row represents a unique academic article, and therefore the article_id
+        is unique across rows.
+  - name: journal_abbreviation
+    description: Abbreviated name of the journal
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: '[A-Z]+(?:\.\s?[A-Z]+)*\s?(?:[A-Z][a-z]+\.?)*'
+        summary: Matches sequences of uppercase letters, possibly followed by periods,
+          spaces, and other word characters.
+      - regex: (?:[A-Z]{2,}|[A-Z]\.)+(?:\s[A-Z][a-z]*\.?)*
+        summary: Matches journal abbreviations that may include acronyms, single uppercase
+          letters followed by periods, and full words with an initial capital letter.
+      - regex: '[A-Z](?:[A-Z\.]*[A-Z])?(?:\s[A-Z](?:[a-z]+|\.)*)*'
+        summary: Matches journal abbreviations that include sequences of uppercase
+          letters, possibly with interspersed periods and spaces, and may end with
+          a word or acronym.
+      - regex: '[A-Z][a-z]*\.(\s?[A-Z][a-z]*\.)*(\s?[A-Z][a-z]*)?'
+        summary: Journal abbreviations that may include initials followed by a period
+          and optional spaces, possibly including volume and issue numbers, and special
+          characters.
+      - regex: ([A-Za-z]+|\([A-Za-z]+\))(\s[A-Za-z]+)*(\s?[A-Za-z]*\.)?(\s?[A-Za-z]+)*
+        summary: Journal abbreviations that may contain full words, possibly including
+          acronyms, numbers, and special characters such as hyphens and parentheses.
+  - name: article_pages
+    description: Page numbers of the article
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: ^\d+$
+        summary: Single page numbers
+      - regex: ^\d+-\d+$
+        summary: Page ranges with a hyphen separator
+      - regex: \b[A-Z]?[0-9]+(?:-[0-9]+)?[A-Z]?\b
+        summary: Standalone page numbers with a possible letter prefix and/or suffix
+      - regex: \b[A-Za-z]+[0-9]+(?:-[0-9]+)?\b
+        summary: Alphanumeric codes that may represent unique article identifiers,
+          starting with letters followed by numbers and possibly a hyphen and additional
+          numbers
+      - regex: \be[0-9]+(?:-[a-zA-Z0-9]+)?\b
+        summary: Alphanumeric codes with an 'e' prefix, followed by numbers and possibly
+          a hyphen and additional numbers or letters
+      - regex: \bG[0-9]+-G[0-9]+\b
+        summary: Alphanumeric codes with a 'G' prefix, followed by numbers separated
+          by a hyphen
+      - regex: \bS[0-9]+(?:-[S0-9]+)?\b
+        summary: Alphanumeric codes with an 'S' prefix, followed by numbers and possibly
+          a hyphen and additional numbers
+      - regex: \d+-\d+(?:\s+[A-Z]+\s+-\s+.*)?
+        summary: Page ranges with a hyphen, possibly followed by additional text and
+          a description.
+      - regex: S\d+-
+        summary: Supplemental page references starting with 'S' followed by a page
+          number and a hyphen.
+      - regex: W\d+-?(?:W\d+)?(?:\s+[A-Z]+\s+-\s+.*)?
+        summary: Page references with 'W' followed by a range or single page number.
+      - regex: (\d+-\d+|\d+)(,\s*\d+)*
+        summary: Page ranges and individual page numbers, separated by hyphens and
+          commas
+  - name: article_title
+    description: Title of the article
+    tests:
+    - not_null
+  - name: authors
+    description: List of authors for the article
+    cocoon_meta:
+      missing_acceptable: Anonymous or collective authorship.
+  - name: journal_issue
+    description: Issue number of the journal
+    tests:
+    - not_null
+  - name: publication_date
+    description: Publication date of the article
+    tests:
+    - not_null
+  - name: journal_volume
+    description: Volume number of the journal
+    tests:
+    - not_null

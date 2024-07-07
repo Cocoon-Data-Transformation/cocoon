@@ -1,0 +1,164 @@
+version: 2
+models:
+- name: stg_movies
+  description: The table is about movies. It contains details of films including title,
+    release year, director, actors, language, country, duration, ratings, and genre.
+    The table also includes a brief plot description for each movie. It covers various
+    film attributes like cast, filming locations, and review counts. The movies span
+    different decades and genres, from classic thrillers to documentaries.
+  columns:
+  - name: plot_summary
+    description: Brief plot summary of the movie
+    tests:
+    - not_null
+    - unique
+    cocoon_meta:
+      uniqueness: This column contains a brief summary of the movie's plot. For this
+        table, each row represents a unique movie. While plot summaries are generally
+        unique for each movie, there's a small possibility that two very similar movies
+        might have identical plot summaries. However, in practice, it's highly likely
+        to be unique across rows.
+  - name: movie_id
+    description: Unique identifier for the movie
+    tests:
+    - not_null
+    - unique
+    cocoon_meta:
+      uniqueness: This column contains a unique identifier for each movie. For this
+        table, each row represents a unique movie, and movie_id is designed to be
+        a unique identifier. It should be unique across all rows.
+      patterns:
+      - regex: \d+-[a-z_]+
+        summary: Numeric ID followed by hyphen and movie title
+      - regex: '[a-z_]+(_\d{4})?'
+        summary: Movie title with underscores and optional year
+      - regex: '[a-z0-9_-]+'
+        summary: Any lowercase letters, numbers, underscores, and hyphens
+  - name: title
+    description: Title of the movie
+    tests:
+    - not_null
+  - name: filming_locations
+    description: Places where the movie was filmed
+    cocoon_meta:
+      missing_acceptable: Some movies may not have specific filming locations.
+      patterns:
+      - regex: ([A-Za-z\s]+),\s([A-Za-z\s]+),\s([A-Za-z\s]+)
+        summary: City, State, Country format (most common)
+      - regex: ([A-Za-z\s\.-]+)\s-\s(\d+\s[A-Za-z\s\.]+,\s[A-Za-z\s,]+)
+        summary: Studio name with address
+      - regex: ([A-Za-z\s]+),\s([A-Za-z\s]+)
+        summary: City, Country format
+      - regex: ^[A-Za-z\s]+$
+        summary: Single location (country or state)
+      - regex: ([A-Za-z\s,]+)
+        summary: Complex locations with multiple components
+  - name: languages
+    description: Primary language(s) of the movie
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: ^English$
+        summary: Entries with only English
+      - regex: ^English,[A-Z][a-z]+( [A-Z][a-z]+)*$
+        summary: Entries with English and one other language
+      - regex: ^English,[A-Z][a-z]+( [A-Z][a-z]+)*,[A-Z][a-z]+( [A-Z][a-z]+)*$
+        summary: Entries with English and two other languages
+      - regex: ^English,[A-Z][a-z]+( [A-Z][a-z]+)*,[A-Z][a-z]+( [A-Z][a-z]+)*,[A-Z][a-z]+(
+          [A-Z][a-z]+)*$
+        summary: Entries with English and three other languages
+      - regex: ^English(,[A-Z][a-z]+( [A-Z][a-z]+)*){1,4}$
+        summary: Entries with English and up to four other languages
+      - regex: ^[A-Z][a-z]+( [A-Z][a-z]+)*,English(,[A-Z][a-z]+( [A-Z][a-z]+)*)*$
+        summary: Entries starting with a language other than English
+      - regex: ^([A-Z][a-z]+( [A-Z][a-z]+)*(,|$))+$
+        summary: General pattern for all entries
+      - regex: ^([A-Z][a-zA-Z''\- ]+,\s*)*[A-Z][a-zA-Z''\- ]+$
+        summary: Capitalized words (languages) separated by commas with optional spaces
+  - name: country
+    description: Country of production
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: ^[A-Z][a-zA-Z ]+(?:;[A-Z][a-zA-Z ]+)*$
+        summary: Country names separated by semicolons
+      - regex: ^[A-Z][a-zA-Z ]+(?:,[A-Z][a-zA-Z ]+)*$
+        summary: Country names separated by commas
+  - name: writers
+    description: Writers or creators of the movie
+    tests:
+    - not_null
+  - name: main_actors
+    description: Main actors in the movie
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: ^[A-Z][a-z]+(?:\s[A-Z]\.?)?(?:\s[A-Z][a-z]+)+(?:,[A-Z][a-z]+(?:\s[A-Z]\.?)?(?:\s[A-Z][a-z]+)+){1,2}$
+        summary: 2-3 actor names separated by commas
+      - regex: ^[A-Z][a-z\-'']+(?:\s[A-Z]\.?)?(?:\s[A-Z][a-z\-'']+)*(?:,[A-Z][a-z\-'']+(?:\s[A-Z]\.?)?(?:\s[A-Z][a-z\-'']+)*){1,2}$
+        summary: More lenient pattern allowing for various name formats
+      - regex: "^[A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\xFF\\s\\.-]+(?:,[A-Za-z\xC0-\xD6\xD8\
+          -\xF6\xF8-\xFF\\s\\.-]+){1,2}$"
+        summary: Lists of 2-3 actor names separated by commas
+      - regex: "^[A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\xFF\\s\\.-]+$"
+        summary: Single name or phrase
+      - regex: "^[A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\xFF''\\s-]+(?:,[A-Za-z\xC0-\xD6\xD8\
+          -\xF6\xF8-\xFF''\\s-]+){1,2}$"
+        summary: Names separated by commas, typically 2-3 names per entry
+      - regex: ^.*$
+        summary: Some entries contain band names or non-standard name formats
+  - name: director
+    description: Director of the movie
+    tests:
+    - not_null
+  - name: average_rating
+    description: Average rating score
+    tests:
+    - not_null
+  - name: number_of_ratings
+    description: Number of ratings received
+    tests:
+    - not_null
+  - name: genres
+    description: Categories or types of the movie
+    tests:
+    - not_null
+  - name: runtime
+    description: Length of the movie in minutes
+    tests:
+    - not_null
+    cocoon_meta:
+      patterns:
+      - regex: \d{1,3}\smin
+        summary: Runtime values in minutes (1-3 digits followed by " min")
+      - regex: \d+ hr\. (\d+ min\.)?
+        summary: Runtime durations in the format of "X hr. Y min." or "X hr."
+      - regex: \d+\s*hr\.
+        summary: Runtime values in hours, with 'hr.' suffix
+  - name: full_cast
+    description: Extended list of actors in the movie
+    tests:
+    - not_null
+    - unique
+    cocoon_meta:
+      uniqueness: This column provides an extended list of actors in the movie. For
+        this table, each row represents a unique movie. The full cast list is likely
+        to be unique for each movie, especially when considering the order of the
+        actors. However, there's a small possibility that two different movies might
+        have an identical cast list. In practice, it's highly likely to be unique
+        across rows.
+  - name: release_date
+    description: Date the movie was released
+    tests:
+    - not_null
+  - name: number_of_reviews
+    description: Number of user and critic reviews
+    tests:
+    - not_null
+  - name: release_year
+    description: Year the movie was released
+    tests:
+    - not_null
