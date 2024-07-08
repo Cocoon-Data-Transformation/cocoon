@@ -15742,9 +15742,9 @@ def create_explore_button(query_widget, table_name=None, query="", list_descript
         
     else:
         if table_name is not None:
-            table_name = logical_to_physical.get(table_name, table_name)
-            table_name = enclose_table_name(table_name)
-            query = f'SELECT * FROM {table_name}'
+            physical_table_name = logical_to_physical.get(table_name, table_name)
+            physical_table_name = enclose_table_name(physical_table_name)
+            query = f'SELECT * FROM {physical_table_name}'
             
         explore_button = widgets.Button(
             description='Explore',
@@ -28570,7 +28570,7 @@ pk_mapping:
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         
-        df = extract_output[0]
+        df = pd.read_json(self.get_sibling_document('Decide Keys For All'), orient="split")
         summary = run_output
               
         data_project = self.para["data_project"]

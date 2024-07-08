@@ -2,12 +2,11 @@ from setuptools import setup, find_packages
 
 setup(
     name="cocoon_data",
-    version="0.1.92",
+    version="0.1.93",
     packages=find_packages(),
     install_requires=open("requirements.txt").read().splitlines(),
     extras_require={
-        "geo": ["geopandas==0.14.1", "rasterio", "pyproj", "shapely", "scipy"],
-        "bedrock": ["boto3==1.34.90"],
+        "geo": ["geopandas==0.14.1", "rasterio", "pyproj", "shapely", "scipy"]
     },
     author="Zachary Huang",
     author_email="zh2408@columbia.edu",
