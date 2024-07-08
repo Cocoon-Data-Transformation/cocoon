@@ -14,8 +14,15 @@ from pygments.lexers import PythonLexer, SqlLexer, YamlLexer
 from pygments.formatters import Terminal256Formatter, HtmlFormatter
 import html
 
+_cocoon_global_values = {
+    'IMAGE_MODE': "graphviz"
+}
 
+def get_image_mode():
+    return _cocoon_global_values['IMAGE_MODE']
 
+def set_image_mode(value):
+    _cocoon_global_values['IMAGE_MODE'] = value
 
 def wrap_in_iframe(html_code, width=800, height=400):
 
@@ -674,6 +681,7 @@ def generate_dialogue_html(dialogue):
     return html_content
 
 
+
 def generate_seaborn_palette(n_colors):
     palette = sns.husl_palette(n_colors, s=0.7, l=0.8)
     hex_colors = ["#{:02x}{:02x}{:02x}".format(int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255)) for rgb in palette]
@@ -781,9 +789,24 @@ def wrap_image_in_html(image_data, height=None, format='svg'):
     return scrollable_html
 
 def generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=None, format='svg'):
-    image_data = generate_workflow_image(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, format)
-    return wrap_image_in_html(image_data, height, format)
+    try:
+        image_data = generate_workflow_image(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, format)
+        return wrap_image_in_html(image_data, height, format)
+    except:
+        return """
+<div style="font-family: sans-serif; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; color: #721c24;">
+    <p style="margin: 0 0 10px 0; line-height: 1.4;">⚠️ <strong>Error:</strong> Cocoon needs graphviz installed to generate visualizations.</p>
+    <p style="margin: 0 0 10px 0; line-height: 1.4;">To install, visit the <a href="https://graphviz.org/download/" target="_blank">Graphviz website</a>.</p>
+    <p style="margin: 0; line-height: 1.4;">Alternatively, run: <code>set_image_mode("mermaid")</code></p>
+</div>
+"""        
 
+def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=None, format='svg'):
+    if _cocoon_global_values['IMAGE_MODE'] == 'graphviz':
+        return generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, height, format)
+    else:
+        return generate_workflow_html_multiple_mermaid(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, height)
+    
 def generate_mermaid_code(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True):
     mermaid_code = []
     mermaid_code.append("graph TD")
@@ -828,7 +851,7 @@ def generate_mermaid_code(nodes, edges, edge_labels=None, highlight_nodes_indice
     return mermaid_code
 
 
-def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=300):
+def generate_workflow_html_multiple_mermaid(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=300):
     mermaid_code = generate_mermaid_code(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional)
     html_content = f"""
 <!DOCTYPE html>
@@ -857,6 +880,8 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
 </body>
 </html>
 """
+    if height is None:
+        height = 300
     return wrap_in_iframe(html_content, height=height+20)
 
 
@@ -1100,5 +1125,125 @@ def visualize_table_mapping(table1_name, table1_cols, table2_name, table2_cols, 
     """
     return scrollable_html
     
+
+
+
+
+
+def generate_workflow_image_d3(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, format='svg'):
+    graph_data = {
+        "nodes": [],
+        "links": []
+    }
+
+    for i, node in enumerate(nodes):
+        node_data = {"id": node}
+        
+        if node_shape and i < len(node_shape):
+            node_data["shape"] = node_shape[i]
+        else:
+            node_data["shape"] = "rect"
+        
+        if highlight_nodes_indices and i in highlight_nodes_indices:
+            node_data["borderColor"] = "#4fc3f7"
+            node_data["fillColor"] = "#e1f5fe"
+        else:
+            node_data["borderColor"] = "#000000"
+            node_data["fillColor"] = "#ffffff"
+        
+        graph_data["nodes"].append(node_data)
+
+    for i, (tail, head) in enumerate(edges):
+        edge_data = {
+            "source": nodes[tail],
+            "target": nodes[head]
+        }
+        
+        if edge_labels and i < len(edge_labels):
+            edge_data["label"] = edge_labels[i]
+        
+        if highlight_edges_indices and i in highlight_edges_indices:
+            edge_data["color"] = "#4fc3f7"
+        else:
+            edge_data["color"] = "#000000"
+        
+        graph_data["links"].append(edge_data)
+
+    html_content = generate_draggable_graph_html(graph_data)
+    
+    return html_content
+
+
+
+
+
+
+
+
+
+def generate_workflow_image_networkx(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, format='svg'):
+    if directional:
+        G = nx.DiGraph()
+    else:
+        G = nx.Graph()
+
+    G.add_nodes_from(range(len(nodes)))
+    G.add_edges_from(edges)
+
+    if highlight_nodes_indices is None:
+        highlight_nodes_indices = []
+    if highlight_edges_indices is None:
+        highlight_edges_indices = []
+
+    node_colors = ['#ffffff' if i not in highlight_nodes_indices else '#e1f5fe' for i in range(len(nodes))]
+
+    if node_shape is None:
+        node_shape = 'r'
+    
+    edge_colors = ['#000000' if i not in highlight_edges_indices else '#4fc3f7' for i in range(len(edges))]
+
+    plt.figure(figsize=(5, 4))
+    pos = nx.spring_layout(G, k=1, iterations=50)
+    
+    nx.draw_networkx_edges(G, pos, edge_color=edge_colors, arrows=directional, arrowsize=10, width=0.6)
+    
+    def get_text_dimensions(text, font_size):
+        t = plt.text(0, 0, text, fontsize=font_size)
+        bbox = t.get_window_extent(renderer=plt.gcf().canvas.get_renderer())
+        t.remove()
+        return bbox.width / plt.gcf().dpi, bbox.height / plt.gcf().dpi
+
+    if node_shape == 'r':
+        for n in G.nodes():
+            label = nodes[n]
+            width, height = get_text_dimensions(label, 8)
+            width *= 1
+            height *= 2
+            x, y = pos[n]
+            rect = mpatches.Rectangle((x-width/2, y-height/2), width, height, 
+                                      fill=True, facecolor=node_colors[n], 
+                                      edgecolor='#000000', zorder=2)
+            plt.gca().add_patch(rect)
+    else:
+        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=1000, node_shape=node_shape, edgecolors='#000000')
+    
+    for n, label in enumerate(nodes):
+        x, y = pos[n]
+        plt.text(x, y, label, fontsize=8, ha='center', va='center', zorder=3)
+    
+    if edge_labels:
+        edge_labels_dict = {edge: label for edge, label in zip(edges, edge_labels)}
+        nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels_dict, font_size=8)
+
+    plt.axis('off')
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format=format, dpi=300, bbox_inches='tight')
+    buf.seek(0)
+    image = buf.getvalue()
+    plt.close()
+
+    return image
 
 

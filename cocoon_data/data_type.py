@@ -51,19 +51,19 @@ transform_hints = {
     'VARCHAR':{
         'DATE': {
             "DuckDB": """Example Clause: 
-strptime('02/03/1992', '%d/%m/%Y')
-strptime('Monday, 2 March 1992 - 08:32:45 PM', '%A, %-d %B %Y - %I:%M:%S %p')""",
+CAST(strptime('02/03/1992', '%d/%m/%Y') AS DATE)
+CAST(strptime(replace('Mon, 2 March 1992', 'Mon', 'Monday'), '%A, %-d %B %Y') AS DATE)""",
             "Snowflake": """Example Clause: 
 TO_DATE('02/03/1992', 'DD/MM/YYYY')
-TO_TIMESTAMP('Monday, 2 March 1992 - 08:32:45 PM', 'DY, D MONTH YYYY - HH12:MI:SS AM')""",
+TO_DATE('Mon, 2 March 1992', 'DY, DD MON YYYY')""",
         },
         'TIME': {
             "DuckDB": """Example Clause: 
-strptime('02/03/1992', '%d/%m/%Y')
-strptime('Monday, 2 March 1992 - 08:32:45 PM', '%A, %-d %B %Y - %I:%M:%S %p')""",
+CAST(strptime('14:30:45', '%H:%M:%S') AS TIME)
+CAST(strptime(REPLACE(REPLACE('08:32:45 p.m.', 'a.m.', 'AM'), 'p.m.', 'PM'), '%I:%M:%S %p') AS TIME)""",
             "Snowflake": """Example Clause: 
-TO_DATE('02/03/1992', 'DD/MM/YYYY')
-TO_TIMESTAMP('Monday, 2 March 1992 - 08:32:45 PM', 'DY, D MONTH YYYY - HH12:MI:SS AM')""",
+TO_TIME('14:30:45', 'HH24:MI:SS')
+TO_TIME(REPLACE(REPLACE('08:32:45 p.m.', 'a.m.', 'AM'), 'p.m.', 'PM'), 'HH12:MI:SS AM')""",
         },
         'TIMESTAMP': {
             "DuckDB": """Example Clause: 

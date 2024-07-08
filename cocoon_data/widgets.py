@@ -5,34 +5,44 @@ from IPython.display import *
 import pandas as pd
 from html.parser import HTMLParser
 import ast
+from .constant import *
 
-text_area_style = """
+text_area_style = f"""
 <style>
-textarea, input {
+textarea, input {{
     font-family:  'Verdana', serif;
     
-}
-:root {
+}}
+:root {{
     --jp-ui-font-size1: 12px;
-}
+}}
 
-.modern-textarea textarea {
+.modern-textarea textarea {{
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 8px;
     transition: border-color 0.3s, box-shadow 0.3s;
-}
+}}
 
-.modern-textarea textarea:focus {
+.modern-textarea textarea:focus {{
     outline: none;
     border-color: #4a90e2;
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
-}
+}}
 
-.modern-textarea textarea:disabled {
+.modern-textarea textarea:disabled {{
     background-color: #e9e9e9;
     cursor: not-allowed;
-}
+}}
+
+
+.widget-dropdown > select {{
+    font-size: 12px;  /* Adjust this value to change the text size */
+    height: 25px;     /* Adjust this value to change the height of the dropdown box */
+    padding: 3px;     /* Adds some padding inside the dropdown box */
+}}
+
+{pandas_css}
 </style>
 """
 
@@ -619,6 +629,7 @@ def create_column_selector(columns, default=False, except_columns=None):
 
 
 
+
 def create_column_selector_(columns, default=False, selected=None):
     multi_select = widgets.SelectMultiple(
         options=[(column, i) for i, column in enumerate(columns)],
@@ -640,15 +651,15 @@ def create_column_selector_(columns, default=False, selected=None):
     reverse_selection_button = widgets.Button(description="Reverse Selection", button_style='warning', icon='exchange')
         
     def select_all(b):
-        multi_select.value = tuple(range(len(columns)))
+        multi_select.value = [option[1] for option in multi_select.options]
         
     def deselect_all(b):
-        multi_select.value = ()
+        multi_select.value = []
     
     def reverse_selection(b):
         current_selection = set(multi_select.value)
-        all_indices = set(range(len(columns)))
-        new_selection = tuple(all_indices - current_selection)
+        all_values = set(option[1] for option in multi_select.options)
+        new_selection = list(all_values - current_selection)
         multi_select.value = new_selection
     
     select_all_button.on_click(select_all)
@@ -660,10 +671,9 @@ def create_column_selector_(columns, default=False, selected=None):
     display(ui)
     
     if selected is not None:
-        selected_indices = [i for i, column in enumerate(columns) if column in selected]
-        multi_select.value = tuple(selected_indices)
+        multi_select.value = [option[1] for option in multi_select.options if option[0] in selected]
     elif default:
-        multi_select.value = tuple(range(len(columns)))
+        multi_select.value = [option[1] for option in multi_select.options]
         
     return multi_select
 

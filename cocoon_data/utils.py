@@ -5,14 +5,18 @@ from jinja2 import Template
 import ast
 
 def get_detailed_error_info():
-    """
-    Retrieve detailed information about the most recent exception caught by an except clause.
-    Specifically, it fetches the exact line and explanation of the error within the exec block.
-    """
+
     exc_type, exc_value, exc_traceback = sys.exc_info()
 
     tb_list = traceback.format_exception(exc_type, exc_value, exc_traceback)
+    
+    tb_list = [line for tb in tb_list for line in tb.split('\n') if line]
 
+    for i, line in enumerate(tb_list):
+        if line.startswith("Original error"):
+            tb_list = tb_list[i:]
+            break
+        
     for i, line in enumerate(tb_list):
         if "exec(" in line:
             tb_list = tb_list[i+1:]
@@ -24,7 +28,7 @@ def get_detailed_error_info():
             tb_list = tb_list[i:]
             break
 
-    detailed_error_info = ''.join(tb_list)
+    detailed_error_info = '\n'.join(tb_list)
 
     return detailed_error_info
 
