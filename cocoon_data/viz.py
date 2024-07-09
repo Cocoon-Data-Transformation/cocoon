@@ -806,6 +806,14 @@ def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_no
         return generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, height, format)
     else:
         return generate_workflow_html_multiple_mermaid(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, height)
+
+def generate_node_id(index):
+    """Generate a unique node ID for a given index."""
+    if index < 26:
+        return chr(65 + index)
+    else:
+        quotient, remainder = divmod(index, 26)
+        return generate_node_id(quotient - 1) + chr(65 + remainder)
     
 def generate_mermaid_code(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True):
     mermaid_code = []
@@ -823,14 +831,14 @@ def generate_mermaid_code(nodes, edges, edge_labels=None, highlight_nodes_indice
 
     for i, node in enumerate(nodes):
         shape = shape_map.get(node_shape[i] if node_shape else "box", "[{}]")
-        mermaid_code.append(f"    {chr(65 + i)}{shape.format(html.escape(node))}")
+        mermaid_code.append(f"    {generate_node_id(i)}{shape.format(html.escape(node))}")
 
     for i, (start, end) in enumerate(edges):
         connector = "-->" if directional else "---"
         edge_label = ""
         if edge_labels and i < len(edge_labels):
             edge_label = f"|{html.escape(edge_labels[i])}|"
-        edge_str = f"    {chr(65 + start)}{connector}{edge_label}{chr(65 + end)}"
+        edge_str = f"    {generate_node_id(start)}{connector}{edge_label}{generate_node_id(end)}"
         
         mermaid_code.append(edge_str)
 
@@ -840,7 +848,7 @@ def generate_mermaid_code(nodes, edges, edge_labels=None, highlight_nodes_indice
         mermaid_code.append("    classDef highlight fill:#e1f5fe,stroke:#4fc3f7,stroke-width:2px;")
     
     if highlight_nodes_indices:
-        highlight_nodes = ",".join([chr(65 + i) for i in highlight_nodes_indices])
+        highlight_nodes = ",".join([generate_node_id(i) for i in highlight_nodes_indices])
         mermaid_code.append(f"    class {highlight_nodes} highlight;")
     
     mermaid_code.append("    linkStyle default stroke:#999,stroke-width:1px;")
@@ -882,7 +890,8 @@ def generate_workflow_html_multiple_mermaid(nodes, edges, edge_labels=None, high
 """
     if height is None:
         height = 300
-    return wrap_in_iframe(html_content, height=height+20)
+    width = 500 + len(nodes) * 100
+    return wrap_in_iframe(html_content, width=width, height=height+20)
 
 
 

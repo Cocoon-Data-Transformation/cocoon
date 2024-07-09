@@ -16487,7 +16487,10 @@ patterns: # leave empty if free texts
                     query += f"AND NOT {regex_match_clause} \n"
                 
                 query = with_context + "\n" + query
-                result_df = run_sql_return_df(con,query)
+                try:
+                    result_df = run_sql_return_df(con,query)
+                except:
+                    continue
                 
                 if result_df.iloc[0,0] == 0:
                     continue
