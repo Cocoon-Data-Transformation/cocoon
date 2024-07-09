@@ -23306,8 +23306,17 @@ class SelectTables(Node):
                             
                         if yml_content and 'sources' in yml_content:
                             source = yml_content['sources'][0]
-                            return source.get('database'), source.get('schema'), [table['name'] for table in source.get('tables', [])]
-                
+                            database = source.get('database')
+                            schema = source.get('schema')
+                            tables = source.get('tables', [])
+                            
+                            if len(tables) > 0 and isinstance(tables[0], dict):
+                                table_names = [table['name'] for table in tables]
+                            else:
+                                table_names = tables
+                            display(HTML(f"🤓 Found {len(table_names)} source tables in your project!"))
+                            return database, schema, table_names
+            
                 except Exception as e:
                     pass
             
@@ -27901,7 +27910,7 @@ class DocumentProject(Node):
                 source_choice_html += f'<a class="nav-link small {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_source_{table}">{table}</a>'
 
             for idx, table in enumerate(source_tables):
-                df_html = run_sql_return_df(con, f'SELECT * FROM "{table}" LIMIT 100').to_html()
+                df_html = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table)} LIMIT 100').to_html()
                 source_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_source_{table}">
             <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
             <div class="code_container mb-4 mx-4">{df_html}</div>
