@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_faglflexa_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>docln</th>
+      <th>rldnr</th>
+      <th>ryear</th>
+      <th>activ</th>
+      <th>rtcur</th>
+      <th>awtyp</th>
+      <th>rrcty</th>
+      <th>rvers</th>
+      <th>tsl</th>
+      <th>hsl</th>
+      <th>ksl</th>
+      <th>osl</th>
+      <th>msl</th>
+      <th>wsl</th>
+      <th>drcrk</th>
+      <th>poper</th>
+      <th>rwcur</th>
+      <th>gjahr</th>
+      <th>buzei</th>
+      <th>usnam</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>rclnt</th>
+      <th>rbukrs</th>
+      <th>kokrs</th>
+      <th>rcntr</th>
+      <th>belnr</th>
+      <th>rfarea</th>
+      <th>racct</th>
+      <th>budat</th>
+      <th>bschl</th>
+      <th>docnr</th>
+      <th>timestamp_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2</td>
+      <td>0l</td>
+      <td>2007</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-2949.00</td>
+      <td>-2949.00</td>
+      <td>-2286.05</td>
+      <td>-2949.00</td>
+      <td>0.0</td>
+      <td>-2949.00</td>
+      <td>h</td>
+      <td>6</td>
+      <td>usd</td>
+      <td>2006</td>
+      <td>2</td>
+      <td>steiner</td>
+      <td>3388016</td>
+      <td>False</td>
+      <td>800</td>
+      <td>3000</td>
+      <td>2000</td>
+      <td>NaN</td>
+      <td>200001076</td>
+      <td>NaN</td>
+      <td>113100</td>
+      <td>20060601</td>
+      <td>50</td>
+      <td>100002655</td>
+      <td>20070525092226</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>0l</td>
+      <td>2007</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-655.50</td>
+      <td>-655.50</td>
+      <td>-508.14</td>
+      <td>-655.50</td>
+      <td>0.0</td>
+      <td>-655.50</td>
+      <td>h</td>
+      <td>6</td>
+      <td>usd</td>
+      <td>2006</td>
+      <td>2</td>
+      <td>steiner</td>
+      <td>3388017</td>
+      <td>False</td>
+      <td>800</td>
+      <td>3000</td>
+      <td>2000</td>
+      <td>NaN</td>
+      <td>200001077</td>
+      <td>NaN</td>
+      <td>113100</td>
+      <td>20060601</td>
+      <td>50</td>
+      <td>100002658</td>
+      <td>20070525092228</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>0l</td>
+      <td>2007</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-1595.28</td>
+      <td>-1595.28</td>
+      <td>-1236.65</td>
+      <td>-1595.28</td>
+      <td>0.0</td>
+      <td>-1595.28</td>
+      <td>h</td>
+      <td>6</td>
+      <td>usd</td>
+      <td>2006</td>
+      <td>2</td>
+      <td>steiner</td>
+      <td>3388018</td>
+      <td>False</td>
+      <td>800</td>
+      <td>3000</td>
+      <td>2000</td>
+      <td>NaN</td>
+      <td>200001078</td>
+      <td>NaN</td>
+      <td>113100</td>
+      <td>20060601</td>
+      <td>50</td>
+      <td>100002659</td>
+      <td>20070525092228</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>document_line_number</th>
+      <th>ledger_number</th>
+      <th>ryear</th>
+      <th>activity_type</th>
+      <th>transaction_currency</th>
+      <th>document_type</th>
+      <th>record_type</th>
+      <th>version_number</th>
+      <th>transaction_amount_local</th>
+      <th>local_currency_amount</th>
+      <th>group_currency_amount</th>
+      <th>transaction_currency_amount</th>
+      <th>material_ledger_amount</th>
+      <th>amount_document_currency</th>
+      <th>debit_credit_indicator</th>
+      <th>posting_period</th>
+      <th>reporting_currency</th>
+      <th>gjahr</th>
+      <th>line_item_number</th>
+      <th>user_name</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>client_code</th>
+      <th>company_code</th>
+      <th>controlling_area</th>
+      <th>cost_center</th>
+      <th>document_number</th>
+      <th>functional_area</th>
+      <th>gl_account_number</th>
+      <th>posting_date</th>
+      <th>posting_key</th>
+      <th>reference_document_number</th>
+      <th>transaction_timestamp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2</td>
+      <td>0l</td>
+      <td>2007</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-2949.00</td>
+      <td>-2949.00</td>
+      <td>-2286.05</td>
+      <td>-2949.00</td>
+      <td>0.0</td>
+      <td>-2949.00</td>
+      <td>h</td>
+      <td>6</td>
+      <td>usd</td>
+      <td>2006</td>
+      <td>2</td>
+      <td>steiner</td>
+      <td>3388016</td>
+      <td>False</td>
+      <td>800</td>
+      <td>3000</td>
+      <td>2000</td>
+      <td>None</td>
+      <td>200001076</td>
+      <td>None</td>
+      <td>113100</td>
+      <td>2006-06-01</td>
+      <td>50</td>
+      <td>100002655</td>
+      <td>2007-05-25 09:22:26</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2</td>
+      <td>0l</td>
+      <td>2007</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-655.50</td>
+      <td>-655.50</td>
+      <td>-508.14</td>
+      <td>-655.50</td>
+      <td>0.0</td>
+      <td>-655.50</td>
+      <td>h</td>
+      <td>6</td>
+      <td>usd</td>
+      <td>2006</td>
+      <td>2</td>
+      <td>steiner</td>
+      <td>3388017</td>
+      <td>False</td>
+      <td>800</td>
+      <td>3000</td>
+      <td>2000</td>
+      <td>None</td>
+      <td>200001077</td>
+      <td>None</td>
+      <td>113100</td>
+      <td>2006-06-01</td>
+      <td>50</td>
+      <td>100002658</td>
+      <td>2007-05-25 09:22:28</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>0l</td>
+      <td>2007</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-1595.28</td>
+      <td>-1595.28</td>
+      <td>-1236.65</td>
+      <td>-1595.28</td>
+      <td>0.0</td>
+      <td>-1595.28</td>
+      <td>h</td>
+      <td>6</td>
+      <td>usd</td>
+      <td>2006</td>
+      <td>2</td>
+      <td>steiner</td>
+      <td>3388018</td>
+      <td>False</td>
+      <td>800</td>
+      <td>3000</td>
+      <td>2000</td>
+      <td>None</td>
+      <td>200001078</td>
+      <td>None</td>
+      <td>113100</td>
+      <td>2006-06-01</td>
+      <td>50</td>
+      <td>100002659</td>
+      <td>2007-05-25 09:22:28</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">document_line_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_document_line_number"></div><b>📃 Summary:</b> Document line number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ledger_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_ledger_number"></div><b>📃 Summary:</b> Ledger number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ryear</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_ryear"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">activity_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_activity_type"></div><b>📃 Summary:</b> Activity type or category<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='usd'>usd</option><option value='eur'>eur</option><option value='gbp'>gbp</option><option value='jpy'>jpy</option><option value='cny'>cny</option><option value='chf'>chf</option><option value='cad'>cad</option><option value='aud'>aud</option><option value='hkd'>hkd</option><option value='sgd'>sgd</option><option value='krw'>krw</option><option value='inr'>inr</option><option value='mxn'>mxn</option><option value='brl'>brl</option><option value='rub'>rub</option><option value='zar'>zar</option><option value='nzd'>nzd</option><option value='sek'>sek</option><option value='nok'>nok</option><option value='dkk'>dkk</option></select></span><br><br><div id="bar_viz_transaction_currency"></div><b>📃 Summary:</b> Transaction currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">document_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='AB'>AB</option><option value='AF'>AF</option><option value='AN'>AN</option><option value='AZ'>AZ</option><option value='BA'>BA</option><option value='BB'>BB</option><option value='BK'>BK</option><option value='DA'>DA</option><option value='DG'>DG</option><option value='DZ'>DZ</option><option value='EF'>EF</option><option value='KA'>KA</option><option value='KG'>KG</option><option value='KN'>KN</option><option value='KR'>KR</option><option value='KZ'>KZ</option><option value='PR'>PR</option><option value='SA'>SA</option><option value='SK'>SK</option><option value='SU'>SU</option><option value='WA'>WA</option><option value='WE'>WE</option><option value='WL'>WL</option><option value='bkpf'>bkpf</option></select></span><br><br><div id="bar_viz_document_type"></div><b>📃 Summary:</b> Document type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">record_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_record_type"></div><b>📃 Summary:</b> Record type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">version_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_version_number"></div><b>📃 Summary:</b> Version number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_amount_local</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_transaction_amount_local"></div><b>📃 Summary:</b> Total transaction amount in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">local_currency_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_local_currency_amount"></div><b>📃 Summary:</b> Amount in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_currency_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_group_currency_amount"></div><b>📃 Summary:</b> Amount in group currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_currency_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_transaction_currency_amount"></div><b>📃 Summary:</b> Amount in transaction currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">material_ledger_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_material_ledger_amount"></div><b>📃 Summary:</b> Amount in material ledger currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_document_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_document_currency"></div><b>📃 Summary:</b> Amount in document currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">debit_credit_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='D'>D</option><option value='C'>C</option><option value='h'>h</option></select></span><br><br><div id="bar_viz_debit_credit_indicator"></div><b>📃 Summary:</b> Debit/Credit indicator<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">posting_period</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_posting_period"></div><b>📃 Summary:</b> Posting period<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reporting_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='usd'>usd</option><option value='eur'>eur</option><option value='gbp'>gbp</option><option value='jpy'>jpy</option><option value='cny'>cny</option><option value='chf'>chf</option><option value='cad'>cad</option><option value='aud'>aud</option><option value='hkd'>hkd</option><option value='sgd'>sgd</option><option value='inr'>inr</option><option value='krw'>krw</option><option value='mxn'>mxn</option><option value='brl'>brl</option><option value='zar'>zar</option><option value='rub'>rub</option><option value='sek'>sek</option><option value='nok'>nok</option><option value='nzd'>nzd</option><option value='try'>try</option></select></span><br><br><div id="bar_viz_reporting_currency"></div><b>📃 Summary:</b> Currency for reporting<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gjahr</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_gjahr"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">line_item_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_line_item_number"></div><b>📃 Summary:</b> Line item number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_user_name"></div><b>📃 Summary:</b> User name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><b>🦄 Unique:</b> This column appears to be a unique identifier for each row in the table. For this table, each row represents a distinct financial transaction or accounting entry. row_id is likely to be unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the row was deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_client_code"></div><b>📃 Summary:</b> Client<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">company_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_company_code"></div><b>📃 Summary:</b> Company code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">controlling_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_controlling_area"></div><b>📃 Summary:</b> Controlling area<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_center</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cost_center"></div><b>📃 Summary:</b> Receiving/sending cost center<br><b>❓ Missing:</b> May not be applicable for certain transaction types.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">document_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_document_number"></div><b>📃 Summary:</b> Accounting document number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">functional_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_functional_area"></div><b>📃 Summary:</b> Functional area<br><b>❓ Missing:</b> Might not be relevant for all financial activities.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gl_account_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_gl_account_number"></div><b>📃 Summary:</b> G/L account number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">posting_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_posting_date"></div><b>📃 Summary:</b> Posting date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">posting_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_posting_key"></div><b>📃 Summary:</b> Posting key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reference_document_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_reference_document_number"></div><b>📃 Summary:</b> Document number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_timestamp"></div><b>📃 Summary:</b> Timestamp of transaction<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about financial transactions in an SAP system. It includes details like document number, company code, fiscal year, account, amounts in different currencies, posting date, and line item. Each row represents an individual accounting entry with financial values and associated metadata. The table captures various aspects of financial postings across different organizational units and time periods.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>45</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>docln</td>
+      <td>Document line number</td>
+      <td>document_line_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>docnr</td>
+      <td>Document number</td>
+      <td>reference_document_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>rbukrs</td>
+      <td>Company code</td>
+      <td>company_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>rclnt</td>
+      <td>Client</td>
+      <td>client_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>rldnr</td>
+      <td>Ledger number</td>
+      <td>ledger_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>ryear</td>
+      <td>Fiscal year</td>
+      <td>ryear</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>activ</td>
+      <td>Activity type or category</td>
+      <td>activity_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>rmvct</td>
+      <td>Movement type</td>
+      <td>movement_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>rtcur</td>
+      <td>Transaction currency</td>
+      <td>transaction_currency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>runit</td>
+      <td>Unit of measure</td>
+      <td>unit_of_measure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>awtyp</td>
+      <td>Document type</td>
+      <td>document_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>rrcty</td>
+      <td>Record type</td>
+      <td>record_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>rvers</td>
+      <td>Version number</td>
+      <td>version_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>logsys</td>
+      <td>Logical system</td>
+      <td>logical_system</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>racct</td>
+      <td>G/L account number</td>
+      <td>gl_account_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>cost_elem</td>
+      <td>Cost element</td>
+      <td>cost_element</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>rcntr</td>
+      <td>Receiving/sending cost center</td>
+      <td>cost_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>prctr</td>
+      <td>Profit center</td>
+      <td>profit_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>rfarea</td>
+      <td>Functional area</td>
+      <td>functional_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>rbusa</td>
+      <td>Business area</td>
+      <td>rbusa</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>kokrs</td>
+      <td>Controlling area</td>
+      <td>controlling_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>segment</td>
+      <td>Segment</td>
+      <td>segment</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>zzspreg</td>
+      <td>Special region indicator</td>
+      <td>special_region</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>scntr</td>
+      <td>Sender cost center</td>
+      <td>sender_cost_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>pprctr</td>
+      <td>Partner profit center</td>
+      <td>partner_profit_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>sfarea</td>
+      <td>Sender functional area</td>
+      <td>sender_functional_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>sbusa</td>
+      <td>Business area</td>
+      <td>sbusa</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>rassc</td>
+      <td>Asset class</td>
+      <td>asset_class</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>psegment</td>
+      <td>Profit segment</td>
+      <td>profit_segment</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>tsl</td>
+      <td>Total transaction amount in local currency</td>
+      <td>transaction_amount_local</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>hsl</td>
+      <td>Amount in local currency</td>
+      <td>local_currency_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>ksl</td>
+      <td>Amount in group currency</td>
+      <td>group_currency_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>osl</td>
+      <td>Amount in transaction currency</td>
+      <td>transaction_currency_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>msl</td>
+      <td>Amount in material ledger currency</td>
+      <td>material_ledger_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>wsl</td>
+      <td>Amount in document currency</td>
+      <td>amount_document_currency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>drcrk</td>
+      <td>Debit/Credit indicator</td>
+      <td>debit_credit_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>poper</td>
+      <td>Posting period</td>
+      <td>posting_period</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>rwcur</td>
+      <td>Currency for reporting</td>
+      <td>reporting_currency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>gjahr</td>
+      <td>Fiscal year</td>
+      <td>gjahr</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>budat</td>
+      <td>Posting date</td>
+      <td>posting_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>belnr</td>
+      <td>Accounting document number</td>
+      <td>document_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>buzei</td>
+      <td>Line item number</td>
+      <td>line_item_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>bschl</td>
+      <td>Posting key</td>
+      <td>posting_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>bstat</td>
+      <td>Document status</td>
+      <td>document_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>linetype</td>
+      <td>Type of line item</td>
+      <td>line_item_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>xsplitmod</td>
+      <td>Split modification indicator</td>
+      <td>split_modification</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>usnam</td>
+      <td>User name</td>
+      <td>user_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>timestamp_</td>
+      <td>Timestamp of transaction</td>
+      <td>transaction_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the row was deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>3</b> columns have erroneous values<br><ol><li><b>ledger_number</b>: '0l' is unusual because it likely should be '01', using a number instead of a letter.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'0l'</td>
+      <td>'01'</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>activity_type</b>: 'rfbu' is unusual because it's an unclear acronym or potentially a typo.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'rfbu'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>debit_credit_indicator</b>: 'h' is unusual because it's not a standard debit/credit indicator. 'D' and 'C' are more common.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'h'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>28</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>asset_class</td>
+      <td>CAST("asset_class" AS VARCHAR)</td>
+      <td>To transform the data type of the 'asset_class' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>client_code</td>
+      <td>CAST("client_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'client_code' column from 'INT' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only numeric values (specifically 800), casting it to VARCHAR will effectively turn these numbers into string representations.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>company_code</td>
+      <td>CAST("company_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'company_code' column from 'INT' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each integer value to its string representation. Since the column only contains the value 3000, this will effectively change it from the integer 3000 to the string '3000'.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>controlling_area</td>
+      <td>CAST("controlling_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'controlling_area' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a variable-length character string type. The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>cost_center</td>
+      <td>CAST("cost_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cost_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>cost_element</td>
+      <td>CAST("cost_element" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cost_element' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Since the column is already of type DECIMAL, we don't need to worry about any special formatting or precision issues. A straightforward CAST to VARCHAR will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>document_number</td>
+      <td>CAST("document_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'document_number' column from INT to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>document_status</td>
+      <td>CAST("document_status" AS VARCHAR)</td>
+      <td>To transform the 'document_status' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the column is already of type DECIMAL, we don't need any additional formatting or conversion logic. A straightforward CAST to VARCHAR will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>functional_area</td>
+      <td>CAST("functional_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'functional_area' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>gl_account_number</td>
+      <td>CAST("gl_account_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'gl_account_number' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional manipulation since we're converting from a simpler type (INT) to a more flexible type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>line_item_type</td>
+      <td>CAST("line_item_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'line_item_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST function to explicitly convert the column to VARCHAR type. This transformation will change the numeric representation to a string representation.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>logical_system</td>
+      <td>CAST("logical_system" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'logical_system' from 'DECIMAL' to 'VARCHAR' in DuckDB, we need to use a simple CAST function. This will convert each value in the column to its string representation. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future values added to this column will be stored as strings rather than decimal numbers.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>movement_type</td>
+      <td>CAST("movement_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'movement_type' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>partner_profit_center</td>
+      <td>CAST("partner_profit_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'partner_profit_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each value in the column to its string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>posting_date</td>
+      <td>strptime(CAST("posting_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'posting_date' column from INT to DATE, we need to: 1. First, cast the integer to a VARCHAR (string) type. 2. Then, use the strptime function to parse the string into a DATE type. 3. The format '%Y%m%d' matches the structure of the date (YYYYMMDD) in the original integer.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>posting_key</td>
+      <td>CAST("posting_key" AS VARCHAR)</td>
+      <td>To transform the data type of the 'posting_key' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only the value 50, which is an integer, we can safely cast it to a VARCHAR without losing any information.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>profit_center</td>
+      <td>CAST("profit_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'profit_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>profit_segment</td>
+      <td>CAST("profit_segment" AS VARCHAR)</td>
+      <td>To transform the data type of the 'profit_segment' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>rbusa</td>
+      <td>CAST("rbusa" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'rbusa' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters since we're casting to a string type.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>reference_document_number</td>
+      <td>CAST("reference_document_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'reference_document_number' column from INT to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the integer column to a VARCHAR (string) type.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>sbusa</td>
+      <td>CAST("sbusa" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'sbusa' from DECIMAL to VARCHAR, we need to use the CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward: CAST(column_name AS new_data_type).\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>segment</td>
+      <td>CAST("segment" AS VARCHAR)</td>
+      <td>To transform the data type of the 'segment' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>sender_cost_center</td>
+      <td>CAST("sender_cost_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sender_cost_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>sender_functional_area</td>
+      <td>CAST("sender_functional_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sender_functional_area' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional processing since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>special_region</td>
+      <td>CAST("special_region" AS VARCHAR)</td>
+      <td>To transform the data type of the 'special_region' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional modifications since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>split_modification</td>
+      <td>CAST("split_modification" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'split_modification' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>transaction_timestamp</td>
+      <td>strptime(CAST("transaction_timestamp" AS VARCHAR), '%Y%m%d%H%M%S')</td>
+      <td>To transform the 'transaction_timestamp' column from INT to TIMESTAMP, we need to: 1. First, cast the integer to a VARCHAR (string) type. 2. Then, use the strptime function to parse the string into a TIMESTAMP. 3. The format string '%Y%m%d%H%M%S' matches the structure of the given timestamps:\n   - %Y for 4-digit year\n   - %m for 2-digit month\n   - %d for 2-digit day\n   - %H for 2-digit hour (24-hour format)\n   - %M for 2-digit minute\n   - %S for 2-digit second\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>unit_of_measure</td>
+      <td>CAST("unit_of_measure" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'unit_of_measure' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>19</b> columns have missing values<br>
+                    ✔️ <b>2</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>asset_class</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>cost_center</td>
+      <td>100</td>
+      <td>True</td>
+      <td>May not be applicable for certain transaction types.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>cost_element</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>document_status</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>functional_area</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Might not be relevant for all financial activities.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>line_item_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>logical_system</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>movement_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>partner_profit_center</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>profit_center</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>profit_segment</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>rbusa</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>sbusa</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>segment</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>sender_cost_center</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>sender_functional_area</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>special_region</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>split_modification</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>unit_of_measure</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>asset_class</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>cost_element</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>document_status</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>line_item_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>logical_system</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>movement_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>partner_profit_center</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>profit_center</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>profit_segment</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>rbusa</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>sbusa</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>segment</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>sender_cost_center</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>sender_functional_area</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>special_region</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>split_modification</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>unit_of_measure</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 2, 'y': 3}];
+    binWidth = 2;
+    drawHistogram("hist_viz_document_line_number", data, binWidth);
+data = [{'label': '0l', 'value': 100.0}];
+    drawBarChart("bar_viz_ledger_number", data);
+data = [{'x': 2007, 'y': 3}];
+    binWidth = 2007;
+    drawHistogram("hist_viz_ryear", data, binWidth);
+data = [{'label': 'rfbu', 'value': 100.0}];
+    drawBarChart("bar_viz_activity_type", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_transaction_currency", data);
+data = [{'label': 'bkpf', 'value': 100.0}];
+    drawBarChart("bar_viz_document_type", data);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_record_type", data, binWidth);
+data = [{'x': 1, 'y': 3}];
+    binWidth = 1;
+    drawHistogram("hist_viz_version_number", data, binWidth);
+data = [{'x': -2891.6625, 'y': 1}, {'x': -2776.9875, 'y': 0}, {'x': -2662.3125, 'y': 0}];
+    binWidth = 114.675;
+    drawHistogram("hist_viz_transaction_amount_local", data, binWidth);
+data = [{'x': -2891.6625, 'y': 1}, {'x': -2776.9875, 'y': 0}, {'x': -2662.3125, 'y': 0}];
+    binWidth = 114.675;
+    drawHistogram("hist_viz_local_currency_amount", data, binWidth);
+data = [{'x': -2241.60225, 'y': 1}, {'x': -2152.7067500000003, 'y': 0}, {'x': -2063.81125, 'y': 0}];
+    binWidth = 88.89550000000001;
+    drawHistogram("hist_viz_group_currency_amount", data, binWidth);
+data = [{'x': -2891.6625, 'y': 1}, {'x': -2776.9875, 'y': 0}, {'x': -2662.3125, 'y': 0}];
+    binWidth = 114.675;
+    drawHistogram("hist_viz_transaction_currency_amount", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_material_ledger_amount", data, binWidth);
+data = [{'x': -2891.6625, 'y': 1}, {'x': -2776.9875, 'y': 0}, {'x': -2662.3125, 'y': 0}];
+    binWidth = 114.675;
+    drawHistogram("hist_viz_amount_document_currency", data, binWidth);
+data = [{'label': 'h', 'value': 100.0}];
+    drawBarChart("bar_viz_debit_credit_indicator", data);
+data = [{'x': 6, 'y': 3}];
+    binWidth = 6;
+    drawHistogram("hist_viz_posting_period", data, binWidth);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_reporting_currency", data);
+data = [{'x': 2006, 'y': 3}];
+    binWidth = 2006;
+    drawHistogram("hist_viz_gjahr", data, binWidth);
+data = [{'x': 2, 'y': 3}];
+    binWidth = 2;
+    drawHistogram("hist_viz_line_item_number", data, binWidth);
+data = [{'label': 'steiner', 'value': 100.0}];
+    drawBarChart("bar_viz_user_name", data);
+data = [{'x': 3388016.05, 'y': 1}, {'x': 3388016.1500000004, 'y': 0}, {'x': 3388016.25, 'y': 0}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': '800', 'value': 100.0}];
+    drawBarChart("bar_viz_client_code", data);
+data = [{'label': '3000', 'value': 100.0}];
+    drawBarChart("bar_viz_company_code", data);
+data = [{'label': '2000', 'value': 100.0}];
+    drawBarChart("bar_viz_controlling_area", data);
+data = [];
+    drawBarChart("bar_viz_cost_center", data);
+data = [{'label': '200001078', 'value': 33.33333333333333}, {'label': '200001077', 'value': 33.33333333333333}, {'label': '200001076', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_document_number", data);
+data = [];
+    drawBarChart("bar_viz_functional_area", data);
+data = [{'label': '113100', 'value': 100.0}];
+    drawBarChart("bar_viz_gl_account_number", data);
+data = [{'label': '2006-06-01 00:0...', 'value': 100.0}];
+    drawBarChart("bar_viz_posting_date", data);
+data = [{'label': '50', 'value': 100.0}];
+    drawBarChart("bar_viz_posting_key", data);
+data = [{'label': '100002658', 'value': 33.33333333333333}, {'label': '100002659', 'value': 33.33333333333333}, {'label': '100002655', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_reference_document_number", data);
+data = [{'label': '2007-05-25 09:2...', 'value': 66.66666666666666}, {'label': '2007-05-25 09:2...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_transaction_timestamp", data);
+
+
+</script>
+</body>
+</html>

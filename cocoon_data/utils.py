@@ -73,6 +73,9 @@ def sql_cleaner(sql):
 def sanitize_table_name(table_name):
     return re.sub(r'[^a-zA-Z0-9_]', '_', table_name)
 
+def remove_newline(string):
+    return re.sub(r'[\r\n\v\f\x1c-\x1e\x85\u2028\u2029]', '', string)
+
 def clean_table_name(table_name):
     if not table_name[0].isalpha() and table_name[0] != "_":
         table_name = "_" + table_name

@@ -1,0 +1,4100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_faglflext_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>drcrk</th>
+      <th>objnr00</th>
+      <th>objnr01</th>
+      <th>rpmax</th>
+      <th>ryear</th>
+      <th>activ</th>
+      <th>rtcur</th>
+      <th>awtyp</th>
+      <th>rldnr</th>
+      <th>rrcty</th>
+      <th>rvers</th>
+      <th>rbukrs</th>
+      <th>prctr</th>
+      <th>tslvt</th>
+      <th>tsl01</th>
+      <th>tsl02</th>
+      <th>tsl03</th>
+      <th>tsl04</th>
+      <th>tsl05</th>
+      <th>tsl06</th>
+      <th>tsl07</th>
+      <th>tsl08</th>
+      <th>tsl09</th>
+      <th>tsl10</th>
+      <th>tsl11</th>
+      <th>tsl12</th>
+      <th>tsl13</th>
+      <th>tsl14</th>
+      <th>tsl15</th>
+      <th>tsl16</th>
+      <th>hslvt</th>
+      <th>hsl01</th>
+      <th>hsl02</th>
+      <th>hsl03</th>
+      <th>hsl04</th>
+      <th>hsl05</th>
+      <th>hsl06</th>
+      <th>hsl07</th>
+      <th>hsl08</th>
+      <th>hsl09</th>
+      <th>hsl10</th>
+      <th>hsl11</th>
+      <th>hsl12</th>
+      <th>hsl13</th>
+      <th>hsl14</th>
+      <th>hsl15</th>
+      <th>hsl16</th>
+      <th>kslvt</th>
+      <th>ksl01</th>
+      <th>ksl02</th>
+      <th>ksl03</th>
+      <th>ksl04</th>
+      <th>ksl05</th>
+      <th>ksl06</th>
+      <th>ksl07</th>
+      <th>ksl08</th>
+      <th>ksl09</th>
+      <th>ksl10</th>
+      <th>ksl11</th>
+      <th>ksl12</th>
+      <th>ksl13</th>
+      <th>ksl14</th>
+      <th>ksl15</th>
+      <th>ksl16</th>
+      <th>oslvt</th>
+      <th>osl01</th>
+      <th>osl02</th>
+      <th>osl03</th>
+      <th>osl04</th>
+      <th>osl05</th>
+      <th>osl06</th>
+      <th>osl07</th>
+      <th>osl08</th>
+      <th>osl09</th>
+      <th>osl10</th>
+      <th>osl11</th>
+      <th>osl12</th>
+      <th>osl13</th>
+      <th>osl14</th>
+      <th>osl15</th>
+      <th>osl16</th>
+      <th>mslvt</th>
+      <th>msl01</th>
+      <th>msl02</th>
+      <th>msl03</th>
+      <th>msl04</th>
+      <th>msl05</th>
+      <th>msl06</th>
+      <th>msl07</th>
+      <th>msl08</th>
+      <th>msl09</th>
+      <th>msl10</th>
+      <th>msl11</th>
+      <th>msl12</th>
+      <th>msl13</th>
+      <th>msl14</th>
+      <th>msl15</th>
+      <th>msl16</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>objnr02</th>
+      <th>objnr03</th>
+      <th>rbusa</th>
+      <th>rclnt</th>
+      <th>kokrs</th>
+      <th>rcntr</th>
+      <th>rfarea</th>
+      <th>racct</th>
+      <th>timestamp_</th>
+      <th>runit</th>
+      <th>objnr04</th>
+      <th>objnr05</th>
+      <th>objnr06</th>
+      <th>objnr07</th>
+      <th>objnr08</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>h</td>
+      <td>7</td>
+      <td>1</td>
+      <td>16</td>
+      <td>2002</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0l</td>
+      <td>0</td>
+      <td>1</td>
+      <td>3000</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>-245194.66</td>
+      <td>-245194.66</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>-245194.66</td>
+      <td>-245194.66</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>-204328.07</td>
+      <td>-204328.07</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>-245194.66</td>
+      <td>-245194.66</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>196611</td>
+      <td>False</td>
+      <td>76</td>
+      <td>73</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>140000</td>
+      <td>20060117132931</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>s</td>
+      <td>7</td>
+      <td>1</td>
+      <td>16</td>
+      <td>2002</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0l</td>
+      <td>0</td>
+      <td>1</td>
+      <td>3000</td>
+      <td>3005.0</td>
+      <td>0.0</td>
+      <td>5093.77</td>
+      <td>4992.89</td>
+      <td>4841.6</td>
+      <td>5245.07</td>
+      <td>4892.03</td>
+      <td>5093.77</td>
+      <td>5194.64</td>
+      <td>4942.46</td>
+      <td>5144.2</td>
+      <td>5043.34</td>
+      <td>4892.03</td>
+      <td>4791.17</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>5093.77</td>
+      <td>4992.89</td>
+      <td>4841.6</td>
+      <td>5245.07</td>
+      <td>4892.03</td>
+      <td>5093.77</td>
+      <td>5194.64</td>
+      <td>4942.46</td>
+      <td>5144.2</td>
+      <td>5043.34</td>
+      <td>4892.03</td>
+      <td>4791.17</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>4244.79</td>
+      <td>4160.73</td>
+      <td>4034.65</td>
+      <td>4370.87</td>
+      <td>4076.68</td>
+      <td>4244.79</td>
+      <td>4328.85</td>
+      <td>4118.70</td>
+      <td>4286.82</td>
+      <td>4202.77</td>
+      <td>4076.68</td>
+      <td>3992.63</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>5093.77</td>
+      <td>4992.89</td>
+      <td>4841.6</td>
+      <td>5245.07</td>
+      <td>4892.03</td>
+      <td>5093.77</td>
+      <td>5194.64</td>
+      <td>4942.46</td>
+      <td>5144.2</td>
+      <td>5043.34</td>
+      <td>4892.03</td>
+      <td>4791.17</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>196612</td>
+      <td>False</td>
+      <td>137</td>
+      <td>394</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>4215.0</td>
+      <td>100.0</td>
+      <td>403000</td>
+      <td>20060117134333</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>s</td>
+      <td>7</td>
+      <td>1</td>
+      <td>16</td>
+      <td>2002</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0l</td>
+      <td>0</td>
+      <td>1</td>
+      <td>3000</td>
+      <td>3005.0</td>
+      <td>0.0</td>
+      <td>6009.50</td>
+      <td>5890.49</td>
+      <td>5712.0</td>
+      <td>6188.00</td>
+      <td>5771.49</td>
+      <td>6009.50</td>
+      <td>6128.50</td>
+      <td>5830.99</td>
+      <td>6069.0</td>
+      <td>5950.00</td>
+      <td>5771.49</td>
+      <td>5652.50</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>6009.50</td>
+      <td>5890.49</td>
+      <td>5712.0</td>
+      <td>6188.00</td>
+      <td>5771.49</td>
+      <td>6009.50</td>
+      <td>6128.50</td>
+      <td>5830.99</td>
+      <td>6069.0</td>
+      <td>5950.00</td>
+      <td>5771.49</td>
+      <td>5652.50</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>5007.90</td>
+      <td>4908.72</td>
+      <td>4759.98</td>
+      <td>5156.65</td>
+      <td>4809.56</td>
+      <td>5007.90</td>
+      <td>5107.06</td>
+      <td>4859.14</td>
+      <td>5057.48</td>
+      <td>4958.31</td>
+      <td>4809.56</td>
+      <td>4710.40</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>6009.50</td>
+      <td>5890.49</td>
+      <td>5712.0</td>
+      <td>6188.00</td>
+      <td>5771.49</td>
+      <td>6009.50</td>
+      <td>6128.50</td>
+      <td>5830.99</td>
+      <td>6069.0</td>
+      <td>5950.00</td>
+      <td>5771.49</td>
+      <td>5652.50</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>196613</td>
+      <td>False</td>
+      <td>137</td>
+      <td>395</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>4216.0</td>
+      <td>100.0</td>
+      <td>403000</td>
+      <td>20060117134333</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>debit_credit_indicator</th>
+      <th>object_number</th>
+      <th>objnr01</th>
+      <th>max_periods</th>
+      <th>fiscal_year</th>
+      <th>activity_type</th>
+      <th>currency</th>
+      <th>document_type</th>
+      <th>ledger</th>
+      <th>record_type</th>
+      <th>version</th>
+      <th>rbukrs</th>
+      <th>profit_center</th>
+      <th>tslvt</th>
+      <th>january_amount</th>
+      <th>february_amount</th>
+      <th>march_amount</th>
+      <th>april_amount</th>
+      <th>may_amount</th>
+      <th>june_amount</th>
+      <th>july_amount</th>
+      <th>august_amount</th>
+      <th>september_amount</th>
+      <th>october_amount</th>
+      <th>november_amount</th>
+      <th>december_amount</th>
+      <th>tsl13</th>
+      <th>tsl14</th>
+      <th>tsl15</th>
+      <th>tsl16</th>
+      <th>amount_previous_year</th>
+      <th>amount_period_01</th>
+      <th>amount_period_02</th>
+      <th>amount_period_03</th>
+      <th>amount_period_04</th>
+      <th>amount_period_05</th>
+      <th>amount_period_06</th>
+      <th>amount_period_07</th>
+      <th>amount_period_08</th>
+      <th>amount_period_09</th>
+      <th>amount_period_10</th>
+      <th>amount_period_11</th>
+      <th>amount_period_12</th>
+      <th>amount_period_13</th>
+      <th>amount_period_14</th>
+      <th>amount_period_15</th>
+      <th>amount_period_16</th>
+      <th>cost_element_total</th>
+      <th>group_amount_period_01</th>
+      <th>group_amount_period_02</th>
+      <th>group_amount_period_03</th>
+      <th>group_amount_period_04</th>
+      <th>group_amount_period_05</th>
+      <th>group_amount_period_06</th>
+      <th>cost_element_july</th>
+      <th>cost_element_august</th>
+      <th>cost_element_september</th>
+      <th>cost_element_october</th>
+      <th>cost_element_november</th>
+      <th>cost_element_december</th>
+      <th>cost_element_january_next</th>
+      <th>cost_element_february_next</th>
+      <th>cost_element_march_next</th>
+      <th>cost_element_april_next</th>
+      <th>oslvt</th>
+      <th>period_01_value</th>
+      <th>period_02_value</th>
+      <th>period_03_value</th>
+      <th>period_04_value</th>
+      <th>period_05_value</th>
+      <th>period_06_value</th>
+      <th>period_07_value</th>
+      <th>period_08_value</th>
+      <th>period_09_value</th>
+      <th>period_10_value</th>
+      <th>period_11_value</th>
+      <th>period_12_value</th>
+      <th>osl13</th>
+      <th>osl14</th>
+      <th>osl15</th>
+      <th>osl16</th>
+      <th>stat_key_figure_total</th>
+      <th>stat_key_figure_january</th>
+      <th>stat_key_figure_february</th>
+      <th>stat_key_figure_march</th>
+      <th>stat_key_figure_april</th>
+      <th>stat_key_figure_may</th>
+      <th>stat_key_figure_june</th>
+      <th>stat_key_figure_july</th>
+      <th>stat_key_figure_august</th>
+      <th>stat_key_figure_september</th>
+      <th>stat_key_figure_october</th>
+      <th>stat_key_figure_november</th>
+      <th>stat_key_figure_december</th>
+      <th>stat_key_figure_january_next</th>
+      <th>stat_key_figure_february_next</th>
+      <th>stat_key_figure_march_next</th>
+      <th>stat_key_figure_april_next</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>account_group</th>
+      <th>account_number</th>
+      <th>business_area</th>
+      <th>client</th>
+      <th>controlling_area</th>
+      <th>cost_center</th>
+      <th>functional_area</th>
+      <th>gl_account</th>
+      <th>record_timestamp</th>
+      <th>unit_of_measure</th>
+      <th>unused_object_4</th>
+      <th>unused_object_5</th>
+      <th>unused_object_6</th>
+      <th>unused_object_7</th>
+      <th>unused_object_8</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>h</td>
+      <td>7</td>
+      <td>1</td>
+      <td>16</td>
+      <td>2002</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0l</td>
+      <td>0</td>
+      <td>1</td>
+      <td>3000</td>
+      <td>NaN</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>-245194.66</td>
+      <td>-245194.66</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>-245194.66</td>
+      <td>-245194.66</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>-204328.07</td>
+      <td>-204328.07</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.00</td>
+      <td>0.0</td>
+      <td>0.00</td>
+      <td>-245194.66</td>
+      <td>-245194.66</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>196611</td>
+      <td>False</td>
+      <td>76</td>
+      <td>73</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>None</td>
+      <td>None</td>
+      <td>140000</td>
+      <td>2006-01-17 13:29:31</td>
+      <td>None</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>s</td>
+      <td>7</td>
+      <td>1</td>
+      <td>16</td>
+      <td>2002</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0l</td>
+      <td>0</td>
+      <td>1</td>
+      <td>3000</td>
+      <td>3005.0</td>
+      <td>0.0</td>
+      <td>5093.77</td>
+      <td>4992.89</td>
+      <td>4841.6</td>
+      <td>5245.07</td>
+      <td>4892.03</td>
+      <td>5093.77</td>
+      <td>5194.64</td>
+      <td>4942.46</td>
+      <td>5144.2</td>
+      <td>5043.34</td>
+      <td>4892.03</td>
+      <td>4791.17</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>5093.77</td>
+      <td>4992.89</td>
+      <td>4841.6</td>
+      <td>5245.07</td>
+      <td>4892.03</td>
+      <td>5093.77</td>
+      <td>5194.64</td>
+      <td>4942.46</td>
+      <td>5144.2</td>
+      <td>5043.34</td>
+      <td>4892.03</td>
+      <td>4791.17</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>4244.79</td>
+      <td>4160.73</td>
+      <td>4034.65</td>
+      <td>4370.87</td>
+      <td>4076.68</td>
+      <td>4244.79</td>
+      <td>4328.85</td>
+      <td>4118.70</td>
+      <td>4286.82</td>
+      <td>4202.77</td>
+      <td>4076.68</td>
+      <td>3992.63</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>5093.77</td>
+      <td>4992.89</td>
+      <td>4841.6</td>
+      <td>5245.07</td>
+      <td>4892.03</td>
+      <td>5093.77</td>
+      <td>5194.64</td>
+      <td>4942.46</td>
+      <td>5144.2</td>
+      <td>5043.34</td>
+      <td>4892.03</td>
+      <td>4791.17</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>196612</td>
+      <td>False</td>
+      <td>137</td>
+      <td>394</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>4215.0</td>
+      <td>100.0</td>
+      <td>403000</td>
+      <td>2006-01-17 13:43:33</td>
+      <td>None</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>s</td>
+      <td>7</td>
+      <td>1</td>
+      <td>16</td>
+      <td>2002</td>
+      <td>rfbu</td>
+      <td>usd</td>
+      <td>bkpf</td>
+      <td>0l</td>
+      <td>0</td>
+      <td>1</td>
+      <td>3000</td>
+      <td>3005.0</td>
+      <td>0.0</td>
+      <td>6009.50</td>
+      <td>5890.49</td>
+      <td>5712.0</td>
+      <td>6188.00</td>
+      <td>5771.49</td>
+      <td>6009.50</td>
+      <td>6128.50</td>
+      <td>5830.99</td>
+      <td>6069.0</td>
+      <td>5950.00</td>
+      <td>5771.49</td>
+      <td>5652.50</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>6009.50</td>
+      <td>5890.49</td>
+      <td>5712.0</td>
+      <td>6188.00</td>
+      <td>5771.49</td>
+      <td>6009.50</td>
+      <td>6128.50</td>
+      <td>5830.99</td>
+      <td>6069.0</td>
+      <td>5950.00</td>
+      <td>5771.49</td>
+      <td>5652.50</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>5007.90</td>
+      <td>4908.72</td>
+      <td>4759.98</td>
+      <td>5156.65</td>
+      <td>4809.56</td>
+      <td>5007.90</td>
+      <td>5107.06</td>
+      <td>4859.14</td>
+      <td>5057.48</td>
+      <td>4958.31</td>
+      <td>4809.56</td>
+      <td>4710.40</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>6009.50</td>
+      <td>5890.49</td>
+      <td>5712.0</td>
+      <td>6188.00</td>
+      <td>5771.49</td>
+      <td>6009.50</td>
+      <td>6128.50</td>
+      <td>5830.99</td>
+      <td>6069.0</td>
+      <td>5950.00</td>
+      <td>5771.49</td>
+      <td>5652.50</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>196613</td>
+      <td>False</td>
+      <td>137</td>
+      <td>395</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>4216.0</td>
+      <td>100.0</td>
+      <td>403000</td>
+      <td>2006-01-17 13:43:33</td>
+      <td>None</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">debit_credit_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='d'>d</option><option value='c'>c</option><option value='s'>s</option><option value='h'>h</option></select></span><br><br><div id="bar_viz_debit_credit_indicator"></div><b>📃 Summary:</b> Debit/Credit indicator<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">object_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_object_number"></div><b>📃 Summary:</b> Object number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">objnr01</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_objnr01"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">max_periods</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_max_periods"></div><b>📃 Summary:</b> Maximum number of periods<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fiscal_year</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_fiscal_year"></div><b>📃 Summary:</b> Fiscal year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">activity_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_activity_type"></div><b>📃 Summary:</b> Activity type or transaction code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency"></div><b>📃 Summary:</b> Transaction currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">document_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='AB'>AB</option><option value='AF'>AF</option><option value='AN'>AN</option><option value='AZ'>AZ</option><option value='BA'>BA</option><option value='BB'>BB</option><option value='BK'>BK</option><option value='DA'>DA</option><option value='DG'>DG</option><option value='DZ'>DZ</option><option value='EF'>EF</option><option value='KA'>KA</option><option value='KG'>KG</option><option value='KN'>KN</option><option value='KR'>KR</option><option value='KZ'>KZ</option><option value='PR'>PR</option><option value='SA'>SA</option><option value='SK'>SK</option><option value='SU'>SU</option><option value='WA'>WA</option><option value='WE'>WE</option><option value='WL'>WL</option><option value='bkpf'>bkpf</option></select></span><br><br><div id="bar_viz_document_type"></div><b>📃 Summary:</b> Document type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ledger</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_ledger"></div><b>📃 Summary:</b> Ledger<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">record_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_record_type"></div><b>📃 Summary:</b> Record type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">version</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_version"></div><b>📃 Summary:</b> Version<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">rbukrs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_rbukrs"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">profit_center</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_profit_center"></div><b>📃 Summary:</b> Profit center<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tslvt</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_tslvt"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">january_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_january_amount"></div><b>📃 Summary:</b> January amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">february_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_february_amount"></div><b>📃 Summary:</b> February amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">march_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_march_amount"></div><b>📃 Summary:</b> March amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">april_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_april_amount"></div><b>📃 Summary:</b> April amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">may_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_may_amount"></div><b>📃 Summary:</b> May amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">june_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_june_amount"></div><b>📃 Summary:</b> June amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">july_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_july_amount"></div><b>📃 Summary:</b> July amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">august_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_august_amount"></div><b>📃 Summary:</b> August amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">september_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_september_amount"></div><b>📃 Summary:</b> September amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">october_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_october_amount"></div><b>📃 Summary:</b> October amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">november_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_november_amount"></div><b>📃 Summary:</b> November amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">december_amount</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_december_amount"></div><b>📃 Summary:</b> December amount<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tsl13</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_tsl13"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tsl14</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_tsl14"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tsl15</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_tsl15"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">tsl16</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_tsl16"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_previous_year</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_previous_year"></div><b>📃 Summary:</b> Amount for previous year in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_01</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_01"></div><b>📃 Summary:</b> Amount for period 01 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_02</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_02"></div><b>📃 Summary:</b> Amount for period 02 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_03</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_03"></div><b>📃 Summary:</b> Amount for period 03 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_04</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_04"></div><b>📃 Summary:</b> Amount for period 04 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_05</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_05"></div><b>📃 Summary:</b> Amount for period 05 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_06</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_06"></div><b>📃 Summary:</b> Amount for period 06 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_07</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_07"></div><b>📃 Summary:</b> Amount for period 07 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_08</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_08"></div><b>📃 Summary:</b> Amount for period 08 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_09</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_09"></div><b>📃 Summary:</b> Amount for period 09 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_10</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_10"></div><b>📃 Summary:</b> Amount for period 10 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_11</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_11"></div><b>📃 Summary:</b> Amount for period 11 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_12</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_12"></div><b>📃 Summary:</b> Amount for period 12 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_13</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_13"></div><b>📃 Summary:</b> Amount for period 13 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_14</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_14"></div><b>📃 Summary:</b> Amount for period 14 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_15</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_15"></div><b>📃 Summary:</b> Amount for period 15 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">amount_period_16</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_amount_period_16"></div><b>📃 Summary:</b> Amount for period 16 in local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_total</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_total"></div><b>📃 Summary:</b> Cost element value total<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_amount_period_01</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_group_amount_period_01"></div><b>📃 Summary:</b> Amount for period 01 in group currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_amount_period_02</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_group_amount_period_02"></div><b>📃 Summary:</b> Amount for period 02 in group currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_amount_period_03</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_group_amount_period_03"></div><b>📃 Summary:</b> Amount for period 03 in group currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_amount_period_04</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_group_amount_period_04"></div><b>📃 Summary:</b> Amount for period 04 in group currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_amount_period_05</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_group_amount_period_05"></div><b>📃 Summary:</b> Amount for period 05 in group currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">group_amount_period_06</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_group_amount_period_06"></div><b>📃 Summary:</b> Amount for period 06 in group currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_july</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_july"></div><b>📃 Summary:</b> Cost element value for July<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_august</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_august"></div><b>📃 Summary:</b> Cost element value for August<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_september</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_september"></div><b>📃 Summary:</b> Cost element value for September<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_october</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_october"></div><b>📃 Summary:</b> Cost element value for October<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_november</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_november"></div><b>📃 Summary:</b> Cost element value for November<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_december</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_december"></div><b>📃 Summary:</b> Cost element value for December<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_january_next</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_january_next"></div><b>📃 Summary:</b> Cost element value for January next year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_february_next</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_february_next"></div><b>📃 Summary:</b> Cost element value for February next year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_march_next</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_march_next"></div><b>📃 Summary:</b> Cost element value for March next year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_element_april_next</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cost_element_april_next"></div><b>📃 Summary:</b> Cost element value for April next year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">oslvt</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_oslvt"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_01_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_01_value"></div><b>📃 Summary:</b> Financial value for period 1 (e.g., January)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_02_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_02_value"></div><b>📃 Summary:</b> Financial value for period 2 (e.g., February)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_03_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_03_value"></div><b>📃 Summary:</b> Financial value for period 3 (e.g., March)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_04_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_04_value"></div><b>📃 Summary:</b> Financial value for period 4 (e.g., April)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_05_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_05_value"></div><b>📃 Summary:</b> Financial value for period 5 (e.g., May)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_06_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_06_value"></div><b>📃 Summary:</b> Financial value for period 6 (e.g., June)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_07_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_07_value"></div><b>📃 Summary:</b> Financial value for period 7 (e.g., July)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_08_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_08_value"></div><b>📃 Summary:</b> Financial value for period 8 (e.g., August)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_09_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_09_value"></div><b>📃 Summary:</b> Financial value for period 9 (e.g., September)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_10_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_10_value"></div><b>📃 Summary:</b> Financial value for period 10 (e.g., October)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_11_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_11_value"></div><b>📃 Summary:</b> Financial value for period 11 (e.g., November)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">period_12_value</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_period_12_value"></div><b>📃 Summary:</b> Financial value for period 12 (e.g., December)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">osl13</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_osl13"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">osl14</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_osl14"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">osl15</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_osl15"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">osl16</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_osl16"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_total</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_total"></div><b>📃 Summary:</b> Statistical key figure total<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_january</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_january"></div><b>📃 Summary:</b> Statistical key figure for January<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_february</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_february"></div><b>📃 Summary:</b> Statistical key figure for February<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_march</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_march"></div><b>📃 Summary:</b> Statistical key figure for March<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_april</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_april"></div><b>📃 Summary:</b> Statistical key figure for April<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_may</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_may"></div><b>📃 Summary:</b> Statistical key figure for May<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_june</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_june"></div><b>📃 Summary:</b> Statistical key figure for June<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_july</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_july"></div><b>📃 Summary:</b> Statistical key figure for July<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_august</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_august"></div><b>📃 Summary:</b> Statistical key figure for August<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_september</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_september"></div><b>📃 Summary:</b> Statistical key figure for September<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_october</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_october"></div><b>📃 Summary:</b> Statistical key figure for October<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_november</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_november"></div><b>📃 Summary:</b> Statistical key figure for November<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_december</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_december"></div><b>📃 Summary:</b> Statistical key figure for December<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_january_next</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_january_next"></div><b>📃 Summary:</b> Statistical key figure for January next year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_february_next</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_february_next"></div><b>📃 Summary:</b> Statistical key figure for February next year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_march_next</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_march_next"></div><b>📃 Summary:</b> Statistical key figure for March next year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stat_key_figure_april_next</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stat_key_figure_april_next"></div><b>📃 Summary:</b> Statistical key figure for April next year<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><b>🦄 Unique:</b> This column appears to be a unique identifier for each row in the table. For this financial data table, each row represents a distinct financial record, and the row_id seems to be incremental and unique for each entry.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_group</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_group"></div><b>📃 Summary:</b> Object number 2, possibly account group<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_number"></div><b>📃 Summary:</b> Object number 3, possibly specific account<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">business_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_business_area"></div><b>📃 Summary:</b> Business area<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='800'>800</option><option value='888'>888</option><option value='877'>877</option><option value='866'>866</option><option value='855'>855</option><option value='844'>844</option><option value='833'>833</option><option value='822'>822</option><option value='880'>880</option><option value='881'>881</option><option value='882'>882</option><option value='883'>883</option><option value='884'>884</option></select></span><br><br><div id="bar_viz_client"></div><b>📃 Summary:</b> Client<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">controlling_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_controlling_area"></div><b>📃 Summary:</b> Controlling area or company code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cost_center</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_cost_center"></div><b>📃 Summary:</b> Cost center<br><b>❓ Missing:</b> Not applicable for non-cost center related accounts.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">functional_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_functional_area"></div><b>📃 Summary:</b> Functional area<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gl_account</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_gl_account"></div><b>📃 Summary:</b> G/L Account number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">record_timestamp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_record_timestamp"></div><b>📃 Summary:</b> Timestamp of record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unit_of_measure</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_unit_of_measure"></div><b>📃 Summary:</b> Unit of measure<br><b>❓ Missing:</b> Measurement values are all 0.0, so unit not needed.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unused_object_4</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_unused_object_4"></div><b>📃 Summary:</b> Object number 4, unused in this dataset<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unused_object_5</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_unused_object_5"></div><b>📃 Summary:</b> Object number 5, unused in this dataset<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unused_object_6</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_unused_object_6"></div><b>📃 Summary:</b> Object number 6, unused in this dataset<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unused_object_7</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_unused_object_7"></div><b>📃 Summary:</b> Object number 7, unused in this dataset<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unused_object_8</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_unused_object_8"></div><b>📃 Summary:</b> Object number 8, unused in this dataset<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about financial data, likely from an SAP system. It contains accounting records with details like account numbers, cost centers, and financial amounts. Each row represents a financial transaction or balance. The data includes various financial values across different periods (monthly columns). Key fields are currency, year, account, company code, and cost center.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>113</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>drcrk</td>
+      <td>Debit/Credit indicator</td>
+      <td>debit_credit_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>objnr00</td>
+      <td>Object number</td>
+      <td>object_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>objnr01</td>
+      <td>Object number 1, possibly company code</td>
+      <td>objnr01</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>objnr02</td>
+      <td>Object number 2, possibly account group</td>
+      <td>account_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>objnr03</td>
+      <td>Object number 3, possibly specific account</td>
+      <td>account_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>objnr04</td>
+      <td>Object number 4, unused in this dataset</td>
+      <td>unused_object_4</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>objnr05</td>
+      <td>Object number 5, unused in this dataset</td>
+      <td>unused_object_5</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>objnr06</td>
+      <td>Object number 6, unused in this dataset</td>
+      <td>unused_object_6</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>objnr07</td>
+      <td>Object number 7, unused in this dataset</td>
+      <td>unused_object_7</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>objnr08</td>
+      <td>Object number 8, unused in this dataset</td>
+      <td>unused_object_8</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>rclnt</td>
+      <td>Client</td>
+      <td>client</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>rpmax</td>
+      <td>Maximum number of periods</td>
+      <td>max_periods</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>ryear</td>
+      <td>Fiscal year</td>
+      <td>fiscal_year</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>activ</td>
+      <td>Activity type or transaction code</td>
+      <td>activity_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>rmvct</td>
+      <td>Movement type</td>
+      <td>movement_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>rtcur</td>
+      <td>Transaction currency</td>
+      <td>currency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>runit</td>
+      <td>Unit of measure</td>
+      <td>unit_of_measure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>awtyp</td>
+      <td>Document type</td>
+      <td>document_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>rldnr</td>
+      <td>Ledger</td>
+      <td>ledger</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>rrcty</td>
+      <td>Record type</td>
+      <td>record_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>rvers</td>
+      <td>Version</td>
+      <td>version</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>logsys</td>
+      <td>Logical system</td>
+      <td>logical_system</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>racct</td>
+      <td>G/L Account number</td>
+      <td>gl_account</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>cost_elem</td>
+      <td>Cost element or account number</td>
+      <td>cost_element</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>rbukrs</td>
+      <td>Company code</td>
+      <td>rbukrs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>rcntr</td>
+      <td>Cost center</td>
+      <td>cost_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>prctr</td>
+      <td>Profit center</td>
+      <td>profit_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>rfarea</td>
+      <td>Functional area</td>
+      <td>functional_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>rbusa</td>
+      <td>Business area</td>
+      <td>business_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>kokrs</td>
+      <td>Controlling area or company code</td>
+      <td>controlling_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>segment</td>
+      <td>Segment</td>
+      <td>segment</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>zzspreg</td>
+      <td>Special region or regulatory code</td>
+      <td>special_region_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>scntr</td>
+      <td>Sender cost center</td>
+      <td>sender_cost_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>pprctr</td>
+      <td>Profit center, partner</td>
+      <td>partner_profit_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>sfarea</td>
+      <td>Sender functional area</td>
+      <td>sender_functional_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>sbusa</td>
+      <td>Sender business area</td>
+      <td>sender_business_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>rassc</td>
+      <td>Asset class</td>
+      <td>asset_class</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>psegment</td>
+      <td>Profit segment</td>
+      <td>profit_segment</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>tslvt</td>
+      <td>Total or cumulative financial value</td>
+      <td>tslvt</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>tsl01</td>
+      <td>January amount</td>
+      <td>january_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>tsl02</td>
+      <td>February amount</td>
+      <td>february_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>tsl03</td>
+      <td>March amount</td>
+      <td>march_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>tsl04</td>
+      <td>April amount</td>
+      <td>april_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>tsl05</td>
+      <td>May amount</td>
+      <td>may_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>tsl06</td>
+      <td>June amount</td>
+      <td>june_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>tsl07</td>
+      <td>July amount</td>
+      <td>july_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>tsl08</td>
+      <td>August amount</td>
+      <td>august_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>tsl09</td>
+      <td>September amount</td>
+      <td>september_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>tsl10</td>
+      <td>October amount</td>
+      <td>october_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>tsl11</td>
+      <td>November amount</td>
+      <td>november_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>tsl12</td>
+      <td>December amount</td>
+      <td>december_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>tsl13</td>
+      <td>Financial value for period 13</td>
+      <td>tsl13</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>tsl14</td>
+      <td>Financial value for period 14</td>
+      <td>tsl14</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>tsl15</td>
+      <td>Financial value for period 15</td>
+      <td>tsl15</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>tsl16</td>
+      <td>Financial value for period 16</td>
+      <td>tsl16</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>hslvt</td>
+      <td>Amount for previous year in local currency</td>
+      <td>amount_previous_year</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>hsl01</td>
+      <td>Amount for period 01 in local currency</td>
+      <td>amount_period_01</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>hsl02</td>
+      <td>Amount for period 02 in local currency</td>
+      <td>amount_period_02</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>hsl03</td>
+      <td>Amount for period 03 in local currency</td>
+      <td>amount_period_03</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>hsl04</td>
+      <td>Amount for period 04 in local currency</td>
+      <td>amount_period_04</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>hsl05</td>
+      <td>Amount for period 05 in local currency</td>
+      <td>amount_period_05</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>hsl06</td>
+      <td>Amount for period 06 in local currency</td>
+      <td>amount_period_06</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>hsl07</td>
+      <td>Amount for period 07 in local currency</td>
+      <td>amount_period_07</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>hsl08</td>
+      <td>Amount for period 08 in local currency</td>
+      <td>amount_period_08</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>hsl09</td>
+      <td>Amount for period 09 in local currency</td>
+      <td>amount_period_09</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>hsl10</td>
+      <td>Amount for period 10 in local currency</td>
+      <td>amount_period_10</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>hsl11</td>
+      <td>Amount for period 11 in local currency</td>
+      <td>amount_period_11</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>hsl12</td>
+      <td>Amount for period 12 in local currency</td>
+      <td>amount_period_12</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>hsl13</td>
+      <td>Amount for period 13 in local currency</td>
+      <td>amount_period_13</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>hsl14</td>
+      <td>Amount for period 14 in local currency</td>
+      <td>amount_period_14</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>hsl15</td>
+      <td>Amount for period 15 in local currency</td>
+      <td>amount_period_15</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>hsl16</td>
+      <td>Amount for period 16 in local currency</td>
+      <td>amount_period_16</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>kslvt</td>
+      <td>Cost element value total</td>
+      <td>cost_element_total</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>ksl01</td>
+      <td>Amount for period 01 in group currency</td>
+      <td>group_amount_period_01</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>ksl02</td>
+      <td>Amount for period 02 in group currency</td>
+      <td>group_amount_period_02</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>ksl03</td>
+      <td>Amount for period 03 in group currency</td>
+      <td>group_amount_period_03</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>ksl04</td>
+      <td>Amount for period 04 in group currency</td>
+      <td>group_amount_period_04</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>ksl05</td>
+      <td>Amount for period 05 in group currency</td>
+      <td>group_amount_period_05</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>ksl06</td>
+      <td>Amount for period 06 in group currency</td>
+      <td>group_amount_period_06</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>ksl07</td>
+      <td>Cost element value for July</td>
+      <td>cost_element_july</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>ksl08</td>
+      <td>Cost element value for August</td>
+      <td>cost_element_august</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>ksl09</td>
+      <td>Cost element value for September</td>
+      <td>cost_element_september</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>ksl10</td>
+      <td>Cost element value for October</td>
+      <td>cost_element_october</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>ksl11</td>
+      <td>Cost element value for November</td>
+      <td>cost_element_november</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>ksl12</td>
+      <td>Cost element value for December</td>
+      <td>cost_element_december</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>ksl13</td>
+      <td>Cost element value for January next year</td>
+      <td>cost_element_january_next</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>ksl14</td>
+      <td>Cost element value for February next year</td>
+      <td>cost_element_february_next</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>ksl15</td>
+      <td>Cost element value for March next year</td>
+      <td>cost_element_march_next</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>ksl16</td>
+      <td>Cost element value for April next year</td>
+      <td>cost_element_april_next</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>oslvt</td>
+      <td>Total value or balance</td>
+      <td>oslvt</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>osl01</td>
+      <td>Financial value for period 1 (e.g., January)</td>
+      <td>period_01_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>osl02</td>
+      <td>Financial value for period 2 (e.g., February)</td>
+      <td>period_02_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>osl03</td>
+      <td>Financial value for period 3 (e.g., March)</td>
+      <td>period_03_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>osl04</td>
+      <td>Financial value for period 4 (e.g., April)</td>
+      <td>period_04_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>osl05</td>
+      <td>Financial value for period 5 (e.g., May)</td>
+      <td>period_05_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>osl06</td>
+      <td>Financial value for period 6 (e.g., June)</td>
+      <td>period_06_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>osl07</td>
+      <td>Financial value for period 7 (e.g., July)</td>
+      <td>period_07_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>osl08</td>
+      <td>Financial value for period 8 (e.g., August)</td>
+      <td>period_08_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>osl09</td>
+      <td>Financial value for period 9 (e.g., September)</td>
+      <td>period_09_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>osl10</td>
+      <td>Financial value for period 10 (e.g., October)</td>
+      <td>period_10_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>osl11</td>
+      <td>Financial value for period 11 (e.g., November)</td>
+      <td>period_11_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>osl12</td>
+      <td>Financial value for period 12 (e.g., December)</td>
+      <td>period_12_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>102</th>
+      <td>osl13</td>
+      <td>Financial value for period 13 (if applicable)</td>
+      <td>osl13</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>osl14</td>
+      <td>Financial value for period 14 (if applicable)</td>
+      <td>osl14</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>104</th>
+      <td>osl15</td>
+      <td>Financial value for period 15 (if applicable)</td>
+      <td>osl15</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>osl16</td>
+      <td>Financial value for period 16 (if applicable)</td>
+      <td>osl16</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>106</th>
+      <td>mslvt</td>
+      <td>Statistical key figure total</td>
+      <td>stat_key_figure_total</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>107</th>
+      <td>msl01</td>
+      <td>Statistical key figure for January</td>
+      <td>stat_key_figure_january</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>108</th>
+      <td>msl02</td>
+      <td>Statistical key figure for February</td>
+      <td>stat_key_figure_february</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>109</th>
+      <td>msl03</td>
+      <td>Statistical key figure for March</td>
+      <td>stat_key_figure_march</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>110</th>
+      <td>msl04</td>
+      <td>Statistical key figure for April</td>
+      <td>stat_key_figure_april</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>111</th>
+      <td>msl05</td>
+      <td>Statistical key figure for May</td>
+      <td>stat_key_figure_may</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>112</th>
+      <td>msl06</td>
+      <td>Statistical key figure for June</td>
+      <td>stat_key_figure_june</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>msl07</td>
+      <td>Statistical key figure for July</td>
+      <td>stat_key_figure_july</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>114</th>
+      <td>msl08</td>
+      <td>Statistical key figure for August</td>
+      <td>stat_key_figure_august</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>115</th>
+      <td>msl09</td>
+      <td>Statistical key figure for September</td>
+      <td>stat_key_figure_september</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>116</th>
+      <td>msl10</td>
+      <td>Statistical key figure for October</td>
+      <td>stat_key_figure_october</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>117</th>
+      <td>msl11</td>
+      <td>Statistical key figure for November</td>
+      <td>stat_key_figure_november</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>118</th>
+      <td>msl12</td>
+      <td>Statistical key figure for December</td>
+      <td>stat_key_figure_december</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>119</th>
+      <td>msl13</td>
+      <td>Statistical key figure for January next year</td>
+      <td>stat_key_figure_january_next</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>120</th>
+      <td>msl14</td>
+      <td>Statistical key figure for February next year</td>
+      <td>stat_key_figure_february_next</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>121</th>
+      <td>msl15</td>
+      <td>Statistical key figure for March next year</td>
+      <td>stat_key_figure_march_next</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>122</th>
+      <td>msl16</td>
+      <td>Statistical key figure for April next year</td>
+      <td>stat_key_figure_april_next</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>123</th>
+      <td>timestamp_</td>
+      <td>Timestamp of record</td>
+      <td>record_timestamp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>124</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>125</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>3</b> columns have erroneous values<br><ol><li><b>debit_credit_indicator</b>: 's' and 'h' are unusual because they're not standard debit/credit indicators like 'D'/'C' or 'Debit'/'Credit'.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'s'</td>
+      <td>'D'</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>'h'</td>
+      <td>'C'</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>activity_type</b>: 'rfbu' is unusual because it's an unclear acronym or potentially a typo.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'rfbu'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>ledger</b>: '0l' is unusual because it may be a typo for '01' (zero-one) or misrepresentation of a quantity.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'0l'</td>
+      <td>'01'</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>26</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>account_group</td>
+      <td>CAST("account_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'account_group' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'account_group' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>account_number</td>
+      <td>CAST("account_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'account_number' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_data_type). In this case, we're casting the 'account_number' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>asset_class</td>
+      <td>CAST("asset_class" AS VARCHAR)</td>
+      <td>To transform the data type of the 'asset_class' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>business_area</td>
+      <td>CAST("business_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'business_area' column from 'INT' to 'VARCHAR', we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column only contains the value 3000, a simple CAST to VARCHAR will suffice. This will convert the integer value to its string representation.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>client</td>
+      <td>CAST("client" AS VARCHAR)</td>
+      <td>To transform the data type of the 'client' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'client' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>controlling_area</td>
+      <td>CAST("controlling_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'controlling_area' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a variable-length character string type. The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>cost_center</td>
+      <td>CAST("cost_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cost_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. For this specific case, we'll cast the 'cost_center' column to VARCHAR. This will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>cost_element</td>
+      <td>CAST("cost_element" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cost_element' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Since the column is already of type DECIMAL, we don't need to worry about any special formatting or precision issues. A straightforward CAST to VARCHAR will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>functional_area</td>
+      <td>CAST("functional_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'functional_area' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column contains numeric values (100.0), casting it to VARCHAR will convert these numbers into their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>gl_account</td>
+      <td>CAST("gl_account" AS VARCHAR)</td>
+      <td>To transform the data type of the 'gl_account' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>logical_system</td>
+      <td>CAST("logical_system" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'logical_system' from 'DECIMAL' to 'VARCHAR' in DuckDB, we need to use a simple CAST function. This will convert each value in the column to its string representation. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future values added to this column will be stored as strings rather than decimal numbers.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>movement_type</td>
+      <td>CAST("movement_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'movement_type' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>partner_profit_center</td>
+      <td>CAST("partner_profit_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'partner_profit_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each value in the column to its string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>profit_segment</td>
+      <td>CAST("profit_segment" AS VARCHAR)</td>
+      <td>To transform the data type of the 'profit_segment' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>record_timestamp</td>
+      <td>strptime(CAST("record_timestamp" AS VARCHAR), '%Y%m%d%H%M%S')</td>
+      <td>To transform the 'record_timestamp' column from INT to TIMESTAMP, we need to: 1. First, cast the integer to a VARCHAR to ensure we're working with a string. 2. Then, use the strptime function to parse the string into a timestamp. 3. The format string '%Y%m%d%H%M%S' matches the structure of our timestamp strings:\n   - %Y for 4-digit year\n   - %m for 2-digit month\n   - %d for 2-digit day\n   - %H for 2-digit hour (24-hour format)\n   - %M for 2-digit minute\n   - %S for 2-digit second\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>segment</td>
+      <td>CAST("segment" AS VARCHAR)</td>
+      <td>To transform the data type of the 'segment' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>sender_business_area</td>
+      <td>CAST("sender_business_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sender_business_area' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently DECIMAL, casting it to VARCHAR will preserve the data while changing its type to a string format.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>sender_cost_center</td>
+      <td>CAST("sender_cost_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sender_cost_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>sender_functional_area</td>
+      <td>CAST("sender_functional_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sender_functional_area' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional processing since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>special_region_code</td>
+      <td>CAST("special_region_code" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'special_region_code' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>unit_of_measure</td>
+      <td>CAST("unit_of_measure" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'unit_of_measure' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>unused_object_4</td>
+      <td>CAST("unused_object_4" AS BIT)</td>
+      <td>To transform the data type of the column 'unused_object_4' from 'INT' to 'BIT' in DuckDB, we can use a simple CAST function. Since the column only contains the value 0, it can be safely cast to BIT. In DuckDB, BIT is a 1-bit integer type that can hold either 0 or 1. The INT value 0 will be cast to BIT 0, which is a valid conversion.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>unused_object_5</td>
+      <td>CAST("unused_object_5" AS BIT)</td>
+      <td>To transform the data type of the column 'unused_object_5' from 'INT' to 'BIT', we need to use a CAST function. In DuckDB, the BIT data type is represented as a single bit (0 or 1). Since the column only contains the value 0, a simple CAST operation will suffice. The INT value 0 will be directly converted to the BIT value 0.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>unused_object_6</td>
+      <td>CAST("unused_object_6" AS BIT)</td>
+      <td>To transform the data type of the column 'unused_object_6' from 'INT' to 'BIT', we need to use a simple CAST function. In DuckDB, the BIT data type is used for boolean values, where 0 represents false and 1 represents true. Since the column only contains the value 0, casting it to BIT will preserve the logical meaning of the data while changing its type.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>unused_object_7</td>
+      <td>CAST("unused_object_7" AS BIT)</td>
+      <td>To transform the data type of the column 'unused_object_7' from 'INT' to 'BIT', we need to use a CAST function. In DuckDB, the BIT data type is used for binary data and can store either 0 or 1. Since the column only contains the value 0, a simple CAST operation will suffice. The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>unused_object_8</td>
+      <td>CAST("unused_object_8" AS BIT)</td>
+      <td>To transform the data type of the column 'unused_object_8' from 'INT' to 'BIT', we need to use a simple CAST function. In DuckDB, the BIT data type is used for binary data and can store either 0 or 1. Since the distinct values of 'unused_object_8' are only [0], this transformation is straightforward and will not result in any data loss.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>15</b> columns have missing values<br>
+                    ✔️ <b>2</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>asset_class</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>cost_center</td>
+      <td>33.33</td>
+      <td>True</td>
+      <td>Not applicable for non-cost center related accounts.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>cost_element</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>functional_area</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>logical_system</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>movement_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>partner_profit_center</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>profit_center</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>profit_segment</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>segment</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>sender_business_area</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>sender_cost_center</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>sender_functional_area</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>special_region_code</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>unit_of_measure</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Measurement values are all 0.0, so unit not needed.</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>asset_class</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>cost_element</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>functional_area</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>logical_system</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>movement_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>partner_profit_center</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>profit_center</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>profit_segment</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>segment</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>sender_business_area</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>sender_cost_center</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>sender_functional_area</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>special_region_code</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 's', 'value': 66.66666666666666}, {'label': 'h', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_debit_credit_indicator", data);
+data = [{'x': 7, 'y': 3}];
+    binWidth = 7;
+    drawHistogram("hist_viz_object_number", data, binWidth);
+data = [{'x': 1, 'y': 3}];
+    binWidth = 1;
+    drawHistogram("hist_viz_objnr01", data, binWidth);
+data = [{'x': 16, 'y': 3}];
+    binWidth = 16;
+    drawHistogram("hist_viz_max_periods", data, binWidth);
+data = [{'x': 2002, 'y': 3}];
+    binWidth = 2002;
+    drawHistogram("hist_viz_fiscal_year", data, binWidth);
+data = [{'label': 'rfbu', 'value': 100.0}];
+    drawBarChart("bar_viz_activity_type", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency", data);
+data = [{'label': 'bkpf', 'value': 100.0}];
+    drawBarChart("bar_viz_document_type", data);
+data = [{'label': '0l', 'value': 100.0}];
+    drawBarChart("bar_viz_ledger", data);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_record_type", data, binWidth);
+data = [{'x': 1, 'y': 3}];
+    binWidth = 1;
+    drawHistogram("hist_viz_version", data, binWidth);
+data = [{'x': 3000, 'y': 3}];
+    binWidth = 3000;
+    drawHistogram("hist_viz_rbukrs", data, binWidth);
+data = [{'x': 3005.0, 'y': 2}];
+    binWidth = 3005.0;
+    drawHistogram("hist_viz_profit_center", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_tslvt", data, binWidth);
+data = [{'x': 150.2375, 'y': 1}, {'x': 450.71250000000003, 'y': 0}, {'x': 751.1875, 'y': 0}];
+    binWidth = 300.475;
+    drawHistogram("hist_viz_january_amount", data, binWidth);
+data = [{'x': 147.26225, 'y': 1}, {'x': 441.78675, 'y': 0}, {'x': 736.31125, 'y': 0}];
+    binWidth = 294.5245;
+    drawHistogram("hist_viz_february_amount", data, binWidth);
+data = [{'x': 142.8, 'y': 1}, {'x': 428.40000000000003, 'y': 0}, {'x': 714.0, 'y': 0}];
+    binWidth = 285.6;
+    drawHistogram("hist_viz_march_amount", data, binWidth);
+data = [{'x': 154.7, 'y': 1}, {'x': 464.09999999999997, 'y': 0}, {'x': 773.5, 'y': 0}];
+    binWidth = 309.4;
+    drawHistogram("hist_viz_april_amount", data, binWidth);
+data = [{'x': 144.28725, 'y': 1}, {'x': 432.86175000000003, 'y': 0}, {'x': 721.43625, 'y': 0}];
+    binWidth = 288.5745;
+    drawHistogram("hist_viz_may_amount", data, binWidth);
+data = [{'x': 150.2375, 'y': 1}, {'x': 450.71250000000003, 'y': 0}, {'x': 751.1875, 'y': 0}];
+    binWidth = 300.475;
+    drawHistogram("hist_viz_june_amount", data, binWidth);
+data = [{'x': 153.2125, 'y': 1}, {'x': 459.63750000000005, 'y': 0}, {'x': 766.0625, 'y': 0}];
+    binWidth = 306.425;
+    drawHistogram("hist_viz_july_amount", data, binWidth);
+data = [{'x': 145.77474999999998, 'y': 1}, {'x': 437.32424999999995, 'y': 0}, {'x': 728.87375, 'y': 0}];
+    binWidth = 291.54949999999997;
+    drawHistogram("hist_viz_august_amount", data, binWidth);
+data = [{'x': 151.725, 'y': 1}, {'x': 455.17499999999995, 'y': 0}, {'x': 758.625, 'y': 0}];
+    binWidth = 303.45;
+    drawHistogram("hist_viz_september_amount", data, binWidth);
+data = [{'x': 148.75, 'y': 1}, {'x': 446.25, 'y': 0}, {'x': 743.75, 'y': 0}];
+    binWidth = 297.5;
+    drawHistogram("hist_viz_october_amount", data, binWidth);
+data = [{'x': -238920.50625, 'y': 1}, {'x': -226372.19875, 'y': 0}, {'x': -213823.89125, 'y': 0}];
+    binWidth = 12548.307499999999;
+    drawHistogram("hist_viz_november_amount", data, binWidth);
+data = [{'x': -238923.481, 'y': 1}, {'x': -226381.12300000002, 'y': 0}, {'x': -213838.765, 'y': 0}];
+    binWidth = 12542.358;
+    drawHistogram("hist_viz_december_amount", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_tsl13", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_tsl14", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_tsl15", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_tsl16", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_amount_previous_year", data, binWidth);
+data = [{'x': 150.2375, 'y': 1}, {'x': 450.71250000000003, 'y': 0}, {'x': 751.1875, 'y': 0}];
+    binWidth = 300.475;
+    drawHistogram("hist_viz_amount_period_01", data, binWidth);
+data = [{'x': 147.26225, 'y': 1}, {'x': 441.78675, 'y': 0}, {'x': 736.31125, 'y': 0}];
+    binWidth = 294.5245;
+    drawHistogram("hist_viz_amount_period_02", data, binWidth);
+data = [{'x': 142.8, 'y': 1}, {'x': 428.40000000000003, 'y': 0}, {'x': 714.0, 'y': 0}];
+    binWidth = 285.6;
+    drawHistogram("hist_viz_amount_period_03", data, binWidth);
+data = [{'x': 154.7, 'y': 1}, {'x': 464.09999999999997, 'y': 0}, {'x': 773.5, 'y': 0}];
+    binWidth = 309.4;
+    drawHistogram("hist_viz_amount_period_04", data, binWidth);
+data = [{'x': 144.28725, 'y': 1}, {'x': 432.86175000000003, 'y': 0}, {'x': 721.43625, 'y': 0}];
+    binWidth = 288.5745;
+    drawHistogram("hist_viz_amount_period_05", data, binWidth);
+data = [{'x': 150.2375, 'y': 1}, {'x': 450.71250000000003, 'y': 0}, {'x': 751.1875, 'y': 0}];
+    binWidth = 300.475;
+    drawHistogram("hist_viz_amount_period_06", data, binWidth);
+data = [{'x': 153.2125, 'y': 1}, {'x': 459.63750000000005, 'y': 0}, {'x': 766.0625, 'y': 0}];
+    binWidth = 306.425;
+    drawHistogram("hist_viz_amount_period_07", data, binWidth);
+data = [{'x': 145.77474999999998, 'y': 1}, {'x': 437.32424999999995, 'y': 0}, {'x': 728.87375, 'y': 0}];
+    binWidth = 291.54949999999997;
+    drawHistogram("hist_viz_amount_period_08", data, binWidth);
+data = [{'x': 151.725, 'y': 1}, {'x': 455.17499999999995, 'y': 0}, {'x': 758.625, 'y': 0}];
+    binWidth = 303.45;
+    drawHistogram("hist_viz_amount_period_09", data, binWidth);
+data = [{'x': 148.75, 'y': 1}, {'x': 446.25, 'y': 0}, {'x': 743.75, 'y': 0}];
+    binWidth = 297.5;
+    drawHistogram("hist_viz_amount_period_10", data, binWidth);
+data = [{'x': -238920.50625, 'y': 1}, {'x': -226372.19875, 'y': 0}, {'x': -213823.89125, 'y': 0}];
+    binWidth = 12548.307499999999;
+    drawHistogram("hist_viz_amount_period_11", data, binWidth);
+data = [{'x': -238923.481, 'y': 1}, {'x': -226381.12300000002, 'y': 0}, {'x': -213838.765, 'y': 0}];
+    binWidth = 12542.358;
+    drawHistogram("hist_viz_amount_period_12", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_amount_period_13", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_amount_period_14", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_amount_period_15", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_amount_period_16", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_cost_element_total", data, binWidth);
+data = [{'x': 125.19749999999999, 'y': 1}, {'x': 375.5925, 'y': 0}, {'x': 625.9875, 'y': 0}];
+    binWidth = 250.39499999999998;
+    drawHistogram("hist_viz_group_amount_period_01", data, binWidth);
+data = [{'x': 122.718, 'y': 1}, {'x': 368.154, 'y': 0}, {'x': 613.59, 'y': 0}];
+    binWidth = 245.436;
+    drawHistogram("hist_viz_group_amount_period_02", data, binWidth);
+data = [{'x': 118.99949999999998, 'y': 1}, {'x': 356.9984999999999, 'y': 0}, {'x': 594.9975, 'y': 0}];
+    binWidth = 237.99899999999997;
+    drawHistogram("hist_viz_group_amount_period_03", data, binWidth);
+data = [{'x': 128.91625, 'y': 1}, {'x': 386.74875, 'y': 0}, {'x': 644.58125, 'y': 0}];
+    binWidth = 257.8325;
+    drawHistogram("hist_viz_group_amount_period_04", data, binWidth);
+data = [{'x': 120.239, 'y': 1}, {'x': 360.717, 'y': 0}, {'x': 601.1949999999999, 'y': 0}];
+    binWidth = 240.478;
+    drawHistogram("hist_viz_group_amount_period_05", data, binWidth);
+data = [{'x': 125.19749999999999, 'y': 1}, {'x': 375.5925, 'y': 0}, {'x': 625.9875, 'y': 0}];
+    binWidth = 250.39499999999998;
+    drawHistogram("hist_viz_group_amount_period_06", data, binWidth);
+data = [{'x': 127.6765, 'y': 1}, {'x': 383.0295, 'y': 0}, {'x': 638.3824999999999, 'y': 0}];
+    binWidth = 255.353;
+    drawHistogram("hist_viz_cost_element_july", data, binWidth);
+data = [{'x': 121.47850000000001, 'y': 1}, {'x': 364.43550000000005, 'y': 0}, {'x': 607.3925, 'y': 0}];
+    binWidth = 242.95700000000002;
+    drawHistogram("hist_viz_cost_element_august", data, binWidth);
+data = [{'x': 126.43699999999998, 'y': 1}, {'x': 379.3109999999999, 'y': 0}, {'x': 632.185, 'y': 0}];
+    binWidth = 252.87399999999997;
+    drawHistogram("hist_viz_cost_element_september", data, binWidth);
+data = [{'x': 123.95775, 'y': 1}, {'x': 371.87325, 'y': 0}, {'x': 619.7887499999999, 'y': 0}];
+    binWidth = 247.9155;
+    drawHistogram("hist_viz_cost_element_october", data, binWidth);
+data = [{'x': -199099.62925, 'y': 1}, {'x': -188642.74775, 'y': 0}, {'x': -178185.86625000002, 'y': 0}];
+    binWidth = 10456.8815;
+    drawHistogram("hist_viz_cost_element_november", data, binWidth);
+data = [{'x': -199102.10825, 'y': 1}, {'x': -188650.18475000001, 'y': 0}, {'x': -178198.26124999998, 'y': 0}];
+    binWidth = 10451.9235;
+    drawHistogram("hist_viz_cost_element_december", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_cost_element_january_next", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_cost_element_february_next", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_cost_element_march_next", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_cost_element_april_next", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_oslvt", data, binWidth);
+data = [{'x': 150.2375, 'y': 1}, {'x': 450.71250000000003, 'y': 0}, {'x': 751.1875, 'y': 0}];
+    binWidth = 300.475;
+    drawHistogram("hist_viz_period_01_value", data, binWidth);
+data = [{'x': 147.26225, 'y': 1}, {'x': 441.78675, 'y': 0}, {'x': 736.31125, 'y': 0}];
+    binWidth = 294.5245;
+    drawHistogram("hist_viz_period_02_value", data, binWidth);
+data = [{'x': 142.8, 'y': 1}, {'x': 428.40000000000003, 'y': 0}, {'x': 714.0, 'y': 0}];
+    binWidth = 285.6;
+    drawHistogram("hist_viz_period_03_value", data, binWidth);
+data = [{'x': 154.7, 'y': 1}, {'x': 464.09999999999997, 'y': 0}, {'x': 773.5, 'y': 0}];
+    binWidth = 309.4;
+    drawHistogram("hist_viz_period_04_value", data, binWidth);
+data = [{'x': 144.28725, 'y': 1}, {'x': 432.86175000000003, 'y': 0}, {'x': 721.43625, 'y': 0}];
+    binWidth = 288.5745;
+    drawHistogram("hist_viz_period_05_value", data, binWidth);
+data = [{'x': 150.2375, 'y': 1}, {'x': 450.71250000000003, 'y': 0}, {'x': 751.1875, 'y': 0}];
+    binWidth = 300.475;
+    drawHistogram("hist_viz_period_06_value", data, binWidth);
+data = [{'x': 153.2125, 'y': 1}, {'x': 459.63750000000005, 'y': 0}, {'x': 766.0625, 'y': 0}];
+    binWidth = 306.425;
+    drawHistogram("hist_viz_period_07_value", data, binWidth);
+data = [{'x': 145.77474999999998, 'y': 1}, {'x': 437.32424999999995, 'y': 0}, {'x': 728.87375, 'y': 0}];
+    binWidth = 291.54949999999997;
+    drawHistogram("hist_viz_period_08_value", data, binWidth);
+data = [{'x': 151.725, 'y': 1}, {'x': 455.17499999999995, 'y': 0}, {'x': 758.625, 'y': 0}];
+    binWidth = 303.45;
+    drawHistogram("hist_viz_period_09_value", data, binWidth);
+data = [{'x': 148.75, 'y': 1}, {'x': 446.25, 'y': 0}, {'x': 743.75, 'y': 0}];
+    binWidth = 297.5;
+    drawHistogram("hist_viz_period_10_value", data, binWidth);
+data = [{'x': -238920.50625, 'y': 1}, {'x': -226372.19875, 'y': 0}, {'x': -213823.89125, 'y': 0}];
+    binWidth = 12548.307499999999;
+    drawHistogram("hist_viz_period_11_value", data, binWidth);
+data = [{'x': -238923.481, 'y': 1}, {'x': -226381.12300000002, 'y': 0}, {'x': -213838.765, 'y': 0}];
+    binWidth = 12542.358;
+    drawHistogram("hist_viz_period_12_value", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_osl13", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_osl14", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_osl15", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_osl16", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_total", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_january", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_february", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_march", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_april", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_may", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_june", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_july", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_august", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_september", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_october", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_november", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_december", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_january_next", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_february_next", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_march_next", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_stat_key_figure_april_next", data, binWidth);
+data = [{'x': 196611.05, 'y': 1}, {'x': 196611.15000000002, 'y': 0}, {'x': 196611.25, 'y': 0}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': '137', 'value': 66.66666666666666}, {'label': '76', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_account_group", data);
+data = [{'label': '394', 'value': 33.33333333333333}, {'label': '73', 'value': 33.33333333333333}, {'label': '395', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_account_number", data);
+data = [{'label': '3000', 'value': 100.0}];
+    drawBarChart("bar_viz_business_area", data);
+data = [{'label': '800', 'value': 100.0}];
+    drawBarChart("bar_viz_client", data);
+data = [{'label': '2000', 'value': 100.0}];
+    drawBarChart("bar_viz_controlling_area", data);
+data = [{'label': '4216.0', 'value': 50.0}, {'label': '4215.0', 'value': 50.0}];
+    drawBarChart("bar_viz_cost_center", data);
+data = [{'label': '100.0', 'value': 100.0}];
+    drawBarChart("bar_viz_functional_area", data);
+data = [{'label': '403000', 'value': 66.66666666666666}, {'label': '140000', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_gl_account", data);
+data = [{'label': '2006-01-17 13:4...', 'value': 66.66666666666666}, {'label': '2006-01-17 13:2...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_record_timestamp", data);
+data = [];
+    drawBarChart("bar_viz_unit_of_measure", data);
+data = [{'label': "b'\\x00\\x00\\x00\\...", 'value': 100.0}];
+    drawBarChart("bar_viz_unused_object_4", data);
+data = [{'label': "b'\\x00\\x00\\x00\\...", 'value': 100.0}];
+    drawBarChart("bar_viz_unused_object_5", data);
+data = [{'label': "b'\\x00\\x00\\x00\\...", 'value': 100.0}];
+    drawBarChart("bar_viz_unused_object_6", data);
+data = [{'label': "b'\\x00\\x00\\x00\\...", 'value': 100.0}];
+    drawBarChart("bar_viz_unused_object_7", data);
+data = [{'label': "b'\\x00\\x00\\x00\\...", 'value': 100.0}];
+    drawBarChart("bar_viz_unused_object_8", data);
+
+
+</script>
+</body>
+</html>

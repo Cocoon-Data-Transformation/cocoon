@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_pa0001_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>pernr</th>
+      <th>seqnr</th>
+      <th>uname</th>
+      <th>werks</th>
+      <th>persg</th>
+      <th>persk</th>
+      <th>btrtl</th>
+      <th>abkrs</th>
+      <th>sachp</th>
+      <th>sname</th>
+      <th>ename</th>
+      <th>otype</th>
+      <th>sbmod</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>mandt</th>
+      <th>bukrs</th>
+      <th>kokrs</th>
+      <th>vdsk1</th>
+      <th>histo</th>
+      <th>stell</th>
+      <th>aedtm</th>
+      <th>sprps</th>
+      <th>orgeh</th>
+      <th>plans</th>
+      <th>preas</th>
+      <th>begda</th>
+      <th>endda</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>10</td>
+      <td>0</td>
+      <td>powersa</td>
+      <td>200</td>
+      <td>1</td>
+      <td>gc</td>
+      <td>2</td>
+      <td>g1</td>
+      <td>3</td>
+      <td>powers austin</td>
+      <td>austin powers</td>
+      <td>s</td>
+      <td>200</td>
+      <td>1</td>
+      <td>False</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>1000</td>
+      <td>200</td>
+      <td>NaN</td>
+      <td>50016575</td>
+      <td>20030507</td>
+      <td>NaN</td>
+      <td>50001357</td>
+      <td>50005214</td>
+      <td>NaN</td>
+      <td>20020101</td>
+      <td>99991231</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>69</td>
+      <td>0</td>
+      <td>c5115457</td>
+      <td>200</td>
+      <td>1</td>
+      <td>gc</td>
+      <td>2</td>
+      <td>g1</td>
+      <td>3</td>
+      <td>bob sponge</td>
+      <td>mr sponge bob</td>
+      <td>s</td>
+      <td>200</td>
+      <td>2</td>
+      <td>False</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>1000</td>
+      <td>200</td>
+      <td>NaN</td>
+      <td>50029038</td>
+      <td>20111114</td>
+      <td>NaN</td>
+      <td>50002214</td>
+      <td>50005687</td>
+      <td>NaN</td>
+      <td>20030101</td>
+      <td>99991231</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>70</td>
+      <td>0</td>
+      <td>c5115457</td>
+      <td>200</td>
+      <td>1</td>
+      <td>gc</td>
+      <td>2</td>
+      <td>g1</td>
+      <td>3</td>
+      <td>wayne bruce</td>
+      <td>mr bruce wayne</td>
+      <td>s</td>
+      <td>200</td>
+      <td>3</td>
+      <td>False</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>1000</td>
+      <td>200</td>
+      <td>NaN</td>
+      <td>50043146</td>
+      <td>20111114</td>
+      <td>NaN</td>
+      <td>50002214</td>
+      <td>50005691</td>
+      <td>NaN</td>
+      <td>20030101</td>
+      <td>99991231</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>employee_id</th>
+      <th>sequence_number</th>
+      <th>user_name</th>
+      <th>personnel_area</th>
+      <th>persg</th>
+      <th>employee_subgroup</th>
+      <th>personnel_subarea</th>
+      <th>work_schedule_rule</th>
+      <th>sachp</th>
+      <th>sname</th>
+      <th>ename</th>
+      <th>object_type</th>
+      <th>payroll_modifier</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>client</th>
+      <th>company_code</th>
+      <th>controlling_area</th>
+      <th>distribution_key</th>
+      <th>is_historical</th>
+      <th>job_id</th>
+      <th>last_changed_date</th>
+      <th>lock_indicator</th>
+      <th>org_unit_id</th>
+      <th>position_id</th>
+      <th>processing_reason</th>
+      <th>valid_from</th>
+      <th>valid_to</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>10</td>
+      <td>0</td>
+      <td>powersa</td>
+      <td>200</td>
+      <td>1</td>
+      <td>gc</td>
+      <td>2</td>
+      <td>g1</td>
+      <td>3</td>
+      <td>powers austin</td>
+      <td>Mr. Austin Powers</td>
+      <td>s</td>
+      <td>200</td>
+      <td>1</td>
+      <td>False</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>1000</td>
+      <td>200</td>
+      <td>None</td>
+      <td>50016575</td>
+      <td>2003-05-07</td>
+      <td>None</td>
+      <td>50001357</td>
+      <td>50005214</td>
+      <td>None</td>
+      <td>2002-01-01</td>
+      <td>9999-12-31</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>69</td>
+      <td>0</td>
+      <td>c5115457</td>
+      <td>200</td>
+      <td>1</td>
+      <td>gc</td>
+      <td>2</td>
+      <td>g1</td>
+      <td>3</td>
+      <td>bob sponge</td>
+      <td>Mr. Sponge Bob</td>
+      <td>s</td>
+      <td>200</td>
+      <td>2</td>
+      <td>False</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>1000</td>
+      <td>200</td>
+      <td>None</td>
+      <td>50029038</td>
+      <td>2011-11-14</td>
+      <td>None</td>
+      <td>50002214</td>
+      <td>50005687</td>
+      <td>None</td>
+      <td>2003-01-01</td>
+      <td>9999-12-31</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>70</td>
+      <td>0</td>
+      <td>c5115457</td>
+      <td>200</td>
+      <td>1</td>
+      <td>gc</td>
+      <td>2</td>
+      <td>g1</td>
+      <td>3</td>
+      <td>wayne bruce</td>
+      <td>Mr. Bruce Wayne</td>
+      <td>s</td>
+      <td>200</td>
+      <td>3</td>
+      <td>False</td>
+      <td>800</td>
+      <td>2000</td>
+      <td>1000</td>
+      <td>200</td>
+      <td>None</td>
+      <td>50043146</td>
+      <td>2011-11-14</td>
+      <td>None</td>
+      <td>50002214</td>
+      <td>50005691</td>
+      <td>None</td>
+      <td>2003-01-01</td>
+      <td>9999-12-31</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">employee_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_employee_id"></div><b>📃 Summary:</b> Personnel number (employee ID)<br><b>🦄 Unique:</b> This column represents the unique personnel number for each employee. For this table, each row represents an employee's record. The employee_id is likely to be unique across rows as it's a standard practice in HR systems to assign unique identifiers to employees.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sequence_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sequence_number"></div><b>📃 Summary:</b> Sequence number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">user_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_user_name"></div><b>📃 Summary:</b> User name (creator or modifier)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">personnel_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_personnel_area"></div><b>📃 Summary:</b> Personnel area (often plant or location)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">persg</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_persg"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">employee_subgroup</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_employee_subgroup"></div><b>📃 Summary:</b> Employee subgroup<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">personnel_subarea</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_personnel_subarea"></div><b>📃 Summary:</b> Personnel subarea<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">work_schedule_rule</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_work_schedule_rule"></div><b>📃 Summary:</b> Work schedule rule<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sachp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sachp"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sname</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_sname"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ename</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_ename"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">object_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_object_type"></div><b>📃 Summary:</b> Object type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payroll_modifier</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_payroll_modifier"></div><b>📃 Summary:</b> Payroll modifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><b>🦄 Unique:</b> This column is explicitly described as a unique identifier for the row. In a properly designed database, this would be a unique value for each record, making it an excellent candidate key.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record has been deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='800'>800</option><option value='888'>888</option><option value='877'>877</option><option value='866'>866</option><option value='855'>855</option><option value='844'>844</option><option value='833'>833</option><option value='822'>822</option><option value='880'>880</option><option value='881'>881</option><option value='882'>882</option><option value='883'>883</option><option value='884'>884</option></select></span><br><br><div id="bar_viz_client"></div><b>📃 Summary:</b> Client<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">company_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_company_code"></div><b>📃 Summary:</b> Company code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">controlling_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_controlling_area"></div><b>📃 Summary:</b> Controlling area<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">distribution_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_distribution_key"></div><b>📃 Summary:</b> Distribution key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_historical</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_is_historical"></div><b>📃 Summary:</b> Historical record indicator<br><b>❓ Missing:</b> Current records are not historical by definition.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">job_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_job_id"></div><b>📃 Summary:</b> Job identifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_changed_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_changed_date"></div><b>📃 Summary:</b> Last changed date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">lock_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_lock_indicator"></div><b>📃 Summary:</b> Lock indicator<br><b>❓ Missing:</b> Unlocked records don't need a lock indicator.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">org_unit_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_org_unit_id"></div><b>📃 Summary:</b> Organizational unit identifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">position_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_position_id"></div><b>📃 Summary:</b> Position identifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">processing_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_processing_reason"></div><b>📃 Summary:</b> Processing reason<br><b>❓ Missing:</b> No special processing needed for these standard records.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">valid_from</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_valid_from"></div><b>📃 Summary:</b> Start date of validity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">valid_to</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_valid_to"></div><b>📃 Summary:</b> End date of validity<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about employee information in an SAP HR system. It contains personal and organizational details for employees. Key fields include employee number (pernr), name (ename), position (plans), organizational unit (orgeh), and employment dates (begda/endda). The table stores data like company code (bukrs), personnel area (werks), and employee group (persg). It appears to track historical changes with fields for creation date (aedtm) and user (uname).<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>48</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>begda</td>
+      <td>Start date of validity</td>
+      <td>valid_from</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>endda</td>
+      <td>End date of validity</td>
+      <td>valid_to</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>mandt</td>
+      <td>Client</td>
+      <td>client</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>objps</td>
+      <td>Object specification</td>
+      <td>object_specification</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>pernr</td>
+      <td>Personnel number (employee ID)</td>
+      <td>employee_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>seqnr</td>
+      <td>Sequence number</td>
+      <td>sequence_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>sprps</td>
+      <td>Lock indicator</td>
+      <td>lock_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>subty</td>
+      <td>Subtype</td>
+      <td>subtype</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>aedtm</td>
+      <td>Last changed date</td>
+      <td>last_changed_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>uname</td>
+      <td>User name (creator or modifier)</td>
+      <td>user_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>histo</td>
+      <td>Historical record indicator</td>
+      <td>is_historical</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>itxex</td>
+      <td>Tax exemption</td>
+      <td>tax_exemption</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>refex</td>
+      <td>Reference identifier</td>
+      <td>reference_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>ordex</td>
+      <td>Order or sequence identifier</td>
+      <td>order_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>itbld</td>
+      <td>IT Planning layout</td>
+      <td>it_planning_layout</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>preas</td>
+      <td>Processing reason</td>
+      <td>processing_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>flag1</td>
+      <td>Custom flag 1</td>
+      <td>custom_flag_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>flag2</td>
+      <td>Custom flag 2</td>
+      <td>custom_flag_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>flag3</td>
+      <td>Custom flag 3</td>
+      <td>custom_flag_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>flag4</td>
+      <td>Custom flag 4</td>
+      <td>custom_flag_4</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>rese1</td>
+      <td>Reserved field 1</td>
+      <td>reserved_field_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>rese2</td>
+      <td>Reserved field 2</td>
+      <td>reserved_field_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>grpvl</td>
+      <td>Employee group</td>
+      <td>grpvl</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>bukrs</td>
+      <td>Company code</td>
+      <td>company_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>werks</td>
+      <td>Personnel area (often plant or location)</td>
+      <td>personnel_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>persg</td>
+      <td>Employee group</td>
+      <td>persg</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>persk</td>
+      <td>Employee subgroup</td>
+      <td>employee_subgroup</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>vdsk1</td>
+      <td>Distribution key</td>
+      <td>distribution_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>gsber</td>
+      <td>Business area</td>
+      <td>business_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>btrtl</td>
+      <td>Personnel subarea</td>
+      <td>personnel_subarea</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>juper</td>
+      <td>Payroll period</td>
+      <td>payroll_period</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>abkrs</td>
+      <td>Work schedule rule</td>
+      <td>work_schedule_rule</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>ansvh</td>
+      <td>Reason for action</td>
+      <td>action_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>kostl</td>
+      <td>Cost center</td>
+      <td>cost_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>orgeh</td>
+      <td>Organizational unit identifier</td>
+      <td>org_unit_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>plans</td>
+      <td>Position identifier</td>
+      <td>position_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>stell</td>
+      <td>Job identifier</td>
+      <td>job_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>mstbr</td>
+      <td>Payroll area</td>
+      <td>mstbr</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>sacha</td>
+      <td>Wage type</td>
+      <td>wage_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>sachp</td>
+      <td>Payroll area</td>
+      <td>sachp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>sachz</td>
+      <td>Time constraint</td>
+      <td>time_constraint</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>sname</td>
+      <td>Employee name</td>
+      <td>sname</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>ename</td>
+      <td>Employee name</td>
+      <td>ename</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>otype</td>
+      <td>Object type</td>
+      <td>object_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>sbmod</td>
+      <td>Payroll modifier</td>
+      <td>payroll_modifier</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>kokrs</td>
+      <td>Controlling area</td>
+      <td>controlling_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>fistl</td>
+      <td>Funds center</td>
+      <td>funds_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>geber</td>
+      <td>Fund</td>
+      <td>fund</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>fkber</td>
+      <td>Functional area</td>
+      <td>functional_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>grant_nbr</td>
+      <td>Grant number</td>
+      <td>grant_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>sgmnt</td>
+      <td>Segment identifier</td>
+      <td>segment_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>budget_pd</td>
+      <td>Budget period</td>
+      <td>budget_period</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record has been deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>3</b> columns have erroneous values<br><ol><li><b>employee_subgroup</b>: 'gc' is unusual because it's a single, ambiguous code that doesn't clearly indicate its meaning for employee subgroups.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'gc'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>ename</b>: 'austin powers' lacks capitalization and title, while 'mr bruce wayne' and 'mr sponge bob' have inconsistent title formatting.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>austin powers</td>
+      <td>Mr. Austin Powers</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>mr bruce wayne</td>
+      <td>Mr. Bruce Wayne</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>mr sponge bob</td>
+      <td>Mr. Sponge Bob</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>object_type</b>: 's' is unusual because it's a single letter that doesn't clearly indicate what object type it represents.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'s'</td>
+      <td>'star'</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>39</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>action_reason</td>
+      <td>CAST("action_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the 'action_reason' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently DECIMAL, casting it to VARCHAR will preserve the original values as strings.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>budget_period</td>
+      <td>CAST("budget_period" AS VARCHAR)</td>
+      <td>To transform the data type of the 'budget_period' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>business_area</td>
+      <td>CAST("business_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'business_area' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(column_name AS new_data_type). In this case, we're casting 'business_area' to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>client</td>
+      <td>CAST("client" AS VARCHAR)</td>
+      <td>To transform the data type of the 'client' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'client' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>company_code</td>
+      <td>CAST("company_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'company_code' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only numeric values (specifically 2000), casting it to VARCHAR will convert these numbers into their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>controlling_area</td>
+      <td>CAST("controlling_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'controlling_area' column from 'INT' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the integer values to their string representation. Since DuckDB follows SQL standards, the CAST function is straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>cost_center</td>
+      <td>CAST("cost_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cost_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>custom_flag_1</td>
+      <td>CAST("custom_flag_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_1' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>custom_flag_2</td>
+      <td>CAST("custom_flag_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_2' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert all numeric values in the column to their string representations. Since the column has no distinct values (it's empty or all values are NULL), this transformation will effectively create a column of empty strings or NULL values, depending on the original content.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>custom_flag_3</td>
+      <td>CAST("custom_flag_3" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_3' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB). This transformation will preserve the numeric value as a string representation.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>custom_flag_4</td>
+      <td>CAST("custom_flag_4" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_4' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>distribution_key</td>
+      <td>CAST("distribution_key" AS VARCHAR)</td>
+      <td>To transform the data type of the 'distribution_key' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_data_type). In this case, we're casting the 'distribution_key' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>functional_area</td>
+      <td>CAST("functional_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'functional_area' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>fund</td>
+      <td>CAST("fund" AS VARCHAR)</td>
+      <td>To transform the data type of the 'fund' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward: CAST(column_name AS new_data_type).\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>funds_center</td>
+      <td>CAST("funds_center" AS VARCHAR)</td>
+      <td>To transform the data type of the 'funds_center' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this transformation is straightforward. We'll use the CAST function to convert the DECIMAL values to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>grant_number</td>
+      <td>CAST("grant_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'grant_number' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the question specifies using a simple cast clause, we'll use the standard CAST syntax.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>grpvl</td>
+      <td>CAST("grpvl" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'grpvl' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>is_historical</td>
+      <td>CAST("is_historical" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_historical' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We don't need to specify a length for VARCHAR in DuckDB, as it dynamically allocates the necessary space.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>it_planning_layout</td>
+      <td>CAST("it_planning_layout" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'it_planning_layout' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values (as indicated by the empty list), this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>job_id</td>
+      <td>CAST("job_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'job_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer (INT) to a variable-length character string (VARCHAR). The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>last_changed_date</td>
+      <td>strptime(CAST("last_changed_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'last_changed_date' column from INT to DATE, we need to first cast the integer to a VARCHAR, and then use the strptime function to parse the string into a DATE. The format of the date strings is 'YYYYMMDD', which corresponds to the format string '%Y%m%d' in the strptime function.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>lock_indicator</td>
+      <td>CAST("lock_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the 'lock_indicator' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, then AS, and finally the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>mstbr</td>
+      <td>CAST("mstbr" AS VARCHAR)</td>
+      <td>To transform the data type of the 'mstbr' column from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters since we're converting to a string type.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>object_specification</td>
+      <td>CAST("object_specification" AS VARCHAR)</td>
+      <td>To transform the data type of the column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. Since the column 'object_specification' is currently a DECIMAL and we want to convert it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>order_id</td>
+      <td>CAST("order_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'order_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the desired data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>org_unit_id</td>
+      <td>CAST("org_unit_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'org_unit_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function is straightforward and doesn't require any additional formatting or manipulation of the data.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>payroll_period</td>
+      <td>CAST("payroll_period" AS VARCHAR)</td>
+      <td>To transform the data type of the 'payroll_period' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>position_id</td>
+      <td>CAST("position_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'position_id' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>processing_reason</td>
+      <td>CAST("processing_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the 'processing_reason' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>reference_id</td>
+      <td>CAST("reference_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'reference_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. This transformation is straightforward and doesn't require any additional processing since we're just changing how the data is stored and interpreted by the database.\n</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>reserved_field_1</td>
+      <td>CAST("reserved_field_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reserved_field_1' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>reserved_field_2</td>
+      <td>CAST("reserved_field_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reserved_field_2' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the data type of an expression to a specified target data type. In this case, we're converting from DECIMAL to VARCHAR. Since the column has no distinct values (it's empty), this transformation should not affect any existing data.\n</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>segment_id</td>
+      <td>CAST("segment_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'segment_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Even though the column currently has no distinct values, this cast will ensure that any future values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>subtype</td>
+      <td>CAST("subtype" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subtype' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. Since the column is already of type DECIMAL, we can directly cast it to VARCHAR without any additional formatting or manipulation. This will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>tax_exemption</td>
+      <td>CAST("tax_exemption" AS VARCHAR)</td>
+      <td>To transform the data type of the 'tax_exemption' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>time_constraint</td>
+      <td>CAST("time_constraint" AS VARCHAR)</td>
+      <td>To transform the data type of the 'time_constraint' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>valid_from</td>
+      <td>strptime(CAST("valid_from" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'valid_from' column from INT to DATE in DuckDB, we need to: 1. First, cast the integer to a VARCHAR (string). 2. Then, use the strptime function to parse the string into a DATE. 3. The format '%Y%m%d' matches the structure of our integer dates (YYYYMMDD).\n</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>valid_to</td>
+      <td>strptime(CAST("valid_to" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'valid_to' column from INT to DATE, we need to: 1. Cast the integer to a VARCHAR first, as the strptime function requires a string input. 2. Use the strptime function to parse the string into a DATE. 3. The format '%Y%m%d' is used because the date is in the format YYYYMMDD. 4. We don't need to explicitly CAST to DATE at the end because strptime returns a DATE type.\n</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>wage_type</td>
+      <td>CAST("wage_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'wage_type' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column is already named 'wage_type', we don't need to rename it in this transformation.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>29</b> columns have missing values<br>
+                    ✔️ <b>3</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>action_reason</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>budget_period</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>business_area</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>cost_center</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>custom_flag_1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>custom_flag_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>custom_flag_3</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>custom_flag_4</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>functional_area</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>fund</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>funds_center</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>grant_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>grpvl</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>is_historical</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Current records are not historical by definition.</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>it_planning_layout</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>lock_indicator</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Unlocked records don't need a lock indicator.</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>mstbr</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>object_specification</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>order_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>payroll_period</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>processing_reason</td>
+      <td>100</td>
+      <td>True</td>
+      <td>No special processing needed for these standard records.</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>reference_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>reserved_field_1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>reserved_field_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>segment_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>subtype</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>tax_exemption</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>time_constraint</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>wage_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>action_reason</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>budget_period</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>business_area</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>cost_center</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>custom_flag_1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>custom_flag_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>custom_flag_3</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>custom_flag_4</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>functional_area</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>fund</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>funds_center</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>grant_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>grpvl</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>it_planning_layout</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>mstbr</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>object_specification</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>order_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>payroll_period</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>reference_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>reserved_field_1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>reserved_field_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>segment_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>subtype</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>tax_exemption</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>time_constraint</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>wage_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 11.5, 'y': 1}, {'x': 14.5, 'y': 0}, {'x': 17.5, 'y': 0}];
+    binWidth = 3.0;
+    drawHistogram("hist_viz_employee_id", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_sequence_number", data, binWidth);
+data = [{'label': 'c5115457', 'value': 66.66666666666666}, {'label': 'powersa', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_user_name", data);
+data = [{'x': 200, 'y': 3}];
+    binWidth = 200;
+    drawHistogram("hist_viz_personnel_area", data, binWidth);
+data = [{'x': 1, 'y': 3}];
+    binWidth = 1;
+    drawHistogram("hist_viz_persg", data, binWidth);
+data = [{'label': 'gc', 'value': 100.0}];
+    drawBarChart("bar_viz_employee_subgroup", data);
+data = [{'x': 2, 'y': 3}];
+    binWidth = 2;
+    drawHistogram("hist_viz_personnel_subarea", data, binWidth);
+data = [{'label': 'g1', 'value': 100.0}];
+    drawBarChart("bar_viz_work_schedule_rule", data);
+data = [{'x': 3, 'y': 3}];
+    binWidth = 3;
+    drawHistogram("hist_viz_sachp", data, binWidth);
+data = [{'label': 'powers austin', 'value': 33.33333333333333}, {'label': 'bob sponge', 'value': 33.33333333333333}, {'label': 'wayne bruce', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_sname", data);
+data = [{'label': 'Mr. Austin Powe...', 'value': 33.33333333333333}, {'label': 'Mr. Sponge Bob', 'value': 33.33333333333333}, {'label': 'Mr. Bruce Wayne', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_ename", data);
+data = [{'label': 's', 'value': 100.0}];
+    drawBarChart("bar_viz_object_type", data);
+data = [{'x': 200, 'y': 3}];
+    binWidth = 200;
+    drawHistogram("hist_viz_payroll_modifier", data, binWidth);
+data = [{'x': 1.05, 'y': 1}, {'x': 1.15, 'y': 0}, {'x': 1.25, 'y': 0}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': '800', 'value': 100.0}];
+    drawBarChart("bar_viz_client", data);
+data = [{'label': '2000', 'value': 100.0}];
+    drawBarChart("bar_viz_company_code", data);
+data = [{'label': '1000', 'value': 100.0}];
+    drawBarChart("bar_viz_controlling_area", data);
+data = [{'label': '200', 'value': 100.0}];
+    drawBarChart("bar_viz_distribution_key", data);
+data = [];
+    drawBarChart("bar_viz_is_historical", data);
+data = [{'label': '50029038', 'value': 33.33333333333333}, {'label': '50043146', 'value': 33.33333333333333}, {'label': '50016575', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_job_id", data);
+data = [{'label': '2011-11-14 00:0...', 'value': 66.66666666666666}, {'label': '2003-05-07 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_last_changed_date", data);
+data = [];
+    drawBarChart("bar_viz_lock_indicator", data);
+data = [{'label': '50002214', 'value': 66.66666666666666}, {'label': '50001357', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_org_unit_id", data);
+data = [{'label': '50005214', 'value': 33.33333333333333}, {'label': '50005687', 'value': 33.33333333333333}, {'label': '50005691', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_position_id", data);
+data = [];
+    drawBarChart("bar_viz_processing_reason", data);
+data = [{'label': '2003-01-01 00:0...', 'value': 66.66666666666666}, {'label': '2002-01-01 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_valid_from", data);
+data = [{'label': '9999-12-31 00:0...', 'value': 100.0}];
+    drawBarChart("bar_viz_valid_to", data);
+
+
+</script>
+</body>
+</html>

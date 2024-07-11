@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_pa0007_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>mandt</th>
+      <th>pernr</th>
+      <th>seqnr</th>
+      <th>uname</th>
+      <th>schkz</th>
+      <th>zterf</th>
+      <th>empct</th>
+      <th>mostd</th>
+      <th>wostd</th>
+      <th>arbst</th>
+      <th>wkwdy</th>
+      <th>jrstd</th>
+      <th>minta</th>
+      <th>maxta</th>
+      <th>minwo</th>
+      <th>maxwo</th>
+      <th>minmo</th>
+      <th>maxmo</th>
+      <th>minja</th>
+      <th>maxja</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>dysch</th>
+      <th>aedtm</th>
+      <th>begda</th>
+      <th>endda</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>800</td>
+      <td>80052</td>
+      <td>0</td>
+      <td>C5174732</td>
+      <td>norm</td>
+      <td>0</td>
+      <td>100.0</td>
+      <td>173.34</td>
+      <td>40.0</td>
+      <td>8.0</td>
+      <td>5.0</td>
+      <td>2080.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1414</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>20121029</td>
+      <td>19911215</td>
+      <td>99991231</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>800</td>
+      <td>80053</td>
+      <td>0</td>
+      <td>C5174732</td>
+      <td>norm</td>
+      <td>0</td>
+      <td>100.0</td>
+      <td>173.34</td>
+      <td>40.0</td>
+      <td>8.0</td>
+      <td>5.0</td>
+      <td>2080.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1415</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>20121029</td>
+      <td>19920315</td>
+      <td>99991231</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>800</td>
+      <td>1003</td>
+      <td>0</td>
+      <td>LIMPERT</td>
+      <td>flex</td>
+      <td>0</td>
+      <td>100.0</td>
+      <td>156.48</td>
+      <td>36.0</td>
+      <td>7.2</td>
+      <td>5.0</td>
+      <td>1879.2</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>12</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>19950531</td>
+      <td>19940101</td>
+      <td>99991231</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>client_id</th>
+      <th>employee_id</th>
+      <th>sequence_number</th>
+      <th>last_modified_by</th>
+      <th>schedule_type</th>
+      <th>time_recording_indicator</th>
+      <th>employment_percentage</th>
+      <th>monthly_hours</th>
+      <th>weekly_hours</th>
+      <th>daily_hours</th>
+      <th>workdays_per_week</th>
+      <th>yearly_hours</th>
+      <th>min_daily_hours</th>
+      <th>max_daily_hours</th>
+      <th>min_weekly_hours</th>
+      <th>max_weekly_hours</th>
+      <th>min_monthly_hours</th>
+      <th>max_monthly_hours</th>
+      <th>min_yearly_hours</th>
+      <th>max_yearly_hours</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>dynamic_scheduling</th>
+      <th>last_modified_date</th>
+      <th>valid_from_date</th>
+      <th>valid_to_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>800</td>
+      <td>80052</td>
+      <td>0</td>
+      <td>C5174732</td>
+      <td>norm</td>
+      <td>0</td>
+      <td>100.0</td>
+      <td>173.34</td>
+      <td>40.0</td>
+      <td>8.0</td>
+      <td>5.0</td>
+      <td>2080.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1414</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2012-10-29</td>
+      <td>1991-12-15</td>
+      <td>9999-12-31</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>800</td>
+      <td>80053</td>
+      <td>0</td>
+      <td>C5174732</td>
+      <td>norm</td>
+      <td>0</td>
+      <td>100.0</td>
+      <td>173.34</td>
+      <td>40.0</td>
+      <td>8.0</td>
+      <td>5.0</td>
+      <td>2080.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1415</td>
+      <td>False</td>
+      <td>None</td>
+      <td>2012-10-29</td>
+      <td>1992-03-15</td>
+      <td>9999-12-31</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>800</td>
+      <td>1003</td>
+      <td>0</td>
+      <td>LIMPERT</td>
+      <td>flex</td>
+      <td>0</td>
+      <td>100.0</td>
+      <td>156.48</td>
+      <td>36.0</td>
+      <td>7.2</td>
+      <td>5.0</td>
+      <td>1879.2</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>12</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1995-05-31</td>
+      <td>1994-01-01</td>
+      <td>9999-12-31</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_client_id"></div><b>📃 Summary:</b> Client identifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">employee_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_employee_id"></div><b>📃 Summary:</b> Employee personnel number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sequence_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sequence_number"></div><b>📃 Summary:</b> Sequence number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_by</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_by"></div><b>📃 Summary:</b> User who last changed the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">schedule_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='norm'>norm</option><option value='flex'>flex</option><option value='part-time'>part-time</option><option value='shift'>shift</option></select></span><br><br><div id="bar_viz_schedule_type"></div><b>📃 Summary:</b> Work schedule type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">time_recording_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_time_recording_indicator"></div><b>📃 Summary:</b> Time recording indicator<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">employment_percentage</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_employment_percentage"></div><b>📃 Summary:</b> Employment percentage<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">monthly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_monthly_hours"></div><b>📃 Summary:</b> Monthly working hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">weekly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_weekly_hours"></div><b>📃 Summary:</b> Weekly working hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">daily_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_daily_hours"></div><b>📃 Summary:</b> Daily working hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">workdays_per_week</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_workdays_per_week"></div><b>📃 Summary:</b> Workdays per week<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">yearly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_yearly_hours"></div><b>📃 Summary:</b> Yearly working hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">min_daily_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_min_daily_hours"></div><b>📃 Summary:</b> Minimum daily hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">max_daily_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_max_daily_hours"></div><b>📃 Summary:</b> Maximum daily hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">min_weekly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_min_weekly_hours"></div><b>📃 Summary:</b> Minimum weekly hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">max_weekly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_max_weekly_hours"></div><b>📃 Summary:</b> Maximum weekly hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">min_monthly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_min_monthly_hours"></div><b>📃 Summary:</b> Minimum monthly hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">max_monthly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_max_monthly_hours"></div><b>📃 Summary:</b> Maximum monthly hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">min_yearly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_min_yearly_hours"></div><b>📃 Summary:</b> Minimum yearly hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">max_yearly_hours</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_max_yearly_hours"></div><b>📃 Summary:</b> Maximum yearly hours<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><b>🦄 Unique:</b> This column appears to be a unique identifier for each row in the table. For this table, each row represents a distinct work schedule entry. The row_id is likely to be unique across all rows, making it a suitable candidate key.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">dynamic_scheduling</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_dynamic_scheduling"></div><b>📃 Summary:</b> Dynamic scheduling indicator<br><b>❓ Missing:</b> Not applicable for standard or fixed scheduling types.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_modified_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_modified_date"></div><b>📃 Summary:</b> Date of last change<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">valid_from_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_valid_from_date"></div><b>📃 Summary:</b> Start date of validity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">valid_to_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_valid_to_date"></div><b>📃 Summary:</b> End date of validity<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about employee work schedules. It contains details such as employee number (pernr), start and end dates (begda, endda), work schedule type (schkz), employment percentage (empct), weekly hours (wostd), daily hours (arbst), and yearly hours (jrstd). The table also includes fields for minimum and maximum hours per day, week, month, and year. Additional fields store administrative information like creation date (aedtm) and user (uname).<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>46</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>begda</td>
+      <td>Start date of validity</td>
+      <td>valid_from_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>endda</td>
+      <td>End date of validity</td>
+      <td>valid_to_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>mandt</td>
+      <td>Client identifier</td>
+      <td>client_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>objps</td>
+      <td>Object for personnel calculation</td>
+      <td>personnel_calculation_object</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>pernr</td>
+      <td>Employee personnel number</td>
+      <td>employee_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>seqnr</td>
+      <td>Sequence number</td>
+      <td>sequence_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>sprps</td>
+      <td>Lock indicator</td>
+      <td>lock_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>subty</td>
+      <td>Subtype</td>
+      <td>subtype</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>aedtm</td>
+      <td>Date of last change</td>
+      <td>last_modified_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>uname</td>
+      <td>User who last changed the record</td>
+      <td>last_modified_by</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>histo</td>
+      <td>Historical record indicator</td>
+      <td>is_historical</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>itxex</td>
+      <td>Integration time execution</td>
+      <td>integration_time_execution</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>refex</td>
+      <td>Reference to external system</td>
+      <td>external_reference</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>ordex</td>
+      <td>Order of execution</td>
+      <td>execution_order</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>itbld</td>
+      <td>Integration time building</td>
+      <td>integration_time_building</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>preas</td>
+      <td>Reason code</td>
+      <td>reason_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>flag1</td>
+      <td>Custom flag 1</td>
+      <td>custom_flag_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>flag2</td>
+      <td>Custom flag 2</td>
+      <td>custom_flag_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>flag3</td>
+      <td>Custom flag 3</td>
+      <td>custom_flag_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>flag4</td>
+      <td>Custom flag 4</td>
+      <td>custom_flag_4</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>rese1</td>
+      <td>Reserve field 1</td>
+      <td>reserve_field_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>rese2</td>
+      <td>Reserve field 2</td>
+      <td>reserve_field_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>grpvl</td>
+      <td>Group value</td>
+      <td>group_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>schkz</td>
+      <td>Work schedule type</td>
+      <td>schedule_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>zterf</td>
+      <td>Time recording indicator</td>
+      <td>time_recording_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>empct</td>
+      <td>Employment percentage</td>
+      <td>employment_percentage</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>mostd</td>
+      <td>Monthly working hours</td>
+      <td>monthly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>wostd</td>
+      <td>Weekly working hours</td>
+      <td>weekly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>arbst</td>
+      <td>Daily working hours</td>
+      <td>daily_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>wkwdy</td>
+      <td>Workdays per week</td>
+      <td>workdays_per_week</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>jrstd</td>
+      <td>Yearly working hours</td>
+      <td>yearly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>teilk</td>
+      <td>Part-time indicator</td>
+      <td>part_time_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>minta</td>
+      <td>Minimum daily hours</td>
+      <td>min_daily_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>maxta</td>
+      <td>Maximum daily hours</td>
+      <td>max_daily_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>minwo</td>
+      <td>Minimum weekly hours</td>
+      <td>min_weekly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>maxwo</td>
+      <td>Maximum weekly hours</td>
+      <td>max_weekly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>minmo</td>
+      <td>Minimum monthly hours</td>
+      <td>min_monthly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>maxmo</td>
+      <td>Maximum monthly hours</td>
+      <td>max_monthly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>minja</td>
+      <td>Minimum yearly hours</td>
+      <td>min_yearly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>maxja</td>
+      <td>Maximum yearly hours</td>
+      <td>max_yearly_hours</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>dysch</td>
+      <td>Dynamic scheduling indicator</td>
+      <td>dynamic_scheduling</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>kztim</td>
+      <td>Time management indicator</td>
+      <td>time_management_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>wweek</td>
+      <td>Work week definition</td>
+      <td>work_week_definition</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>awtyp</td>
+      <td>Type of working time</td>
+      <td>work_time_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>24</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>custom_flag_1</td>
+      <td>CAST("custom_flag_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_1' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>custom_flag_2</td>
+      <td>CAST("custom_flag_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_2' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert all numeric values in the column to their string representations. Since the column has no distinct values (it's empty or all values are NULL), this transformation will effectively create a column of empty strings or NULL values, depending on the original content.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>custom_flag_3</td>
+      <td>CAST("custom_flag_3" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_3' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB). This transformation will preserve the numeric value as a string representation.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>custom_flag_4</td>
+      <td>CAST("custom_flag_4" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_4' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>dynamic_scheduling</td>
+      <td>CAST("dynamic_scheduling" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'dynamic_scheduling' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert data from one type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'dynamic_scheduling' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>execution_order</td>
+      <td>CAST("execution_order" AS VARCHAR)</td>
+      <td>To transform the data type of the 'execution_order' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. Since the column is already of type DECIMAL, we can directly cast it to VARCHAR without any additional processing. This transformation will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>external_reference</td>
+      <td>CAST("external_reference" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'external_reference' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This operation will convert the numeric values to their string representations. Since the column has no distinct values (as mentioned in the prompt), this transformation should not affect any existing data, but it will change the column's data type to allow for string inputs in the future.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>group_value</td>
+      <td>CAST("group_value" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'group_value' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>integration_time_building</td>
+      <td>CAST("integration_time_building" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'integration_time_building' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>integration_time_execution</td>
+      <td>CAST("integration_time_execution" AS VARCHAR)</td>
+      <td>To transform the data type of the 'integration_time_execution' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>is_historical</td>
+      <td>CAST("is_historical" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_historical' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We don't need to specify a length for VARCHAR in DuckDB, as it dynamically allocates the necessary space.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>last_modified_date</td>
+      <td>strptime(CAST("last_modified_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'last_modified_date' column from INT to DATE, we need to: 1. First, cast the integer to a VARCHAR (string) type. 2. Then, use the strptime function to parse the string into a DATE type. 3. The format string '%Y%m%d' matches the structure of our date integers (YYYYMMDD).\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>lock_indicator</td>
+      <td>CAST("lock_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the 'lock_indicator' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, then AS, and finally the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>part_time_indicator</td>
+      <td>CAST("part_time_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the 'part_time_indicator' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>personnel_calculation_object</td>
+      <td>CAST("personnel_calculation_object" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'personnel_calculation_object' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Since DuckDB uses standard SQL syntax for CAST operations, we can use the straightforward CAST(column AS new_type) format.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>reason_code</td>
+      <td>CAST("reason_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'reason_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column doesn't contain any distinct values (as mentioned in the prompt), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future if needed.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>reserve_field_1</td>
+      <td>CAST("reserve_field_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reserve_field_1' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>reserve_field_2</td>
+      <td>CAST("reserve_field_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reserve_field_2' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Since the column has no distinct values (it's empty), this transformation should not affect any existing data but will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>subtype</td>
+      <td>CAST("subtype" AS VARCHAR)</td>
+      <td>To transform the data type of the 'subtype' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. Since the column is already of type DECIMAL, we can directly cast it to VARCHAR without any additional formatting or manipulation. This will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>time_management_indicator</td>
+      <td>CAST("time_management_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'time_management_indicator' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function is used to convert a value from one data type to another. The syntax is straightforward and doesn't require any additional formatting or manipulation since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>valid_from_date</td>
+      <td>strptime(CAST("valid_from_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'valid_from_date' column from INT to DATE in DuckDB, we need to: 1. First, cast the integer to a VARCHAR (string) type. 2. Then, use the strptime function to parse the string into a DATE type. 3. The format string '%Y%m%d' matches the structure of our date integers (YYYYMMDD).\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>valid_to_date</td>
+      <td>strptime(CAST("valid_to_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'valid_to_date' column from INT to DATE, we need to: 1. Cast the integer to a string (VARCHAR) to ensure proper formatting. 2. Use the strptime function to parse the string into a date. 3. Use the format '%Y%m%d' as the date is in YYYYMMDD format. 4. Since all values are 99991231, which represents a far future date often used to indicate "no end date", we can directly cast it to DATE without using strptime.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>work_time_type</td>
+      <td>CAST("work_time_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'work_time_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>work_week_definition</td>
+      <td>CAST("work_week_definition" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'work_week_definition' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>21</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>custom_flag_1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>custom_flag_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>custom_flag_3</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>custom_flag_4</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>dynamic_scheduling</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for standard or fixed scheduling types.</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>execution_order</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>external_reference</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>group_value</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>integration_time_building</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>integration_time_execution</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>is_historical</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>lock_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>part_time_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>personnel_calculation_object</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>reason_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>reserve_field_1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>reserve_field_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>subtype</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>time_management_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>work_time_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>work_week_definition</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>custom_flag_1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>custom_flag_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>custom_flag_3</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>custom_flag_4</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>execution_order</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>external_reference</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>group_value</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>integration_time_building</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>integration_time_execution</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>is_historical</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>lock_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>part_time_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>personnel_calculation_object</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>reason_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>reserve_field_1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>reserve_field_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>subtype</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>time_management_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>work_time_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>work_week_definition</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 800, 'y': 3}];
+    binWidth = 800;
+    drawHistogram("hist_viz_client_id", data, binWidth);
+data = [{'x': 2979.25, 'y': 1}, {'x': 6931.75, 'y': 0}, {'x': 10884.25, 'y': 0}];
+    binWidth = 3952.5;
+    drawHistogram("hist_viz_employee_id", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_sequence_number", data, binWidth);
+data = [{'label': 'C5174732', 'value': 66.66666666666666}, {'label': 'LIMPERT', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_last_modified_by", data);
+data = [{'label': 'norm', 'value': 66.66666666666666}, {'label': 'flex', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_schedule_type", data);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_time_recording_indicator", data, binWidth);
+data = [{'x': 100.0, 'y': 3}];
+    binWidth = 100.0;
+    drawHistogram("hist_viz_employment_percentage", data, binWidth);
+data = [{'x': 156.9015, 'y': 1}, {'x': 157.7445, 'y': 0}, {'x': 158.58749999999998, 'y': 0}];
+    binWidth = 0.8430000000000006;
+    drawHistogram("hist_viz_monthly_hours", data, binWidth);
+data = [{'x': 36.1, 'y': 1}, {'x': 36.3, 'y': 0}, {'x': 36.5, 'y': 0}];
+    binWidth = 0.2;
+    drawHistogram("hist_viz_weekly_hours", data, binWidth);
+data = [{'x': 7.220000000000001, 'y': 1}, {'x': 7.26, 'y': 0}, {'x': 7.300000000000001, 'y': 0}];
+    binWidth = 0.039999999999999994;
+    drawHistogram("hist_viz_daily_hours", data, binWidth);
+data = [{'x': 5.0, 'y': 3}];
+    binWidth = 5.0;
+    drawHistogram("hist_viz_workdays_per_week", data, binWidth);
+data = [{'x': 1884.22, 'y': 1}, {'x': 1894.26, 'y': 0}, {'x': 1904.3, 'y': 0}];
+    binWidth = 10.039999999999997;
+    drawHistogram("hist_viz_yearly_hours", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_min_daily_hours", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_max_daily_hours", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_min_weekly_hours", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_max_weekly_hours", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_min_monthly_hours", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_max_monthly_hours", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_min_yearly_hours", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_max_yearly_hours", data, binWidth);
+data = [{'x': 47.075, 'y': 1}, {'x': 117.22500000000001, 'y': 0}, {'x': 187.375, 'y': 0}];
+    binWidth = 70.15;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [];
+    drawBarChart("bar_viz_dynamic_scheduling", data);
+data = [{'label': '2012-10-29 00:0...', 'value': 66.66666666666666}, {'label': '1995-05-31 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_last_modified_date", data);
+data = [{'label': '1992-03-15 00:0...', 'value': 33.33333333333333}, {'label': '1991-12-15 00:0...', 'value': 33.33333333333333}, {'label': '1994-01-01 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_valid_from_date", data);
+data = [{'label': '9999-12-31 00:0...', 'value': 100.0}];
+    drawBarChart("bar_viz_valid_to_date", data);
+
+
+</script>
+</body>
+</html>

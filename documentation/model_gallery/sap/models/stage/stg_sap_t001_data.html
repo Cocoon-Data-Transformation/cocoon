@@ -1,0 +1,3187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_t001_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>butxt</th>
+      <th>ort01</th>
+      <th>land1</th>
+      <th>waers</th>
+      <th>spras</th>
+      <th>ktopl</th>
+      <th>periv</th>
+      <th>rcomp</th>
+      <th>stceg</th>
+      <th>buvar</th>
+      <th>xfdis</th>
+      <th>xvalv</th>
+      <th>kkber</th>
+      <th>xgsbe</th>
+      <th>xgjrv</th>
+      <th>xkdft</th>
+      <th>xeink</th>
+      <th>xfdmm</th>
+      <th>xfdsd</th>
+      <th>ktop2</th>
+      <th>umkrs</th>
+      <th>wfvar</th>
+      <th>mwskv</th>
+      <th>mwska</th>
+      <th>impda</th>
+      <th>xnegp</th>
+      <th>wt_newwt</th>
+      <th>fstvare</th>
+      <th>xcos</th>
+      <th>xcession</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>adrnr</th>
+      <th>mandt</th>
+      <th>bukrs</th>
+      <th>kokfi</th>
+      <th>waabw</th>
+      <th>fikrs</th>
+      <th>fmhrdate</th>
+      <th>fstva</th>
+      <th>xfmca</th>
+      <th>offsacct</th>
+      <th>opvar</th>
+      <th>xfmco</th>
+      <th>xbbbe</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>novi grad</td>
+      <td>sokovia</td>
+      <td>so</td>
+      <td>eur</td>
+      <td>f</td>
+      <td>cafr</td>
+      <td>k4</td>
+      <td>2223.0</td>
+      <td>fr93341612697</td>
+      <td>2.0</td>
+      <td>x</td>
+      <td>x</td>
+      <td>2222.0</td>
+      <td>None</td>
+      <td>x</td>
+      <td>x</td>
+      <td>x</td>
+      <td>x</td>
+      <td>x</td>
+      <td>None</td>
+      <td>2200.0</td>
+      <td>NaN</td>
+      <td>v0</td>
+      <td>a0</td>
+      <td>2.0</td>
+      <td>x</td>
+      <td>x</td>
+      <td>None</td>
+      <td>2.0</td>
+      <td>x</td>
+      <td>336</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>811</td>
+      <td>3000</td>
+      <td>2</td>
+      <td>10</td>
+      <td>2222.0</td>
+      <td>0</td>
+      <td>2222</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>2222</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>florin city</td>
+      <td>florin</td>
+      <td>fn</td>
+      <td>eur</td>
+      <td>s</td>
+      <td>cape</td>
+      <td>k4</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2.0</td>
+      <td>None</td>
+      <td>x</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>x</td>
+      <td>None</td>
+      <td>x</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>c0</td>
+      <td>d0</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>x</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>46</td>
+      <td>False</td>
+      <td>21634.0</td>
+      <td>0</td>
+      <td>3000</td>
+      <td>2</td>
+      <td>10</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>1</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>kingdom of genovia</td>
+      <td>genovia</td>
+      <td>ga</td>
+      <td>eur</td>
+      <td>o</td>
+      <td>int</td>
+      <td>k4</td>
+      <td>1107.0</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>x</td>
+      <td>x</td>
+      <td>1000.0</td>
+      <td>x</td>
+      <td>x</td>
+      <td>x</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>gkr</td>
+      <td>1000.0</td>
+      <td>1000.0</td>
+      <td>v0</td>
+      <td>a0</td>
+      <td>NaN</td>
+      <td>x</td>
+      <td>None</td>
+      <td>fmre</td>
+      <td>2.0</td>
+      <td>x</td>
+      <td>114</td>
+      <td>False</td>
+      <td>66216.0</td>
+      <td>800</td>
+      <td>3000</td>
+      <td>2</td>
+      <td>10</td>
+      <td>NaN</td>
+      <td>20000101</td>
+      <td>1000</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>company_name</th>
+      <th>city</th>
+      <th>country_key</th>
+      <th>currency_key</th>
+      <th>language_key</th>
+      <th>chart_of_accounts</th>
+      <th>fiscal_year_variant</th>
+      <th>rcomp</th>
+      <th>vat_registration_number</th>
+      <th>business_transaction_variant</th>
+      <th>distribution_flag</th>
+      <th>valuation_flag</th>
+      <th>credit_control_area</th>
+      <th>business_area_flag</th>
+      <th>fiscal_year_variant_flag</th>
+      <th>customer_down_payment_flag</th>
+      <th>purchasing_company_code</th>
+      <th>mm_flag</th>
+      <th>sd_flag</th>
+      <th>interest_calculation_profit_center</th>
+      <th>sales_organization</th>
+      <th>cash_flow_variant</th>
+      <th>output_tax_category</th>
+      <th>input_tax_category</th>
+      <th>implementation_date</th>
+      <th>negative_postings_flag</th>
+      <th>new_withholding_tax</th>
+      <th>extended_funds_management_variant</th>
+      <th>xcos</th>
+      <th>factoring_indicator</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>address_number</th>
+      <th>client</th>
+      <th>company_code</th>
+      <th>controlling_to_fi_interface</th>
+      <th>exchange_rate_tolerance</th>
+      <th>financial_management_area</th>
+      <th>fiscal_year_variant_change_date</th>
+      <th>funds_management_variant</th>
+      <th>mgmt_consolidation_flag</th>
+      <th>offsetting_account</th>
+      <th>open_period_variant</th>
+      <th>pl_consolidation_flag</th>
+      <th>pl_statement_account</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>novi grad</td>
+      <td>sokovia</td>
+      <td>so</td>
+      <td>eur</td>
+      <td>f</td>
+      <td>cafr</td>
+      <td>k4</td>
+      <td>2223.0</td>
+      <td>fr93341612697</td>
+      <td>2.0</td>
+      <td>x</td>
+      <td>x</td>
+      <td>2222.0</td>
+      <td>None</td>
+      <td>x</td>
+      <td>x</td>
+      <td>x</td>
+      <td>x</td>
+      <td>x</td>
+      <td>None</td>
+      <td>2200.0</td>
+      <td>NaN</td>
+      <td>v0</td>
+      <td>a0</td>
+      <td>2.0</td>
+      <td>x</td>
+      <td>x</td>
+      <td>None</td>
+      <td>2.0</td>
+      <td>x</td>
+      <td>336</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>811</td>
+      <td>3000</td>
+      <td>2</td>
+      <td>10</td>
+      <td>2222.0</td>
+      <td>NaT</td>
+      <td>2222</td>
+      <td>None</td>
+      <td>0</td>
+      <td>2222</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>florin city</td>
+      <td>florin</td>
+      <td>fn</td>
+      <td>eur</td>
+      <td>s</td>
+      <td>cape</td>
+      <td>k4</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>2.0</td>
+      <td>None</td>
+      <td>x</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>x</td>
+      <td>None</td>
+      <td>x</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>c0</td>
+      <td>d0</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>x</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>None</td>
+      <td>46</td>
+      <td>False</td>
+      <td>21634.0</td>
+      <td>0</td>
+      <td>3000</td>
+      <td>2</td>
+      <td>10</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>1</td>
+      <td>None</td>
+      <td>0</td>
+      <td>1</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>kingdom of genovia</td>
+      <td>genovia</td>
+      <td>ga</td>
+      <td>eur</td>
+      <td>o</td>
+      <td>int</td>
+      <td>k4</td>
+      <td>1107.0</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>x</td>
+      <td>x</td>
+      <td>1000.0</td>
+      <td>x</td>
+      <td>x</td>
+      <td>x</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>gkr</td>
+      <td>1000.0</td>
+      <td>1000.0</td>
+      <td>v0</td>
+      <td>a0</td>
+      <td>NaN</td>
+      <td>x</td>
+      <td>None</td>
+      <td>fmre</td>
+      <td>2.0</td>
+      <td>x</td>
+      <td>114</td>
+      <td>False</td>
+      <td>66216.0</td>
+      <td>800</td>
+      <td>3000</td>
+      <td>2</td>
+      <td>10</td>
+      <td>None</td>
+      <td>2000-01-01</td>
+      <td>1000</td>
+      <td>None</td>
+      <td>0</td>
+      <td>1000</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">company_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_company_name"></div><b>📃 Summary:</b> Company Name<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">city</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_city"></div><b>📃 Summary:</b> City<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">country_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_country_key"></div><b>📃 Summary:</b> Country Key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency_key"></div><b>📃 Summary:</b> Currency key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">language_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='a'>a</option><option value='b'>b</option><option value='c'>c</option><option value='d'>d</option><option value='e'>e</option><option value='f'>f</option><option value='g'>g</option><option value='h'>h</option><option value='i'>i</option><option value='j'>j</option><option value='k'>k</option><option value='l'>l</option><option value='m'>m</option><option value='n'>n</option><option value='o'>o</option><option value='p'>p</option><option value='q'>q</option><option value='r'>r</option><option value='s'>s</option><option value='t'>t</option><option value='u'>u</option><option value='v'>v</option><option value='w'>w</option><option value='x'>x</option><option value='y'>y</option><option value='z'>z</option></select></span><br><br><div id="bar_viz_language_key"></div><b>📃 Summary:</b> Language key<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">chart_of_accounts</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_chart_of_accounts"></div><b>📃 Summary:</b> Chart of Accounts<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fiscal_year_variant</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='K4'>K4</option><option value='K1'>K1</option><option value='K2'>K2</option><option value='K3'>K3</option><option value='V1'>V1</option><option value='V2'>V2</option><option value='V3'>V3</option><option value='V4'>V4</option><option value='W1'>W1</option><option value='A1'>A1</option><option value='A2'>A2</option><option value='A3'>A3</option><option value='A4'>A4</option><option value='B1'>B1</option><option value='B2'>B2</option><option value='B3'>B3</option><option value='B4'>B4</option><option value='C1'>C1</option><option value='C2'>C2</option><option value='C3'>C3</option><option value='C4'>C4</option><option value='D1'>D1</option><option value='D2'>D2</option><option value='D3'>D3</option><option value='D4'>D4</option><option value='E1'>E1</option><option value='E2'>E2</option><option value='E3'>E3</option><option value='E4'>E4</option><option value='k4'>k4</option></select></span><br><br><div id="bar_viz_fiscal_year_variant"></div><b>📃 Summary:</b> Fiscal year variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">rcomp</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_rcomp"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">vat_registration_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_vat_registration_number"></div><b>📃 Summary:</b> VAT registration number<br><b>❓ Missing:</b> Not applicable for entities not registered for VAT<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">business_transaction_variant</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_business_transaction_variant"></div><b>📃 Summary:</b> Business Transaction Variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">distribution_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='x'>x</option><option value=''></option></select></span><br><br><div id="bar_viz_distribution_flag"></div><b>📃 Summary:</b> Flag for distribution<br><b>❓ Missing:</b> Not applicable if not involved in distribution<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">valuation_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='x'>x</option><option value=''></option></select></span><br><br><div id="bar_viz_valuation_flag"></div><b>📃 Summary:</b> Flag for valuation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">credit_control_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_credit_control_area"></div><b>📃 Summary:</b> Credit Control Area<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">business_area_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='x'>x</option><option value=''></option></select></span><br><br><div id="bar_viz_business_area_flag"></div><b>📃 Summary:</b> Flag for business area<br><b>❓ Missing:</b> Not applicable if business areas aren't used<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fiscal_year_variant_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='x'>x</option><option value=''></option></select></span><br><br><div id="bar_viz_fiscal_year_variant_flag"></div><b>📃 Summary:</b> Flag for fiscal year variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">customer_down_payment_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option><option value='x'>x</option></select></span><br><br><div id="bar_viz_customer_down_payment_flag"></div><b>📃 Summary:</b> Flag for customer down payment<br><b>❓ Missing:</b> Not applicable if down payments aren't accepted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">purchasing_company_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_purchasing_company_code"></div><b>📃 Summary:</b> Indicator for purchasing company code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">mm_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='x'>x</option><option value=' '> </option></select></span><br><br><div id="bar_viz_mm_flag"></div><b>📃 Summary:</b> Flag for materials management<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sd_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='x'>x</option><option value=''></option><option value='n'>n</option></select></span><br><br><div id="bar_viz_sd_flag"></div><b>📃 Summary:</b> Flag for sales and distribution<br><b>❓ Missing:</b> Not applicable for non-sales related entries<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">interest_calculation_profit_center</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_interest_calculation_profit_center"></div><b>📃 Summary:</b> Profit Center for Interest Calculation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sales_organization</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_sales_organization"></div><b>📃 Summary:</b> Sales organization<br><b>❓ Missing:</b> Not applicable for companies without sales operations<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">cash_flow_variant</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_cash_flow_variant"></div><b>📃 Summary:</b> Cash flow variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">output_tax_category</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_output_tax_category"></div><b>📃 Summary:</b> Tax category for output tax<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">input_tax_category</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_input_tax_category"></div><b>📃 Summary:</b> Tax category for input tax<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">implementation_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_implementation_date"></div><b>📃 Summary:</b> Implementation Date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">negative_postings_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='Y'>Y</option><option value='N'>N</option><option value='x'>x</option></select></span><br><br><div id="bar_viz_negative_postings_flag"></div><b>📃 Summary:</b> Flag for negative postings<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">new_withholding_tax</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='x'>x</option><option value=' '> </option></select></span><br><br><div id="bar_viz_new_withholding_tax"></div><b>📃 Summary:</b> New withholding tax indicator<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">extended_funds_management_variant</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='fmre'>fmre</option><option value='fmco'>fmco</option><option value='fmse'>fmse</option><option value='fmgp'>fmgp</option></select></span><br><br><div id="bar_viz_extended_funds_management_variant"></div><b>📃 Summary:</b> Extended Funds Management Variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">xcos</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_xcos"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">factoring_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-purple">accepted_values<select><option value='x'>x</option><option value=''></option></select></span><br><br><div id="bar_viz_factoring_indicator"></div><b>📃 Summary:</b> Indicator for factoring<br><b>❓ Missing:</b> Not applicable if factoring isn't used<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">address_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_address_number"></div><b>📃 Summary:</b> Address number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_client"></div><b>📃 Summary:</b> Client<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">company_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_company_code"></div><b>📃 Summary:</b> Company Code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">controlling_to_fi_interface</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_controlling_to_fi_interface"></div><b>📃 Summary:</b> Controlling to FI Interface<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">exchange_rate_tolerance</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_exchange_rate_tolerance"></div><b>📃 Summary:</b> Exchange rate difference tolerance percentage<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">financial_management_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_financial_management_area"></div><b>📃 Summary:</b> Financial Management Area<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fiscal_year_variant_change_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_fiscal_year_variant_change_date"></div><b>📃 Summary:</b> Fiscal Year Variant Change Date<br><b>❓ Missing:</b> Not applicable if fiscal year variant hasn't changed<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">funds_management_variant</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_funds_management_variant"></div><b>📃 Summary:</b> Funds Management Variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">mgmt_consolidation_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_mgmt_consolidation_flag"></div><b>📃 Summary:</b> Flag for management consolidation<br><b>❓ Missing:</b> Not applicable for non-consolidated management accounts<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">offsetting_account</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_offsetting_account"></div><b>📃 Summary:</b> Offsetting account number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">open_period_variant</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_open_period_variant"></div><b>📃 Summary:</b> Open period variant<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pl_consolidation_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_pl_consolidation_flag"></div><b>📃 Summary:</b> Flag for profit and loss consolidation<br><b>❓ Missing:</b> Not applicable for non-consolidated profit and loss accounts<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pl_statement_account</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_pl_statement_account"></div><b>📃 Summary:</b> Indicator for P&L statement account<br><b>❓ Missing:</b> Not applicable if not a profit and loss account<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about company codes in an SAP system. It contains details like company code (bukrs), client (mandt), company name (butxt), city (ort01), country (land1), and currency (waers). It also includes various configuration flags and settings related to financial accounting, controlling, and other business processes for each company code.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>77</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>bukrs</td>
+      <td>Company Code</td>
+      <td>company_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>mandt</td>
+      <td>Client</td>
+      <td>client</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>butxt</td>
+      <td>Company Name</td>
+      <td>company_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>ort01</td>
+      <td>City</td>
+      <td>city</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>land1</td>
+      <td>Country Key</td>
+      <td>country_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>waers</td>
+      <td>Currency key</td>
+      <td>currency_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>spras</td>
+      <td>Language key</td>
+      <td>language_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>ktopl</td>
+      <td>Chart of Accounts</td>
+      <td>chart_of_accounts</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>waabw</td>
+      <td>Exchange rate difference tolerance percentage</td>
+      <td>exchange_rate_tolerance</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>periv</td>
+      <td>Fiscal year variant</td>
+      <td>fiscal_year_variant</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>kokfi</td>
+      <td>Controlling to FI Interface</td>
+      <td>controlling_to_fi_interface</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>rcomp</td>
+      <td>Company code of consolidation unit</td>
+      <td>rcomp</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>adrnr</td>
+      <td>Address number</td>
+      <td>address_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>stceg</td>
+      <td>VAT registration number</td>
+      <td>vat_registration_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>fikrs</td>
+      <td>Financial Management Area</td>
+      <td>financial_management_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>xfmco</td>
+      <td>Flag for profit and loss consolidation</td>
+      <td>pl_consolidation_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>xfmcb</td>
+      <td>Flag for balance sheet consolidation</td>
+      <td>balance_sheet_consolidation_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>xfmca</td>
+      <td>Flag for management consolidation</td>
+      <td>mgmt_consolidation_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>txjcd</td>
+      <td>Tax jurisdiction code</td>
+      <td>tax_jurisdiction_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>fmhrdate</td>
+      <td>Fiscal Year Variant Change Date</td>
+      <td>fiscal_year_variant_change_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>buvar</td>
+      <td>Business Transaction Variant</td>
+      <td>business_transaction_variant</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>fdbuk</td>
+      <td>FM Company Code</td>
+      <td>fm_company_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>xfdis</td>
+      <td>Flag for distribution</td>
+      <td>distribution_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>xvalv</td>
+      <td>Flag for valuation</td>
+      <td>valuation_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>xskfn</td>
+      <td>Flag for special G/L transactions</td>
+      <td>special_gl_transactions_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>kkber</td>
+      <td>Credit Control Area</td>
+      <td>credit_control_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>xmwsn</td>
+      <td>Flag for value-added tax</td>
+      <td>vat_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>mregl</td>
+      <td>Regulation method for material ledger</td>
+      <td>material_ledger_regulation</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>xgsbe</td>
+      <td>Flag for business area</td>
+      <td>business_area_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>xgjrv</td>
+      <td>Flag for fiscal year variant</td>
+      <td>fiscal_year_variant_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>xkdft</td>
+      <td>Flag for customer down payment</td>
+      <td>customer_down_payment_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>xprod</td>
+      <td>Flag for production orders</td>
+      <td>production_orders_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>xeink</td>
+      <td>Indicator for purchasing company code</td>
+      <td>purchasing_company_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>xjvaa</td>
+      <td>Flag for joint venture accounting</td>
+      <td>joint_venture_accounting_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>xvvwa</td>
+      <td>Flag for foreign currency valuation</td>
+      <td>foreign_currency_valuation_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>xslta</td>
+      <td>Flag for contract management</td>
+      <td>contract_management_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>xfdmm</td>
+      <td>Flag for materials management</td>
+      <td>mm_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>xfdsd</td>
+      <td>Flag for sales and distribution</td>
+      <td>sd_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>xextb</td>
+      <td>Indicator for extended bookkeeping</td>
+      <td>extended_bookkeeping</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>ebukr</td>
+      <td>Consolidation Company Code</td>
+      <td>ebukr</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>ktop2</td>
+      <td>Profit Center for Interest Calculation</td>
+      <td>interest_calculation_profit_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>umkrs</td>
+      <td>Sales organization</td>
+      <td>sales_organization</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>bukrs_glob</td>
+      <td>Global Company Code</td>
+      <td>global_company_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>fstva</td>
+      <td>Funds Management Variant</td>
+      <td>funds_management_variant</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>opvar</td>
+      <td>Open period variant</td>
+      <td>open_period_variant</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>xcovr</td>
+      <td>Indicator for coverage</td>
+      <td>coverage_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>txkrs</td>
+      <td>Tax calculation procedure</td>
+      <td>tax_calculation_procedure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>wfvar</td>
+      <td>Cash flow variant</td>
+      <td>cash_flow_variant</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>xbbbf</td>
+      <td>Indicator for cash flow account</td>
+      <td>cash_flow_account</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>xbbbe</td>
+      <td>Indicator for P&amp;L statement account</td>
+      <td>pl_statement_account</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>xbbba</td>
+      <td>Indicator for balance sheet account</td>
+      <td>balance_sheet_account</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>xbbko</td>
+      <td>Indicator for cost accounting account</td>
+      <td>cost_accounting_account</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>xstdt</td>
+      <td>Flag for statistical postings</td>
+      <td>statistical_postings_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>mwskv</td>
+      <td>Tax category for output tax</td>
+      <td>output_tax_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>mwska</td>
+      <td>Tax category for input tax</td>
+      <td>input_tax_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>impda</td>
+      <td>Implementation Date</td>
+      <td>implementation_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>xnegp</td>
+      <td>Flag for negative postings</td>
+      <td>negative_postings_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>xkkbi</td>
+      <td>Flag for vendor down payment</td>
+      <td>vendor_down_payment_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>wt_newwt</td>
+      <td>New withholding tax indicator</td>
+      <td>new_withholding_tax</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>pp_pdate</td>
+      <td>Posting period end date</td>
+      <td>posting_period_end_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>infmt</td>
+      <td>Information System Format</td>
+      <td>information_system_format</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>fstvare</td>
+      <td>Extended Funds Management Variant</td>
+      <td>extended_funds_management_variant</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>kopim</td>
+      <td>Cost of Sales Accounting</td>
+      <td>kopim</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>dkweg</td>
+      <td>Dunning Procedure</td>
+      <td>dunning_procedure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>offsacct</td>
+      <td>Offsetting account number</td>
+      <td>offsetting_account</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>bapovar</td>
+      <td>Business Area Posting Variant</td>
+      <td>business_area_posting_variant</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>xcos</td>
+      <td>Indicator for cost of sales accounting</td>
+      <td>xcos</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>xcession</td>
+      <td>Indicator for factoring</td>
+      <td>factoring_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>xsplt</td>
+      <td>Flag for splitting</td>
+      <td>splitting_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>surccm</td>
+      <td>Surcharge calculation method</td>
+      <td>surcharge_calculation_method</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>dtprov</td>
+      <td>Document Type for Provisions</td>
+      <td>provisions_doc_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>dtamtc</td>
+      <td>Document Type for Automatic Clearing</td>
+      <td>auto_clearing_doc_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>dttaxc</td>
+      <td>Document Type for Tax Clearing</td>
+      <td>tax_clearing_doc_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>dttdsp</td>
+      <td>Document Type for Down Payment</td>
+      <td>down_payment_doc_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>dtaxr</td>
+      <td>Document Type for Automatic Tax Reporting</td>
+      <td>auto_tax_reporting_doc_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>xvatdate</td>
+      <td>Flag for VAT reporting date</td>
+      <td>vat_reporting_date_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>pst_per_var</td>
+      <td>Posting period variant</td>
+      <td>posting_period_variant</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>xbbsc</td>
+      <td>Indicator for statement of changes in equity</td>
+      <td>equity_changes_account</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>fm_derive_acc</td>
+      <td>FM Derive Accounts</td>
+      <td>fm_derive_accounts</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>7</b> columns have erroneous values<br><ol><li><b>country_key</b>: 'fn', 'ga', and 'so' are unusual because they don't correspond to standard country codes.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'fn'</td>
+      <td>'FI'</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>'ga'</td>
+      <td>'GA'</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>'so'</td>
+      <td>'SO'</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>distribution_flag</b>: 'x' is unusual because it's not descriptive and doesn't clearly indicate the purpose of the flag.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'x'</td>
+      <td>'distributed'</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>business_area_flag</b>: 'x' is unusual because it's not descriptive and doesn't represent a clear business area category.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'x'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>customer_down_payment_flag</b>: 'x' is unusual for a flag field; more descriptive values like 'true'/'false' or '0'/'1' are typically used.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'x'</td>
+      <td>'true'</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>purchasing_company_code</b>: 'x' is unusual because company codes typically use more descriptive or standardized formats.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'x'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>sd_flag</b>: 'x' is unusual because flags often use more meaningful values like 'true'/'false' or 'yes'/'no'.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'x'</td>
+      <td>'true'</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>new_withholding_tax</b>: 'x' is unusual because it's not a numeric value typically used for tax rates.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'x'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>49</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>address_number</td>
+      <td>CAST("address_number" AS INT)</td>
+      <td>To transform the data type of the 'address_number' column from DECIMAL to INT, we need to use the CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to INT. Since the values in the column are already whole numbers (despite being stored as DECIMAL), a simple CAST to INT will work without losing any information.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>auto_clearing_doc_type</td>
+      <td>CAST("auto_clearing_doc_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'auto_clearing_doc_type' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auto_tax_reporting_doc_type</td>
+      <td>CAST("auto_tax_reporting_doc_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'auto_tax_reporting_doc_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>balance_sheet_account</td>
+      <td>CAST("balance_sheet_account" AS VARCHAR)</td>
+      <td>To transform the data type of the 'balance_sheet_account' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional modifications since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>balance_sheet_consolidation_flag</td>
+      <td>CAST("balance_sheet_consolidation_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'balance_sheet_consolidation_flag' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>business_area_posting_variant</td>
+      <td>CAST("business_area_posting_variant" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'business_area_posting_variant' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>cash_flow_account</td>
+      <td>CAST("cash_flow_account" AS VARCHAR)</td>
+      <td>To transform the data type of the 'cash_flow_account' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (empty list provided), this transformation should not affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>client</td>
+      <td>CAST("client" AS VARCHAR)</td>
+      <td>To transform the data type of the 'client' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'client' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>company_code</td>
+      <td>CAST("company_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'company_code' column from 'INT' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each integer value to its string representation. Since the column only contains the value 3000, this will effectively change it from the integer 3000 to the string '3000'.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>contract_management_flag</td>
+      <td>CAST("contract_management_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the 'contract_management_flag' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>controlling_to_fi_interface</td>
+      <td>CAST("controlling_to_fi_interface" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'controlling_to_fi_interface' from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the integer column to a VARCHAR (variable-length character string) type.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>cost_accounting_account</td>
+      <td>CAST("cost_accounting_account" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'cost_accounting_account' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values, this transformation will not affect any existing data, but it will change the column's data type for future insertions or operations.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>coverage_indicator</td>
+      <td>CAST("coverage_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the 'coverage_indicator' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. \nNote that since the column has no distinct values (as mentioned in the prompt), this transformation will effectively change the data type of an empty column. The syntax remains the same regardless of the column's content.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>down_payment_doc_type</td>
+      <td>CAST("down_payment_doc_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'down_payment_doc_type' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>dunning_procedure</td>
+      <td>CAST("dunning_procedure" AS VARCHAR)</td>
+      <td>To transform the data type of the 'dunning_procedure' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ebukr</td>
+      <td>CAST("ebukr" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'ebukr' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>equity_changes_account</td>
+      <td>CAST("equity_changes_account" AS VARCHAR)</td>
+      <td>To transform the data type of the 'equity_changes_account' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column is currently empty (no distinct values), this transformation will not affect any existing data but will change the column's data type for future insertions.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>exchange_rate_tolerance</td>
+      <td>CAST("exchange_rate_tolerance" AS VARCHAR)</td>
+      <td>To transform the data type of the 'exchange_rate_tolerance' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting an integer to a string (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>extended_bookkeeping</td>
+      <td>CAST("extended_bookkeeping" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'extended_bookkeeping' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting to VARCHAR, which can accommodate any string representation of the original DECIMAL values.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>financial_management_area</td>
+      <td>CAST("financial_management_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'financial_management_area' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional formatting or precision specification when converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>fiscal_year_variant_change_date</td>
+      <td>CASE \n    WHEN "fiscal_year_variant_change_date" = 0 THEN NULL\n    ELSE strptime(CAST("fiscal_year_variant_change_date" AS VARCHAR), '%Y%m%d')\nEND</td>
+      <td>To transform the 'fiscal_year_variant_change_date' column from INT to DATE, we need to: 1. Cast the integer to a string (VARCHAR) first. 2. Use the strptime function to parse the string into a date. 3. Handle the special case of 0, which is not a valid date.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>fm_company_code</td>
+      <td>CAST("fm_company_code" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'fm_company_code' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column is currently empty (as indicated by the empty list of distinct values), this transformation will work without any issues for future data as well.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>fm_derive_accounts</td>
+      <td>CAST("fm_derive_accounts" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'fm_derive_accounts' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>foreign_currency_valuation_flag</td>
+      <td>CAST("foreign_currency_valuation_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'foreign_currency_valuation_flag' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert data from one type to another. The syntax is straightforward and doesn't require any additional processing since we're just changing the data type without any manipulation of the values.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>funds_management_variant</td>
+      <td>CAST("funds_management_variant" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'funds_management_variant' from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert the data type of a column or expression. In this case, we're converting from INT to VARCHAR. The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>global_company_code</td>
+      <td>CAST("global_company_code" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'global_company_code' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>information_system_format</td>
+      <td>CAST("information_system_format" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'information_system_format' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR conversion.\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>joint_venture_accounting_flag</td>
+      <td>CAST("joint_venture_accounting_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'joint_venture_accounting_flag' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>kopim</td>
+      <td>CAST("kopim" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'kopim' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>material_ledger_regulation</td>
+      <td>CAST("material_ledger_regulation" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'material_ledger_regulation' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB syntax, this is straightforward and can be done using the CAST keyword or the :: operator. Since the task specifically asks for a cast clause, we'll use the CAST keyword.\n</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>mgmt_consolidation_flag</td>
+      <td>CAST("mgmt_consolidation_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the 'mgmt_consolidation_flag' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since the column doesn't contain any values (as indicated by the empty list of distinct values).\n</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>offsetting_account</td>
+      <td>CAST("offsetting_account" AS VARCHAR)</td>
+      <td>To transform the data type of the 'offsetting_account' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column only contains the value 0, casting it to VARCHAR will convert this numeric value to its string representation.\n</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>open_period_variant</td>
+      <td>CAST("open_period_variant" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'open_period_variant' from 'INT' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>pl_consolidation_flag</td>
+      <td>CAST("pl_consolidation_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'pl_consolidation_flag' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>pl_statement_account</td>
+      <td>CAST("pl_statement_account" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'pl_statement_account' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>posting_period_end_date</td>
+      <td>CAST("posting_period_end_date" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'posting_period_end_date' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be properly converted to strings.\n</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>posting_period_variant</td>
+      <td>CAST("posting_period_variant" AS VARCHAR)</td>
+      <td>To transform the data type of the 'posting_period_variant' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently of type DECIMAL, casting it to VARCHAR will effectively turn each number into its string equivalent.\n</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>production_orders_flag</td>
+      <td>CAST("production_orders_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'production_orders_flag' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We don't need to specify any length for VARCHAR as DuckDB doesn't require it.\n</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>provisions_doc_type</td>
+      <td>CAST("provisions_doc_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'provisions_doc_type' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We will wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>special_gl_transactions_flag</td>
+      <td>CAST("special_gl_transactions_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'special_gl_transactions_flag' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (empty list provided), this transformation should not affect any existing data but will change the column's data type to accommodate potential string values in the future.\n</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>splitting_flag</td>
+      <td>CAST("splitting_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the 'splitting_flag' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>statistical_postings_flag</td>
+      <td>CAST("statistical_postings_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the 'statistical_postings_flag' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we can still perform the cast operation, which will handle any potential values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>surcharge_calculation_method</td>
+      <td>CAST("surcharge_calculation_method" AS VARCHAR)</td>
+      <td>To transform the data type of the 'surcharge_calculation_method' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>tax_calculation_procedure</td>
+      <td>CAST("tax_calculation_procedure" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'tax_calculation_procedure' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>tax_clearing_doc_type</td>
+      <td>CAST("tax_clearing_doc_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'tax_clearing_doc_type' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>tax_jurisdiction_code</td>
+      <td>CAST("tax_jurisdiction_code" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'tax_jurisdiction_code' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column currently has no distinct values (it's empty), this transformation will not affect any existing data but will change the column's data type for future insertions.\n</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>vat_flag</td>
+      <td>CAST("vat_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the 'vat_flag' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>vat_reporting_date_flag</td>
+      <td>CAST("vat_reporting_date_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'vat_reporting_date_flag' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column is currently empty (no distinct values), this transformation will not affect any existing data but will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>vendor_down_payment_flag</td>
+      <td>CAST("vendor_down_payment_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'vendor_down_payment_flag' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>61</b> columns have missing values<br>
+                    ✔️ <b>11</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>address_number</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>auto_clearing_doc_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auto_tax_reporting_doc_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>balance_sheet_account</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>balance_sheet_consolidation_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>business_area_flag</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>Not applicable if business areas aren't used</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>business_area_posting_variant</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>business_transaction_variant</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>cash_flow_account</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>cash_flow_variant</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>contract_management_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>cost_accounting_account</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>coverage_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>credit_control_area</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>customer_down_payment_flag</td>
+      <td>33.33</td>
+      <td>True</td>
+      <td>Not applicable if down payments aren't accepted</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>distribution_flag</td>
+      <td>33.33</td>
+      <td>True</td>
+      <td>Not applicable if not involved in distribution</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>down_payment_doc_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>dunning_procedure</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>ebukr</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>equity_changes_account</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>extended_bookkeeping</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>extended_funds_management_variant</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>factoring_indicator</td>
+      <td>33.33</td>
+      <td>True</td>
+      <td>Not applicable if factoring isn't used</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>financial_management_area</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>fiscal_year_variant_change_date</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>Not applicable if fiscal year variant hasn't changed</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>fm_company_code</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>fm_derive_accounts</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>foreign_currency_valuation_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>global_company_code</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>implementation_date</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>information_system_format</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>interest_calculation_profit_center</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>joint_venture_accounting_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>kopim</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>material_ledger_regulation</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>mgmt_consolidation_flag</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Not applicable for non-consolidated management accounts</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>mm_flag</td>
+      <td>66.67</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>negative_postings_flag</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>new_withholding_tax</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>pl_consolidation_flag</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Not applicable for non-consolidated profit and loss accounts</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>pl_statement_account</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Not applicable if not a profit and loss account</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>posting_period_end_date</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>posting_period_variant</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>production_orders_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>provisions_doc_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>purchasing_company_code</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>rcomp</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>sales_organization</td>
+      <td>33.33</td>
+      <td>True</td>
+      <td>Not applicable for companies without sales operations</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>sd_flag</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>Not applicable for non-sales related entries</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>special_gl_transactions_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>splitting_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>statistical_postings_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>surcharge_calculation_method</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>tax_calculation_procedure</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>tax_clearing_doc_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>tax_jurisdiction_code</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>vat_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>vat_registration_number</td>
+      <td>66.67</td>
+      <td>True</td>
+      <td>Not applicable for entities not registered for VAT</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>vat_reporting_date_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>vendor_down_payment_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>xcos</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>address_number</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>auto_clearing_doc_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>auto_tax_reporting_doc_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>balance_sheet_account</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>balance_sheet_consolidation_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>business_area_posting_variant</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>business_transaction_variant</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>cash_flow_account</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>cash_flow_variant</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>contract_management_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>cost_accounting_account</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>coverage_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>credit_control_area</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>down_payment_doc_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>dunning_procedure</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>ebukr</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>equity_changes_account</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>extended_bookkeeping</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>extended_funds_management_variant</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>financial_management_area</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>fm_company_code</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>fm_derive_accounts</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>foreign_currency_valuation_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>global_company_code</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>implementation_date</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>information_system_format</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>interest_calculation_profit_center</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>joint_venture_accounting_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>kopim</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>material_ledger_regulation</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>mm_flag</td>
+      <td>66.67</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>negative_postings_flag</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>new_withholding_tax</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>posting_period_end_date</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>posting_period_variant</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>production_orders_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>provisions_doc_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>purchasing_company_code</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>rcomp</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>special_gl_transactions_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>splitting_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>statistical_postings_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>surcharge_calculation_method</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>tax_calculation_procedure</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>tax_clearing_doc_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>tax_jurisdiction_code</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>vat_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>vat_reporting_date_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>vendor_down_payment_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>xcos</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'novi grad', 'value': 33.33333333333333}, {'label': 'florin city', 'value': 33.33333333333333}, {'label': 'kingdom of geno...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_company_name", data);
+data = [{'label': 'genovia', 'value': 33.33333333333333}, {'label': 'sokovia', 'value': 33.33333333333333}, {'label': 'florin', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_city", data);
+data = [{'label': 'so', 'value': 33.33333333333333}, {'label': 'fn', 'value': 33.33333333333333}, {'label': 'ga', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_country_key", data);
+data = [{'label': 'eur', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_key", data);
+data = [{'label': 'f', 'value': 33.33333333333333}, {'label': 'o', 'value': 33.33333333333333}, {'label': 's', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_language_key", data);
+data = [{'label': 'int', 'value': 33.33333333333333}, {'label': 'cape', 'value': 33.33333333333333}, {'label': 'cafr', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_chart_of_accounts", data);
+data = [{'label': 'k4', 'value': 100.0}];
+    drawBarChart("bar_viz_fiscal_year_variant", data);
+data = [{'x': 1134.9, 'y': 1}, {'x': 1190.6999999999998, 'y': 0}, {'x': 1246.5, 'y': 0}];
+    binWidth = 55.8;
+    drawHistogram("hist_viz_rcomp", data, binWidth);
+data = [{'label': 'fr93341612697', 'value': 100.0}];
+    drawBarChart("bar_viz_vat_registration_number", data);
+data = [{'x': 2.0, 'y': 2}];
+    binWidth = 2.0;
+    drawHistogram("hist_viz_business_transaction_variant", data, binWidth);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_distribution_flag", data);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_valuation_flag", data);
+data = [{'x': 1030.55, 'y': 1}, {'x': 1091.65, 'y': 0}, {'x': 1152.75, 'y': 0}];
+    binWidth = 61.1;
+    drawHistogram("hist_viz_credit_control_area", data, binWidth);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_business_area_flag", data);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_fiscal_year_variant_flag", data);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_customer_down_payment_flag", data);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_purchasing_company_code", data);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_mm_flag", data);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_sd_flag", data);
+data = [{'label': 'gkr', 'value': 100.0}];
+    drawBarChart("bar_viz_interest_calculation_profit_center", data);
+data = [{'x': 1030.0, 'y': 1}, {'x': 1090.0, 'y': 0}, {'x': 1150.0, 'y': 0}];
+    binWidth = 60.0;
+    drawHistogram("hist_viz_sales_organization", data, binWidth);
+data = [{'x': 1000.0, 'y': 1}];
+    binWidth = 1000.0;
+    drawHistogram("hist_viz_cash_flow_variant", data, binWidth);
+data = [{'label': 'v0', 'value': 66.66666666666666}, {'label': 'c0', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_output_tax_category", data);
+data = [{'label': 'a0', 'value': 66.66666666666666}, {'label': 'd0', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_input_tax_category", data);
+data = [{'x': 2.0, 'y': 1}];
+    binWidth = 2.0;
+    drawHistogram("hist_viz_implementation_date", data, binWidth);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_negative_postings_flag", data);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_new_withholding_tax", data);
+data = [{'label': 'fmre', 'value': 100.0}];
+    drawBarChart("bar_viz_extended_funds_management_variant", data);
+data = [{'x': 2.0, 'y': 2}];
+    binWidth = 2.0;
+    drawHistogram("hist_viz_xcos", data, binWidth);
+data = [{'label': 'x', 'value': 100.0}];
+    drawBarChart("bar_viz_factoring_indicator", data);
+data = [{'x': 53.25, 'y': 1}, {'x': 67.75, 'y': 0}, {'x': 82.25, 'y': 0}];
+    binWidth = 14.5;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'x': 22748.55, 'y': 1}, {'x': 24977.65, 'y': 0}, {'x': 27206.75, 'y': 0}];
+    binWidth = 2229.1;
+    drawHistogram("hist_viz_address_number", data, binWidth);
+data = [{'label': '0', 'value': 33.33333333333333}, {'label': '800', 'value': 33.33333333333333}, {'label': '811', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_client", data);
+data = [{'label': '3000', 'value': 100.0}];
+    drawBarChart("bar_viz_company_code", data);
+data = [{'label': '2', 'value': 100.0}];
+    drawBarChart("bar_viz_controlling_to_fi_interface", data);
+data = [{'label': '10', 'value': 100.0}];
+    drawBarChart("bar_viz_exchange_rate_tolerance", data);
+data = [{'label': '2222.0', 'value': 100.0}];
+    drawBarChart("bar_viz_financial_management_area", data);
+data = [{'label': '2000-01-01 00:0...', 'value': 100.0}];
+    drawBarChart("bar_viz_fiscal_year_variant_change_date", data);
+data = [{'label': '2222', 'value': 33.33333333333333}, {'label': '1', 'value': 33.33333333333333}, {'label': '1000', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_funds_management_variant", data);
+data = [];
+    drawBarChart("bar_viz_mgmt_consolidation_flag", data);
+data = [{'label': '0', 'value': 100.0}];
+    drawBarChart("bar_viz_offsetting_account", data);
+data = [{'label': '2222', 'value': 33.33333333333333}, {'label': '1', 'value': 33.33333333333333}, {'label': '1000', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_open_period_variant", data);
+data = [];
+    drawBarChart("bar_viz_pl_consolidation_flag", data);
+data = [];
+    drawBarChart("bar_viz_pl_statement_account", data);
+
+
+</script>
+</body>
+</html>

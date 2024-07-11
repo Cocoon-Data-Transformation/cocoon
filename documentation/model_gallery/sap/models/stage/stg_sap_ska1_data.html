@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_ska1_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>ktopl</th>
+      <th>ernam</th>
+      <th>ktoks</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>bilkt</th>
+      <th>mandt</th>
+      <th>erdat</th>
+      <th>sakan</th>
+      <th>saknr</th>
+      <th>xbilk</th>
+      <th>gvtyp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>dabe</td>
+      <td>sap</td>
+      <td>sako</td>
+      <td>1</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>19920624</td>
+      <td>111000</td>
+      <td>111000</td>
+      <td>x</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>dabe</td>
+      <td>sap</td>
+      <td>sako</td>
+      <td>2</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>19920625</td>
+      <td>112000</td>
+      <td>112000</td>
+      <td>x</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>dabe</td>
+      <td>sap</td>
+      <td>sako</td>
+      <td>3</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>0</td>
+      <td>19920626</td>
+      <td>113000</td>
+      <td>113000</td>
+      <td>x</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>chart_of_accounts</th>
+      <th>creator_username</th>
+      <th>account_group</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>balance_sheet_account_type</th>
+      <th>company_code</th>
+      <th>creation_date</th>
+      <th>gl_account_group_currency</th>
+      <th>gl_account_number</th>
+      <th>is_balance_sheet_account</th>
+      <th>pl_account_type</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>dabe</td>
+      <td>sap</td>
+      <td>sako</td>
+      <td>1</td>
+      <td>False</td>
+      <td>None</td>
+      <td>0</td>
+      <td>1992-06-24</td>
+      <td>111000</td>
+      <td>111000</td>
+      <td>True</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>dabe</td>
+      <td>sap</td>
+      <td>sako</td>
+      <td>2</td>
+      <td>False</td>
+      <td>None</td>
+      <td>0</td>
+      <td>1992-06-25</td>
+      <td>112000</td>
+      <td>112000</td>
+      <td>True</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>dabe</td>
+      <td>sap</td>
+      <td>sako</td>
+      <td>3</td>
+      <td>False</td>
+      <td>None</td>
+      <td>0</td>
+      <td>1992-06-26</td>
+      <td>113000</td>
+      <td>113000</td>
+      <td>True</td>
+      <td>None</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">chart_of_accounts</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_chart_of_accounts"></div><b>📃 Summary:</b> Chart of accounts identifier<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creator_username</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creator_username"></div><b>📃 Summary:</b> Username of the record creator<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">account_group</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_account_group"></div><b>📃 Summary:</b> Account group<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><b>🦄 Unique:</b> This column is a unique identifier for each row in the table. For this table, each row represents a specific GL account entry. The row_id is likely to be unique across rows as it's designed to be a distinct identifier.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">balance_sheet_account_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_balance_sheet_account_type"></div><b>📃 Summary:</b> Balance sheet account type<br><b>❓ Missing:</b> Not applicable for non-balance sheet accounts.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">company_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_company_code"></div><b>📃 Summary:</b> Company code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_date"></div><b>📃 Summary:</b> Creation date of the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gl_account_group_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_gl_account_group_currency"></div><b>📃 Summary:</b> G/L account number in group currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gl_account_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_gl_account_number"></div><b>📃 Summary:</b> G/L account number<br><b>🦄 Unique:</b> This column represents the G/L account number. For this table, each row is a GL account entry. In a chart of accounts, each account number is typically unique. However, without more context, we can't be certain that this number is never reused across different chart of accounts or company codes.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_balance_sheet_account</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_balance_sheet_account"></div><b>📃 Summary:</b> Balance sheet account flag<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">pl_account_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_pl_account_type"></div><b>📃 Summary:</b> Profit and loss account type<br><b>❓ Missing:</b> Not applicable for balance sheet accounts.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about chart of accounts entries. It contains account numbers (saknr) and their properties. Key fields include company code (mandt), chart of accounts (ktopl), and account number (saknr). Other fields provide details like creation date (erdat), creator (ernam), account type (ktoks), and various flags (xbilk, xloev, etc.). The table likely represents a master data structure for financial accounting purposes.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>19</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>mandt</td>
+      <td>Company code</td>
+      <td>company_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>ktopl</td>
+      <td>Chart of accounts identifier</td>
+      <td>chart_of_accounts</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>saknr</td>
+      <td>G/L account number</td>
+      <td>gl_account_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>bilkt</td>
+      <td>Balance sheet account type</td>
+      <td>balance_sheet_account_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>gvtyp</td>
+      <td>Profit and loss account type</td>
+      <td>pl_account_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>vbund</td>
+      <td>Company ID for partner company</td>
+      <td>partner_company_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>xbilk</td>
+      <td>Balance sheet account flag</td>
+      <td>is_balance_sheet_account</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>sakan</td>
+      <td>G/L account number in group currency</td>
+      <td>gl_account_group_currency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>erdat</td>
+      <td>Creation date of the record</td>
+      <td>creation_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>ernam</td>
+      <td>Username of the record creator</td>
+      <td>creator_username</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>ktoks</td>
+      <td>Account group</td>
+      <td>account_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>xloev</td>
+      <td>Deletion flag</td>
+      <td>is_marked_for_deletion</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>xspea</td>
+      <td>Posting block in client</td>
+      <td>is_posting_blocked_client</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>xspeb</td>
+      <td>Posting block in company code</td>
+      <td>is_posting_blocked_company</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>xspep</td>
+      <td>Posting block in profit center</td>
+      <td>is_posting_blocked_profit_center</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>func_area</td>
+      <td>Functional area of the account</td>
+      <td>functional_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>mustr</td>
+      <td>Sample account indicator</td>
+      <td>sample_account_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>2</b> columns have erroneous values<br><ol><li><b>chart_of_accounts</b>: 'dabe' is unusual because it's not a recognized word and could be a typo for 'debit' or another accounting term.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'dabe'</td>
+      <td>'debit'</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>is_balance_sheet_account</b>: 'x' is unusual because it's not a clear indicator of balance sheet account status.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'x'</td>
+      <td>'yes'</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>14</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>balance_sheet_account_type</td>
+      <td>CAST("balance_sheet_account_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'balance_sheet_account_type' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>company_code</td>
+      <td>CAST("company_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'company_code' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only the value 0, casting it to VARCHAR will result in the string '0'.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>creation_date</td>
+      <td>strptime(CAST("creation_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'creation_date' column from INT to DATE in DuckDB, we need to: 1. First, cast the integer to a VARCHAR (string) type. 2. Then, use the strptime function to parse the string into a DATE type. 3. The format string '%Y%m%d' is used because the date is in the format YYYYMMDD.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>functional_area</td>
+      <td>CAST("functional_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'functional_area' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>gl_account_group_currency</td>
+      <td>CAST("gl_account_group_currency" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'gl_account_group_currency' from INT to VARCHAR, we need to use the CAST function in DuckDB. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>gl_account_number</td>
+      <td>CAST("gl_account_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'gl_account_number' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'gl_account_number' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>is_balance_sheet_account</td>
+      <td>CAST("is_balance_sheet_account" = 'x' AS BOOLEAN)</td>
+      <td>To transform the 'is_balance_sheet_account' column from VARCHAR to BOOLEAN, we need to use a CAST function. In DuckDB, the 'x' value is typically used to represent TRUE for boolean fields, while NULL or an empty string would represent FALSE. Therefore, we can use a simple CAST clause to convert 'x' to TRUE and any other value (including NULL) to FALSE.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>is_marked_for_deletion</td>
+      <td>CAST("is_marked_for_deletion" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_marked_for_deletion' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>is_posting_blocked_client</td>
+      <td>CAST("is_posting_blocked_client" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_posting_blocked_client' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each value in the column to its string representation. Even though the column currently has no distinct values (as indicated by the empty list []), this cast will still work and will be applicable if data is added to the column in the future.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>is_posting_blocked_company</td>
+      <td>CAST("is_posting_blocked_company" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_posting_blocked_company' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>is_posting_blocked_profit_center</td>
+      <td>CAST("is_posting_blocked_profit_center" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_posting_blocked_profit_center' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (empty list provided), this transformation should not affect any existing data, but it will change the column's data type for future insertions or operations.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>partner_company_id</td>
+      <td>CAST("partner_company_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'partner_company_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently a DECIMAL and we want to convert it to a VARCHAR, we'll use CAST with the VARCHAR type specified.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>pl_account_type</td>
+      <td>CAST("pl_account_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'pl_account_type' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>sample_account_indicator</td>
+      <td>CAST("sample_account_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'sample_account_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since DuckDB uses standard SQL syntax for CAST operations, we can use the straightforward CAST(column AS type) format.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>9</b> columns have missing values<br>
+                    ✔️ <b>2</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>balance_sheet_account_type</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for non-balance sheet accounts.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>functional_area</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>is_marked_for_deletion</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>is_posting_blocked_client</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>is_posting_blocked_company</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>is_posting_blocked_profit_center</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>partner_company_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>pl_account_type</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for balance sheet accounts.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>sample_account_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>functional_area</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>is_marked_for_deletion</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>is_posting_blocked_client</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>is_posting_blocked_company</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>is_posting_blocked_profit_center</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>partner_company_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>sample_account_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'dabe', 'value': 100.0}];
+    drawBarChart("bar_viz_chart_of_accounts", data);
+data = [{'label': 'sap', 'value': 100.0}];
+    drawBarChart("bar_viz_creator_username", data);
+data = [{'label': 'sako', 'value': 100.0}];
+    drawBarChart("bar_viz_account_group", data);
+data = [{'x': 1.05, 'y': 1}, {'x': 1.15, 'y': 0}, {'x': 1.25, 'y': 0}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [];
+    drawBarChart("bar_viz_balance_sheet_account_type", data);
+data = [{'label': '0', 'value': 100.0}];
+    drawBarChart("bar_viz_company_code", data);
+data = [{'label': '1992-06-26 00:0...', 'value': 33.33333333333333}, {'label': '1992-06-24 00:0...', 'value': 33.33333333333333}, {'label': '1992-06-25 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_creation_date", data);
+data = [{'label': '111000', 'value': 33.33333333333333}, {'label': '113000', 'value': 33.33333333333333}, {'label': '112000', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_gl_account_group_currency", data);
+data = [{'label': '111000', 'value': 33.33333333333333}, {'label': '113000', 'value': 33.33333333333333}, {'label': '112000', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_gl_account_number", data);
+data = [{'label': 'True', 'value': 100.0}];
+    drawBarChart("bar_viz_is_balance_sheet_account", data);
+data = [];
+    drawBarChart("bar_viz_pl_account_type", data);
+
+
+</script>
+</body>
+</html>

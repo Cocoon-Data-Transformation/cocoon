@@ -1,0 +1,4159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_mara_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>mandt</th>
+      <th>ernam</th>
+      <th>aenam</th>
+      <th>vpsta</th>
+      <th>pstat</th>
+      <th>mtart</th>
+      <th>mbrsh</th>
+      <th>bismt</th>
+      <th>meins</th>
+      <th>blanz</th>
+      <th>brgew</th>
+      <th>ntgew</th>
+      <th>volum</th>
+      <th>wesch</th>
+      <th>laeng</th>
+      <th>breit</th>
+      <th>hoehe</th>
+      <th>ergew</th>
+      <th>ervol</th>
+      <th>gewto</th>
+      <th>volto</th>
+      <th>fuelg</th>
+      <th>stfak</th>
+      <th>datab</th>
+      <th>mstde</th>
+      <th>mstdv</th>
+      <th>mhdrz</th>
+      <th>mhdhb</th>
+      <th>mhdlp</th>
+      <th>inhal</th>
+      <th>vpreh</th>
+      <th>inhbr</th>
+      <th>cuobf</th>
+      <th>compl</th>
+      <th>mtpos_mara</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>behvo</th>
+      <th>ersda</th>
+      <th>liqdt</th>
+      <th>stoff</th>
+      <th>etifo</th>
+      <th>etiag</th>
+      <th>etiar</th>
+      <th>laeda</th>
+      <th>mfrnr</th>
+      <th>mfrpn</th>
+      <th>matnr</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>700</td>
+      <td>hvruser</td>
+      <td>hvruser</td>
+      <td>k</td>
+      <td>k</td>
+      <td>fert</td>
+      <td>m</td>
+      <td>updated desc</td>
+      <td>bag</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>norm</td>
+      <td>26047</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>10230308</td>
+      <td>0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>10230308</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>51066122</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>700</td>
+      <td>hvruser</td>
+      <td>None</td>
+      <td>k</td>
+      <td>k</td>
+      <td>zmdg</td>
+      <td>m</td>
+      <td>None</td>
+      <td>ea</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>norm</td>
+      <td>26048</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>10230308</td>
+      <td>0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>10000000</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>51066123</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>700</td>
+      <td>hvruser</td>
+      <td>hvruser</td>
+      <td>k</td>
+      <td>k</td>
+      <td>fert</td>
+      <td>m</td>
+      <td>updated desc</td>
+      <td>bag</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>norm</td>
+      <td>26053</td>
+      <td>False</td>
+      <td>NaN</td>
+      <td>10230309</td>
+      <td>0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>10230309</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>51066124</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>client</th>
+      <th>creator_name</th>
+      <th>last_changed_by</th>
+      <th>complete_material_maintenance_status</th>
+      <th>maintenance_status</th>
+      <th>material_type</th>
+      <th>industry_sector</th>
+      <th>old_material_number</th>
+      <th>base_unit_of_measure</th>
+      <th>number_of_sheets</th>
+      <th>gross_weight</th>
+      <th>ntgew</th>
+      <th>volum</th>
+      <th>material_weight</th>
+      <th>length</th>
+      <th>width</th>
+      <th>height</th>
+      <th>ergew</th>
+      <th>ervol</th>
+      <th>gross_weight_tolerance</th>
+      <th>volume_tolerance</th>
+      <th>fill_quantity</th>
+      <th>stfak</th>
+      <th>valid_from_date</th>
+      <th>material_specific_status</th>
+      <th>material_specific_status_usage</th>
+      <th>min_remaining_shelf_life</th>
+      <th>shelf_life_expiration_date</th>
+      <th>storage_percentage</th>
+      <th>net_contents</th>
+      <th>comparison_price_unit</th>
+      <th>gross_contents</th>
+      <th>internal_object_number</th>
+      <th>completion_level</th>
+      <th>general_item_category_group_mara</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>container_requirements</th>
+      <th>creation_date</th>
+      <th>deletion_flag</th>
+      <th>hazardous_material_number</th>
+      <th>hazmat_form</th>
+      <th>hazmat_label_group</th>
+      <th>hazmat_packaging_type</th>
+      <th>last_change_date</th>
+      <th>manufacturer_number</th>
+      <th>manufacturer_part_number</th>
+      <th>material_number</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>700</td>
+      <td>hvruser</td>
+      <td>hvruser</td>
+      <td>k</td>
+      <td>k</td>
+      <td>fert</td>
+      <td>m</td>
+      <td>updated desc</td>
+      <td>bag</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>norm</td>
+      <td>26047</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1023-03-08</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>1023-03-08</td>
+      <td>None</td>
+      <td>None</td>
+      <td>51066122</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>700</td>
+      <td>hvruser</td>
+      <td>None</td>
+      <td>k</td>
+      <td>k</td>
+      <td>zmdg</td>
+      <td>m</td>
+      <td>None</td>
+      <td>ea</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>norm</td>
+      <td>26048</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1023-03-08</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>NaT</td>
+      <td>None</td>
+      <td>None</td>
+      <td>51066123</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>700</td>
+      <td>hvruser</td>
+      <td>hvruser</td>
+      <td>k</td>
+      <td>k</td>
+      <td>fert</td>
+      <td>m</td>
+      <td>updated desc</td>
+      <td>bag</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>norm</td>
+      <td>26053</td>
+      <td>False</td>
+      <td>None</td>
+      <td>1023-03-09</td>
+      <td>b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>1023-03-09</td>
+      <td>None</td>
+      <td>None</td>
+      <td>51066124</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_client"></div><b>📃 Summary:</b> Client<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creator_name</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creator_name"></div><b>📃 Summary:</b> Name of person who created the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_changed_by</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_changed_by"></div><b>📃 Summary:</b> Name of person who changed the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">complete_material_maintenance_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='k'>k</option><option value='a'>a</option><option value='i'>i</option><option value='p'>p</option><option value='r'>r</option><option value='c'>c</option><option value='n'>n</option><option value='d'>d</option></select></span><br><br><div id="bar_viz_complete_material_maintenance_status"></div><b>📃 Summary:</b> Maintenance status of complete material<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">maintenance_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='OK'>OK</option><option value='Needs Maintenance'>Needs Maintenance</option><option value='Under Maintenance'>Under Maintenance</option><option value='Critical'>Critical</option><option value='Scheduled'>Scheduled</option><option value='Deferred'>Deferred</option><option value='Completed'>Completed</option><option value='Pending'>Pending</option><option value='N/A'>N/A</option><option value='k'>k</option></select></span><br><br><div id="bar_viz_maintenance_status"></div><b>📃 Summary:</b> Maintenance status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">material_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_material_type"></div><b>📃 Summary:</b> Material type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">industry_sector</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='a'>a</option><option value='b'>b</option><option value='c'>c</option><option value='d'>d</option><option value='e'>e</option><option value='f'>f</option><option value='g'>g</option><option value='h'>h</option><option value='i'>i</option><option value='j'>j</option><option value='k'>k</option><option value='l'>l</option><option value='m'>m</option><option value='n'>n</option><option value='o'>o</option><option value='p'>p</option><option value='q'>q</option><option value='r'>r</option><option value='s'>s</option><option value='t'>t</option><option value='u'>u</option></select></span><br><br><div id="bar_viz_industry_sector"></div><b>📃 Summary:</b> Industry sector<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">old_material_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_old_material_number"></div><b>📃 Summary:</b> Old material number<br><b>❓ Missing:</b> Not applicable for newly created materials without previous numbers.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">base_unit_of_measure</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='bag'>bag</option><option value='ea'>ea</option><option value='kg'>kg</option><option value='g'>g</option><option value='lb'>lb</option><option value='oz'>oz</option><option value='l'>l</option><option value='ml'>ml</option><option value='m'>m</option><option value='cm'>cm</option><option value='mm'>mm</option><option value='in'>in</option><option value='ft'>ft</option><option value='yd'>yd</option><option value='pc'>pc</option><option value='box'>box</option><option value='case'>case</option><option value='pack'>pack</option><option value='set'>set</option><option value='pair'>pair</option><option value='roll'>roll</option><option value='sheet'>sheet</option><option value='unit'>unit</option></select></span><br><br><div id="bar_viz_base_unit_of_measure"></div><b>📃 Summary:</b> Base unit of measure<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">number_of_sheets</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_number_of_sheets"></div><b>📃 Summary:</b> Number of sheets<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gross_weight</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_gross_weight"></div><b>📃 Summary:</b> Gross weight<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ntgew</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_ntgew"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">volum</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_volum"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">material_weight</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_material_weight"></div><b>📃 Summary:</b> Weight of the material<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">length</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_length"></div><b>📃 Summary:</b> Length of the material<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">width</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_width"></div><b>📃 Summary:</b> Width of the material<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">height</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_height"></div><b>📃 Summary:</b> Height<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ergew</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_ergew"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">ervol</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_ervol"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gross_weight_tolerance</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_gross_weight_tolerance"></div><b>📃 Summary:</b> Gross weight tolerance<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">volume_tolerance</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_volume_tolerance"></div><b>📃 Summary:</b> Volume tolerance<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fill_quantity</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_fill_quantity"></div><b>📃 Summary:</b> Fill quantity<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stfak</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stfak"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">valid_from_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_valid_from_date"></div><b>📃 Summary:</b> Valid-from date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">material_specific_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_material_specific_status"></div><b>📃 Summary:</b> Material-specific status<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">material_specific_status_usage</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_material_specific_status_usage"></div><b>📃 Summary:</b> Material-specific status usage<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">min_remaining_shelf_life</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_min_remaining_shelf_life"></div><b>📃 Summary:</b> Minimum remaining shelf life<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">shelf_life_expiration_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_shelf_life_expiration_date"></div><b>📃 Summary:</b> Shelf life expiration date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">storage_percentage</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_storage_percentage"></div><b>📃 Summary:</b> Storage percentage<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">net_contents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_net_contents"></div><b>📃 Summary:</b> Net contents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">comparison_price_unit</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_comparison_price_unit"></div><b>📃 Summary:</b> Comparison price unit<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gross_contents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_gross_contents"></div><b>📃 Summary:</b> Gross contents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">internal_object_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_internal_object_number"></div><b>📃 Summary:</b> Internal object number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">completion_level</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_completion_level"></div><b>📃 Summary:</b> Material completion level<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">general_item_category_group_mara</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_general_item_category_group_mara"></div><b>📃 Summary:</b> General item category group<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><b>🦄 Unique:</b> This column appears to be a unique identifier for each row in the table. For this table, each row represents a unique material record. The row_id seems to be unique across rows based on the sample data.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">container_requirements</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_container_requirements"></div><b>📃 Summary:</b> Container requirements<br><b>❓ Missing:</b> Only applicable for materials requiring specific containers<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">creation_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_creation_date"></div><b>📃 Summary:</b> Date when the record was created<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">deletion_flag</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_deletion_flag"></div><b>📃 Summary:</b> Deletion flag<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hazardous_material_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_hazardous_material_number"></div><b>📃 Summary:</b> Hazardous material number<br><b>❓ Missing:</b> Only applicable for hazardous materials<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hazmat_form</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_hazmat_form"></div><b>📃 Summary:</b> Form of hazardous materials<br><b>❓ Missing:</b> Only applicable for hazardous materials<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hazmat_label_group</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_hazmat_label_group"></div><b>📃 Summary:</b> Labeling group for hazardous materials<br><b>❓ Missing:</b> Only applicable for hazardous materials<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">hazmat_packaging_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_hazmat_packaging_type"></div><b>📃 Summary:</b> Packaging requirements for hazardous materials<br><b>❓ Missing:</b> Only applicable for hazardous materials<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_change_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_change_date"></div><b>📃 Summary:</b> Date of last change<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manufacturer_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_manufacturer_number"></div><b>📃 Summary:</b> Manufacturer number<br><b>❓ Missing:</b> Not applicable for in-house produced items.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manufacturer_part_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_manufacturer_part_number"></div><b>📃 Summary:</b> Manufacturer part number<br><b>❓ Missing:</b> Not applicable for in-house produced items.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">material_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_material_number"></div><b>📃 Summary:</b> Material number<br><b>🦄 Unique:</b> This column represents the unique identifier for each material in the SAP system. For this table, each row is a distinct material, and the material number should be unique across all materials.<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about material master data in an SAP system. It contains details of materials such as material number, creation date, material type, base unit of measure, weight, volume, and various flags and indicators. The data includes fields related to procurement, sales, and inventory management. Each row represents a unique material record with its attributes and characteristics.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>119</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>mandt</td>
+      <td>Client</td>
+      <td>client</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>matnr</td>
+      <td>Material number</td>
+      <td>material_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>ersda</td>
+      <td>Date when the record was created</td>
+      <td>creation_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>ernam</td>
+      <td>Name of person who created the record</td>
+      <td>creator_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>laeda</td>
+      <td>Date of last change</td>
+      <td>last_change_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>aenam</td>
+      <td>Name of person who changed the record</td>
+      <td>last_changed_by</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>vpsta</td>
+      <td>Maintenance status of complete material</td>
+      <td>complete_material_maintenance_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>pstat</td>
+      <td>Maintenance status</td>
+      <td>maintenance_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>lvorm</td>
+      <td>Flag for deletion block</td>
+      <td>deletion_block_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>mtart</td>
+      <td>Material type</td>
+      <td>material_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>mbrsh</td>
+      <td>Industry sector</td>
+      <td>industry_sector</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>matkl</td>
+      <td>Material group</td>
+      <td>material_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>bismt</td>
+      <td>Old material number</td>
+      <td>old_material_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>meins</td>
+      <td>Base unit of measure</td>
+      <td>base_unit_of_measure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>bstme</td>
+      <td>Purchase order unit of measure</td>
+      <td>purchase_order_uom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>zeinr</td>
+      <td>Rework processing time</td>
+      <td>rework_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>zeiar</td>
+      <td>Time to produce or procure the material</td>
+      <td>production_procurement_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>zeivr</td>
+      <td>Administrative lead time</td>
+      <td>administrative_lead_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>zeifo</td>
+      <td>In-house production time</td>
+      <td>inhouse_production_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>aeszn</td>
+      <td>Number of the change document</td>
+      <td>change_document_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>blatt</td>
+      <td>Page number of specification</td>
+      <td>specification_page_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>blanz</td>
+      <td>Number of sheets</td>
+      <td>number_of_sheets</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>ferth</td>
+      <td>Production/inspection memo</td>
+      <td>production_memo</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>formt</td>
+      <td>Format of the material</td>
+      <td>material_format</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>groes</td>
+      <td>Size/dimensions</td>
+      <td>dimensions</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>wrkst</td>
+      <td>Material of the product</td>
+      <td>material_composition</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>normt</td>
+      <td>Industry standard description</td>
+      <td>industry_standard_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>labor</td>
+      <td>Laboratory or office</td>
+      <td>lab_office</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>ekwsl</td>
+      <td>Purchasing value key</td>
+      <td>purchasing_value_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>brgew</td>
+      <td>Gross weight</td>
+      <td>gross_weight</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>ntgew</td>
+      <td>Net weight</td>
+      <td>ntgew</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>gewei</td>
+      <td>Weight unit</td>
+      <td>weight_unit</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>volum</td>
+      <td>Volume</td>
+      <td>volum</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>voleh</td>
+      <td>Volume unit</td>
+      <td>volume_unit</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>behvo</td>
+      <td>Container requirements</td>
+      <td>container_requirements</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>raube</td>
+      <td>Shelf life expiration date</td>
+      <td>shelf_life_expiration</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>tempb</td>
+      <td>Temperature conditions indicator</td>
+      <td>temperature_conditions</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>disst</td>
+      <td>Distribution status</td>
+      <td>distribution_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>tragr</td>
+      <td>Transportation group</td>
+      <td>transportation_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>stoff</td>
+      <td>Hazardous material number</td>
+      <td>hazardous_material_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>spart</td>
+      <td>Division</td>
+      <td>division</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>kunnr</td>
+      <td>Customer number</td>
+      <td>customer_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>eannr</td>
+      <td>EAN category</td>
+      <td>ean_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>wesch</td>
+      <td>Weight of the material</td>
+      <td>material_weight</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>bwvor</td>
+      <td>Valuation procedure</td>
+      <td>valuation_procedure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>bwscl</td>
+      <td>Valuation class</td>
+      <td>valuation_class</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>saiso</td>
+      <td>Season</td>
+      <td>season</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>etiar</td>
+      <td>Packaging requirements for hazardous materials</td>
+      <td>hazmat_packaging_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>etifo</td>
+      <td>Form of hazardous materials</td>
+      <td>hazmat_form</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>entar</td>
+      <td>Configurable material indicator</td>
+      <td>entar</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>ean11</td>
+      <td>European Article Number (EAN)</td>
+      <td>ean</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>numtp</td>
+      <td>Number type for material</td>
+      <td>number_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>laeng</td>
+      <td>Length of the material</td>
+      <td>length</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>breit</td>
+      <td>Width of the material</td>
+      <td>width</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>hoehe</td>
+      <td>Height</td>
+      <td>height</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>meabm</td>
+      <td>Maximum storage period</td>
+      <td>max_storage_period</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>prdha</td>
+      <td>Product hierarchy</td>
+      <td>product_hierarchy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>aeklk</td>
+      <td>Purchase order text key</td>
+      <td>purchase_order_text_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>cadkz</td>
+      <td>CAD indicator</td>
+      <td>cad_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>qmpur</td>
+      <td>QM procurement active</td>
+      <td>qm_procurement_active</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>ergew</td>
+      <td>Net weight</td>
+      <td>ergew</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>ergei</td>
+      <td>Allowed packaging weight</td>
+      <td>allowed_packaging_weight</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>ervol</td>
+      <td>Volume of the material</td>
+      <td>ervol</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>ervoe</td>
+      <td>Name of person who proposed the record</td>
+      <td>proposer_name</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>gewto</td>
+      <td>Gross weight tolerance</td>
+      <td>gross_weight_tolerance</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>volto</td>
+      <td>Volume tolerance</td>
+      <td>volume_tolerance</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>vabme</td>
+      <td>Variable purchase order unit</td>
+      <td>variable_purchase_order_unit</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>kzrev</td>
+      <td>Revision level indicator</td>
+      <td>revision_level_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>kzkfg</td>
+      <td>Configurable material indicator</td>
+      <td>kzkfg</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>xchpf</td>
+      <td>Batch management requirement indicator</td>
+      <td>batch_management_required</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>vhart</td>
+      <td>Packaging material type</td>
+      <td>packaging_material_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>fuelg</td>
+      <td>Fill quantity</td>
+      <td>fill_quantity</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>stfak</td>
+      <td>Bulk material indicator</td>
+      <td>stfak</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>magrv</td>
+      <td>Material group packaging materials</td>
+      <td>packaging_material_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>begru</td>
+      <td>Authorization group for material</td>
+      <td>authorization_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>datab</td>
+      <td>Valid-from date</td>
+      <td>valid_from_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>liqdt</td>
+      <td>Deletion flag</td>
+      <td>deletion_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>saisj</td>
+      <td>Season year</td>
+      <td>season_year</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>plgtp</td>
+      <td>Planning type</td>
+      <td>planning_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>mlgut</td>
+      <td>Storage conditions</td>
+      <td>storage_conditions</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>extwg</td>
+      <td>External material group</td>
+      <td>external_material_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>satnr</td>
+      <td>Cross-plant configurable material</td>
+      <td>cross_plant_configurable_material</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>attyp</td>
+      <td>Material category</td>
+      <td>material_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>kzkup</td>
+      <td>Indicator: Material can be co-product</td>
+      <td>co_product_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>kznfm</td>
+      <td>Indicator: Relevant to follow-up material</td>
+      <td>follow_up_material_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>pmata</td>
+      <td>Pricing reference material</td>
+      <td>pricing_reference_material</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>mstae</td>
+      <td>Cross-plant material status</td>
+      <td>cross_plant_material_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>mstav</td>
+      <td>General item category group</td>
+      <td>general_item_category_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>mstde</td>
+      <td>Material-specific status</td>
+      <td>material_specific_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>mstdv</td>
+      <td>Material-specific status usage</td>
+      <td>material_specific_status_usage</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>taklv</td>
+      <td>Tax classification</td>
+      <td>tax_classification</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>rbnrm</td>
+      <td>Catalog profile</td>
+      <td>catalog_profile</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>mhdrz</td>
+      <td>Minimum remaining shelf life</td>
+      <td>min_remaining_shelf_life</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>mhdhb</td>
+      <td>Shelf life expiration date</td>
+      <td>shelf_life_expiration_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>mhdlp</td>
+      <td>Storage percentage</td>
+      <td>storage_percentage</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>inhme</td>
+      <td>Unit of measure for contents</td>
+      <td>contents_unit</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>inhal</td>
+      <td>Net contents</td>
+      <td>net_contents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>vpreh</td>
+      <td>Comparison price unit</td>
+      <td>comparison_price_unit</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>etiag</td>
+      <td>Labeling group for hazardous materials</td>
+      <td>hazmat_label_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>inhbr</td>
+      <td>Gross contents</td>
+      <td>gross_contents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>cmeth</td>
+      <td>Consumption mode</td>
+      <td>consumption_mode</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>cuobf</td>
+      <td>Internal object number</td>
+      <td>internal_object_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>102</th>
+      <td>kzumw</td>
+      <td>Environmentally relevant indicator</td>
+      <td>environmentally_relevant_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>kosch</td>
+      <td>Product allocation determination procedure</td>
+      <td>product_allocation_procedure</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>104</th>
+      <td>sprof</td>
+      <td>Sales price factor</td>
+      <td>sales_price_factor</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>nrfhg</td>
+      <td>Central Article Number</td>
+      <td>central_article_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>106</th>
+      <td>mfrpn</td>
+      <td>Manufacturer part number</td>
+      <td>manufacturer_part_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>107</th>
+      <td>mfrnr</td>
+      <td>Manufacturer number</td>
+      <td>manufacturer_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>108</th>
+      <td>bmatn</td>
+      <td>Base material number</td>
+      <td>base_material_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>109</th>
+      <td>mprof</td>
+      <td>Material pricing profile</td>
+      <td>pricing_profile</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>110</th>
+      <td>kzwsm</td>
+      <td>Indicator for configurable material</td>
+      <td>kzwsm</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>111</th>
+      <td>saity</td>
+      <td>Season category</td>
+      <td>season_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>112</th>
+      <td>profl</td>
+      <td>Profile</td>
+      <td>profile</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>ihivi</td>
+      <td>Hierarchy category</td>
+      <td>hierarchy_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>114</th>
+      <td>iloos</td>
+      <td>Indicator: Bulk material</td>
+      <td>iloos</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>115</th>
+      <td>serlv</td>
+      <td>Serial number profile</td>
+      <td>serial_number_profile</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>116</th>
+      <td>kzgvh</td>
+      <td>Packaging material indicator</td>
+      <td>packaging_material_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>117</th>
+      <td>xgchp</td>
+      <td>Batch management across plants indicator</td>
+      <td>cross_plant_batch_management</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>118</th>
+      <td>kzeff</td>
+      <td>Effectivity parameter indicator</td>
+      <td>effectivity_parameter_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>119</th>
+      <td>compl</td>
+      <td>Material completion level</td>
+      <td>completion_level</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>120</th>
+      <td>iprkz</td>
+      <td>Period indicator for shelf life expiration date</td>
+      <td>shelf_life_period_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>121</th>
+      <td>rdmhd</td>
+      <td>Round lot size</td>
+      <td>round_lot_size</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>122</th>
+      <td>przus</td>
+      <td>Price control indicator</td>
+      <td>price_control_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>123</th>
+      <td>mtpos_mara</td>
+      <td>General item category group</td>
+      <td>general_item_category_group_mara</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>124</th>
+      <td>bflme</td>
+      <td>Lead-time offset</td>
+      <td>lead_time_offset</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>125</th>
+      <td>nsnid</td>
+      <td>NATO Stock Number</td>
+      <td>nato_stock_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>126</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>127</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>4</b> columns have erroneous values<br><ol><li><b>complete_material_maintenance_status</b>: 'k' is unusual because it's a single letter that doesn't convey meaningful information about maintenance status.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'k'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>maintenance_status</b>: 'k' is unusual because it's a single letter that doesn't clearly indicate a maintenance status.<br>❌ The column has not been cleaned<br><br></li><li><b>industry_sector</b>: 'm' is unusual because it's not a standard industry sector abbreviation and lacks clarity.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'m'</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>old_material_number</b>: 'updated desc' is unusual because it's not a typical format for a material number.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'updated desc'</td>
+      <td>''</td>
+    </tr>
+  </tbody>
+</table><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>90</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>administrative_lead_time</td>
+      <td>CAST("administrative_lead_time" AS INT)</td>
+      <td>To transform the data type of the column 'administrative_lead_time' from 'DECIMAL' to 'INT', we need to use a simple CAST function in DuckDB. Since the column currently has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data. However, it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>authorization_group</td>
+      <td>CAST("authorization_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'authorization_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert data from one type to another. Since the column is currently DECIMAL and we want to change it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>base_material_number</td>
+      <td>CAST("base_material_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'base_material_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Since DuckDB uses standard SQL syntax for CAST operations, we can directly use the CAST keyword followed by the column name and the desired data type in parentheses.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>batch_management_required</td>
+      <td>CAST("batch_management_required" AS BOOLEAN)</td>
+      <td>To transform the data type of the column 'batch_management_required' from DECIMAL to BOOLEAN in DuckDB, we need to use a simple CAST clause. Since the column only contains distinct values of [], which likely means it's empty or contains only NULL values, we can safely cast it to BOOLEAN. In DuckDB, this cast will convert 0 to FALSE, any non-zero number to TRUE, and NULL will remain NULL.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>cad_indicator</td>
+      <td>CAST("cad_indicator" AS BOOLEAN)</td>
+      <td>To transform the 'cad_indicator' column from DECIMAL to BOOLEAN, we need to use a simple CAST function. In DuckDB, we can directly cast a numeric type to BOOLEAN. When casting to BOOLEAN, DuckDB follows these rules: - 0 becomes FALSE - Any non-zero number becomes TRUE - NULL remains NULL This transformation is straightforward since we're dealing with a simple type conversion without any complex logic.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>catalog_profile</td>
+      <td>CAST("catalog_profile" AS VARCHAR)</td>
+      <td>To transform the data type of the 'catalog_profile' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>central_article_number</td>
+      <td>CAST("central_article_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'central_article_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional formatting or length specification for VARCHAR in this case.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>change_document_number</td>
+      <td>CAST("change_document_number" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'change_document_number' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional formatting or manipulation since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>co_product_indicator</td>
+      <td>CAST("co_product_indicator" AS BOOLEAN)</td>
+      <td>To transform the 'co_product_indicator' column from DECIMAL to BOOLEAN in DuckDB, we need to use a CAST function. However, there's an important consideration:\n1. The column 'co_product_indicator' has no distinct values (it's empty), which means it might contain NULL values or it's completely empty. 2. In DuckDB, when casting from DECIMAL to BOOLEAN:\n   - 0 becomes FALSE\n   - Any non-zero number becomes TRUE\n   - NULL remains NULL\n\nGiven that the column is empty, casting it to BOOLEAN will likely result in a column of NULL values, but the cast operation itself is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>consumption_mode</td>
+      <td>CAST("consumption_mode" AS VARCHAR)</td>
+      <td>To transform the data type of the 'consumption_mode' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column already contains distinct values, a straightforward CAST operation should suffice.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>container_requirements</td>
+      <td>CAST("container_requirements" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'container_requirements' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. Since the column currently has no distinct values (it's empty or null), casting it to VARCHAR will not affect any existing data but will change the column's data type to allow for string values in the future.\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>contents_unit</td>
+      <td>CAST("contents_unit" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'contents_unit' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use CAST() and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>creation_date</td>
+      <td>strptime(CAST("creation_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'creation_date' column from INT to DATE, we need to: 1. Cast the integer to a VARCHAR first, as the strptime function expects a string input. 2. Use the strptime function to parse the string into a date. 3. The format '%Y%m%d' is used because the date is in the format YYYYMMDD.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>cross_plant_batch_management</td>
+      <td>CAST("cross_plant_batch_management" AS BOOLEAN)</td>
+      <td>To transform the data type of the column 'cross_plant_batch_management' from DECIMAL to BOOLEAN, we need to use a CAST function. In DuckDB, we can directly cast a DECIMAL to a BOOLEAN. The conversion follows these rules: - 0 becomes FALSE - Any non-zero value becomes TRUE - NULL remains NULL Since the column has no distinct values (empty list provided), it might contain only NULL values or it might be empty. The CAST will still work in these cases, potentially resulting in a column of NULL values if that was the original content.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>cross_plant_configurable_material</td>
+      <td>CAST("cross_plant_configurable_material" AS BOOLEAN)</td>
+      <td>To transform the data type of the column 'cross_plant_configurable_material' from DECIMAL to BOOLEAN, we need to use a simple CAST clause. In DuckDB, we can directly cast a DECIMAL to a BOOLEAN. The conversion follows these rules: - 0 becomes FALSE - Any non-zero value becomes TRUE - NULL remains NULL Since the column has no distinct values (empty list), it might contain only NULL values or it's an empty column. The cast will still work in these cases, converting any existing values according to the rules above.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>cross_plant_material_status</td>
+      <td>CAST("cross_plant_material_status" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'cross_plant_material_status' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the desired data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>customer_number</td>
+      <td>CAST("customer_number" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'customer_number' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional processing since we're just changing the data type without any modification to the actual data.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>deletion_block_flag</td>
+      <td>CAST("deletion_block_flag" AS BOOLEAN)</td>
+      <td>To transform the 'deletion_block_flag' column from DECIMAL to BOOLEAN, we need to use a CAST function. In DuckDB, we can directly cast a DECIMAL to a BOOLEAN. The cast will follow these rules: 1. 0 will be cast to FALSE 2. Any non-zero value will be cast to TRUE 3. NULL values will remain NULL\nSince the question states that the column has no distinct values (an empty list), it's likely that all values are NULL. However, the CAST operation will still work correctly for any potential non-NULL values that might be added in the future.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>deletion_flag</td>
+      <td>CAST("deletion_flag" AS BIT)</td>
+      <td>To transform the 'deletion_flag' column from INT to BIT, we need to use a CAST function. In DuckDB, we can directly cast an integer to a bit. Since the column only contains 0 as a value, it will be appropriately converted to FALSE in the BIT data type. The CAST function in DuckDB allows for this straightforward conversion.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>dimensions</td>
+      <td>CAST("dimensions" AS VARCHAR)</td>
+      <td>To transform the data type of the 'dimensions' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the question states that 'dimensions' has no distinct values (an empty list), this cast operation should work without any issues, as there are no actual values to convert.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>distribution_status</td>
+      <td>CAST("distribution_status" AS VARCHAR)</td>
+      <td>To transform the data type of the 'distribution_status' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the column is already of type DECIMAL, we don't need to handle any special cases or transformations beyond the basic cast.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>division</td>
+      <td>CAST("division" AS VARCHAR)</td>
+      <td>To transform the data type of the 'division' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this is straightforward. We simply use CAST(column_name AS new_data_type). In this case, we're casting 'division' to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>ean</td>
+      <td>CAST("ean" AS VARCHAR)</td>
+      <td>To transform the data type of the 'ean' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'ean' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>ean_category</td>
+      <td>CAST("ean_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'ean_category' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the distinct values list is empty, we can still perform the cast operation, which will work for any decimal values present in the column.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>effectivity_parameter_indicator</td>
+      <td>CAST("effectivity_parameter_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'effectivity_parameter_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>entar</td>
+      <td>CAST("entar" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'entar' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>environmentally_relevant_indicator</td>
+      <td>CAST("environmentally_relevant_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'environmentally_relevant_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>external_material_group</td>
+      <td>CAST("external_material_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'external_material_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently DECIMAL and we want to change it to VARCHAR, we'll use CAST with VARCHAR as the target type.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>follow_up_material_indicator</td>
+      <td>CAST("follow_up_material_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'follow_up_material_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>general_item_category_group</td>
+      <td>CAST("general_item_category_group" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'general_item_category_group' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>hazardous_material_number</td>
+      <td>CAST("hazardous_material_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'hazardous_material_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>hazmat_form</td>
+      <td>CAST("hazmat_form" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'hazmat_form' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently empty (has no distinct values), this transformation should be straightforward and won't result in any data loss.\n</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>hazmat_label_group</td>
+      <td>CAST("hazmat_label_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'hazmat_label_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>hazmat_packaging_type</td>
+      <td>CAST("hazmat_packaging_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'hazmat_packaging_type' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>hierarchy_category</td>
+      <td>CAST("hierarchy_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'hierarchy_category' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>iloos</td>
+      <td>CAST("iloos" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'iloos' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the new data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>industry_standard_description</td>
+      <td>CAST("industry_standard_description" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'industry_standard_description' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column is already of type DECIMAL, we don't need to do any additional processing before the cast.\n</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>inhouse_production_time</td>
+      <td>CAST("inhouse_production_time" AS VARCHAR)</td>
+      <td>To transform the data type of the 'inhouse_production_time' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert all values in the column to their string representation. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>kzkfg</td>
+      <td>CAST("kzkfg" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'kzkfg' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>kzwsm</td>
+      <td>CAST("kzwsm" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'kzwsm' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value of one data type to another. In this case, we're converting from DECIMAL to VARCHAR (variable-length character string).\n</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>lab_office</td>
+      <td>CAST("lab_office" AS VARCHAR)</td>
+      <td>To transform the data type of the 'lab_office' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this is straightforward. We simply use CAST and specify the column name and the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>last_change_date</td>
+      <td>CASE \n    WHEN "last_change_date" BETWEEN 10000101 AND 99991231 \n    THEN strptime(CAST("last_change_date" AS VARCHAR), '%Y%m%d')\n    ELSE NULL\nEND</td>
+      <td>To transform the 'last_change_date' column from INT to DATE in DuckDB, we need to first cast the integer to a VARCHAR (string), and then use the strptime function to parse the string into a DATE. The format of the date strings is 'YYYYMMDD', which corresponds to the format string '%Y%m%d' in the strptime function.\n</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>lead_time_offset</td>
+      <td>CAST("lead_time_offset" AS VARCHAR)</td>
+      <td>To transform the data type of the 'lead_time_offset' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>manufacturer_number</td>
+      <td>CAST("manufacturer_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'manufacturer_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>manufacturer_part_number</td>
+      <td>CAST("manufacturer_part_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'manufacturer_part_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST function to convert the column to VARCHAR. This transformation is safe since VARCHAR can hold any textual representation of the original DECIMAL values.\n</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>material_category</td>
+      <td>CAST("material_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'material_category' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>material_composition</td>
+      <td>CAST("material_composition" AS VARCHAR)</td>
+      <td>To transform the data type of the 'material_composition' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>material_format</td>
+      <td>CAST("material_format" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'material_format' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column is currently a DECIMAL and we want to convert it to a VARCHAR, we'll use CAST with the VARCHAR type specification.\n</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>material_group</td>
+      <td>CAST("material_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'material_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>material_number</td>
+      <td>CAST("material_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'material_number' column from 'INT' to 'VARCHAR' in DuckDB, we need to use a simple CAST function. This will convert each integer value to its string representation. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>max_storage_period</td>
+      <td>CAST("max_storage_period" AS VARCHAR)</td>
+      <td>To transform the data type of the 'max_storage_period' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>nato_stock_number</td>
+      <td>CAST("nato_stock_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'nato_stock_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently DECIMAL, casting it to VARCHAR will preserve all the digits, including any decimal places.\n</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>number_type</td>
+      <td>CAST("number_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>packaging_material_group</td>
+      <td>CAST("packaging_material_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'packaging_material_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>packaging_material_indicator</td>
+      <td>CAST("packaging_material_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'packaging_material_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>packaging_material_type</td>
+      <td>CAST("packaging_material_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'packaging_material_type' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This operation will convert the numeric values to their string representations. Since the column currently contains no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type to allow for string inputs in the future.\n</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>planning_type</td>
+      <td>CAST("planning_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'planning_type' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this operation is straightforward. We simply use the CAST function and specify the target data type as VARCHAR. This will convert all values in the 'planning_type' column to string representations.\n</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>price_control_indicator</td>
+      <td>CAST("price_control_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'price_control_indicator' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the current distinct values are empty, this cast will work for any potential decimal values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>pricing_profile</td>
+      <td>CAST("pricing_profile" AS VARCHAR)</td>
+      <td>To transform the data type of the 'pricing_profile' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional processing since we're just changing the data type representation.\n</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>pricing_reference_material</td>
+      <td>CAST("pricing_reference_material" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'pricing_reference_material' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>product_allocation_procedure</td>
+      <td>CAST("product_allocation_procedure" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'product_allocation_procedure' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR conversion.\n</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>product_hierarchy</td>
+      <td>CAST("product_hierarchy" AS VARCHAR)</td>
+      <td>To transform the data type of the 'product_hierarchy' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>production_memo</td>
+      <td>CAST("production_memo" AS VARCHAR)</td>
+      <td>To transform the data type of the 'production_memo' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST function and specify the target data type as VARCHAR. This will convert the numeric values in the DECIMAL column to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>production_procurement_time</td>
+      <td>CAST("production_procurement_time" AS VARCHAR)</td>
+      <td>To transform the data type of the 'production_procurement_time' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>profile</td>
+      <td>CAST("profile" AS VARCHAR)</td>
+      <td>To transform the data type of the 'profile' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>proposer_name</td>
+      <td>CAST("proposer_name" AS VARCHAR)</td>
+      <td>To transform the data type of the 'proposer_name' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Even though the distinct values list is empty, we'll proceed with the cast operation as requested.\n</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>purchase_order_text_key</td>
+      <td>CAST("purchase_order_text_key" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'purchase_order_text_key' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column has no distinct values, this transformation should not affect any existing data, but it will change how future data is stored and interpreted in this column.\n</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>purchase_order_uom</td>
+      <td>CAST("purchase_order_uom" AS VARCHAR)</td>
+      <td>To transform the data type of the 'purchase_order_uom' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>purchasing_value_key</td>
+      <td>CAST("purchasing_value_key" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'purchasing_value_key' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional modifications since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>qm_procurement_active</td>
+      <td>CAST("qm_procurement_active" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'qm_procurement_active' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>revision_level_indicator</td>
+      <td>CAST("revision_level_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'revision_level_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>rework_time</td>
+      <td>CAST("rework_time" AS VARCHAR)</td>
+      <td>To transform the data type of the 'rework_time' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>round_lot_size</td>
+      <td>CAST("round_lot_size" AS VARCHAR)</td>
+      <td>To transform the data type of the 'round_lot_size' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>sales_price_factor</td>
+      <td>CAST("sales_price_factor" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sales_price_factor' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Since DuckDB uses standard SQL syntax for CAST operations, we can directly use the CAST function with the desired data type.\n</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>season</td>
+      <td>CAST("season" AS VARCHAR)</td>
+      <td>To transform the data type of the 'season' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>season_category</td>
+      <td>CAST("season_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'season_category' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>season_year</td>
+      <td>CAST("season_year" AS VARCHAR)</td>
+      <td>To transform the data type of the 'season_year' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. In DuckDB, the syntax for this operation is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>serial_number_profile</td>
+      <td>CAST("serial_number_profile" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'serial_number_profile' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column currently contains decimal values, casting to VARCHAR will preserve all the digits, including any decimal places.\n</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>shelf_life_expiration</td>
+      <td>CAST("shelf_life_expiration" AS VARCHAR)</td>
+      <td>To transform the data type of the 'shelf_life_expiration' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>shelf_life_period_indicator</td>
+      <td>CAST("shelf_life_period_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'shelf_life_period_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional formatting or manipulation since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>specification_page_number</td>
+      <td>CAST("specification_page_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'specification_page_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case). This will convert all values in the column to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>storage_conditions</td>
+      <td>CAST("storage_conditions" AS VARCHAR)</td>
+      <td>To transform the data type of the 'storage_conditions' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>tax_classification</td>
+      <td>CAST("tax_classification" AS VARCHAR)</td>
+      <td>To transform the data type of the 'tax_classification' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future if needed.\n</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>temperature_conditions</td>
+      <td>CAST("temperature_conditions" AS VARCHAR)</td>
+      <td>To transform the data type of the 'temperature_conditions' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since DuckDB follows SQL standards, the CAST syntax is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>transportation_group</td>
+      <td>CAST("transportation_group" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'transportation_group' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently empty (has no distinct values), this transformation will not affect any existing data, but it will change the column's data type for future insertions.\n</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>valuation_class</td>
+      <td>CAST("valuation_class" AS VARCHAR)</td>
+      <td>To transform the data type of the 'valuation_class' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Since DuckDB follows SQL standards, the CAST syntax is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>valuation_procedure</td>
+      <td>CAST("valuation_procedure" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'valuation_procedure' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the expression from one data type to another. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>variable_purchase_order_unit</td>
+      <td>CAST("variable_purchase_order_unit" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'variable_purchase_order_unit' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representation. Since the column has no distinct values (empty list provided), this transformation should not affect any existing data, but it will change the column's data type for future insertions or operations.\n</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>volume_unit</td>
+      <td>CAST("volume_unit" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'volume_unit' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column 'volume_unit' is currently empty (has no distinct values), this transformation will effectively create an empty VARCHAR column, ready to accept string data if needed in the future.\n</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>weight_unit</td>
+      <td>CAST("weight_unit" AS VARCHAR)</td>
+      <td>To transform the data type of the 'weight_unit' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this conversion is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>90</b> columns have missing values<br>
+                    ✔️ <b>8</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>administrative_lead_time</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>allowed_packaging_weight</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>authorization_group</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>base_material_number</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>batch_management_required</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>cad_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>catalog_profile</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>central_article_number</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>change_document_number</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>co_product_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>consumption_mode</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>container_requirements</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Only applicable for materials requiring specific containers</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>contents_unit</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>cross_plant_batch_management</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>cross_plant_configurable_material</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>cross_plant_material_status</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>customer_number</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>deletion_block_flag</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>dimensions</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>distribution_status</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>division</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>ean</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>ean_category</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>effectivity_parameter_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>entar</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>environmentally_relevant_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>external_material_group</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>follow_up_material_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>general_item_category_group</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>hazardous_material_number</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Only applicable for hazardous materials</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>hazmat_form</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Only applicable for hazardous materials</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>hazmat_label_group</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Only applicable for hazardous materials</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>hazmat_packaging_type</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Only applicable for hazardous materials</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>hierarchy_category</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>iloos</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>industry_standard_description</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>inhouse_production_time</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>kzkfg</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>kzwsm</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>lab_office</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>last_change_date</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>last_changed_by</td>
+      <td>33.33</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>lead_time_offset</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>manufacturer_number</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Not applicable for in-house produced items.</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>manufacturer_part_number</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Not applicable for in-house produced items.</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>material_category</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>material_composition</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>material_format</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>material_group</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>max_storage_period</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>nato_stock_number</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>number_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>old_material_number</td>
+      <td>33.33</td>
+      <td>True</td>
+      <td>Not applicable for newly created materials without previous numbers.</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>packaging_material_group</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>packaging_material_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>packaging_material_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>planning_type</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>price_control_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>pricing_profile</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>pricing_reference_material</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>product_allocation_procedure</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>product_hierarchy</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>production_memo</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>production_procurement_time</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>profile</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>proposer_name</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>purchase_order_text_key</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>purchase_order_uom</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>purchasing_value_key</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>qm_procurement_active</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>revision_level_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>rework_time</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>round_lot_size</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>sales_price_factor</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>season</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>season_category</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>season_year</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>serial_number_profile</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>shelf_life_expiration</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>shelf_life_period_indicator</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>specification_page_number</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>storage_conditions</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>tax_classification</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>temperature_conditions</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>transportation_group</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>valuation_class</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>valuation_procedure</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>variable_purchase_order_unit</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>volume_unit</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>weight_unit</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>administrative_lead_time</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>allowed_packaging_weight</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>authorization_group</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>base_material_number</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>batch_management_required</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>cad_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>catalog_profile</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>central_article_number</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>change_document_number</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>co_product_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>consumption_mode</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>contents_unit</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>cross_plant_batch_management</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>cross_plant_configurable_material</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>cross_plant_material_status</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>customer_number</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>deletion_block_flag</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>dimensions</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>distribution_status</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>division</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>ean</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>ean_category</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>effectivity_parameter_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>entar</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>environmentally_relevant_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>external_material_group</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>follow_up_material_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>general_item_category_group</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>hierarchy_category</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>iloos</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>industry_standard_description</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>inhouse_production_time</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>kzkfg</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>kzwsm</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>lab_office</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>last_change_date</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>last_changed_by</td>
+      <td>33.33</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>lead_time_offset</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>material_category</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>material_composition</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>material_format</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>material_group</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>max_storage_period</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>nato_stock_number</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>number_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>packaging_material_group</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>packaging_material_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>packaging_material_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>planning_type</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>price_control_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>pricing_profile</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>pricing_reference_material</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>product_allocation_procedure</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>product_hierarchy</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>production_memo</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>production_procurement_time</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>profile</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>proposer_name</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>purchase_order_text_key</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>purchase_order_uom</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>purchasing_value_key</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>qm_procurement_active</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>revision_level_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>rework_time</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>round_lot_size</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>sales_price_factor</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>season</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>season_category</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>season_year</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>serial_number_profile</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>shelf_life_expiration</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>shelf_life_period_indicator</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>specification_page_number</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>storage_conditions</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>tax_classification</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>temperature_conditions</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>transportation_group</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>valuation_class</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>valuation_procedure</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>variable_purchase_order_unit</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>volume_unit</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>weight_unit</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 700, 'y': 3}];
+    binWidth = 700;
+    drawHistogram("hist_viz_client", data, binWidth);
+data = [{'label': 'hvruser', 'value': 100.0}];
+    drawBarChart("bar_viz_creator_name", data);
+data = [{'label': 'hvruser', 'value': 100.0}];
+    drawBarChart("bar_viz_last_changed_by", data);
+data = [{'label': 'k', 'value': 100.0}];
+    drawBarChart("bar_viz_complete_material_maintenance_status", data);
+data = [{'label': 'k', 'value': 100.0}];
+    drawBarChart("bar_viz_maintenance_status", data);
+data = [{'label': 'fert', 'value': 66.66666666666666}, {'label': 'zmdg', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_material_type", data);
+data = [{'label': 'm', 'value': 100.0}];
+    drawBarChart("bar_viz_industry_sector", data);
+data = [{'label': 'updated desc', 'value': 100.0}];
+    drawBarChart("bar_viz_old_material_number", data);
+data = [{'label': 'bag', 'value': 66.66666666666666}, {'label': 'ea', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_base_unit_of_measure", data);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_number_of_sheets", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_gross_weight", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_ntgew", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_volum", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_material_weight", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_length", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_width", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_height", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_ergew", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_ervol", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_gross_weight_tolerance", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_volume_tolerance", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_fill_quantity", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_stfak", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_valid_from_date", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_material_specific_status", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_material_specific_status_usage", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_min_remaining_shelf_life", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_shelf_life_expiration_date", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_storage_percentage", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_net_contents", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_comparison_price_unit", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_gross_contents", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_internal_object_number", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_completion_level", data, binWidth);
+data = [{'label': 'norm', 'value': 100.0}];
+    drawBarChart("bar_viz_general_item_category_group_mara", data);
+data = [{'x': 26047.15, 'y': 1}, {'x': 26047.449999999997, 'y': 0}, {'x': 26047.75, 'y': 0}];
+    binWidth = 0.3;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [];
+    drawBarChart("bar_viz_container_requirements", data);
+data = [{'label': '1023-03-08 00:0...', 'value': 66.66666666666666}, {'label': '1023-03-09 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_creation_date", data);
+data = [{'label': "b'\\x00\\x00\\x00\\...", 'value': 100.0}];
+    drawBarChart("bar_viz_deletion_flag", data);
+data = [];
+    drawBarChart("bar_viz_hazardous_material_number", data);
+data = [];
+    drawBarChart("bar_viz_hazmat_form", data);
+data = [];
+    drawBarChart("bar_viz_hazmat_label_group", data);
+data = [];
+    drawBarChart("bar_viz_hazmat_packaging_type", data);
+data = [{'label': '1023-03-08 00:0...', 'value': 50.0}, {'label': '1023-03-09 00:0...', 'value': 50.0}];
+    drawBarChart("bar_viz_last_change_date", data);
+data = [];
+    drawBarChart("bar_viz_manufacturer_number", data);
+data = [];
+    drawBarChart("bar_viz_manufacturer_part_number", data);
+data = [{'label': '51066123', 'value': 33.33333333333333}, {'label': '51066122', 'value': 33.33333333333333}, {'label': '51066124', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_material_number", data);
+
+
+</script>
+</body>
+</html>

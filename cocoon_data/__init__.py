@@ -19133,8 +19133,8 @@ class CleanUnusualForAll(MultipleNode):
                 
             clean_unusual_col = clean_unusual[col]
             
-            explanation_value = clean_unusual_col.get('explanation', '').replace('\n', ' ')
-            comment += f"-- {col}: {explanation_value}\n"
+            explanation_value = clean_unusual_col.get('explanation', '')
+            comment += f"-- {col}: {remove_newline(explanation_value)}\n"
 
             if not clean_unusual_col["could_clean"]:
                 selections.append(f'"{col}"')

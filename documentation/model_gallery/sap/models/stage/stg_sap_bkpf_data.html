@@ -1,0 +1,3826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_bkpf_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>gjahr</th>
+      <th>blart</th>
+      <th>monat</th>
+      <th>aedat</th>
+      <th>upddt</th>
+      <th>usnam</th>
+      <th>tcode</th>
+      <th>stjah</th>
+      <th>waers</th>
+      <th>kursf</th>
+      <th>kzkrs</th>
+      <th>frath</th>
+      <th>glvor</th>
+      <th>awtyp</th>
+      <th>hwaer</th>
+      <th>hwae2</th>
+      <th>hwae3</th>
+      <th>kurs2</th>
+      <th>kurs3</th>
+      <th>basw2</th>
+      <th>basw3</th>
+      <th>umrd2</th>
+      <th>umrd3</th>
+      <th>stodt</th>
+      <th>kuty2</th>
+      <th>kuty3</th>
+      <th>txkrs</th>
+      <th>ctxkrs</th>
+      <th>numpg</th>
+      <th>reindat</th>
+      <th>vatdate</th>
+      <th>kursx</th>
+      <th>kur2x</th>
+      <th>kur3x</th>
+      <th>resubmission</th>
+      <th>intdate</th>
+      <th>psobt</th>
+      <th>psodt</th>
+      <th>psotm</th>
+      <th>offset_refer_dat</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>belnr</th>
+      <th>bldat</th>
+      <th>budat</th>
+      <th>bukrs</th>
+      <th>mandt</th>
+      <th>ccins</th>
+      <th>ccnum</th>
+      <th>curt2</th>
+      <th>curt3</th>
+      <th>awkey</th>
+      <th>cpudt</th>
+      <th>cputm</th>
+      <th>fikrs</th>
+      <th>xrueb</th>
+      <th>blind</th>
+      <th>cash_alloc</th>
+      <th>xsplit</th>
+      <th>stgrd</th>
+      <th>stblg</th>
+      <th>xmca</th>
+      <th>wwert</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2006</td>
+      <td>sa</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>d002766</td>
+      <td>fb50</td>
+      <td>0</td>
+      <td>usd</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>rfbu</td>
+      <td>bkpf</td>
+      <td>usd</td>
+      <td>eur</td>
+      <td>usd</td>
+      <td>-1.24</td>
+      <td>0.0</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>m</td>
+      <td>m</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>200001076</td>
+      <td>20060425</td>
+      <td>20060425</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>30</td>
+      <td>40</td>
+      <td>10000107630002006</td>
+      <td>20060425</td>
+      <td>112823</td>
+      <td>3000</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>20060425</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2006</td>
+      <td>sa</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>d002766</td>
+      <td>fb50</td>
+      <td>0</td>
+      <td>usd</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>rfbu</td>
+      <td>bkpf</td>
+      <td>usd</td>
+      <td>eur</td>
+      <td>usd</td>
+      <td>-1.24</td>
+      <td>0.0</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>m</td>
+      <td>m</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>2</td>
+      <td>False</td>
+      <td>200001077</td>
+      <td>20060426</td>
+      <td>20060426</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>30</td>
+      <td>40</td>
+      <td>10000107730002006</td>
+      <td>20060426</td>
+      <td>94020</td>
+      <td>3000</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>20060426</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2006</td>
+      <td>sa</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>d002766</td>
+      <td>fb50</td>
+      <td>0</td>
+      <td>usd</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>rfbu</td>
+      <td>bkpf</td>
+      <td>usd</td>
+      <td>eur</td>
+      <td>usd</td>
+      <td>-1.24</td>
+      <td>0.0</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>m</td>
+      <td>m</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3</td>
+      <td>False</td>
+      <td>200001078</td>
+      <td>20060426</td>
+      <td>20060426</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>30</td>
+      <td>40</td>
+      <td>10000107830002006</td>
+      <td>20060426</td>
+      <td>94135</td>
+      <td>3000</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>20060426</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>gjahr</th>
+      <th>blart</th>
+      <th>posting_month</th>
+      <th>last_change_date</th>
+      <th>update_date</th>
+      <th>usnam</th>
+      <th>transaction_code</th>
+      <th>stjah</th>
+      <th>currency_code</th>
+      <th>fixed_exchange_rate</th>
+      <th>reciprocal_exchange_rate_indicator</th>
+      <th>freight_charges</th>
+      <th>business_transaction</th>
+      <th>reference_type</th>
+      <th>primary_currency</th>
+      <th>currency_2</th>
+      <th>currency_3</th>
+      <th>exchange_rate_currency_2</th>
+      <th>exchange_rate_currency_3</th>
+      <th>withholding_tax_base_method</th>
+      <th>extended_withholding_tax_base</th>
+      <th>unknown_field_2</th>
+      <th>unknown_field_3</th>
+      <th>reverse_posting_date</th>
+      <th>currency_type_2</th>
+      <th>currency_type_3_alt</th>
+      <th>exchange_rate</th>
+      <th>local_currency_exchange_rate</th>
+      <th>page_count</th>
+      <th>reindat</th>
+      <th>vat_date</th>
+      <th>primary_exchange_rate</th>
+      <th>exchange_rate_2</th>
+      <th>exchange_rate_3</th>
+      <th>resubmission_date</th>
+      <th>interest_calculation_date</th>
+      <th>psobt</th>
+      <th>psodt</th>
+      <th>document_time</th>
+      <th>offset_reference_date</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>belnr</th>
+      <th>bldat</th>
+      <th>budat</th>
+      <th>bukrs</th>
+      <th>client_number</th>
+      <th>credit_card_issuer</th>
+      <th>credit_card_number</th>
+      <th>currency_type</th>
+      <th>currency_type_3</th>
+      <th>document_reference_key</th>
+      <th>entry_date</th>
+      <th>entry_time</th>
+      <th>financial_management_area</th>
+      <th>invoice_correction_indicator</th>
+      <th>is_blind_document</th>
+      <th>is_cash_allocation</th>
+      <th>line_item_split_indicator</th>
+      <th>reversal_reason</th>
+      <th>reverse_document_number</th>
+      <th>special_gl_indicator</th>
+      <th>value_date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2006</td>
+      <td>sa</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>d002766</td>
+      <td>fb50</td>
+      <td>0</td>
+      <td>usd</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>rfbu</td>
+      <td>bkpf</td>
+      <td>usd</td>
+      <td>eur</td>
+      <td>usd</td>
+      <td>-1.24</td>
+      <td>0.0</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>m</td>
+      <td>m</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>False</td>
+      <td>200001076</td>
+      <td>2006-04-25</td>
+      <td>2006-04-25</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>None</td>
+      <td>None</td>
+      <td>30</td>
+      <td>40</td>
+      <td>10000107630002006</td>
+      <td>2006-04-25</td>
+      <td>11:28:23</td>
+      <td>3000</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2006-04-25</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2006</td>
+      <td>sa</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>d002766</td>
+      <td>fb50</td>
+      <td>0</td>
+      <td>usd</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>rfbu</td>
+      <td>bkpf</td>
+      <td>usd</td>
+      <td>eur</td>
+      <td>usd</td>
+      <td>-1.24</td>
+      <td>0.0</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>m</td>
+      <td>m</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>2</td>
+      <td>False</td>
+      <td>200001077</td>
+      <td>2006-04-26</td>
+      <td>2006-04-26</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>None</td>
+      <td>None</td>
+      <td>30</td>
+      <td>40</td>
+      <td>10000107730002006</td>
+      <td>2006-04-26</td>
+      <td>09:40:20</td>
+      <td>3000</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2006-04-26</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2006</td>
+      <td>sa</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>d002766</td>
+      <td>fb50</td>
+      <td>0</td>
+      <td>usd</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>rfbu</td>
+      <td>bkpf</td>
+      <td>usd</td>
+      <td>eur</td>
+      <td>usd</td>
+      <td>-1.24</td>
+      <td>0.0</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>m</td>
+      <td>m</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>3</td>
+      <td>False</td>
+      <td>200001078</td>
+      <td>2006-04-26</td>
+      <td>2006-04-26</td>
+      <td>3000</td>
+      <td>800</td>
+      <td>None</td>
+      <td>None</td>
+      <td>30</td>
+      <td>40</td>
+      <td>10000107830002006</td>
+      <td>2006-04-26</td>
+      <td>09:41:35</td>
+      <td>3000</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2006-04-26</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">gjahr</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_gjahr"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">blart</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='AL'>AL</option><option value='AK'>AK</option><option value='AZ'>AZ</option><option value='AR'>AR</option><option value='CA'>CA</option><option value='CO'>CO</option><option value='CT'>CT</option><option value='DE'>DE</option><option value='FL'>FL</option><option value='GA'>GA</option><option value='HI'>HI</option><option value='ID'>ID</option><option value='IL'>IL</option><option value='IN'>IN</option><option value='IA'>IA</option><option value='KS'>KS</option><option value='KY'>KY</option><option value='LA'>LA</option><option value='ME'>ME</option><option value='MD'>MD</option><option value='MA'>MA</option><option value='MI'>MI</option><option value='MN'>MN</option><option value='MS'>MS</option><option value='MO'>MO</option><option value='MT'>MT</option><option value='NE'>NE</option><option value='NV'>NV</option><option value='NH'>NH</option><option value='NJ'>NJ</option><option value='NM'>NM</option><option value='NY'>NY</option><option value='NC'>NC</option><option value='ND'>ND</option><option value='OH'>OH</option><option value='OK'>OK</option><option value='OR'>OR</option><option value='PA'>PA</option><option value='RI'>RI</option><option value='SC'>SC</option><option value='SD'>SD</option><option value='TN'>TN</option><option value='TX'>TX</option><option value='UT'>UT</option><option value='VT'>VT</option><option value='VA'>VA</option><option value='WA'>WA</option><option value='WV'>WV</option><option value='WI'>WI</option><option value='WY'>WY</option><option value='sa'>sa</option></select></span><br><br><div id="bar_viz_blart"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">posting_month</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_posting_month"></div><b>📃 Summary:</b> Posting period (month)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_change_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_last_change_date"></div><b>📃 Summary:</b> Date of last change<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">update_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_update_date"></div><b>📃 Summary:</b> Update date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">usnam</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_usnam"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_code"></div><b>📃 Summary:</b> SAP transaction code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">stjah</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_stjah"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency_code"></div><b>📃 Summary:</b> Currency code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fixed_exchange_rate</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_fixed_exchange_rate"></div><b>📃 Summary:</b> Exchange rate (fixed)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reciprocal_exchange_rate_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_reciprocal_exchange_rate_indicator"></div><b>📃 Summary:</b> Indicator for reciprocal exchange rate<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">freight_charges</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_freight_charges"></div><b>📃 Summary:</b> Freight charges<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">business_transaction</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='rfbu'>rfbu</option><option value='sale'>sale</option><option value='purchase'>purchase</option><option value='payment'>payment</option><option value='receipt'>receipt</option><option value='transfer'>transfer</option><option value='deposit'>deposit</option><option value='withdrawal'>withdrawal</option><option value='invoice'>invoice</option><option value='refund'>refund</option><option value='credit'>credit</option><option value='debit'>debit</option><option value='adjustment'>adjustment</option><option value='exchange'>exchange</option><option value='subscription'>subscription</option><option value='cancellation'>cancellation</option><option value='renewal'>renewal</option><option value='loan'>loan</option><option value='investment'>investment</option><option value='payroll'>payroll</option></select></span><br><br><div id="bar_viz_business_transaction"></div><b>📃 Summary:</b> Business transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reference_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='bkpf'>bkpf</option></select></span><br><br><div id="bar_viz_reference_type"></div><b>📃 Summary:</b> Reference type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">primary_currency</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_primary_currency"></div><b>📃 Summary:</b> Currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='eur'>eur</option><option value='usd'>usd</option><option value='gbp'>gbp</option><option value='jpy'>jpy</option><option value='chf'>chf</option><option value='cad'>cad</option><option value='aud'>aud</option><option value='nzd'>nzd</option><option value='cny'>cny</option><option value='hkd'>hkd</option><option value='sgd'>sgd</option><option value='sek'>sek</option><option value='nok'>nok</option><option value='mxn'>mxn</option><option value='zar'>zar</option><option value='inr'>inr</option><option value='brl'>brl</option><option value='rub'>rub</option><option value='krw'>krw</option><option value='try'>try</option></select></span><br><br><div id="bar_viz_currency_2"></div><b>📃 Summary:</b> Currency 2<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_3</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency_3"></div><b>📃 Summary:</b> Currency 3<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">exchange_rate_currency_2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_exchange_rate_currency_2"></div><b>📃 Summary:</b> Exchange rate for currency 2<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">exchange_rate_currency_3</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_exchange_rate_currency_3"></div><b>📃 Summary:</b> Exchange rate for currency 3<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">withholding_tax_base_method</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_withholding_tax_base_method"></div><b>📃 Summary:</b> Base method for withholding tax<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">extended_withholding_tax_base</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_extended_withholding_tax_base"></div><b>📃 Summary:</b> Extended withholding tax base<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unknown_field_2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_unknown_field_2"></div><b>📃 Summary:</b> Unknown field 2<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">unknown_field_3</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_unknown_field_3"></div><b>📃 Summary:</b> Unknown field 3<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reverse_posting_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_reverse_posting_date"></div><b>📃 Summary:</b> Reverse posting date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_type_2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='AUD'>AUD</option><option value='CAD'>CAD</option><option value='CHF'>CHF</option><option value='CNY'>CNY</option><option value='EUR'>EUR</option><option value='GBP'>GBP</option><option value='HKD'>HKD</option><option value='JPY'>JPY</option><option value='KRW'>KRW</option><option value='MXN'>MXN</option><option value='NOK'>NOK</option><option value='NZD'>NZD</option><option value='SEK'>SEK</option><option value='SGD'>SGD</option><option value='USD'>USD</option><option value='m'>m</option></select></span><br><br><div id="bar_viz_currency_type_2"></div><b>📃 Summary:</b> Currency type 2<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_type_3_alt</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='$'>$</option><option value='€'>€</option><option value='£'>£</option><option value='¥'>¥</option><option value='₣'>₣</option><option value='₹'>₹</option><option value='Kr'>Kr</option><option value='R$'>R$</option><option value='C$'>C$</option><option value='A$'>A$</option><option value='NZ$'>NZ$</option><option value='Fr'>Fr</option><option value='₱'>₱</option><option value='₩'>₩</option><option value='₪'>₪</option><option value='₺'>₺</option><option value='₴'>₴</option><option value='₸'>₸</option><option value='₼'>₼</option><option value='₽'>₽</option><option value='m'>m</option></select></span><br><br><div id="bar_viz_currency_type_3_alt"></div><b>📃 Summary:</b> Currency type 3<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">exchange_rate</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_exchange_rate"></div><b>📃 Summary:</b> Exchange rate<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">local_currency_exchange_rate</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_local_currency_exchange_rate"></div><b>📃 Summary:</b> Exchange rate for local currency<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">page_count</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_page_count"></div><b>📃 Summary:</b> Number of pages<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reindat</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_reindat"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">vat_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_vat_date"></div><b>📃 Summary:</b> VAT date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">primary_exchange_rate</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_primary_exchange_rate"></div><b>📃 Summary:</b> Exchange rate<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">exchange_rate_2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_exchange_rate_2"></div><b>📃 Summary:</b> Exchange rate 2<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">exchange_rate_3</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_exchange_rate_3"></div><b>📃 Summary:</b> Exchange rate 3<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">resubmission_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_resubmission_date"></div><b>📃 Summary:</b> Resubmission date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">interest_calculation_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_interest_calculation_date"></div><b>📃 Summary:</b> Interest calculation date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">psobt</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_psobt"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">psodt</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_psodt"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">document_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_document_time"></div><b>📃 Summary:</b> Document time<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">offset_reference_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_offset_reference_date"></div><b>📃 Summary:</b> Offset reference date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><b>🦄 Unique:</b> This column is a unique identifier for each row in the table. For this table, each row represents a SAP financial document header. The row_id appears to be unique across rows, incrementing by 1 for each new entry.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record is deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">belnr</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_belnr"></div><b>📃 Summary:</b> <br><b>🦄 Unique:</b> This column appears to be a document number. For this table, each row represents a unique SAP financial document header. The belnr values are different for each row in the sample data, suggesting it could be unique for each document.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">bldat</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_bldat"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">budat</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_budat"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">bukrs</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_bukrs"></div><b>📃 Summary:</b> <br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_client_number"></div><b>📃 Summary:</b> Client number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">credit_card_issuer</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_credit_card_issuer"></div><b>📃 Summary:</b> Credit card issuer<br><b>❓ Missing:</b> Not applicable if transaction doesn't involve credit card.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">credit_card_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_credit_card_number"></div><b>📃 Summary:</b> Credit card number<br><b>❓ Missing:</b> Not applicable if transaction doesn't involve credit card.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='USD'>USD</option><option value='EUR'>EUR</option><option value='GBP'>GBP</option><option value='JPY'>JPY</option><option value='CHF'>CHF</option><option value='CAD'>CAD</option><option value='AUD'>AUD</option><option value='CNY'>CNY</option><option value='HKD'>HKD</option><option value='NZD'>NZD</option><option value='SEK'>SEK</option><option value='KRW'>KRW</option><option value='SGD'>SGD</option><option value='NOK'>NOK</option><option value='MXN'>MXN</option><option value='INR'>INR</option><option value='RUB'>RUB</option><option value='ZAR'>ZAR</option><option value='TRY'>TRY</option><option value='BRL'>BRL</option><option value='30'>30</option></select></span><br><br><div id="bar_viz_currency_type"></div><b>📃 Summary:</b> Currency type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_type_3</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency_type_3"></div><b>📃 Summary:</b> Currency type 3<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">document_reference_key</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_document_reference_key"></div><b>📃 Summary:</b> Reference key for SAP document<br><b>🦄 Unique:</b> This column seems to be a composite key combining multiple fields (possibly including belnr, bukrs, and gjahr). For this table, each row represents a unique SAP financial document header. The document_reference_key values are different for each row in the sample data, suggesting it could be unique for each document.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">entry_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_entry_date"></div><b>📃 Summary:</b> Entry date<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">entry_time</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_entry_time"></div><b>📃 Summary:</b> Entry time<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">financial_management_area</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_financial_management_area"></div><b>📃 Summary:</b> Financial management area<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">invoice_correction_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_invoice_correction_indicator"></div><b>📃 Summary:</b> Invoice correction indicator<br><b>❓ Missing:</b> Not applicable if the document is not an invoice correction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_blind_document</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_is_blind_document"></div><b>📃 Summary:</b> Blind document indicator<br><b>❓ Missing:</b> Not applicable if the document is not a blind document<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_cash_allocation</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_is_cash_allocation"></div><b>📃 Summary:</b> Cash allocation indicator<br><b>❓ Missing:</b> Not applicable if the transaction doesn't involve cash allocation<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">line_item_split_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_line_item_split_indicator"></div><b>📃 Summary:</b> Line item split indicator<br><b>❓ Missing:</b> Not applicable if the line item is not split<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reversal_reason</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_reversal_reason"></div><b>📃 Summary:</b> Reversal reason<br><b>❓ Missing:</b> Not applicable if the transaction is not a reversal<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">reverse_document_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_reverse_document_number"></div><b>📃 Summary:</b> Reverse document number<br><b>❓ Missing:</b> Not applicable if the transaction is not a reversal<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">special_gl_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_special_gl_indicator"></div><b>📃 Summary:</b> Special G/L indicator<br><b>❓ Missing:</b> Not applicable for standard general ledger transactions<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">value_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_value_date"></div><b>📃 Summary:</b> Value date<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about SAP financial document headers. It contains details like document number, company code, fiscal year, posting date, currency, and various transaction codes. The table includes financial attributes such as exchange rates, reversal information, and VAT-related fields. It also has system-related fields for processing and tracking purposes.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>94</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>belnr</td>
+      <td>Document number</td>
+      <td>belnr</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>bukrs</td>
+      <td>Company code</td>
+      <td>bukrs</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>gjahr</td>
+      <td>Fiscal year</td>
+      <td>gjahr</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>mandt</td>
+      <td>Client number</td>
+      <td>client_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>blart</td>
+      <td>Document type</td>
+      <td>blart</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>bldat</td>
+      <td>Document date</td>
+      <td>bldat</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>budat</td>
+      <td>Posting date</td>
+      <td>budat</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>monat</td>
+      <td>Posting period (month)</td>
+      <td>posting_month</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>cpudt</td>
+      <td>Entry date</td>
+      <td>entry_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>cputm</td>
+      <td>Entry time</td>
+      <td>entry_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>aedat</td>
+      <td>Date of last change</td>
+      <td>last_change_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>upddt</td>
+      <td>Update date</td>
+      <td>update_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>wwert</td>
+      <td>Value date</td>
+      <td>value_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>usnam</td>
+      <td>User name</td>
+      <td>usnam</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>tcode</td>
+      <td>SAP transaction code</td>
+      <td>transaction_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>bvorg</td>
+      <td>Accounting transaction</td>
+      <td>accounting_transaction</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>xblnr</td>
+      <td>Reference document number</td>
+      <td>reference_document_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>dbblg</td>
+      <td>Document number</td>
+      <td>dbblg</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>stblg</td>
+      <td>Reverse document number</td>
+      <td>reverse_document_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>stjah</td>
+      <td>Fiscal year</td>
+      <td>stjah</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>bktxt</td>
+      <td>Document header text</td>
+      <td>document_header_text</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>waers</td>
+      <td>Currency code</td>
+      <td>currency_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>kursf</td>
+      <td>Exchange rate (fixed)</td>
+      <td>fixed_exchange_rate</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>kzwrs</td>
+      <td>Currency key indicator</td>
+      <td>currency_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>kzkrs</td>
+      <td>Indicator for reciprocal exchange rate</td>
+      <td>reciprocal_exchange_rate_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>bstat</td>
+      <td>Document status</td>
+      <td>document_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>xnetb</td>
+      <td>Net amount in document currency</td>
+      <td>net_amount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>frath</td>
+      <td>Freight charges</td>
+      <td>freight_charges</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>xrueb</td>
+      <td>Invoice correction indicator</td>
+      <td>invoice_correction_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>glvor</td>
+      <td>Business transaction</td>
+      <td>business_transaction</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>grpid</td>
+      <td>Group ID</td>
+      <td>group_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>dokid</td>
+      <td>Document ID</td>
+      <td>document_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>arcid</td>
+      <td>Archive identification</td>
+      <td>archive_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>iblar</td>
+      <td>Clearing document number</td>
+      <td>clearing_document_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>awtyp</td>
+      <td>Reference type</td>
+      <td>reference_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>awkey</td>
+      <td>Reference key for SAP document</td>
+      <td>document_reference_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>fikrs</td>
+      <td>Financial management area</td>
+      <td>financial_management_area</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>hwaer</td>
+      <td>Currency</td>
+      <td>primary_currency</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>hwae2</td>
+      <td>Currency 2</td>
+      <td>currency_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>hwae3</td>
+      <td>Currency 3</td>
+      <td>currency_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>kurs2</td>
+      <td>Exchange rate for currency 2</td>
+      <td>exchange_rate_currency_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>kurs3</td>
+      <td>Exchange rate for currency 3</td>
+      <td>exchange_rate_currency_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>basw2</td>
+      <td>Base method for withholding tax</td>
+      <td>withholding_tax_base_method</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>basw3</td>
+      <td>Extended withholding tax base</td>
+      <td>extended_withholding_tax_base</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>umrd2</td>
+      <td>Unknown field 2</td>
+      <td>unknown_field_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>umrd3</td>
+      <td>Unknown field 3</td>
+      <td>unknown_field_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>xstov</td>
+      <td>Reversal of other period indicator</td>
+      <td>other_period_reversal_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>stodt</td>
+      <td>Reverse posting date</td>
+      <td>reverse_posting_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>xmwst</td>
+      <td>Tax code</td>
+      <td>tax_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>curt2</td>
+      <td>Currency type</td>
+      <td>currency_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>curt3</td>
+      <td>Currency type 3</td>
+      <td>currency_type_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>kuty2</td>
+      <td>Currency type 2</td>
+      <td>currency_type_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>kuty3</td>
+      <td>Currency type 3</td>
+      <td>currency_type_3_alt</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>xsnet</td>
+      <td>Statistical posting indicator</td>
+      <td>statistical_posting_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>ausbk</td>
+      <td>Clearing date</td>
+      <td>ausbk</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>xusvr</td>
+      <td>EU sales list indicator</td>
+      <td>eu_sales_list_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>duefl</td>
+      <td>Due flag</td>
+      <td>due_flag</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>awsys</td>
+      <td>Logical system of origin</td>
+      <td>origin_system</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>txkrs</td>
+      <td>Exchange rate</td>
+      <td>exchange_rate</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>ctxkrs</td>
+      <td>Exchange rate for local currency</td>
+      <td>local_currency_exchange_rate</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>lotkz</td>
+      <td>Reversal indicator</td>
+      <td>lotkz</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>xwvof</td>
+      <td>Tax determination date indicator</td>
+      <td>tax_determination_date_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>stgrd</td>
+      <td>Reversal reason</td>
+      <td>reversal_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>ppnam</td>
+      <td>Person who parked the document</td>
+      <td>parked_by</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>brnch</td>
+      <td>Branch number</td>
+      <td>branch_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>numpg</td>
+      <td>Number of pages</td>
+      <td>page_count</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>adisc</td>
+      <td>Additional discount information</td>
+      <td>additional_discount</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>xref1_hd</td>
+      <td>Reference key 1</td>
+      <td>reference_key_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>xref2_hd</td>
+      <td>Reference key 2</td>
+      <td>reference_key_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>xreversal</td>
+      <td>Reversal indicator</td>
+      <td>xreversal</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>reindat</td>
+      <td>Clearing date</td>
+      <td>reindat</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>rldnr</td>
+      <td>Ledger</td>
+      <td>ledger</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>ldgrp</td>
+      <td>Ledger group</td>
+      <td>ledger_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>propmano</td>
+      <td>Property management object number</td>
+      <td>property_management_object</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>xblnr_alt</td>
+      <td>Alternative reference document number</td>
+      <td>alternative_reference_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>vatdate</td>
+      <td>VAT date</td>
+      <td>vat_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>doccat</td>
+      <td>Document category</td>
+      <td>document_category</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>xsplit</td>
+      <td>Line item split indicator</td>
+      <td>line_item_split_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>cash_alloc</td>
+      <td>Cash allocation indicator</td>
+      <td>is_cash_allocation</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>follow_on</td>
+      <td>Follow-on document indicator</td>
+      <td>follow_on_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>xreorg</td>
+      <td>Reorganization status</td>
+      <td>reorganization_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>subset</td>
+      <td>Subset identifier</td>
+      <td>subset</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>kurst</td>
+      <td>Exchange rate type</td>
+      <td>exchange_rate_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>kursx</td>
+      <td>Exchange rate</td>
+      <td>primary_exchange_rate</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>kur2x</td>
+      <td>Exchange rate 2</td>
+      <td>exchange_rate_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>kur3x</td>
+      <td>Exchange rate 3</td>
+      <td>exchange_rate_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>xmca</td>
+      <td>Special G/L indicator</td>
+      <td>special_gl_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>resubmission</td>
+      <td>Resubmission date</td>
+      <td>resubmission_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>_sapf15_status</td>
+      <td>Status of SAP F15 process</td>
+      <td>sap_f15_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>psoty</td>
+      <td>Transaction type</td>
+      <td>transaction_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>psoak</td>
+      <td>Accounting clerk</td>
+      <td>accounting_clerk</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>psoks</td>
+      <td>Document type</td>
+      <td>psoks</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>psosg</td>
+      <td>Posting key</td>
+      <td>posting_key</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>psofn</td>
+      <td>Company code</td>
+      <td>psofn</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>intform</td>
+      <td>Interest calculation form</td>
+      <td>interest_calculation_form</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>intdate</td>
+      <td>Interest calculation date</td>
+      <td>interest_calculation_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>psobt</td>
+      <td>Posting date</td>
+      <td>psobt</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>psozl</td>
+      <td>Line item number</td>
+      <td>line_item_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>psodt</td>
+      <td>Document date</td>
+      <td>psodt</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>psotm</td>
+      <td>Document time</td>
+      <td>document_time</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>fm_umart</td>
+      <td>Funds management type</td>
+      <td>funds_management_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>ccins</td>
+      <td>Credit card issuer</td>
+      <td>credit_card_issuer</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>102</th>
+      <td>ccnum</td>
+      <td>Credit card number</td>
+      <td>credit_card_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>103</th>
+      <td>ssblk</td>
+      <td>Blocking reason</td>
+      <td>blocking_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>104</th>
+      <td>batch</td>
+      <td>Batch number</td>
+      <td>batch_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>105</th>
+      <td>sname</td>
+      <td>User name</td>
+      <td>sname</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>106</th>
+      <td>sampled</td>
+      <td>Sampled indicator</td>
+      <td>sampled_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>107</th>
+      <td>exclude_flag</td>
+      <td>Exclusion indicator</td>
+      <td>exclude_flag</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>108</th>
+      <td>blind</td>
+      <td>Blind document indicator</td>
+      <td>is_blind_document</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>109</th>
+      <td>offset_status</td>
+      <td>Offset status</td>
+      <td>offset_status</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>110</th>
+      <td>offset_refer_dat</td>
+      <td>Offset reference date</td>
+      <td>offset_reference_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>111</th>
+      <td>penrc</td>
+      <td>Penalty calculation rule</td>
+      <td>penalty_calculation_rule</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>112</th>
+      <td>knumv</td>
+      <td>Number of condition record</td>
+      <td>condition_record_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>113</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>114</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record is deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🚧 3. Erroneous Values</h2><br>
+            🔍 <b>3</b> columns have erroneous values<br><ol><li><b>blart</b>: 'sa' is unusual because it's a very short, ambiguous code without clear meaning in most contexts.<br>❌ The column has not been cleaned<br><br></li><li><b>currency_type_2</b>: 'm' is unusual because it's not a standard currency code or recognizable currency name.<br>✔️ The column has been cleaned:<br><table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Original Value</th>
+      <th>Cleaned Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>'m'</td>
+      <td>'UNKNOWN'</td>
+    </tr>
+  </tbody>
+</table><br></li><li><b>currency_type_3_alt</b>: 'm' is unusual because it's not a standard currency code and lacks context.<br>❌ The column has not been cleaned<br><br></li></ol><br><h2>🔧 4. Data Type</h2><br>
+                    ✔️ <b>73</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>accounting_clerk</td>
+      <td>CAST("accounting_clerk" AS VARCHAR)</td>
+      <td>To transform the data type of the 'accounting_clerk' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional parameters for this specific conversion.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>accounting_transaction</td>
+      <td>CAST("accounting_transaction" AS VARCHAR)</td>
+      <td>To transform the data type of the 'accounting_transaction' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR conversion.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>additional_discount</td>
+      <td>CAST("additional_discount" AS VARCHAR)</td>
+      <td>To transform the data type of the 'additional_discount' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this is straightforward. We wrap the column name in the CAST function and specify the target data type as VARCHAR. This will convert all values in the column to their string representation.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>alternative_reference_number</td>
+      <td>CAST("alternative_reference_number" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'alternative_reference_number' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert all values in the column to their string representation. Even though the distinct values list is empty, this cast will work for any potential decimal values in the column.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>archive_id</td>
+      <td>CAST("archive_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'archive_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert each numeric value in the column to its string representation. Since the column is already of type DECIMAL, we don't need to worry about any intermediate conversions. The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>ausbk</td>
+      <td>CAST("ausbk" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'ausbk' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>batch_number</td>
+      <td>CAST("batch_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'batch_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>belnr</td>
+      <td>CAST("belnr" AS VARCHAR)</td>
+      <td>To transform the data type of the 'belnr' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>bldat</td>
+      <td>strptime(CAST("bldat" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'bldat' column from INT to DATE in DuckDB, we need to: 1. First, cast the integer to a VARCHAR (string). 2. Then, use the strptime function to parse the string into a DATE. 3. The format string '%Y%m%d' is used because the date is in the format YYYYMMDD.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>blocking_reason</td>
+      <td>CAST("blocking_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the 'blocking_reason' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We don't need to specify a length for VARCHAR in DuckDB, as it dynamically adjusts to the content.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>branch_number</td>
+      <td>CAST("branch_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'branch_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>budat</td>
+      <td>strptime(CAST("budat" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'budat' column from INT to DATE in DuckDB, we need to: 1. First, cast the integer to a VARCHAR (string) type. 2. Then, use the strptime function to parse the string into a DATE type. 3. The format string '%Y%m%d' is used because the date is in the format YYYYMMDD.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>bukrs</td>
+      <td>CAST("bukrs" AS VARCHAR)</td>
+      <td>To transform the data type of the 'bukrs' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>clearing_document_number</td>
+      <td>CAST("clearing_document_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'clearing_document_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representation. Since DuckDB syntax is specified, we'll use the standard SQL CAST function, which is supported in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>client_number</td>
+      <td>CAST("client_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'client_number' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a variable-length character string type. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>condition_record_number</td>
+      <td>CAST("condition_record_number" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'condition_record_number' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR conversion.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>credit_card_issuer</td>
+      <td>CAST("credit_card_issuer" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'credit_card_issuer' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional considerations since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>credit_card_number</td>
+      <td>CAST("credit_card_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'credit_card_number' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR conversion.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>currency_indicator</td>
+      <td>CAST("currency_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the 'currency_indicator' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case). This will convert all values in the 'currency_indicator' column to string format.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>currency_type</td>
+      <td>CAST("currency_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'currency_type' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a string type (VARCHAR). The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>currency_type_3</td>
+      <td>CAST("currency_type_3" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'currency_type_3' from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting an integer to a string (VARCHAR). The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>dbblg</td>
+      <td>CAST("dbblg" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'dbblg' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the data type of an expression to a specified target data type. In this case, we're converting from DECIMAL to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>document_category</td>
+      <td>CAST("document_category" AS VARCHAR)</td>
+      <td>To transform the data type of the 'document_category' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representations. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>document_header_text</td>
+      <td>CAST("document_header_text" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'document_header_text' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward in DuckDB, and it doesn't require any additional parameters for this particular conversion.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>document_id</td>
+      <td>CAST("document_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'document_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Even though the current distinct values are empty, this cast will work for any future decimal values that might be added to the column.\n</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>document_reference_key</td>
+      <td>CAST("document_reference_key" AS VARCHAR)</td>
+      <td>To transform the data type of the 'document_reference_key' column from INT to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from an integer type to a variable-length character string type. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>document_status</td>
+      <td>CAST("document_status" AS VARCHAR)</td>
+      <td>To transform the 'document_status' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representations. Since the column is already of type DECIMAL, we don't need any additional formatting or conversion logic. A straightforward CAST to VARCHAR will suffice.\n</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>due_flag</td>
+      <td>CAST("due_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the 'due_flag' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert the numeric values to their string representation. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data. However, it will change the column's data type to allow for string values in the future if needed.\n</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>entry_date</td>
+      <td>strptime(CAST("entry_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'entry_date' column from INT to DATE in DuckDB, we need to: 1. First, cast the integer to a VARCHAR (string) type. 2. Then, use the strptime function to parse the string into a DATE type. 3. The format '%Y%m%d' matches the structure of our date integers (YYYYMMDD).\n</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>entry_time</td>
+      <td>CAST(\n    strptime(\n        LPAD(CAST("entry_time" AS VARCHAR), 6, '0'),\n        '%H%M%S'\n    ) AS TIME\n)</td>
+      <td>To transform the 'entry_time' column from INT to TIME in DuckDB, we need to: 1. Cast the integer to a string (VARCHAR) first. 2. Use the strptime function to parse the string into a TIME data type. 3. The format string '%H%M%S' is used because the values represent hours, minutes, and seconds without any separators.\n</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>eu_sales_list_indicator</td>
+      <td>CAST("eu_sales_list_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'eu_sales_list_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional considerations since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>exchange_rate_type</td>
+      <td>CAST("exchange_rate_type" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'exchange_rate_type' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>exclude_flag</td>
+      <td>CAST("exclude_flag" AS VARCHAR)</td>
+      <td>To transform the data type of the 'exclude_flag' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change how future data is stored and interpreted in this column.\n</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>financial_management_area</td>
+      <td>CAST("financial_management_area" AS VARCHAR)</td>
+      <td>To transform the data type of the 'financial_management_area' column from INT to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only the value 3000, casting it to VARCHAR will convert this numeric value to its string representation.\n</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>follow_on_indicator</td>
+      <td>CAST("follow_on_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the 'follow_on_indicator' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional considerations since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>funds_management_type</td>
+      <td>CAST("funds_management_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'funds_management_type' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently of type DECIMAL, casting it to VARCHAR will ensure that all numeric values are properly converted to text format.\n</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>group_id</td>
+      <td>CAST("group_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'group_id' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert each value in the column to its string representation. Since the column 'group_id' has no distinct values (it's an empty list), this transformation will work without any issues for all potential future values.\n</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>interest_calculation_form</td>
+      <td>CAST("interest_calculation_form" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'interest_calculation_form' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>invoice_correction_indicator</td>
+      <td>CAST("invoice_correction_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'invoice_correction_indicator' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this is straightforward. We don't need to specify a length for VARCHAR in DuckDB, as it dynamically adjusts to the content.\n</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>is_blind_document</td>
+      <td>CAST("is_blind_document" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_blind_document' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any additional handling since the column doesn't contain any values that would cause issues during the conversion.\n</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>is_cash_allocation</td>
+      <td>CAST("is_cash_allocation" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_cash_allocation' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function will convert the decimal values to their string representations. This is straightforward in DuckDB syntax and doesn't require any additional processing since we're just changing the data type without modifying the content.\n</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>ledger</td>
+      <td>CAST("ledger" AS VARCHAR)</td>
+      <td>To transform the data type of the 'ledger' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(expression AS new_type). In this case, we're casting the 'ledger' column to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>ledger_group</td>
+      <td>CAST("ledger_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'ledger_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Even though the column currently has no distinct values, this cast will ensure that any future values added to this column will be stored as strings rather than decimal numbers.\n</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>line_item_number</td>
+      <td>CAST("line_item_number" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'line_item_number' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>line_item_split_indicator</td>
+      <td>CAST("line_item_split_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'line_item_split_indicator' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>lotkz</td>
+      <td>CAST("lotkz" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'lotkz' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>net_amount</td>
+      <td>CAST("net_amount" AS VARCHAR)</td>
+      <td>To transform the data type of the 'net_amount' column from DECIMAL to VARCHAR, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. In DuckDB, the syntax for this operation is straightforward.\n</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>offset_status</td>
+      <td>CAST("offset_status" AS VARCHAR)</td>
+      <td>To transform the data type of the 'offset_status' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently DECIMAL, casting it to VARCHAR will preserve all the information while changing the data type.\n</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>origin_system</td>
+      <td>CAST("origin_system" AS VARCHAR)</td>
+      <td>To transform the data type of the 'origin_system' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>other_period_reversal_indicator</td>
+      <td>CAST("other_period_reversal_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'other_period_reversal_indicator' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>parked_by</td>
+      <td>CAST("parked_by" AS VARCHAR)</td>
+      <td>To transform the data type of the 'parked_by' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Even though the column currently has no distinct values, this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>penalty_calculation_rule</td>
+      <td>CAST("penalty_calculation_rule" AS VARCHAR)</td>
+      <td>To transform the data type of the 'penalty_calculation_rule' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>posting_key</td>
+      <td>CAST("posting_key" AS VARCHAR)</td>
+      <td>To transform the data type of the 'posting_key' column from DECIMAL to VARCHAR, we need to use a CAST function. In DuckDB, the syntax for this is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>property_management_object</td>
+      <td>CAST("property_management_object" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'property_management_object' from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. This function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>psofn</td>
+      <td>CAST("psofn" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'psofn' from 'DECIMAL' to 'VARCHAR' in DuckDB, we need to use the CAST function. This function allows us to convert data from one type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows the standard SQL syntax.\n</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>psoks</td>
+      <td>CAST("psoks" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'psoks' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>reference_document_number</td>
+      <td>CAST("reference_document_number" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reference_document_number' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>reference_key_1</td>
+      <td>CAST("reference_key_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reference_key_1' from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each numeric value in the column to its string representation. Even though the column currently has no distinct values (it's empty), this cast will ensure that any future decimal values added to this column will be stored as strings.\n</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>reference_key_2</td>
+      <td>CAST("reference_key_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reference_key_2' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>reorganization_status</td>
+      <td>CAST("reorganization_status" AS VARCHAR)</td>
+      <td>To transform the data type of the 'reorganization_status' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We don't need to specify a length for VARCHAR in DuckDB, as it dynamically adjusts to the content.\n</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>reversal_reason</td>
+      <td>CAST("reversal_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the 'reversal_reason' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>reverse_document_number</td>
+      <td>CAST("reverse_document_number" AS VARCHAR)</td>
+      <td>To transform the data type of the 'reverse_document_number' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>sampled_indicator</td>
+      <td>CAST("sampled_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'sampled_indicator' from DECIMAL to VARCHAR in DuckDB, we need to use the CAST function. The CAST function allows us to convert one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>sap_f15_status</td>
+      <td>CAST("sap_f15_status" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'sap_f15_status' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column is currently DECIMAL, casting it to VARCHAR will preserve the data while changing its type to a string format.\n</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>sname</td>
+      <td>CAST("sname" AS VARCHAR)</td>
+      <td>To transform the data type of the 'sname' column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This operation will convert the numeric values in the 'sname' column to their string representations. Since the question states that 'sname' has no distinct values (empty list), this transformation should work without any issues, as there are no complex decimal values to consider.\n</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>special_gl_indicator</td>
+      <td>CAST("special_gl_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the 'special_gl_indicator' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this transformation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>statistical_posting_indicator</td>
+      <td>CAST("statistical_posting_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'statistical_posting_indicator' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations. Since the column has no distinct values (as indicated by the empty list []), this transformation should not affect any existing data, but it will change how future data is stored and interpreted in this column.\n</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>subset</td>
+      <td>CAST("subset" AS VARCHAR)</td>
+      <td>To transform the column 'subset' from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>tax_code</td>
+      <td>CAST("tax_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'tax_code' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Since the column 'tax_code' has no distinct values (it's an empty list), this transformation should work without any issues for all potential future values.\n</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>tax_determination_date_indicator</td>
+      <td>CAST("tax_determination_date_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'tax_determination_date_indicator' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>transaction_type</td>
+      <td>CAST("transaction_type" AS VARCHAR)</td>
+      <td>To transform the data type of the 'transaction_type' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the CAST function is used to convert one data type to another. The syntax is straightforward: CAST(column AS new_data_type). In this case, we're casting 'transaction_type' to VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>value_date</td>
+      <td>strptime(CAST("value_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'value_date' column from INT to DATE in DuckDB, we need to: 1. First, cast the integer to a VARCHAR (string) type. 2. Then, use the strptime function to parse the string into a DATE type. 3. The format string '%Y%m%d' matches the structure of our date integers (YYYYMMDD).\n</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>xreversal</td>
+      <td>CAST("xreversal" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'xreversal' from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function will convert the decimal values to their string representation. Since the column has no distinct values (it's empty), this transformation will effectively create an empty VARCHAR column.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 5. Missing Values</h2><br>
+                    🔍 <b>61</b> columns have missing values<br>
+                    ✔️ <b>9</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>accounting_clerk</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>accounting_transaction</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>additional_discount</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>alternative_reference_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>archive_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>ausbk</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>batch_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>blocking_reason</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>branch_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>clearing_document_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>condition_record_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>credit_card_issuer</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if transaction doesn't involve credit card.</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>credit_card_number</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if transaction doesn't involve credit card.</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>currency_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>dbblg</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>document_category</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>document_header_text</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>document_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>document_status</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>due_flag</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>eu_sales_list_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>exchange_rate_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>exclude_flag</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>follow_on_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>funds_management_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>group_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>interest_calculation_form</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>invoice_correction_indicator</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if the document is not an invoice correction</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>is_blind_document</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if the document is not a blind document</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>is_cash_allocation</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if the transaction doesn't involve cash allocation</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>ledger</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>ledger_group</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>line_item_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>line_item_split_indicator</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if the line item is not split</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>lotkz</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>net_amount</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>offset_status</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>origin_system</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>other_period_reversal_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>parked_by</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>penalty_calculation_rule</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>posting_key</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>property_management_object</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>psofn</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>psoks</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>reference_document_number</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>reference_key_1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>reference_key_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>reorganization_status</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>reversal_reason</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if the transaction is not a reversal</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>reverse_document_number</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable if the transaction is not a reversal</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>sampled_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>sap_f15_status</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>sname</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>special_gl_indicator</td>
+      <td>100</td>
+      <td>True</td>
+      <td>Not applicable for standard general ledger transactions</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>statistical_posting_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>subset</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>tax_code</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>tax_determination_date_indicator</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>transaction_type</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>xreversal</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>accounting_clerk</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>accounting_transaction</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>additional_discount</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>alternative_reference_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>archive_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>ausbk</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>batch_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>blocking_reason</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>branch_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>clearing_document_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>condition_record_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>currency_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>dbblg</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>document_category</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>document_header_text</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>document_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>document_status</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>due_flag</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>eu_sales_list_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>exchange_rate_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>exclude_flag</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>follow_on_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>funds_management_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>group_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>interest_calculation_form</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>ledger</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>ledger_group</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>line_item_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>lotkz</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>net_amount</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>offset_status</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>origin_system</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>other_period_reversal_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>parked_by</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>penalty_calculation_rule</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>posting_key</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>property_management_object</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>psofn</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>psoks</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>reference_document_number</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>reference_key_1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>reference_key_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>reorganization_status</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>sampled_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>sap_f15_status</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>sname</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>statistical_posting_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>subset</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>tax_code</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>tax_determination_date_indicator</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>transaction_type</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>xreversal</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 2006, 'y': 3}];
+    binWidth = 2006;
+    drawHistogram("hist_viz_gjahr", data, binWidth);
+data = [{'label': 'sa', 'value': 100.0}];
+    drawBarChart("bar_viz_blart", data);
+data = [{'x': 4, 'y': 3}];
+    binWidth = 4;
+    drawHistogram("hist_viz_posting_month", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_last_change_date", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_update_date", data, binWidth);
+data = [{'label': 'd002766', 'value': 100.0}];
+    drawBarChart("bar_viz_usnam", data);
+data = [{'label': 'fb50', 'value': 100.0}];
+    drawBarChart("bar_viz_transaction_code", data);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_stjah", data, binWidth);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_code", data);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_fixed_exchange_rate", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_reciprocal_exchange_rate_indicator", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_freight_charges", data, binWidth);
+data = [{'label': 'rfbu', 'value': 100.0}];
+    drawBarChart("bar_viz_business_transaction", data);
+data = [{'label': 'bkpf', 'value': 100.0}];
+    drawBarChart("bar_viz_reference_type", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_primary_currency", data);
+data = [{'label': 'eur', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_2", data);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_3", data);
+data = [{'x': -1.24, 'y': 3}];
+    binWidth = -1.24;
+    drawHistogram("hist_viz_exchange_rate_currency_2", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_exchange_rate_currency_3", data, binWidth);
+data = [{'x': 2, 'y': 3}];
+    binWidth = 2;
+    drawHistogram("hist_viz_withholding_tax_base_method", data, binWidth);
+data = [{'x': 2, 'y': 3}];
+    binWidth = 2;
+    drawHistogram("hist_viz_extended_withholding_tax_base", data, binWidth);
+data = [{'x': 3, 'y': 3}];
+    binWidth = 3;
+    drawHistogram("hist_viz_unknown_field_2", data, binWidth);
+data = [{'x': 3, 'y': 3}];
+    binWidth = 3;
+    drawHistogram("hist_viz_unknown_field_3", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_reverse_posting_date", data, binWidth);
+data = [{'label': 'm', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_type_2", data);
+data = [{'label': 'm', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_type_3_alt", data);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_exchange_rate", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_local_currency_exchange_rate", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_page_count", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_reindat", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_vat_date", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_primary_exchange_rate", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_exchange_rate_2", data, binWidth);
+data = [{'x': 0.0, 'y': 3}];
+    binWidth = 0.0;
+    drawHistogram("hist_viz_exchange_rate_3", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_resubmission_date", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_interest_calculation_date", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_psobt", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_psodt", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_document_time", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_offset_reference_date", data, binWidth);
+data = [{'x': 1.05, 'y': 1}, {'x': 1.15, 'y': 0}, {'x': 1.25, 'y': 0}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': '200001078', 'value': 33.33333333333333}, {'label': '200001077', 'value': 33.33333333333333}, {'label': '200001076', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_belnr", data);
+data = [{'label': '2006-04-26 00:0...', 'value': 66.66666666666666}, {'label': '2006-04-25 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_bldat", data);
+data = [{'label': '2006-04-26 00:0...', 'value': 66.66666666666666}, {'label': '2006-04-25 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_budat", data);
+data = [{'label': '3000', 'value': 100.0}];
+    drawBarChart("bar_viz_bukrs", data);
+data = [{'label': '800', 'value': 100.0}];
+    drawBarChart("bar_viz_client_number", data);
+data = [];
+    drawBarChart("bar_viz_credit_card_issuer", data);
+data = [];
+    drawBarChart("bar_viz_credit_card_number", data);
+data = [{'label': '30', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_type", data);
+data = [{'label': '40', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_type_3", data);
+data = [{'label': '100001076300020...', 'value': 33.33333333333333}, {'label': '100001078300020...', 'value': 33.33333333333333}, {'label': '100001077300020...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_document_reference_key", data);
+data = [{'label': '2006-04-26 00:0...', 'value': 66.66666666666666}, {'label': '2006-04-25 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_entry_date", data);
+data = [{'label': '11:28:23', 'value': 33.33333333333333}, {'label': '09:41:35', 'value': 33.33333333333333}, {'label': '09:40:20', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_entry_time", data);
+data = [{'label': '3000', 'value': 100.0}];
+    drawBarChart("bar_viz_financial_management_area", data);
+data = [];
+    drawBarChart("bar_viz_invoice_correction_indicator", data);
+data = [];
+    drawBarChart("bar_viz_is_blind_document", data);
+data = [];
+    drawBarChart("bar_viz_is_cash_allocation", data);
+data = [];
+    drawBarChart("bar_viz_line_item_split_indicator", data);
+data = [];
+    drawBarChart("bar_viz_reversal_reason", data);
+data = [];
+    drawBarChart("bar_viz_reverse_document_number", data);
+data = [];
+    drawBarChart("bar_viz_special_gl_indicator", data);
+data = [{'label': '2006-04-26 00:0...', 'value': 66.66666666666666}, {'label': '2006-04-25 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_value_date", data);
+
+
+</script>
+</body>
+</html>

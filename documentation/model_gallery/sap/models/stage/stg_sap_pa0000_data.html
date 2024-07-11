@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>sap_pa0000_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>pernr</th>
+      <th>seqnr</th>
+      <th>uname</th>
+      <th>_fivetran_rowid</th>
+      <th>_fivetran_deleted</th>
+      <th>massn</th>
+      <th>mandt</th>
+      <th>endda</th>
+      <th>aedtm</th>
+      <th>sprps</th>
+      <th>begda</th>
+      <th>stat2</th>
+      <th>stat3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>10</td>
+      <td>0</td>
+      <td>bobsponge</td>
+      <td>1</td>
+      <td>False</td>
+      <td>1</td>
+      <td>800</td>
+      <td>99991231</td>
+      <td>20030507</td>
+      <td>NaN</td>
+      <td>20020101</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>69</td>
+      <td>0</td>
+      <td>wardsquid</td>
+      <td>2</td>
+      <td>False</td>
+      <td>1</td>
+      <td>800</td>
+      <td>99991231</td>
+      <td>20030917</td>
+      <td>NaN</td>
+      <td>20030101</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>70</td>
+      <td>0</td>
+      <td>starpatrick</td>
+      <td>3</td>
+      <td>False</td>
+      <td>52</td>
+      <td>800</td>
+      <td>99991231</td>
+      <td>20030917</td>
+      <td>NaN</td>
+      <td>20030101</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>employee_id</th>
+      <th>sequence_number</th>
+      <th>username</th>
+      <th>row_id</th>
+      <th>is_deleted</th>
+      <th>action_type</th>
+      <th>client_code</th>
+      <th>end_date</th>
+      <th>last_change_date</th>
+      <th>lock_indicator</th>
+      <th>start_date</th>
+      <th>status_2</th>
+      <th>status_3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>10</td>
+      <td>0</td>
+      <td>bobsponge</td>
+      <td>1</td>
+      <td>False</td>
+      <td>1</td>
+      <td>800</td>
+      <td>9999-12-31</td>
+      <td>2003-05-07</td>
+      <td>None</td>
+      <td>2002-01-01</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>69</td>
+      <td>0</td>
+      <td>wardsquid</td>
+      <td>2</td>
+      <td>False</td>
+      <td>1</td>
+      <td>800</td>
+      <td>9999-12-31</td>
+      <td>2003-09-17</td>
+      <td>None</td>
+      <td>2003-01-01</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>70</td>
+      <td>0</td>
+      <td>starpatrick</td>
+      <td>3</td>
+      <td>False</td>
+      <td>52</td>
+      <td>800</td>
+      <td>9999-12-31</td>
+      <td>2003-09-17</td>
+      <td>None</td>
+      <td>2003-01-01</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">employee_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_employee_id"></div><b>📃 Summary:</b> Personnel number<br><b>🦄 Unique:</b> This column represents the personnel number for each employee. For this table, each row represents an employee record. The employee_id appears to be unique across rows, as it's a common practice to assign unique identifiers to employees.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">sequence_number</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_sequence_number"></div><b>📃 Summary:</b> Sequence number<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">username</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_username"></div><b>📃 Summary:</b> Username of the person who created/modified<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">row_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="hist_viz_row_id"></div><b>📃 Summary:</b> Unique identifier for the row<br><b>🦄 Unique:</b> This column is described as a unique identifier for the row. For this table, each row is an employee record. By definition, if it's a unique identifier for the row, it would be unique across all rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">is_deleted</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_is_deleted"></div><b>📃 Summary:</b> Indicates if the record was deleted<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">action_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_action_type"></div><b>📃 Summary:</b> Action or measure type<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">client_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_client_code"></div><b>📃 Summary:</b> Client or company code<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">end_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_end_date"></div><b>📃 Summary:</b> End date of the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">last_change_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_last_change_date"></div><b>📃 Summary:</b> Date of last change<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">lock_indicator</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_lock_indicator"></div><b>📃 Summary:</b> Lock indicator<br><b>❓ Missing:</b> No locks applied to these records.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">start_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_start_date"></div><b>📃 Summary:</b> Start date of the record<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">status_2</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='1'>1</option><option value='2'>2</option><option value='3'>3</option><option value='4'>4</option><option value='5'>5</option></select></span><br><br><div id="bar_viz_status_2"></div><b>📃 Summary:</b> Status 2<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">status_3</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='1'>1</option><option value='2'>2</option><option value='3'>3</option><option value='4'>4</option><option value='5'>5</option></select></span><br><br><div id="bar_viz_status_3"></div><b>📃 Summary:</b> Status 3<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about employee records. It contains personal data and employment status information. Each row represents an employee record with fields like start date, end date, personnel number, and status codes. The table also includes audit fields such as creation date and username. It appears to track changes in employee status over time.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>30</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>begda</td>
+      <td>Start date of the record</td>
+      <td>start_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>endda</td>
+      <td>End date of the record</td>
+      <td>end_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>mandt</td>
+      <td>Client or company code</td>
+      <td>client_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>objps</td>
+      <td>Object specification</td>
+      <td>object_spec</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>pernr</td>
+      <td>Personnel number</td>
+      <td>employee_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>seqnr</td>
+      <td>Sequence number</td>
+      <td>sequence_number</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>sprps</td>
+      <td>Lock indicator</td>
+      <td>lock_indicator</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>subty</td>
+      <td>Subtype of the record</td>
+      <td>record_subtype</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>aedtm</td>
+      <td>Date of last change</td>
+      <td>last_change_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>uname</td>
+      <td>Username of the person who created/modified</td>
+      <td>username</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>histo</td>
+      <td>Historical record indicator</td>
+      <td>is_historical</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>itxex</td>
+      <td>IT external system identifier</td>
+      <td>external_system_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>refex</td>
+      <td>Reference to external system</td>
+      <td>external_reference</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>ordex</td>
+      <td>Order of execution</td>
+      <td>execution_order</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>itbld</td>
+      <td>IT building or location</td>
+      <td>it_location</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>preas</td>
+      <td>Process reason</td>
+      <td>process_reason</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>flag1</td>
+      <td>First flag for custom use</td>
+      <td>custom_flag_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>flag2</td>
+      <td>Second flag for custom use</td>
+      <td>custom_flag_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>flag3</td>
+      <td>Third flag for custom use</td>
+      <td>custom_flag_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>flag4</td>
+      <td>Fourth flag for custom use</td>
+      <td>custom_flag_4</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>rese1</td>
+      <td>Reserved field 1</td>
+      <td>reserved_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>rese2</td>
+      <td>Reserved field 2</td>
+      <td>reserved_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>grpvl</td>
+      <td>Group value</td>
+      <td>group_value</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>massn</td>
+      <td>Action or measure type</td>
+      <td>action_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>massg</td>
+      <td>Measure group</td>
+      <td>measure_group</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>stat1</td>
+      <td>Status 1</td>
+      <td>status_1</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>stat2</td>
+      <td>Status 2</td>
+      <td>status_2</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>stat3</td>
+      <td>Status 3</td>
+      <td>status_3</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>_fivetran_rowid</td>
+      <td>Unique identifier for the row</td>
+      <td>row_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>_fivetran_deleted</td>
+      <td>Indicates if the record was deleted</td>
+      <td>is_deleted</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>25</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>action_type</td>
+      <td>CAST("action_type" AS VARCHAR)</td>
+      <td>To transform the 'action_type' column from INT to VARCHAR, we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column contains only two distinct values (1 and 52), casting to VARCHAR will convert these integer values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>client_code</td>
+      <td>CAST("client_code" AS VARCHAR)</td>
+      <td>To transform the data type of the 'client_code' column from 'INT' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column currently contains only numeric values (specifically 800), casting it to VARCHAR will effectively turn these numbers into string representations.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>custom_flag_1</td>
+      <td>CAST("custom_flag_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_1' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case) using the AS keyword.\n</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>custom_flag_2</td>
+      <td>CAST("custom_flag_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_2' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert all numeric values in the column to their string representations. Since the column has no distinct values (it's empty or all values are NULL), this transformation will effectively create a column of empty strings or NULL values, depending on the original content.\n</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>custom_flag_3</td>
+      <td>CAST("custom_flag_3" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_3' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB). This transformation will preserve the numeric value as a string representation.\n</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>custom_flag_4</td>
+      <td>CAST("custom_flag_4" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'custom_flag_4' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR (which is equivalent to STRING in DuckDB).\n</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>end_date</td>
+      <td>strptime(CAST("end_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'end_date' column from INT to DATE in DuckDB, we need to: 1. First cast the integer to a VARCHAR (string). 2. Then use the strptime function to parse the string into a DATE. 3. The format '%Y%m%d' is used because the date is in the format YYYYMMDD. 4. We can combine these steps into a single cast clause.\n</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>execution_order</td>
+      <td>CAST("execution_order" AS VARCHAR)</td>
+      <td>To transform the data type of the 'execution_order' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. Since the column is already of type DECIMAL, we can directly cast it to VARCHAR without any additional processing. This transformation will convert the numeric values to their string representations.\n</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>external_reference</td>
+      <td>CAST("external_reference" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'external_reference' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This operation will convert the numeric values to their string representations. Since the column has no distinct values (as mentioned in the prompt), this transformation should not affect any existing data, but it will change the column's data type to allow for string inputs in the future.\n</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>external_system_id</td>
+      <td>CAST("external_system_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'external_system_id' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert each value in the column to its string representation. Since the column has no distinct values (it's empty), this transformation should not affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>group_value</td>
+      <td>CAST("group_value" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'group_value' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the CAST function can be used to convert one data type to another. The syntax is straightforward and doesn't require any special handling since we're converting from a numeric type (DECIMAL) to a string type (VARCHAR).\n</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>is_historical</td>
+      <td>CAST("is_historical" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'is_historical' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We don't need to specify a length for VARCHAR in DuckDB, as it dynamically allocates the necessary space.\n</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>it_location</td>
+      <td>CAST("it_location" AS VARCHAR)</td>
+      <td>To transform the data type of the 'it_location' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. \nIt's worth noting that even though the column has no distinct values (as indicated by the empty list []), we still need to perform the cast to change the column's data type. This will ensure that any future insertions or updates to this column will be treated as VARCHAR instead of DECIMAL.\n</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>last_change_date</td>
+      <td>strptime(CAST("last_change_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'last_change_date' column from INT to DATE in DuckDB, we need to first cast the integer to a VARCHAR, and then use the strptime function to parse the string into a date. The format '%Y%m%d' matches the structure of the given dates (YYYYMMDD).\n</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>lock_indicator</td>
+      <td>CAST("lock_indicator" AS VARCHAR)</td>
+      <td>To transform the data type of the 'lock_indicator' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We use the CAST keyword followed by the column name in parentheses, then AS, and finally the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>measure_group</td>
+      <td>CAST("measure_group" AS VARCHAR)</td>
+      <td>To transform the data type of the 'measure_group' column from DECIMAL to VARCHAR, we need to use a simple CAST function in DuckDB. The CAST function converts the value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. The syntax is straightforward and doesn't require any additional parameters or length specifications for VARCHAR in DuckDB.\n</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>object_spec</td>
+      <td>CAST("object_spec" AS VARCHAR)</td>
+      <td>To transform the data type of the column from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name 'object_spec' with the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>process_reason</td>
+      <td>CAST("process_reason" AS VARCHAR)</td>
+      <td>To transform the data type of the 'process_reason' column from DECIMAL to VARCHAR in DuckDB, we need to use a simple CAST function. This will convert the numeric values to their string representation. Since the column has no distinct values (as indicated by the empty list), this transformation should not affect any existing data, but it will change the column's data type to allow for string values in the future if needed.\n</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>record_subtype</td>
+      <td>CAST("record_subtype" AS VARCHAR)</td>
+      <td>To transform the data type of the 'record_subtype' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in a CAST function and specify VARCHAR as the target data type.\n</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>reserved_1</td>
+      <td>CAST("reserved_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reserved_1' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll wrap the column name in the CAST function and specify the target data type as VARCHAR.\n</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>reserved_2</td>
+      <td>CAST("reserved_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'reserved_2' from 'DECIMAL' to 'VARCHAR', we need to use a simple CAST function in DuckDB. The CAST function converts a value from one data type to another. In this case, we're converting from DECIMAL to VARCHAR. Since the column 'reserved_2' has no distinct values (it's empty), this transformation should not affect any existing data, but it will change the column's data type for future insertions or updates.\n</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>start_date</td>
+      <td>strptime(CAST("start_date" AS VARCHAR), '%Y%m%d')</td>
+      <td>To transform the 'start_date' column from INT to DATE in DuckDB, we need to: 1. First, cast the integer to a VARCHAR (string). 2. Then, use the strptime function to parse the string into a DATE. 3. The format '%Y%m%d' matches the structure of our integer dates (YYYYMMDD).\n</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>status_1</td>
+      <td>CAST("status_1" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'status_1' from 'DECIMAL' to 'VARCHAR' in DuckDB, we need to use the CAST function. This function allows us to convert data from one type to another. In this case, we're converting from DECIMAL to VARCHAR. The CAST function in DuckDB follows the standard SQL syntax, which makes it straightforward to use.\n</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>status_2</td>
+      <td>CAST("status_2" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'status_2' from 'INT' to 'VARCHAR', we need to use a simple CAST function in DuckDB. This will convert the integer values to their string representation. Since the column only contains the value 3, it will be converted to the string '3'.\n</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>status_3</td>
+      <td>CAST("status_3" AS VARCHAR)</td>
+      <td>To transform the data type of the column 'status_3' from 'INT' to 'VARCHAR', we need to use a CAST function. In DuckDB, the CAST function can be used to convert one data type to another. Since the column only contains the value [1], casting it to VARCHAR will effectively convert this numeric value to its string representation.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>18</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>custom_flag_1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>custom_flag_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>custom_flag_3</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>custom_flag_4</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>execution_order</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>external_reference</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>external_system_id</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>group_value</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>is_historical</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>it_location</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>lock_indicator</td>
+      <td>100</td>
+      <td>True</td>
+      <td>No locks applied to these records.</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>measure_group</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>object_spec</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>process_reason</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>record_subtype</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>reserved_1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>reserved_2</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>status_1</td>
+      <td>100</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>custom_flag_1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>custom_flag_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>custom_flag_3</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>custom_flag_4</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>execution_order</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>external_reference</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>external_system_id</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>group_value</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>is_historical</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>it_location</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>measure_group</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>object_spec</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>process_reason</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>record_subtype</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>reserved_1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>reserved_2</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>status_1</td>
+      <td>100</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 11.5, 'y': 1}, {'x': 14.5, 'y': 0}, {'x': 17.5, 'y': 0}];
+    binWidth = 3.0;
+    drawHistogram("hist_viz_employee_id", data, binWidth);
+data = [{'x': 0, 'y': 3}];
+    binWidth = 0;
+    drawHistogram("hist_viz_sequence_number", data, binWidth);
+data = [{'label': 'bobsponge', 'value': 33.33333333333333}, {'label': 'starpatrick', 'value': 33.33333333333333}, {'label': 'wardsquid', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_username", data);
+data = [{'x': 1.05, 'y': 1}, {'x': 1.15, 'y': 0}, {'x': 1.25, 'y': 0}];
+    binWidth = 0.1;
+    drawHistogram("hist_viz_row_id", data, binWidth);
+data = [{'label': 'False', 'value': 100.0}];
+    drawBarChart("bar_viz_is_deleted", data);
+data = [{'label': '1', 'value': 66.66666666666666}, {'label': '52', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_action_type", data);
+data = [{'label': '800', 'value': 100.0}];
+    drawBarChart("bar_viz_client_code", data);
+data = [{'label': '9999-12-31 00:0...', 'value': 100.0}];
+    drawBarChart("bar_viz_end_date", data);
+data = [{'label': '2003-09-17 00:0...', 'value': 66.66666666666666}, {'label': '2003-05-07 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_last_change_date", data);
+data = [];
+    drawBarChart("bar_viz_lock_indicator", data);
+data = [{'label': '2003-01-01 00:0...', 'value': 66.66666666666666}, {'label': '2002-01-01 00:0...', 'value': 33.33333333333333}];
+    drawBarChart("bar_viz_start_date", data);
+data = [{'label': '3', 'value': 100.0}];
+    drawBarChart("bar_viz_status_2", data);
+data = [{'label': '1', 'value': 100.0}];
+    drawBarChart("bar_viz_status_3", data);
+
+
+</script>
+</body>
+</html>

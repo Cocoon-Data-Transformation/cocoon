@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Cleaning</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>balance_transaction_data</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>id</th>
+      <th>amount</th>
+      <th>currency</th>
+      <th>description</th>
+      <th>fee</th>
+      <th>net</th>
+      <th>source</th>
+      <th>status</th>
+      <th>type</th>
+      <th>payout_id</th>
+      <th>connected_account_id</th>
+      <th>available_on</th>
+      <th>created</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>txn_0IV4rIig6peNXzgDK3XAFbaN</td>
+      <td>-18759</td>
+      <td>usd</td>
+      <td>f39657a1847db73d9a2abb0bad3d31ae</td>
+      <td>0</td>
+      <td>-18759</td>
+      <td>po_0IV4rIig6peNXzgD51VFKdaB</td>
+      <td>pending</td>
+      <td>payout</td>
+      <td>po_0IV4rIig6peNXzgD51VFKdaB</td>
+      <td>NaN</td>
+      <td>2021-03-16 00:00:00</td>
+      <td>2021-03-15 01:04:36</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>txn_0IDYgiig6peNXzgDuNvLeoLR</td>
+      <td>2040000</td>
+      <td>usd</td>
+      <td>d267c9d09a2d1e50f12635bd2b56ed29</td>
+      <td>59190</td>
+      <td>1980810</td>
+      <td>ch_0IDYghig6peNXzgDhuOFKdTS</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0IFUKBig6peNXzgDZQM7WPAo</td>
+      <td>NaN</td>
+      <td>2021-02-01 00:00:00</td>
+      <td>2021-01-25 17:17:15</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>txn_0IG5fvig6peNXzgD8jemrxAp</td>
+      <td>117524</td>
+      <td>usd</td>
+      <td>0662d6089789e1fabd56c6d55e91ef09</td>
+      <td>3438</td>
+      <td>114086</td>
+      <td>ch_0IG5fuig6peNXzgDzZkrO949</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0II1gGig6peNXzgD4BxKEJJJ</td>
+      <td>NaN</td>
+      <td>2021-02-08 00:00:00</td>
+      <td>2021-02-01 16:54:54</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>txn_0ILGCbig6peNXzgDqjp7xaaX</td>
+      <td>7239375</td>
+      <td>usd</td>
+      <td>612942eb1230077a0b1d066de5aba0db</td>
+      <td>209972</td>
+      <td>7029403</td>
+      <td>ch_0ILGCZig6peNXzgDw4eVbq0v</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0IN6L6ig6peNXzgDu7m6fhRI</td>
+      <td>NaN</td>
+      <td>2021-02-22 00:00:00</td>
+      <td>2021-02-15 23:09:59</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>txn_0IO6DWig6peNXzgDF8qNjZNX</td>
+      <td>255360</td>
+      <td>usd</td>
+      <td>b8de27e00022f92981c965125c15c22d</td>
+      <td>7435</td>
+      <td>247925</td>
+      <td>ch_0IO6DVig6peNXzgDgTOGtdeD</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0IQ08Sig6peNXzgDC6UG0Oxc</td>
+      <td>NaN</td>
+      <td>2021-03-02 00:00:00</td>
+      <td>2021-02-23 19:06:41</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>txn_0IROZoig6peNXzgDRsBjph8K</td>
+      <td>438750</td>
+      <td>usd</td>
+      <td>d3c18c425369d3c6b26126b7f791cf3f</td>
+      <td>12754</td>
+      <td>425996</td>
+      <td>ch_0IROZmig6peNXzgDwohSYaPj</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0ITGUHig6peNXzgD78pmjvio</td>
+      <td>NaN</td>
+      <td>2021-03-11 00:00:00</td>
+      <td>2021-03-04 21:19:18</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>txn_0IT7uhig6peNXzgDolTgmiUJ</td>
+      <td>19350</td>
+      <td>usd</td>
+      <td>a29cfd524867f29bd7eddcb21fdf6e3b</td>
+      <td>591</td>
+      <td>18759</td>
+      <td>ch_0IT7ugig6peNXzgDh9iGZed7</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0IV4rIig6peNXzgD51VFKdaB</td>
+      <td>NaN</td>
+      <td>2021-03-16 00:00:00</td>
+      <td>2021-03-09 15:56:02</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>txn_0IUBwDig6peNXzgDCYCHC7gd</td>
+      <td>3519960</td>
+      <td>usd</td>
+      <td>e8be2b872cd9d14ddf3b5cd89860d551</td>
+      <td>137308</td>
+      <td>3382652</td>
+      <td>ch_0IUBwCig6peNXzgDTOTEw24B</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2021-03-19 00:00:00</td>
+      <td>2021-03-12 14:26:00</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>txn_0IUIaVig6peNXzgDoGvsNC17</td>
+      <td>7499999</td>
+      <td>usd</td>
+      <td>9b8159d008204266ff7f2df19843d5b4</td>
+      <td>217530</td>
+      <td>7282469</td>
+      <td>ch_0IUIaTig6peNXzgDhyoZBxWv</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>None</td>
+      <td>NaN</td>
+      <td>2021-03-19 00:00:00</td>
+      <td>2021-03-12 21:32:01</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>transaction_id</th>
+      <th>transaction_amount_cents</th>
+      <th>currency_code</th>
+      <th>transaction_description</th>
+      <th>fee_amount_cents</th>
+      <th>net_amount_cents</th>
+      <th>transaction_source_id</th>
+      <th>transaction_status</th>
+      <th>transaction_type</th>
+      <th>payout_id</th>
+      <th>connected_account_id</th>
+      <th>funds_available_date</th>
+      <th>transaction_created_at</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>txn_0IV4rIig6peNXzgDK3XAFbaN</td>
+      <td>-18759</td>
+      <td>usd</td>
+      <td>f39657a1847db73d9a2abb0bad3d31ae</td>
+      <td>0</td>
+      <td>-18759</td>
+      <td>po_0IV4rIig6peNXzgD51VFKdaB</td>
+      <td>pending</td>
+      <td>payout</td>
+      <td>po_0IV4rIig6peNXzgD51VFKdaB</td>
+      <td>None</td>
+      <td>2021-03-16</td>
+      <td>2021-03-15 01:04:36</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>txn_0IDYgiig6peNXzgDuNvLeoLR</td>
+      <td>2040000</td>
+      <td>usd</td>
+      <td>d267c9d09a2d1e50f12635bd2b56ed29</td>
+      <td>59190</td>
+      <td>1980810</td>
+      <td>ch_0IDYghig6peNXzgDhuOFKdTS</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0IFUKBig6peNXzgDZQM7WPAo</td>
+      <td>None</td>
+      <td>2021-02-01</td>
+      <td>2021-01-25 17:17:15</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>txn_0IG5fvig6peNXzgD8jemrxAp</td>
+      <td>117524</td>
+      <td>usd</td>
+      <td>0662d6089789e1fabd56c6d55e91ef09</td>
+      <td>3438</td>
+      <td>114086</td>
+      <td>ch_0IG5fuig6peNXzgDzZkrO949</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0II1gGig6peNXzgD4BxKEJJJ</td>
+      <td>None</td>
+      <td>2021-02-08</td>
+      <td>2021-02-01 16:54:54</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>txn_0ILGCbig6peNXzgDqjp7xaaX</td>
+      <td>7239375</td>
+      <td>usd</td>
+      <td>612942eb1230077a0b1d066de5aba0db</td>
+      <td>209972</td>
+      <td>7029403</td>
+      <td>ch_0ILGCZig6peNXzgDw4eVbq0v</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0IN6L6ig6peNXzgDu7m6fhRI</td>
+      <td>None</td>
+      <td>2021-02-22</td>
+      <td>2021-02-15 23:09:59</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>txn_0IO6DWig6peNXzgDF8qNjZNX</td>
+      <td>255360</td>
+      <td>usd</td>
+      <td>b8de27e00022f92981c965125c15c22d</td>
+      <td>7435</td>
+      <td>247925</td>
+      <td>ch_0IO6DVig6peNXzgDgTOGtdeD</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0IQ08Sig6peNXzgDC6UG0Oxc</td>
+      <td>None</td>
+      <td>2021-03-02</td>
+      <td>2021-02-23 19:06:41</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>txn_0IROZoig6peNXzgDRsBjph8K</td>
+      <td>438750</td>
+      <td>usd</td>
+      <td>d3c18c425369d3c6b26126b7f791cf3f</td>
+      <td>12754</td>
+      <td>425996</td>
+      <td>ch_0IROZmig6peNXzgDwohSYaPj</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0ITGUHig6peNXzgD78pmjvio</td>
+      <td>None</td>
+      <td>2021-03-11</td>
+      <td>2021-03-04 21:19:18</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>txn_0IT7uhig6peNXzgDolTgmiUJ</td>
+      <td>19350</td>
+      <td>usd</td>
+      <td>a29cfd524867f29bd7eddcb21fdf6e3b</td>
+      <td>591</td>
+      <td>18759</td>
+      <td>ch_0IT7ugig6peNXzgDh9iGZed7</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>po_0IV4rIig6peNXzgD51VFKdaB</td>
+      <td>None</td>
+      <td>2021-03-16</td>
+      <td>2021-03-09 15:56:02</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>txn_0IUBwDig6peNXzgDCYCHC7gd</td>
+      <td>3519960</td>
+      <td>usd</td>
+      <td>e8be2b872cd9d14ddf3b5cd89860d551</td>
+      <td>137308</td>
+      <td>3382652</td>
+      <td>ch_0IUBwCig6peNXzgDTOTEw24B</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2021-03-19</td>
+      <td>2021-03-12 14:26:00</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>txn_0IUIaVig6peNXzgDoGvsNC17</td>
+      <td>7499999</td>
+      <td>usd</td>
+      <td>9b8159d008204266ff7f2df19843d5b4</td>
+      <td>217530</td>
+      <td>7282469</td>
+      <td>ch_0IUIaTig6peNXzgDhyoZBxWv</td>
+      <td>pending</td>
+      <td>charge</td>
+      <td>None</td>
+      <td>None</td>
+      <td>2021-03-19</td>
+      <td>2021-03-12 21:32:01</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_transaction_id"></div><b>📃 Summary:</b> Unique identifier for the transaction<br><b>🦄 Unique:</b> This column represents a unique identifier for each transaction. For this table, each row is for a single financial transaction, and transaction_id is unique across rows.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_amount_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_transaction_amount_cents"></div><b>📃 Summary:</b> Transaction amount in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">currency_code</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_currency_code"></div><b>📃 Summary:</b> Currency code of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_description</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_description"></div><b>📃 Summary:</b> Unique identifier or description of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">fee_amount_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_fee_amount_cents"></div><b>📃 Summary:</b> Fee amount in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">net_amount_cents</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_net_amount_cents"></div><b>📃 Summary:</b> Net amount after fees in cents<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_source_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_source_id"></div><b>📃 Summary:</b> Source of the transaction (charge or payout ID)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_status</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='pending'>pending</option><option value='completed'>completed</option><option value='failed'>failed</option><option value='cancelled'>cancelled</option><option value='processing'>processing</option><option value='rejected'>rejected</option><option value='on hold'>on hold</option><option value='refunded'>refunded</option><option value='partially refunded'>partially refunded</option></select></span><br><br><div id="bar_viz_transaction_status"></div><b>📃 Summary:</b> Current status of the transaction<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_type</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-purple">accepted_values<select><option value='charge'>charge</option><option value='payout'>payout</option></select></span><br><br><div id="bar_viz_transaction_type"></div><b>📃 Summary:</b> Type of transaction (charge or payout)<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">payout_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_payout_id"></div><b>📃 Summary:</b> Identifier for the associated payout<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">connected_account_id</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="bar_viz_connected_account_id"></div><b>📃 Summary:</b> ID of the connected account (empty in this data)<br><b>❓ Missing:</b> Not applicable for direct transactions without connected accounts.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">funds_available_date</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_funds_available_date"></div><b>📃 Summary:</b> Date when the funds become available<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">transaction_created_at</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="bar_viz_transaction_created_at"></div><b>📃 Summary:</b> Date and time when the transaction was created<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table is about balance transactions. It includes details such as transaction ID, amount, date, currency, description, fees, net amount, source, status, and type. Each row represents a financial transaction like a charge or payout. The table tracks monetary movements, including both incoming (charges) and outgoing (payouts) transactions, with associated fees and net amounts.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>11</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>id</td>
+      <td>Unique identifier for the transaction</td>
+      <td>transaction_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>amount</td>
+      <td>Transaction amount in cents</td>
+      <td>transaction_amount_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>available_on</td>
+      <td>Date when the funds become available</td>
+      <td>funds_available_date</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>connected_account_id</td>
+      <td>ID of the connected account (empty in this data)</td>
+      <td>connected_account_id</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>created</td>
+      <td>Date and time when the transaction was created</td>
+      <td>transaction_created_at</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>currency</td>
+      <td>Currency code of the transaction</td>
+      <td>currency_code</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>description</td>
+      <td>Unique identifier or description of the transaction</td>
+      <td>transaction_description</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>exchange_rate</td>
+      <td>Exchange rate for currency conversion (empty in this data)</td>
+      <td>exchange_rate</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>fee</td>
+      <td>Fee amount in cents</td>
+      <td>fee_amount_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>net</td>
+      <td>Net amount after fees in cents</td>
+      <td>net_amount_cents</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>source</td>
+      <td>Source of the transaction (charge or payout ID)</td>
+      <td>transaction_source_id</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>status</td>
+      <td>Current status of the transaction</td>
+      <td>transaction_status</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>type</td>
+      <td>Type of transaction (charge or payout)</td>
+      <td>transaction_type</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>payout_id</td>
+      <td>Identifier for the associated payout</td>
+      <td>payout_id</td>
+      <td>❌ No</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>3</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>connected_account_id</td>
+      <td>CAST("connected_account_id" AS VARCHAR)</td>
+      <td>To transform the data type of the 'connected_account_id' column from DECIMAL to VARCHAR, we need to use a simple CAST function. In DuckDB, the syntax for this operation is straightforward. We'll use the CAST keyword followed by the column name in parentheses, and then specify the target data type (VARCHAR in this case).\n</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>funds_available_date</td>
+      <td>CAST("funds_available_date" AS DATE)</td>
+      <td>To transform the 'funds_available_date' column from VARCHAR to DATE, we need to use a simple CAST function. The date format in the given values is already in a standard ISO format (YYYY-MM-DD HH:MM:SS), which can be directly cast to DATE without needing to use strptime(). The CAST function will automatically truncate the time portion and keep only the date.\n</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>transaction_created_at</td>
+      <td>CAST("transaction_created_at" AS TIMESTAMP)</td>
+      <td>To transform the 'transaction_created_at' column from VARCHAR to TIMESTAMP, we can use a simple CAST function in DuckDB. The date-time format in the given examples is already in a standard format that DuckDB can automatically recognize (YYYY-MM-DD HH:MM:SS), so we don't need to use the strptime function for explicit parsing. A straightforward CAST to TIMESTAMP will work.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>3</b> columns have missing values<br>
+                    ✔️ <b>1</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>connected_account_id</td>
+      <td>100.00</td>
+      <td>True</td>
+      <td>Not applicable for direct transactions without connected accounts.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>exchange_rate</td>
+      <td>100.00</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>payout_id</td>
+      <td>22.22</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                        <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>exchange_rate</td>
+      <td>100.00</td>
+      <td>🗑️ Drop Column</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>payout_id</td>
+      <td>22.22</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'label': 'txn_0IT7uhig6pe...', 'value': 11.11111111111111}, {'label': 'txn_0IDYgiig6pe...', 'value': 11.11111111111111}, {'label': 'txn_0IUIaVig6pe...', 'value': 11.11111111111111}, {'label': 'txn_0IV4rIig6pe...', 'value': 11.11111111111111}, {'label': 'txn_0IG5fvig6pe...', 'value': 11.11111111111111}, {'label': 'Other values', 'value': 44.44444444444444}];
+    drawBarChart("bar_viz_transaction_id", data);
+data = [{'x': 169209.95, 'y': 4}, {'x': 545147.8500000001, 'y': 1}, {'x': 921085.7500000001, 'y': 0}, {'x': 1297023.6500000001, 'y': 0}, {'x': 1672961.55, 'y': 0}, {'x': 2048899.4500000002, 'y': 1}, {'x': 2424837.3500000006, 'y': 0}, {'x': 2800775.25, 'y': 0}, {'x': 3176713.1500000004, 'y': 0}];
+    binWidth = 375937.9;
+    drawHistogram("hist_viz_transaction_amount_cents", data, binWidth);
+data = [{'label': 'usd', 'value': 100.0}];
+    drawBarChart("bar_viz_currency_code", data);
+data = [{'label': 'f39657a1847db73...', 'value': 11.11111111111111}, {'label': '0662d6089789e1f...', 'value': 11.11111111111111}, {'label': 'd267c9d09a2d1e5...', 'value': 11.11111111111111}, {'label': 'b8de27e00022f92...', 'value': 11.11111111111111}, {'label': '612942eb1230077...', 'value': 11.11111111111111}, {'label': 'Other values', 'value': 44.44444444444444}];
+    drawBarChart("bar_viz_transaction_description", data);
+data = [{'x': 5438.25, 'y': 4}, {'x': 16314.75, 'y': 1}, {'x': 27191.25, 'y': 0}, {'x': 38067.75, 'y': 0}, {'x': 48944.25, 'y': 0}, {'x': 59820.75, 'y': 1}, {'x': 70697.25, 'y': 0}, {'x': 81573.75, 'y': 0}, {'x': 92450.25, 'y': 0}];
+    binWidth = 10876.5;
+    drawHistogram("hist_viz_fee_amount_cents", data, binWidth);
+data = [{'x': 163771.7, 'y': 4}, {'x': 528833.1000000001, 'y': 1}, {'x': 893894.5000000001, 'y': 0}, {'x': 1258955.9000000001, 'y': 0}, {'x': 1624017.3, 'y': 0}, {'x': 1989078.7000000002, 'y': 1}, {'x': 2354140.1000000006, 'y': 0}, {'x': 2719201.5, 'y': 0}, {'x': 3084262.9000000004, 'y': 0}];
+    binWidth = 365061.4;
+    drawHistogram("hist_viz_net_amount_cents", data, binWidth);
+data = [{'label': 'ch_0IG5fuig6peN...', 'value': 11.11111111111111}, {'label': 'ch_0IDYghig6peN...', 'value': 11.11111111111111}, {'label': 'ch_0IROZmig6peN...', 'value': 11.11111111111111}, {'label': 'ch_0ILGCZig6peN...', 'value': 11.11111111111111}, {'label': 'po_0IV4rIig6peN...', 'value': 11.11111111111111}, {'label': 'Other values', 'value': 44.44444444444444}];
+    drawBarChart("bar_viz_transaction_source_id", data);
+data = [{'label': 'pending', 'value': 100.0}];
+    drawBarChart("bar_viz_transaction_status", data);
+data = [{'label': 'charge', 'value': 88.88888888888889}, {'label': 'payout', 'value': 11.11111111111111}];
+    drawBarChart("bar_viz_transaction_type", data);
+data = [{'label': 'po_0IV4rIig6peN...', 'value': 28.57142857142857}, {'label': 'po_0II1gGig6peN...', 'value': 14.285714285714285}, {'label': 'po_0IFUKBig6peN...', 'value': 14.285714285714285}, {'label': 'po_0IQ08Sig6peN...', 'value': 14.285714285714285}, {'label': 'po_0IN6L6ig6peN...', 'value': 14.285714285714285}, {'label': 'po_0ITGUHig6peN...', 'value': 14.285714285714285}];
+    drawBarChart("bar_viz_payout_id", data);
+data = [];
+    drawBarChart("bar_viz_connected_account_id", data);
+data = [{'label': '2021-03-19', 'value': 22.22222222222222}, {'label': '2021-03-16', 'value': 22.22222222222222}, {'label': '2021-02-22', 'value': 11.11111111111111}, {'label': '2021-03-02', 'value': 11.11111111111111}, {'label': '2021-02-01', 'value': 11.11111111111111}, {'label': 'Other values', 'value': 22.22222222222222}];
+    drawBarChart("bar_viz_funds_available_date", data);
+data = [{'label': '2021-02-15 23:0...', 'value': 11.11111111111111}, {'label': '2021-01-25 17:1...', 'value': 11.11111111111111}, {'label': '2021-02-01 16:5...', 'value': 11.11111111111111}, {'label': '2021-03-04 21:1...', 'value': 11.11111111111111}, {'label': '2021-03-12 14:2...', 'value': 11.11111111111111}, {'label': 'Other values', 'value': 44.44444444444444}];
+    drawBarChart("bar_viz_transaction_created_at", data);
+
+
+</script>
+</body>
+</html>
