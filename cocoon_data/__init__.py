@@ -62,12 +62,19 @@ except:
 icon_import = False
 MAX_TRIALS = 3
 LOG_MESSAGE_HISTORY = False
-DEBUG_MODE =  False
+
+cocoon_main_setting = {
+    'DEBUG_MODE': False,
+    'LOG_MESSAGE_HISTORY': False,
+    'MAX_TRIALS': 3,
+    'icon_import': False
+}
+
 cocoon_comment_start = "-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE\n"
 cocoon_comment_end = "-- COCOON BLOCK END\n"
 sys.setrecursionlimit(50000)
 
-if not DEBUG_MODE:
+if not cocoon_main_setting['DEBUG_MODE']:
     warnings.filterwarnings("ignore")
 
 def yml_from_name(table_name):
@@ -11722,7 +11729,7 @@ The error is: {e}
 The messages are:
 {self.messages}""")
             
-            if DEBUG_MODE:
+            if cocoon_main_setting['DEBUG_MODE']:
                 raise e
             
             for i in range(self.retry_times):
@@ -15194,7 +15201,8 @@ def find_nodes_with_no_parents(nodes, edges):
 
 
 class SQLStep(TransformationStep):
-    def __init__(self, table_name, con, sql_code= "", database=None, schema=None, *args, **kwargs):
+    
+    def __init__(self, table_name, con, sql_code= "", database=None, schema=None, materialized = False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.explanation = ""
         self.name = table_name
@@ -15204,7 +15212,11 @@ class SQLStep(TransformationStep):
         self.con = con
         self.database = database
         self.schema = schema
+        self.materialized = materialized
     
+    def set_materialized(self, materialized=True):
+        self.materialized = materialized
+        
     def __repr__(self, full=True):
         if not full:
             return self.name
@@ -15257,7 +15269,34 @@ class SQLStep(TransformationStep):
 
         display(return_button)
     
-    def get_codes(self, target_id=0, source_ids=None, mode=""):
+        
+    def get_sql_code(self, source_steps=None, full=None):
+
+        if isinstance(self.sql_code, str):
+            return self.sql_code
+        
+        if callable(self.sql_code):
+            if source_steps is None:
+                source_steps = []
+            
+            formatted_steps = []
+            for step in source_steps:
+                if full is not None:
+                    formatted_step = str(step.__repr__(full=full))
+                elif hasattr(step, 'materialized') and step.materialized:
+                    formatted_step = str(step.__repr__(full=True))
+                else:
+                    formatted_step = str(step.__repr__(full=False))
+                formatted_steps.append(enclose_table_name(formatted_step))
+            
+            return self.sql_code(*formatted_steps)
+        
+        raise TypeError("sql_code must be either a string or a callable")
+    
+    def get_codes(self, target_id=0, source_ids=None, source_steps=None, mode="", full=None):
+        
+        if not self.sql_code:
+            return ""
         
         if source_ids is None:
             source_ids = []
@@ -15268,33 +15307,44 @@ class SQLStep(TransformationStep):
             raise("Mode not supported")
 
         if mode == "":
-            return self.sql_code
+            return self.get_sql_code(source_steps, full=full)
         
         if mode == "TABLE":
-            return f"CREATE OR REPLACE TABLE \"{self.name}\" AS\n{indent_paragraph(self.sql_code)}"
+            return f"CREATE OR REPLACE TABLE \"{self.name}\" AS\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}"
 
         if mode == "VIEW":
-            return f"CREATE OR REPLACE VIEW \"{self.name}\" AS\n{indent_paragraph(self.sql_code)}"
+            return f"CREATE OR REPLACE VIEW \"{self.name}\" AS\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}"
         
         if mode == "AS":
-            return f"\"{self.name}\" AS (\n{indent_paragraph(self.sql_code)}\n)"
-
-
+            return f"\"{self.name}\" AS (\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}\n)"
 
 
 class TransformationSQLPipeline(TransformationPipeline):
+    
+    def get_codes_for_step(self, step_idx, mode="", full=None):
+        source_step_indicies = self.get_incoming_steps(step_idx)
+        source_steps = [self.steps[source_idx] for source_idx in source_step_indicies]
+        return self.steps[step_idx].get_codes(mode=mode, source_steps=source_steps, full=full)
 
     def get_codes(self, mode="dbt"):
         sorted_step_idx = topological_sort(self.steps, self.edges)
         
         if mode == "dbt":
-            
             with_clauses = []
             
-            for step_idx  in sorted_step_idx[1:-1]:
-                step = self.steps[step_idx]
-                codes = step.get_codes(target_id=step_idx, mode="AS")
-                with_clauses.append(codes)
+            for step_idx  in sorted_step_idx[:-1]:
+                
+                
+                
+                incoming_steps = self.get_incoming_steps(step_idx)
+                full = False
+                if len(incoming_steps) == 1:
+                    if len(self.get_incoming_steps(incoming_steps[0])) == 0:
+                        full = True
+                codes = self.get_codes_for_step(step_idx=step_idx, mode="AS", full=full)
+                    
+                if codes and codes.strip():
+                    with_clauses.append(codes)
 
             codes = cocoon_comment_start
             utc_time = datetime.datetime.now(datetime.timezone.utc)
@@ -15303,50 +15353,77 @@ class TransformationSQLPipeline(TransformationPipeline):
                 codes += "WITH \n" + ",\n\n".join(with_clauses) + "\n\n"
             codes += cocoon_comment_end
 
-            codes += self.steps[sorted_step_idx[-1]].get_codes(target_id=sorted_step_idx[-1], mode="")
+            codes += self.get_codes_for_step(step_idx=sorted_step_idx[-1], mode="", full= False if len(with_clauses) > 0 else True)
 
             return codes
         
         if mode == "WITH":
             with_clauses = []
+            visited = set()
             
-            for step_idx  in sorted_step_idx[1:]:
+            def dfs(step_idx):
+                if step_idx in visited:
+                    return
+                visited.add(step_idx)
+                
                 step = self.steps[step_idx]
-                codes = step.get_codes(target_id=step_idx, mode="AS")
-                with_clauses.append(codes)
+                
+                for parent_idx in self.get_incoming_steps(step_idx):
+                    dfs(parent_idx)
+                
+                if not step.materialized:
+                    codes = self.get_codes_for_step(step_idx=step_idx, mode="AS")
+                    if codes and codes.strip():
+                        with_clauses.append(codes)
             
+            final_step_idx = self.find_final_node()
+            final_step = self.steps[final_step_idx]
+            if final_step.materialized:
+                return ""
+            
+            dfs(final_step_idx)
+
             codes = ""
-            
-            if len(with_clauses) > 0:
-                codes += "WITH \n" + ",\n\n".join(with_clauses)
+            if with_clauses:
+                codes = "WITH \n" + ",\n\n".join(with_clauses)
             
             return codes
 
         if mode == "WITH_TABLE":
-            dbt_codes = self.get_codes(mode="dbt")
+            select_all_codes = self.get_codes(mode="WITH_SELECT_ALL")
             last_step = self.steps[sorted_step_idx[-1]]
-            final_codes = f"CREATE OR REPLACE TABLE {last_step} AS\n{indent_paragraph(dbt_codes)}"
+            final_codes = f"CREATE OR REPLACE TABLE {last_step} AS\n{indent_paragraph(select_all_codes)}"
             
             return final_codes
 
         if mode == "WITH_VIEW":
-            dbt_codes = self.get_codes(mode="dbt")
+            select_all_codes = self.get_codes(mode="WITH_SELECT_ALL")
             last_step = self.steps[sorted_step_idx[-1]]
-            final_codes = f"CREATE OR REPLACE VIEW {last_step} AS\n{indent_paragraph(dbt_codes)}"
-            
+            final_codes = f"CREATE OR REPLACE VIEW {last_step} AS\n{indent_paragraph(select_all_codes)}"
             return final_codes
+        
+        if mode == "WITH_SELECT_ALL":
+            with_clauses = self.get_codes(mode="WITH")
+            full= False if len(with_clauses) > 0 else True
+            last_step = self.steps[sorted_step_idx[-1]]
+            last_step_name = enclose_table_name(last_step.__repr__(full=full))
+            select_all_codes = with_clauses + "\n" + f"SELECT * FROM {last_step_name}"
+            return select_all_codes
         
         if mode == "TABLE":
             
             table_clauses = []
             
             for step_idx  in sorted_step_idx[1:]:
-                step = self.steps[step_idx]
-                codes = step.get_codes(target_id=step_idx, mode="TABLE")
+                codes = self.get_codes_for_step(step_idx=step_idx, mode="TABLE")
                 table_clauses.append(codes)
                 
             return "\n\n".join(table_clauses)
     
+    def get_incoming_steps(self, step_idx):
+        incoming = [from_idx for from_idx, to_indices in self.edges.items() if step_idx in to_indices]
+        return sorted(incoming)
+
     def get_samples(self, con, columns=None, sample_size=None):
         query = self.get_samples_query(columns, sample_size)
         result = run_sql_return_df(con, query)
@@ -15377,7 +15454,20 @@ class TransformationSQLPipeline(TransformationPipeline):
     def run_codes(self, con, mode="dbt"):
         sql_code = self.get_codes(mode=mode)
         run_sql_return_df(con, sql_code)
+    
+    def materialize(self, con, mode="WITH_TABLE", database=None, schema=None):
+        if mode not in ["WITH_TABLE", "WITH_VIEW"]:
+            raise ValueError("Mode must be either 'WITH_TABLE' or 'WITH_VIEW'.")
         
+        final_step = self.get_final_step()
+        if database is not None:
+            final_step.database = database
+        if schema is not None:
+            final_step.schema = schema
+        
+        self.run_codes(con=con, mode=mode)
+        final_step.set_materialized()
+    
     def __repr__(self, full=True):
         final_step = self.get_final_step()
         return final_step.__repr__(full=full)
@@ -15388,11 +15478,7 @@ class TransformationSQLPipeline(TransformationPipeline):
 
  
 class DataProject:
-    image_mode = "graphviz"
     
-    @classmethod
-    def set_image_mode(cls, mode):
-        cls.image_mode = mode
     
     def __init__(self):
         self.tables = {}
@@ -15405,13 +15491,74 @@ class DataProject:
 
         self.story = []
         
+        self.history_table = {}
+        
         self.primary_key = {}
         
         self.foreign_key = {}
         
+        self.key = {}
+        
         self.fks = {}
         
         self.entities = {}
+        
+        self.relations = {}
+        
+        self.story = []
+    
+    def create_table_ddl(self, table_name):
+        if table_name not in self.tables:
+            raise ValueError(f"Table '{table_name}' does not exist in the project.")
+        
+        columns = self.tables[table_name]
+        column_definitions = []
+        
+        for column_name, column_type in columns.items():
+            column_definitions.append(f"    {column_name} {column_type}")
+        
+        column_string = ",\n".join(column_definitions)
+        
+        ddl = f"CREATE TABLE '{table_name}' (\n{column_string}\n);"
+        
+        return ddl
+    
+    def create_all_tables_ddl(self):
+        ddl_statements = []
+        
+        for table_name in self.tables:
+            ddl_statements.append(self.create_table_ddl(table_name))
+        
+        return "\n\n".join(ddl_statements)
+    
+    def build_er_story_from_yml(self, er_yml):
+        if isinstance(er_yml, str):
+            er_yml = yaml.safe_load(er_yml)
+
+        for entity in er_yml.get('entities', []):
+            table_name = entity.get('table_name')
+            if table_name:
+                self.entities[table_name] = {
+                    'entity_name': entity.get('entity_name'),
+                    'entity_desc': entity.get('entity_description')
+                }
+
+        for relation in er_yml.get('relations', []):
+            table_name = relation.get('table_name')
+            if table_name:
+                self.relations[table_name] = {
+                    'relation_name': relation.get('relation_name'),
+                    'entities': relation.get('entities', []),
+                    'relation_desc': relation.get('relation_description')
+                }
+
+        self.story = [
+            {
+                'relation_name': story_item.get('relation_name'),
+                'relation_desc': story_item.get('story_line')
+            }
+            for story_item in er_yml.get('story', [])
+        ]
         
     def add_table_project(self, table_project):
         table_name = table_project.table_name
@@ -15573,18 +15720,113 @@ class DataProject:
     def list_tables(self):
         return list(self.tables.keys())
 
-    def describe_project(self):
+    def describe_project(self, tables=None, limit=10):
         description = ""
-        for idx, (table, attributes) in enumerate(self.tables.items()):
+        idx = 0
+        for table, attributes in self.tables.items():
+            if tables is not None:
+                if table not in tables:
+                    continue
             if isinstance(attributes, dict):
                 attributes = list(attributes.keys())
             
-            if len(attributes) < 10:
-                description += f"{idx+1}. {table}: {attributes}\n"
+            if len(attributes) < limit:
+                description += f"{idx+1}. '{table}': {attributes}\n"
             else:
-                description += f"{idx+1}. {table}: {attributes[:10] + ['...']}\n"
+                description += f"{idx+1}. '{table}': {attributes[:limit] + ['...']}\n"
+            
+            idx += 1
+            
+            if table in self.history_table:
+                history_table = self.history_table[table]
+                
+                history_table_attributes = self.tables[history_table]
+                
+                if isinstance(history_table_attributes, dict):
+                    history_table_attributes = list(history_table_attributes.keys())
+                
+                if len(history_table_attributes) < limit:
+                    description += f"|- History -> '{history_table}': {history_table_attributes}\n"
+                else:
+                    description += f"|- History -> '{history_table}': {history_table_attributes[:limit] + ['...']}\n"
+            
         return description
 
+    
+    def describe_project_yml(self, tables=None, limit=10):
+        result = []
+        for table, attributes in self.tables.items():
+            if tables is not None and table not in tables:
+                continue
+            
+            table_info = OrderedDict()
+            table_info['table_name'] = table
+            
+            if hasattr(self, 'table_object') and table in self.table_object:
+                table_desc = getattr(self.table_object[table], 'table_summary', None)
+                if table_desc:
+                    table_info['table_desc'] = table_desc
+            
+            if isinstance(attributes, dict):
+                attributes = list(attributes.keys())
+            
+            attribute_list = attributes[:limit]
+            if len(attributes) > limit:
+                attribute_list.append('...')
+            
+            table_info['attributes'] = str(attribute_list)
+            
+            if table in self.history_table:
+                history_table = self.history_table[table]
+                history_table_attributes = self.tables[history_table]
+                
+                if isinstance(history_table_attributes, dict):
+                    history_table_attributes = list(history_table_attributes.keys())
+                
+                history_attribute_list = history_table_attributes[:limit]
+                if len(history_table_attributes) > limit:
+                    history_attribute_list.append('...')
+                
+                table_info['history_table'] = {
+                    'table_name': history_table,
+                    'attributes': str(history_attribute_list)
+                }
+            
+            result.append(table_info)
+        
+        return result
+
+    def describe_project_html(self, tables=None, limit=10):
+        html = "<ol>"
+        for table, attributes in self.tables.items():
+            if tables is not None and table not in tables:
+                continue
+            
+            if isinstance(attributes, dict):
+                attributes = list(attributes.keys())
+            
+            attribute_list = attributes[:limit]
+            if len(attributes) > limit:
+                attribute_list.append('...')
+            
+            html += f"<li><strong>{table}</strong>: {attribute_list}</li>"
+            
+            if table in self.history_table:
+                history_table = self.history_table[table]
+                history_table_attributes = self.tables[history_table]
+                
+                if isinstance(history_table_attributes, dict):
+                    history_table_attributes = list(history_table_attributes.keys())
+                
+                history_attribute_list = history_table_attributes[:limit]
+                if len(history_table_attributes) > limit:
+                    history_attribute_list.append('...')
+                
+                html += f"<ul><li>History &rarr; <strong>{history_table}</strong>: {history_attribute_list}</li></ul>"
+        
+        html += "</ol>"
+        return html
+    
     def display_graph(self):
         tables = self.list_tables()
 
@@ -15615,11 +15857,41 @@ class DataProject:
     def generate_nodes_edges(self):
         return generate_nodes_edges(self.foreign_key)
 
-    def display_graph_static(self):
+    def generate_story_html(self):
+        html_items = []
+        for i, item in enumerate(self.story):
+            html_item = f"<li>'{item['relation_name']}': {item['relation_desc']}</li>"
+            html_items.append(html_item)
+        
+        html_content = "<ol>\n" + "\n".join(html_items) + "\n</ol>"
+        return html_content
+        
+    def generate_html_graph_static(self, highlight_nodes=None):
         nodes, edges = self.generate_nodes_edges()
         
-        html_output = generate_workflow_html_multiple(nodes, edges, directional=True)
+        highlight_nodes_indices = None
+        if highlight_nodes is not None:
+            highlight_nodes_indices = [nodes.index(node) for node in highlight_nodes if node in nodes]
+        
+        html_output = generate_workflow_html_multiple(nodes, edges, directional=True, highlight_nodes_indices=highlight_nodes_indices)
+        return html_output
+
+    def display_graph_static(self, highlight_nodes=None):
+        html_output = self.generate_html_graph_static(highlight_nodes)
         display(HTML(html_output))
+            
+    def display_story_multiple_page(self):
+        relation_story = self.story
+
+        relation_to_entities = {}
+
+        for relation_info in self.relations.values():
+            relation_name = relation_info['relation_name']
+            if relation_name is not None:
+                relation_to_entities[relation_name] = relation_info['entities']
+            
+        display_pages(total_page=len(relation_story), 
+            create_html_content=partial(create_html_content_er_story, relation_to_entities, relation_story, None))
 
 
 def generate_nodes_edges(foreign_key):
@@ -15921,12 +16193,14 @@ class DecideProjection(Node):
                 old_table_name = table_pipeline.__repr__(full=False)
                 new_table_name = old_table_name + "_projected"
                 selection_clause = ',\n'.join(document['selected_columns'])
-                sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}'
+                sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
                 comment = f"-- Projection: Selecting {len(document['selected_columns'])} out of {num_cols} columns\n"
                 if num_cols - len(selected_indices) < 10:
                     not_selected_columns = [column_names[i] for i in range(num_cols) if i not in selected_indices]
                     comment += f"-- Columns projected out: {not_selected_columns}\n"
-                sql_query = comment + sql_query
+                    
+                sql_query = lambda *args, comment=comment, sql_query=sql_query: f"{comment}{sql_query}\nFROM {args[0]}"
+                     
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 table_pipeline.add_step_to_final(step)
                 
@@ -16313,10 +16587,14 @@ class DecideDuplicate(Node):
                         old_table_name = table_pipeline.__repr__(full=False)
                         new_table_name = old_table_name + "_dedup"
                         
-                        sql_query = f'SELECT DISTINCT * FROM {table_pipeline}'
+                        sql_query = f'SELECT DISTINCT *'
                         sql_query = f"-- Deduplication: Removed {duplicate_count} duplicated rows\n" + sql_query
+                        sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"      
                         step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
                         self.para["table_pipeline"].add_step_to_final(step)
+                        database = self.para.get("database", None)
+                        schema = self.para.get("schema", None)
+                        self.para["table_pipeline"].materialize(con, database=database, schema=schema)
                         document["duplicate_removed"] = True
                     callback(document)
 
@@ -16352,9 +16630,10 @@ class DecideDuplicate(Node):
 
 
 def get_missing_percentage(con, table_name, column_name, with_context=""):
+    table_name_str = enclose_table_name(table_name)
     query = f"""
     SELECT COUNT(*) as total_count, COUNT("{column_name}") as non_missing_count
-    FROM "{table_name}"
+    FROM {table_name_str}
     """
     
     query = with_context + "\n" + query
@@ -16921,7 +17200,7 @@ class DecideMissing(Node):
 
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
-        table_name = table_pipeline.get_final_step().name
+        table_name = table_pipeline.get_final_step()
 
         schema = table_pipeline.get_schema(con)
         columns = list(schema.keys())
@@ -17263,11 +17542,15 @@ class DecideDMVforAll(MultipleNode):
                         selection_clauses.append(f'"{col}"')
 
                     selection_clause = ',\n'.join(selection_clauses)
-                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}'
+                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
                     sql_query = comment + sql_query
+                    sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"
                     con = self.item["con"]
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                     table_pipeline.add_step_to_final(step)
+                    database = self.para.get("database", None)
+                    schema = self.para.get("schema", None)
+                    table_pipeline.materialize(con=con, database=database, schema=schema)
                 
                 document = new_df.to_json(orient="split")
                 callback(document)
@@ -17323,7 +17606,7 @@ class DecideUnique(ListNode):
         column_descs = {}
         
         for col in columns:
-            distinct_count, total_count = compute_unique_ratio(con, table_name, col, allow_null=True, with_context=with_context)
+            distinct_count, total_count = compute_unique_ratio(con, table_pipeline, col, allow_null=True, with_context=with_context)
             if total_count  == 0:
                 continue
             if distinct_count/total_count > 0.9:
@@ -19169,12 +19452,15 @@ class CleanUnusualForAll(MultipleNode):
             where_sql = "\nWHERE\n" + indent_paragraph(" AND\n".join(filters) if filters else "")
 
         sql_query = f"""SELECT
-{selection_sql}
-FROM {table_pipeline}{where_sql}"""  
+{selection_sql}"""  
         
         sql_query = comment + sql_query
+        sql_query = lambda *args, sql_query=sql_query, where_sql=where_sql: f"{sql_query}\nFROM {args[0]}{where_sql}"  
         step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
         table_pipeline.add_step_to_final(step)
+        database = self.para.get("database", None)
+        schema = self.para.get("schema", None)
+        table_pipeline.materialize(con=con, database=database, schema=schema)
 
         callback(document)
             
@@ -19291,7 +19577,8 @@ FROM {table_name}"""
                 if missing_handling_sql != "":
                     old_table_name = table_pipeline.__repr__(full=False)
                     new_table_name = old_table_name + "_missing_handled"
-                    step = SQLStep(table_name=new_table_name, sql_code=missing_handling_sql, con=self.item["con"])
+                    sql_query = lambda *args: create_missing_handling_sql(new_df, schema, args[0])
+                    step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
                     table_pipeline.add_step_to_final(step)
                 
                 document = new_df.to_json(orient="split")
@@ -19613,7 +19900,7 @@ cast_clause: |
         
         merged_clause += f"END"
         
-        if not DEBUG_MODE:
+        if not cocoon_main_setting['DEBUG_MODE']:
             try:
                 table_pipeline = self.para["table_pipeline"]
                 with_context = table_pipeline.get_codes(mode="WITH")
@@ -19755,7 +20042,6 @@ class TransformTypeForAll(MultipleNode):
 
                 sql_query = "SELECT\n"
                 sql_query += indent_paragraph(",\n".join(non_affected_columns + [f"{row['Clause']} AS \"{row['Column Name']}\"" for i, row in new_df.iterrows()]))
-                sql_query += f'\nFROM {table_pipeline}'
 
                 comment = "-- Column Type Casting: \n"
 
@@ -19767,9 +20053,14 @@ class TransformTypeForAll(MultipleNode):
                         comment += f"-- {column_name}: from {current_type} to {target_type}\n"
 
                 sql_query = comment + sql_query
-
+                
+                sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}" 
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
+                con = self.item["con"]
                 table_pipeline.add_step_to_final(step)
+                database = self.para.get("database", None)
+                schema = self.para.get("schema", None)
+                table_pipeline.materialize(con=con, database=database, schema=schema)
 
                 callback(document)
         
@@ -19967,12 +20258,15 @@ Return in the following format:
                                                             columns_not_to_trim +\
                                                             [f'TRIM({col}) AS {col}' for col in columns_to_trim]))
 
-                    sql_query += f'\nFROM {sql_pipeline}'
                     
                     sql_query = "-- Trim Leading and Trailing Spaces\n" + sql_query
+                    sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"  
 
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
                     sql_pipeline.add_step_to_final(step)
+                    database = self.para.get("database", None)
+                    schema = self.para.get("schema", None)
+                    sql_pipeline.materialize(con=con, database=database, schema=schema)
 
                 callback(new_df.to_json(orient="split"))
 
@@ -20253,9 +20547,10 @@ class WriteStageYMLCode(Node):
         
         if "yaml_only" not in self.class_para or not self.class_para["yaml_only"]:
             
-            sql_query = f'SELECT * FROM {table_pipeline}'
+            sql_query = f'SELECT *'
             final_table_name = table_pipeline.__repr__(full=False)
             if final_table_name != new_table_name:
+                sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"   
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
                 table_pipeline.add_step_to_final(step)
                 
@@ -20485,8 +20780,8 @@ class WriteStageYMLCode(Node):
 
     <div class="main-panel">
         <div class="container">
-            {create_cocoon_logo(header="Data Cleaning", footer="Powered by Cocoon")}
-            <div><h1>{before_table_name}</h1>(First 100 rows)</div>
+            {create_cocoon_logo(header="Data Formatting", footer="Powered by Cocoon")}
+            <div><h1>{before_table_name.__repr__(full=False)}</h1>(First 100 rows)</div>
             <div>
                 {cocoon_html_toggle_block}
             </div>
@@ -20990,7 +21285,7 @@ class SelectTable(Node):
             with self.output_context():
                 table_name = table_dropdown.value
                 
-                sql_step = SQLStep(table_name=table_name, con=con, database=database_dropdown.value, schema=schema_dropdown.value)
+                sql_step = SQLStep(table_name=table_name, con=con, database=database_dropdown.value, schema=schema_dropdown.value, materialized=True)
                 pipeline = TransformationSQLPipeline(steps=[sql_step], edges=[])
                 self.para["table_pipeline"] = pipeline
                 
@@ -21305,9 +21600,9 @@ Return in the following format:
                             selection_clauses.append(f'"{old_name}"')
                     
                     selection_clause = ',\n'.join(selection_clauses)
-                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}'
+                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
                     sql_query = comment + sql_query
-                    
+                    sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"
                     con = self.item["con"]
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                     table_pipeline.add_step_to_final(step)
@@ -21355,7 +21650,7 @@ class DecideMissingList(ListNode):
             missing_columns = {}
             
             for col in chunk_columns:
-                missing_percentage = get_missing_percentage(con, table_name, col, with_context=with_context)
+                missing_percentage = get_missing_percentage(con, table_pipeline, col, with_context=with_context)
                 if missing_percentage > 0:
                     missing_columns[col] = missing_percentage
                     
@@ -21763,8 +22058,8 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
-        "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control: <u>read-only</u></i>",
-        "🧩 <b>Model:</b> Give us a set of tables, we'll clean, integrate and model them.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "✨ <b>Format:</b> Give us a table, we'll format and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🧩 <b>Model:</b> Give us a set of tables, we'll format, integrate and model them.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
         "🔍 <b>Profile:</b> Give us a table, we'll identify anomalies.<br> <i>🛡️ Access Control: <u>read-only</u></i>",
         "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables.",
         "🔧 <b>(Preview) Transform:</b> Give us source/target tables, we will transform.",
@@ -21777,7 +22072,7 @@ class CocoonBranchStep(Node):
         ]
         
         next_nodes = [
-            "Data Stage Workflow",
+            "Data Format Workflow",
             "Data Vault Workflow",
             "Data Profiling Workflow",
             "Fuzzy Join Workflow",
@@ -21834,7 +22129,7 @@ def create_cocoon_workflow(con, para = {}, output=None):
     main_workflow.add_to_leaf(branch_node)
     
 
-    _, stage_workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget, para=para, output=output)
+    _, stage_workflow = create_cocoon_data_format_workflow(con=con, query_widget=query_widget, para=para, output=output)
     _, profile_workflow = create_cocoon_profile_workflow(con=con, query_widget=query_widget, output=output)
     _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget, output=output)    
     dbt_explore_workflow = create_cocoon_dbt_explore_workflow()
@@ -21849,6 +22144,38 @@ def create_cocoon_workflow(con, para = {}, output=None):
     main_workflow.register(data_vault_workflow, parent=branch_node)
     
     return query_widget, main_workflow
+
+def create_cocoon_data_format_workflow(con, query_widget=None, viewer=False, dbt_directory="./dbt_directory", para={}, output=None):
+
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+    
+
+    
+    workflow_para = {"data_project": DataProject(),
+                     "dbt_directory": dbt_directory}
+    
+    for key, value in para.items():
+        workflow_para[key] = value
+
+    main_workflow = Workflow("Data Format Workflow", 
+                            item = item, 
+                            description="A workflow to format",
+                            para = workflow_para,
+                            output = output)
+    
+    main_workflow.add_to_leaf(SelectSchema(output = output))
+    main_workflow.add_to_leaf(DBTProjectConfig(output = output))
+    main_workflow.add_to_leaf(SelectTables(output = output))
+    main_workflow.add_to_leaf(StageForAllAndEnd(output = output))
+
+    return query_widget, main_workflow
+
 
 def get_columns_pattern(columns, use_cache=True):
     template = f"""You have the following columns:
@@ -21976,7 +22303,7 @@ class DecideColumnsPattern(Node):
                     selected_columns = [f'"{col}"' for col in columns if col not in columns_to_remove]
 
                     selection_clause = ',\n'.join(selected_columns)
-                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}'
+                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
 
                     comment = "-- Remove wide columns with pattern. The regex and columns are:\n"
                     for index, row in new_df.iterrows():
@@ -21987,7 +22314,7 @@ class DecideColumnsPattern(Node):
                                 comment += f"-- {row['Pattern']}: {', '.join(row['Columns'])}\n"
 
                     sql_query = f"{comment}{sql_query}"
-
+                    sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                     step.run_codes()
                     table_pipeline.add_step_to_final(step)
@@ -22958,6 +23285,7 @@ class DecideStringCategoricalForAll(MultipleNode):
         data = {
             'Column': [],
             'Should Categorical?': [],
+            'Current Domain': [],
             'Acceptable Values': [],
             'Explanation': []
         }
@@ -22967,6 +23295,7 @@ class DecideStringCategoricalForAll(MultipleNode):
                 if details['can_enumerate']:
                     data['Column'].append(column_name)
                     data['Should Categorical?'].append(True)
+                    data['Current Domain'].append(details['current_domain'])
                     if details['current_full']:
                         domain_list = [str(item) for item in details['domain']]
                         data['Acceptable Values'].append(domain_list)
@@ -22981,12 +23310,12 @@ class DecideStringCategoricalForAll(MultipleNode):
             callback(df.to_json(orient="split"))
             return
 
-        editable_columns = [False, True, True, False]
+        editable_columns = [False, True, True, True, False]
         reset = True
         lists = ['Current Domain']
         long_text = ['Explanation']
         editable_list = {
-            'Related Hubs': {}
+            'Acceptable Values': {}
         }
         
         grid = create_dataframe_grid(df, editable_columns, reset=reset, lists=lists, 
@@ -23025,7 +23354,8 @@ class DecideStringCategoricalForAll(MultipleNode):
                 for idx, row in new_df.iterrows():
                     column = row['Column']
                     if row['Should Categorical?']:
-                        table_object.category[column] = row['Acceptable Values']
+                        table_object.category[column] = row['Current Domain']
+                        table_object.potential_category[column] = [item for item in row['Acceptable Values'] if item not in row['Current Domain']]
                 
                 callback(document)
         
@@ -23275,7 +23605,8 @@ full_domain: # only if limited_size, well_known, and not current_full
             missing_values = set(summary["domain"]) - set(summary["full_domain"])
             if missing_values:
                 summary["full_domain"].extend(list(missing_values))
-            
+        
+        summary["current_domain"] = sample_values[column_name].tolist()
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
@@ -23301,25 +23632,8 @@ class SelectTables(Node):
             if "dbt_directory" in self.para:
                 try:
                     dbt_directory = self.para["dbt_directory"]
-                    sources_file = os.path.join(dbt_directory, "sources.yml")
-                    
-                    if os.path.exists(sources_file):
-                        with open(sources_file, 'r') as file:
-                            yml_content = yaml.safe_load(file)
-                            
-                        if yml_content and 'sources' in yml_content:
-                            source = yml_content['sources'][0]
-                            database = source.get('database')
-                            schema = source.get('schema')
-                            tables = source.get('tables', [])
-                            
-                            if len(tables) > 0 and isinstance(tables[0], dict):
-                                table_names = [table['name'] for table in tables]
-                            else:
-                                table_names = tables
-                            display(HTML(f"🤓 Found {len(table_names)} source tables in your project!"))
-                            return database, schema, table_names
-            
+                    sources_file_path = os.path.join(dbt_directory, "sources.yml")
+                    return read_source_file(sources_file_path)
                 except Exception as e:
                     pass
             
@@ -24652,13 +24966,13 @@ HAVING count(distinct(coalesce({decide_col}, 'NULL'))) > 1"""
         selection_sql = indent_paragraph(",\n".join(selections))
         
         sql_query = f"""SELECT
-{selection_sql}
-FROM {table_pipeline}"""    
+{selection_sql}"""    
 
         comment = f"-- FD: functional dependency\n"
         comment += f"-- {groupby} -> {', '.join(summary['one_one_columns'])}\n"
         
         sql_query = comment + sql_query
+        sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"
         step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
         table_pipeline.add_step_to_final(step)
         
@@ -24934,7 +25248,7 @@ Return in the following format:
 
 class Table:
     def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_acceptable=None, unusualness=None, 
-                 category=None, uniqueness=None, patterns=None, variant=None):
+                 category=None, uniqueness=None, patterns=None, variant=None, potential_category = None):
         self.table_name = table_name
         self.table_summary = table_summary
         self.columns = columns or []
@@ -24942,6 +25256,7 @@ class Table:
         self.missing_acceptable = missing_acceptable or {}
         self.unusualness = unusualness or {}
         self.category = category or {}
+        self.potential_category = potential_category or {}
         self.uniqueness = uniqueness or {}
         self.patterns = patterns or {}
         self.variant = variant or {}
@@ -24952,6 +25267,37 @@ class Table:
             category_string += f"'{column}': {categories}\n"
         return category_string.strip()
     
+    def get_column_desc_yml(self, columns=None, show_category=False, 
+                        show_unique=False, show_pattern=False):
+        result = []
+        if columns is None:
+            columns = self.columns
+        
+        for column in columns:
+            if column in self.column_desc:
+                column_info = OrderedDict()
+                column_info['name'] = column
+                column_info['description'] = self.column_desc.get(column, "")
+                
+                if show_category and column in self.category:
+                    column_info['domain'] = str(self.category[column])
+                
+                if show_unique and column in self.uniqueness:
+                    column_info['unique'] = self.uniqueness[column]
+                
+                if show_pattern and column in self.patterns:
+                    column_info['patterns'] = [
+                        OrderedDict([
+                            ('summary', pattern['summary']),
+                            ('regex', pattern['regex'])
+                        ])
+                        for pattern in self.patterns[column]
+                    ]
+                
+                result.append(column_info)
+        
+        return result
+
     def print_column_desc(self, columns=None, show_category=False, 
                           show_unique=False, show_pattern=False):
         column_desc_string = ""
@@ -25043,6 +25389,17 @@ class Table:
                 variant_info = self.variant[variant_key]
                 if variant_info:
                     cocoon_meta["variant"] = variant_info
+                    
+            potential_category_key = next((key for key in self.potential_category if key.lower() == column.lower()), None)
+            if potential_category_key:
+                potential_values = self.potential_category[potential_category_key]
+                if potential_values:
+                    if not isinstance(potential_values, list):
+                        if potential_values.startswith("[") and potential_values.endswith("]"):
+                            potential_values = ast.literal_eval(potential_values)
+                        else:
+                            potential_values = potential_values.split(",")
+                    cocoon_meta["future_accepted_values"] = potential_values
 
             column_data = OrderedDict([
                 ("name", column),
@@ -25105,6 +25462,8 @@ class Table:
                     self.patterns[column_name] = cocoon_meta['patterns']
                 if 'variant' in cocoon_meta:
                     self.variant[column_name] = cocoon_meta['variant']
+                if 'future_accepted_values' in cocoon_meta:
+                    self.potential_category[column_name] = cocoon_meta['future_accepted_values']
                     
                     
     def add_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
@@ -25332,8 +25691,9 @@ class DescribeColumnsListAndTableSummary(DescribeColumnsList):
                             selection_clauses.append(f"\"{old_name}\"")
                     
                     selection_clause = ',\n'.join(selection_clauses)
-                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}\nFROM {table_pipeline}'
+                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
                     sql_query = comment + sql_query
+                    sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"
                     con = self.item["con"]
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                     step.run_codes()
@@ -25650,7 +26010,6 @@ class StageForAll(MultipleNode):
         data_project = self.para["data_project"]
         con = self.item["con"] 
         data_project.tables = {}
-        tables = []
         
         table_data = []
 
@@ -25664,9 +26023,6 @@ class StageForAll(MultipleNode):
             data_project.table_object[new_table_name] = table_object
             
             table_pipeline = node.para["table_pipeline"]
-            database = self.para.get("database", None)
-            schema = self.para.get("schema", None)
-            
             codes = table_pipeline.get_codes(mode="dbt")
             tags = get_tags(codes)
             table_dict = {"table": new_table_name}
@@ -25674,11 +26030,6 @@ class StageForAll(MultipleNode):
                 table_dict[tag] = "✔️" if tag in tags else "❌"
             table_data.append(table_dict)
             
-            final_step = table_pipeline.get_final_step()
-            final_step.database = database
-            final_step.schema = schema
-            
-            tables.append(f"{table_pipeline}")
             data_project.table_pipelines[new_table_name] = table_pipeline
             
         
@@ -25692,13 +26043,11 @@ class StageForAll(MultipleNode):
 
                 for node_id, node in self.nodes.items():
                     try:
-                        table_name = node.para['table_name']
-                        table_object = node.para["table_object"]
-                        new_table_name = table_object.table_name
-                        
                         table_pipeline = node.para["table_pipeline"]
-                        table_pipeline.run_codes(con=con, mode=mode)
-                        
+                        database = self.para.get("database", None)
+                        schema = self.para.get("schema", None)
+                        table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
+
                     except Exception as e:
                         error_msg = f"Error processing {node.para['table_name']}"
                         print(error_msg)
@@ -25733,10 +26082,15 @@ class StageForAll(MultipleNode):
                     new_table_name = table_object.table_name
                     table_pipeline = node.para["table_pipeline"]
                     try:
-                        data_project.add_table(new_table_name, get_table_schema(con, table_pipeline))
-                        if not schema:
+                        database = self.para.get("database", None)
+                        schema = self.para.get("schema", None)
+                        table_schema = get_table_schema(con, table_pipeline, database=database, schema=schem)
+                        
+                        if not table_schema:
                             print(f"⚠️ Can't read {new_table_name}; Is it materialized?")
                             return
+                        
+                        data_project.add_table(new_table_name, table_schema)
                         
                     except Exception as e:
                         print(f"⚠️ Error reading {new_table_name}: {str(e)}")
@@ -25747,6 +26101,53 @@ class StageForAll(MultipleNode):
         submit_button.on_click(on_submit_button_click)
         display(submit_button)
         
+class StageForAllAndEnd(StageForAll):
+    
+    default_name = 'Stage For All'
+    default_description = 'This stages the source tables'
+    
+    def display_after_finish_workflow(self, callback, document):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(1, model_steps)
+        
+        view_button = widgets.Button(description="As View", button_style='info', icon='eye')
+        table_button = widgets.Button(description="As Table", button_style='info', icon='table')
+        
+        data_project = self.para["data_project"]
+        con = self.item["con"] 
+        data_project.tables = {}
+        
+        table_data = []
+
+        tag_order = ["Projection", "Renaming", "Deduplication", "Casting", "Missing", "Cleaning"]
+
+        all_tags = OrderedDict((tag, "") for tag in tag_order)
+        
+        for node in self.nodes.values():
+            table_object = node.para["table_object"]
+            new_table_name = table_object.table_name
+            data_project.table_object[new_table_name] = table_object
+            
+            table_pipeline = node.para["table_pipeline"]
+            codes = table_pipeline.get_codes(mode="dbt")
+            tags = get_tags(codes)
+            table_dict = {"table": new_table_name}
+            for tag in all_tags:
+                table_dict[tag] = "✔️" if tag in tags else "❌"
+            table_data.append(table_dict)
+            
+            data_project.table_pipelines[new_table_name] = table_pipeline
+        
+        df = pd.DataFrame(table_data)
+
+        column_order = ["table"] + list(all_tags.keys())
+        df = df[column_order]
+
+        display(HTML("💯 All the tables are staged! Here are what we have performed ..."))
+        display(df)
+        display(HTML("😎 The results are saved under the stage folder of dbt project!"))
+        
+
 
 
 
@@ -28351,12 +28752,39 @@ class DocumentProject(Node):
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
         save_files_click(save_button) 
         
-
-
-def read_data_project_from_dir(directory, con):
+        
+def read_source_file(sources_file_path):
+    
+    if not os.path.exists(sources_file_path):
+        return None, None, None
+    
+    try:
+        with open(sources_file_path, 'r') as file:
+            yml_content = yaml.safe_load(file)
+        
+        if not yml_content or 'sources' not in yml_content:
+            return None, None, None
+        
+        source = yml_content['sources'][0]
+        database = source.get('database')
+        schema = source.get('schema')
+        tables = source.get('tables', [])
+        
+        if len(tables) > 0 and isinstance(tables[0], dict):
+            table_names = [table['name'] for table in tables]
+        else:
+            table_names = tables
+        
+        return database, schema, table_names
+    
+    except Exception as e:
+        return None, None, None
+    
+    
+    
+def read_data_project_from_dir(directory, con, source_only=False, create=True):
     data_project = DataProject()
     dbt_directory = os.path.join(directory, "models")
-
 
     seeds_directory = os.path.join(directory, "seeds") 
     files = os.listdir(seeds_directory)
@@ -28369,19 +28797,19 @@ def read_data_project_from_dir(directory, con):
             table_name = clean_table_name(table_name)
             df = pd.read_csv(file_path)
             df.columns = [clean_column_name(col) for col in df.columns]
-            con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
+            if create:
+                con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
             tables.append(table_name)
             
-    source_tables = []
-    if os.path.exists(os.path.join(dbt_directory, "sources.yml")):
-        with open(os.path.join(dbt_directory, "sources.yml"), "r") as file:
-            sources_yml = yaml.load(file, Loader=yaml.FullLoader)
-        
-        sources = sources_yml["sources"]
-        for source in sources:
-            if source["name"] == "cocoon":
-                source_tables = source["tables"]
-                break
+    sources_file_path = os.path.join(dbt_directory, "sources.yml")
+    database, schema, source_tables = read_source_file(sources_file_path)
+            
+ 
+    if source_only:
+        for table_name in source_tables:
+            data_project.add_table(table_name, get_table_schema(con, table_name, database=database, schema=schema))
+
+        return data_project
 
     stage_tables = []
     if os.path.exists(os.path.join(dbt_directory, "stage")):
@@ -28393,8 +28821,14 @@ def read_data_project_from_dir(directory, con):
         new_table_name = stage_table
         with open(os.path.join(dbt_directory, "stage", f"{stage_table}.sql"), "r") as f:
             sql_query = f.read()
-            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
-        
+            sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
+            table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+            mode = "WITH_TABLE"
+            if create:
+                table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
+            data_project.table_pipelines[new_table_name] = table_pipeline
+            data_project.add_table(new_table_name, get_table_schema(con, new_table_name, database=database, schema=schema))
+                    
         with open(os.path.join(dbt_directory, "stage", f"{stage_table}.yml"), "r") as f:
             table_object = Table()
             yml_data = yaml.safe_load(f)
@@ -28411,20 +28845,53 @@ def read_data_project_from_dir(directory, con):
         new_table_name = snapshot_table
         with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.sql"), "r") as f:
             sql_query = f.read()
-            step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+            sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
+            table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+            mode = "WITH_TABLE"
+            if create:
+                table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
+            data_project.table_pipelines[new_table_name] = table_pipeline
+            
         
         with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.yml"), "r") as f:
             table_object = Table()
             yml_data = yaml.safe_load(f)
             table_object.read_attributes_from_dbt_schema_yml(yml_data)
             data_project.add_table_project(table_object)
+            
+            old_table_name = yml_data.get("cocoon_meta", {}).get("scd_base_table", None)
+            data_project.history_table[new_table_name] = old_table_name
+        
+        data_project.add_table(new_table_name, get_table_schema(con, new_table_name, database=database, schema=schema))
 
     join_yml_content = ""
     if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
         with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r") as file:
             join_yml_content = file.read()
-
+            
     data_project.build_foreign_key_from_join_graph_yml(join_yml_content)
+    
+    join_graph_data = yaml.safe_load(join_yml_content)
+    
+    if 'join_graph' in join_graph_data:
+        for item in join_graph_data['join_graph']:
+            table_name = item.get('table_name')
+            primary_key = item.get('primary_key')
+            foreign_keys = item.get('foreign_keys')
+            
+            if table_name:
+                data_project.key[table_name] = {
+                    "primary_key": primary_key,
+                    "foreign_keys": foreign_keys
+                }
+                
+    er_yml_content = ""
+    if os.path.exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
+        with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r") as file:
+            er_yml_content = file.read()
+    
+    data_project.build_er_story_from_yml(er_yml_content)
+    
     return data_project
 
 
@@ -28854,3 +29321,1292 @@ def get_tags(input_string):
     }
     
     return set(tag for key, tag in tag_map.items() if key in input_string)
+
+
+
+def generate_er_diagram_html(relation_map, relation_details, highlighted_relations):
+    nodes = []
+    edges = []
+    node_shapes = []
+    highlight_nodes_indices = []
+    highlight_edges_indices = []
+
+    for relation, entities in relation_map.items():
+        if relation not in nodes:
+            nodes.append(relation)
+            node_shapes.append("box")
+        for entity in entities:
+            if entity not in nodes:
+                nodes.append(entity)
+                node_shapes.append("oval")
+
+    for relation, entities in relation_map.items():
+        relation_index = nodes.index(relation)
+        if relation in highlighted_relations:
+            highlight_nodes_indices.append(relation_index)
+        for entity in entities:
+            entity_index = nodes.index(entity)
+            edge = (relation_index, entity_index)
+            edges.append(edge)
+            if relation in highlighted_relations:
+                highlight_edges_indices.append(len(edges) - 1)
+                highlight_nodes_indices.append(entity_index)
+
+    graph_html = generate_workflow_html_multiple(nodes, edges, node_shape=node_shapes, directional=False,
+                                                 highlight_nodes_indices=highlight_nodes_indices,
+                                                 highlight_edges_indices=highlight_edges_indices)
+
+    descriptions_html = '<p>Story behind the relationships <small class="text-muted">(only for those connecting >= 2 entities)</small></p><ol class="small">'
+    for detail in relation_details:
+        relation_name = detail['relation_name']
+        relation_desc = detail['relation_desc']
+        if relation_name in highlighted_relations:
+            descriptions_html += f"<li><b>[{relation_name}]: {relation_desc}</b></li>"
+        else:
+            descriptions_html += f"<li>[{relation_name}]: {relation_desc}</li>"
+    descriptions_html += "</ol>"
+
+    html_content = f"""
+    {descriptions_html}
+    {graph_html}
+    """
+
+    return html_content
+
+
+
+
+
+class DBTProjectConfigAndRead(Node):
+    default_name = 'DBT Project Configuration and Read'
+    default_description = 'This step allows you to specify an existing DBT project directory and read the project.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        dbt_directory_input = widgets.Text(
+            description='Project Directory:',
+            value=self.para.get("dbt_directory", ""),
+            placeholder="/path/to/your/dbt/project",
+            style={'description_width': 'initial'},
+            layout={'width': '50%'}
+        )
+
+        submit_button = widgets.Button(description="Read Project", button_style='success')
+
+        output = widgets.Output()
+
+        def on_button_click(b):
+            with self.output_context():
+                directory = dbt_directory_input.value
+                
+                if not directory:
+                    print("Please specify a directory.")
+                    return
+
+                con = self.item["con"]
+                data_project = read_data_project_from_dir(directory, con)
+                
+                self.para["data_project"] = data_project
+                self.para["dbt_directory"] = directory
+                
+                print(f"Successfully read project from {directory}")
+                
+                callback({"dbt_directory": directory})
+                
+
+        submit_button.on_click(on_button_click)
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if "dbt_directory" in self.para:
+                dbt_directory_input.value = self.para["dbt_directory"]
+                on_button_click(submit_button)
+                return
+
+        create_progress_bar_with_numbers(1, model_steps)
+        display(HTML("<h3>📂 Specify DBT Directory</h3>Preferably built by Cocoon"))
+        display(dbt_directory_input)
+        display(submit_button)
+        display(output)
+            
+            
+class SimpleBusinessQuestionNode(Node):
+    default_name = 'Business Question Input'
+    default_description = 'This step allows you to explore the data and input a business question.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        data_project = self.para["data_project"]
+
+        question_input = widgets.Textarea(
+            placeholder='Enter your business question here...',
+            value=self.para.get("business_question", ""),
+            layout={'width': '96%', 'height': '100px'}
+        )
+        question_input.add_class('modern-textarea')
+        
+        submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
+
+        def on_button_click(b):
+            with self.output_context():
+                business_question = question_input.value.strip()
+
+                if not business_question:
+                    print("Please enter a business question before submitting.")
+                    return
+                
+                if "chatui" in self.para:
+                    import html
+
+                    def escape_html(text):
+                        return html.escape(text)
+
+                    escaped = escape_html(business_question)
+                    self.para["chatui"].add_message("You", escaped)
+
+                self.para["business_question"] = business_question
+
+                callback({"business_question": business_question})
+
+        submit_button.on_click(on_button_click)
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if "business_question" in self.para:
+                on_button_click(submit_button)
+                return
+        
+        create_progress_bar_with_numbers(1, model_steps)
+
+        display(HTML("<h4>🗃️ Available Tables:</h4>"))
+        query_widget = self.item["query_widget"]
+        dropdown = create_explore_button(query_widget, 
+                                         table_name=list(data_project.table_pipelines.keys()),
+                                         logical_to_physical=data_project.table_pipelines)
+        
+
+        display(HTML("<h4>📖 Story Behind Tables:</h4>"))
+        data_project.display_story_multiple_page()
+
+        display(HTML("<h4>❓ Now, enter Your Business Question:</h4>"))
+        display(VBox([question_input]))
+        display(submit_button)
+        
+        
+class BusinessQuestionEntityRelationNode(Node):
+    default_name = 'Business Question Entity and Relation Analysis'
+    default_description = 'This node analyzes the entities and relations related to the business questions.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🔍 Analyzing the business question..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        business_question = self.para["business_question"]
+        
+        return data_project, business_question
+
+    def run(self, extract_output, use_cache=True):
+        data_project, business_question = extract_output
+        
+        story_desc = "\n".join([f"{i+1}. '{item['relation_name']}': {item['relation_desc']}" 
+                        for i, item in enumerate(data_project.story)])
+
+        template = f"""Given the following question:
+'{business_question}'
+
+And the following descriptions of relations in a story-telling fashion:
+{story_desc}
+
+First reason about how the question fits into the story
+Then provide the relations that contains information to answer the question
+
+Return your analysis in the following format:
+```yml
+reasoning: >-
+    The question means... In the story, it is asking for ...
+related_relations:
+    - relation_name: xx
+      explanation: This is related because ...
+    - relation_name: xx
+      ...
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
+            raise ValueError("Analysis should contain a 'reasoning' key with a string value")
+        
+        if 'related_relations' not in analysis or not isinstance(analysis['related_relations'], list):
+            raise ValueError("Analysis should contain a 'related_relations' key with a list value")
+        
+        for relation in analysis['related_relations']:
+            if not isinstance(relation, dict) or 'relation_name' not in relation or 'explanation' not in relation:
+                raise ValueError("Each related relation should be a dictionary with 'relation_name' and 'explanation' keys")
+        
+        return analysis
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        data_project, business_question = extract_output
+        
+        default_analysis = {
+            'reasoning': 'Unable to analyze the business question in relation to the story.',
+            'related_relations': []
+        }
+        
+        return default_analysis
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        analysis = run_output
+        data_project, business_question = extract_output
+        
+        data = {
+            'Name': [],
+            'Related': [],
+            'Explanation': [],
+        }
+        
+        related_relations = {relation['relation_name'] for relation in analysis['related_relations']}
+        for item in data_project.story:
+            name = item['relation_name']
+            is_related = name in related_relations
+            explanation = next((relation['explanation'] for relation in analysis['related_relations'] if relation['relation_name'] == name), '')
+            
+            data['Name'].append(name)
+            data['Related'].append(is_related)
+            data['Explanation'].append(explanation if is_related else '')
+            
+        df = pd.DataFrame(data)
+        
+        editable_columns = [False, True, True]
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset)
+        
+        display(HTML(f"❓ <b>Business Question:</b> {business_question}"))
+        display(HTML(f"🧠 <b>Analysis Reasoning:</b> {analysis['reasoning']}"))
+        display(grid)
+        
+        relation_story = data_project.story
+        relation_to_entities = {}
+        for relation_info in data_project.relations.values():
+            relation_name = relation_info['relation_name']
+            if relation_name is not None:
+                relation_to_entities[relation_name] = relation_info['entities']
+        
+        highlighted_relations = list(related_relations)
+        
+        html_content = generate_er_diagram_html(relation_to_entities, relation_story, highlighted_relations)
+        display(HTML(html_content))
+        
+        if "chatui" in self.para:
+            
+            yml_content = yaml.dump(data_project.story, default_flow_style=False)
+            highlighted_yml_content = highlight_yml_only(yml_content)
+            message = f"😎 <b>RAG from Cocoon</b>: Putting the question in context using Cocoon's ER story... nice! {highlighted_yml_content}"
+            
+            if df['Related'].any():
+                related_entities = ", ".join(df[df['Related']]['Name'].tolist())
+                message += f"🤓 <b>We've found the related relations:</b> {related_entities}"
+                message += html_content
+                message += f"<b>Reasoning</b>: {analysis['reasoning']}<br>"
+                
+                self.para["chatui"].add_message("GenAI", message)
+            else:
+                message += f"🤔 <b>We can't find any related relation</b>.<br><b>Reasoning</b>:{analysis['reasoning']}"
+                self.para["chatui"].add_message("GenAI", message)
+                
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                df = grid_to_updated_dataframe(grid, reset=reset)
+                
+                if not df['Related'].any():
+                    print("Error: At least one relation must be marked as related to the business question.")
+                    return
+                
+                document = {
+                    'reasoning': analysis['reasoning'],
+                    'related_relations': df.to_json(orient="split")
+                }
+                callback(document)
+                
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+class BusinessQuestionSQLFeasibility(Node):
+    default_name = 'Business Question SQL Feasibility Check'
+    default_description = 'This node evaluates whether a business question can be answered with SQL or if it is too ambiguous/abstract.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🤔 Evaluating the feasibility of answering the business question with SQL..."))
+        self.progress = show_progress(1)
+
+        business_question = self.para["business_question"]
+        
+        return business_question
+
+    def run(self, extract_output, use_cache=True):
+        business_question = extract_output
+
+        template = f"""Evaluate the following business question for its feasibility to be answered using SQL:
+
+'{business_question}'
+
+Consider the following guidelines:
+If it's not a question, then it's not suitable for DQL SQL.
+Questions with terms like "best" or "worst" without clear metrics are often ambiguous.
+Questions about strategies or abstract concepts are typically not suitable for SQL queries.
+Questions that needs to create table/set permission go beyond DQL.
+
+Provide your analysis in the following format:
+```yml
+explanation: >-
+    [Your detailed explanation here, discussing why the question is or isn't feasible for SQL]
+sql_feasible: true/false
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'explanation' not in analysis or not isinstance(analysis['explanation'], str):
+            raise ValueError("Analysis should contain an 'explanation' key with a string value")
+        
+        if 'sql_feasible' not in analysis or not isinstance(analysis['sql_feasible'], bool):
+            raise ValueError("Analysis should contain an 'sql_feasible' key with a boolean value")
+        
+        return analysis
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        default_analysis = {
+            'explanation': 'Unable to evaluate the SQL feasibility of the business question.',
+            'sql_feasible': False
+        }
+        
+        return default_analysis
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        analysis = run_output
+        business_question = extract_output
+        
+        if not analysis['sql_feasible'] and "chatui" in self.para:
+            message = f"🤔 <b>We can't run the query</b><br><b>Reason</b>: {analysis['explanation']}"
+            self.para["chatui"].add_message("GenAI", message)
+            
+        display(HTML(f"❓ <b>Business Question:</b> {business_question}"))
+        display(HTML(f"📊 <b>SQL Feasibility:</b> {'Yes' if analysis['sql_feasible'] else 'No'}"))
+        display(HTML(f"🧠 <b>Explanation:</b> {analysis['explanation']}"))
+        
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                document = {
+                    'business_question': business_question,
+                    'sql_feasible': analysis['sql_feasible'],
+                    'explanation': analysis['explanation']
+                }
+                callback(document)
+        
+        next_button.on_click(on_button_click)
+        
+        if analysis['sql_feasible']:
+            display(next_button)
+            
+            if viewer or ("viewer" in self.para and self.para["viewer"]):
+                on_button_click(next_button)
+                return
+            
+            
+            
+class BusinessQuestionDataSufficiency(Node):
+    default_name = 'Business Question Data Sufficiency Check'
+    default_description = 'This node evaluates whether the current tables have enough information to answer the business question.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🔍 Evaluating data sufficiency for the business question..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        business_question = self.para["business_question"]
+
+        df = pd.read_json(self.get_sibling_document('Business Question Entity and Relation Analysis')['related_relations'], orient="split")
+        related_relations = df[df['Related'] == True]['Name'].tolist()
+
+        tables = set()
+        for relation_name in related_relations:
+            for table, relation_data in data_project.relations.items():
+                if relation_data['relation_name'] == relation_name:
+                    entities = relation_data['entities']
+                    for entity in entities:
+                        for table, entity_data in data_project.entities.items():
+                            if entity_data['entity_name'] == entity:
+                                tables.add(table)
+            
+            for table, relation_data in data_project.relations.items():
+                if relation_data['relation_name'] == relation_name:
+                    tables.add(table)
+
+        for table, relation_data in data_project.relations.items():
+            if relation_data['relation_name'] is None and len(relation_data['entities']) == 1:
+                entity = relation_data['entities'][0]
+                for _, entity_data in data_project.entities.items():
+                    if entity_data['entity_name'] == entity:
+                        tables.add(table)
+
+        schema_description = data_project.describe_project(tables=list(tables), limit=9999)
+        
+        return business_question, schema_description, list(tables)
+
+    def run(self, extract_output, use_cache=True):
+        business_question, schema_description, all_related_tables = extract_output
+
+
+        template = f"""Given the following business question:
+'{business_question}'
+
+And the following schema description of relevant tables:
+{schema_description}
+
+Please analyze if the available data is sufficient to answer the business question using SQL. 
+If it is sufficient, provide a high-level explanation of what selections, aggregations, and joins might be needed, and over which columns and tables.
+Some tables are snapshot and its historical data is also available. Pick the right one.
+
+Return your analysis in the following format:
+```yml
+explanation: >-
+    [Your detailed explanation here, discussing data sufficiency and potential SQL approach]
+sufficient: true/false
+sql_approach: >-
+    If sufficient, provide a detailed step-by-step instruction of the SQL approach.
+    Dictates which tables, columns, and operations to use.
+# from sql_approach, list all related tables
+related_tables: ['table1', 'table2', ...]
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'sufficient' not in analysis or not isinstance(analysis['sufficient'], bool):
+            raise ValueError("Analysis should contain a 'sufficient' key with a boolean value")
+        
+        if 'explanation' not in analysis or not isinstance(analysis['explanation'], str):
+            raise ValueError("Analysis should contain an 'explanation' key with a string value")
+        
+        if analysis['sufficient']:
+            if 'sql_approach' not in analysis or not isinstance(analysis['sql_approach'], str):
+                raise ValueError("When data is sufficient, analysis should contain a 'sql_approach' key with a string value")
+            
+            if 'related_tables' not in analysis or not isinstance(analysis['related_tables'], list):
+                raise ValueError("When data is sufficient, analysis should contain a 'related_tables' key with a list value")
+            
+            invalid_tables = [table for table in analysis['related_tables'] if table not in all_related_tables]
+            if invalid_tables:
+                raise ValueError(f"The following tables were not identified as related during extraction: {', '.join(invalid_tables)}")
+
+        return analysis
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        analysis = run_output
+        business_question, _, all_related_tables = extract_output
+        data_project = self.para["data_project"]
+        
+        display(HTML(f"❓ <b>Business Question:</b> {business_question}"))
+        display(HTML(f"📊 <b>Data Sufficiency:</b> {'Yes' if analysis['sufficient'] else 'No'}"))
+        display(HTML(f"🧠 <b>Explanation:</b> {analysis['explanation']}"))
+        
+        related_tables = analysis.get('related_tables', []) if analysis['sufficient'] else []
+
+        if analysis['sufficient']:
+            display(HTML(f"💡 <b>SQL Approach:</b> {analysis['sql_approach']}"))
+        
+        if related_tables:
+            display(HTML(f"📚 <b>Related Tables:</b> {', '.join(related_tables)}"))
+            html_content = data_project.generate_html_graph_static(highlight_nodes=related_tables)
+            display(HTML(html_content))
+        
+        if "chatui" in self.para:
+            yml_dict = data_project.describe_project_yml(tables=all_related_tables, limit=9999)
+            yml_content = yaml.dump(yml_dict, default_flow_style=False)
+            highlighted_yml_content = highlight_yml_only(yml_content)
+            message = f"😎 <b>RAG from Cocoon</b>: Checking out all the related tables Cocoon set up... cool stuff! {highlighted_yml_content}"
+
+            if related_tables and analysis['sufficient']:
+
+                message += f"🤓 <b>We've identified the related tables</b>: {', '.join(related_tables)}"
+                message += html_content
+                message += f"🧠 <b>Explanation</b>: {analysis['explanation']}<br>"
+                message += f"💡 <b>Instruction to write SQL</b>: {analysis['sql_approach']}<br>"
+                
+                self.para["chatui"].add_message("GenAI", message)
+            else:
+                message += "🤔 <b>We couldn't find any related tables</b>.<br>"
+                message += f"🧠 <b>Explanation:</b> {analysis['explanation']}"
+                self.para["chatui"].add_message("GenAI", message)
+
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                if not (related_tables and analysis['sufficient']):
+                    print("Error: Cannot proceed because current data is insufficient, or no related table.")
+                    return
+                
+                document = {
+                    'business_question': business_question,
+                    'data_sufficient': analysis['sufficient'],
+                    'explanation': analysis['explanation'],
+                    'sql_approach': analysis.get('sql_approach', 'N/A'),
+                    'related_tables': related_tables
+                }
+                callback(document)
+        
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+class JoinGraphBuilder(Node):
+    default_name = 'Join Graph Builder'
+    default_description = 'This node builds a join graph based on the SQL approach and related tables.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🔗 Building join graph for the SQL query..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        previous_node_output = self.get_sibling_document('Business Question Data Sufficiency Check')
+        
+        sql_approach = previous_node_output['sql_approach']
+        related_tables = previous_node_output['related_tables']
+        
+        key_info = {}
+        for table in related_tables:
+            if table in data_project.key:
+                key_info[table] = data_project.key[table]
+        
+        return sql_approach, related_tables, key_info
+
+    def run(self, extract_output, use_cache=True):
+        sql_approach, related_tables, key_info = extract_output
+
+        key_info_str = ""
+        for table, keys in key_info.items():
+            key_info_str += f"'{table}': {keys}"
+            
+        template = f"""Given the following SQL approach to execute:
+'{sql_approach}'
+
+And the following related tables with primary key and foreign key information:
+{key_info_str}
+
+Please provide a natural language description of how these tables should be joined to execute the SQL. Inlude:
+1. The main table(s) that form the base of the query.
+2. How each table should be joined to the others, specifying the join keys.
+3. Any potential issues or considerations with the joins (e.g., one-to-many relationships, semi-outer join...).
+
+Your response should be in the following format:
+```yml
+reasoning: >-
+    The join keys are ... Based on the SQL approach, the tables should be joined in the following way...
+join_summary: >- # Clear and concise
+    To execute the SQL, (no) joins are needed. 
+    For each needed join, the join keys are ... it is a (inner/outer) join.
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
+            raise ValueError("Analysis should contain a 'reasoning' key with a string value")
+        
+        if 'join_summary' not in analysis or not isinstance(analysis['join_summary'], str):
+            raise ValueError("Analysis should contain a 'join_summary' key with a string value")
+        
+        return analysis
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        default_analysis = {
+            'reasoning': 'Unable to generate reasoning for the join graph.',
+            'join_summary': 'Unable to generate a join description for the given tables and keys.'
+        }
+        
+        return default_analysis
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        analysis = run_output
+        sql_approach, related_tables, key_info = extract_output
+        
+        display(HTML(f"💡 <b>SQL Approach:</b> {sql_approach}"))
+        display(HTML(f"📚 <b>Related Tables:</b> {', '.join(related_tables)}"))
+        display(HTML(f"🤔 <b>Reasoning:</b> {analysis['reasoning']}"))
+        display(HTML(f"🔗 <b>Join Description:</b> {analysis['join_summary']}"))
+        
+        if "chatui" in self.para:
+            yml_content = yaml.dump(key_info, default_flow_style=False)
+            highlighted_yml_content = highlight_yml_only(yml_content)
+            message = f"😎 <b>RAG from Cocoon</b>: Looking at how tables connect, thanks to Cocoon's key info... clever! {highlighted_yml_content}"
+            message += f"🤓 <b>We've planned the join:</b> {analysis['join_summary']}"
+            self.para["chatui"].add_message("GenAI", message)
+
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                document = {
+                    'sql_approach': sql_approach,
+                    'related_tables': related_tables,
+                    'join_reasoning': analysis['reasoning'],
+                    'join_summary': analysis['join_summary']
+                }
+                callback(document)
+        
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+
+class ColumnSelector(Node):
+    default_name = 'Column Selector'
+    default_description = 'This node identifies the necessary columns for each table in the SQL query.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"📊 Selecting columns for the SQL query..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        previous_node_output = self.get_sibling_document('Business Question Data Sufficiency Check')
+        join_graph_output = self.get_sibling_document('Join Graph Builder')
+        
+        sql_approach = previous_node_output['sql_approach']
+        related_tables = previous_node_output['related_tables']
+        join_summary = join_graph_output['join_summary']
+        
+        table_columns = {}
+        for table in related_tables:
+            if table in data_project.table_object:
+                table_columns[table] = list(data_project.table_object[table].columns)
+        
+        return sql_approach, join_summary, table_columns
+
+    def run(self, extract_output, use_cache=True):
+        sql_approach, join_summary, table_columns = extract_output
+
+        column_info_str = ""
+        for table, columns in table_columns.items():
+            column_info_str += f"'{table}': {columns}\n"
+            
+        template = f"""Given the following SQL approach:
+'{sql_approach}'
+
+And the following join description:
+'{join_summary}'
+
+With the following tables and their available columns:
+{column_info_str}
+
+Please identify the necessary columns for each table to fulfill the SQL approach.
+Consider the following:
+1. Columns needed for joins
+2. Columns required for filtering or conditions
+3. Columns needed for the final output or any calculations
+
+Your response should be in the following format:
+```yml
+reasoning: >-
+    [Explain why these columns are necessary based on the SQL approach and join description]
+selected_columns:
+    table1:
+        - column1
+        - column2
+    table2:
+        - column1
+        - column2
+    ...
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
+            raise ValueError("Analysis should contain a 'reasoning' key with a string value")
+        
+        if 'selected_columns' not in analysis or not isinstance(analysis['selected_columns'], dict):
+            raise ValueError("Analysis should contain a 'selected_columns' key with a dictionary value")
+        
+        for table, columns in analysis['selected_columns'].items():
+            if not isinstance(columns, list):
+                raise ValueError(f"Columns for table '{table}' should be a list")
+            if not set(columns).issubset(set(table_columns[table])):
+                invalid_columns = set(columns) - set(table_columns[table])
+                raise ValueError(f"Invalid columns selected for table '{table}': {invalid_columns}")
+        
+        return analysis
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        sql_approach, join_summary, table_columns = extract_output
+        default_analysis = {
+            'reasoning': 'Unable to determine the necessary columns for the query.',
+            'selected_columns': {table: [] for table in table_columns.keys()}
+        }
+        
+        return default_analysis
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        analysis = run_output
+        sql_approach, join_summary, table_columns = extract_output
+        
+        display(HTML(f"💡 <b>SQL Approach:</b> {sql_approach}"))
+        display(HTML(f"🔗 <b>Join Description:</b> {join_summary}"))
+        display(HTML(f"🤔 <b>Reasoning for Column Selection:</b> {analysis['reasoning']}"))
+        display(HTML("<b>Selected Columns:</b>"))
+        for table, columns in analysis['selected_columns'].items():
+            display(HTML(f"• <b>{table}:</b> {', '.join(columns)}"))
+        
+        
+        if "chatui" in self.para:    
+            
+            data_project = self.para["data_project"] 
+                
+            column_dict = {}
+            for table, columns in analysis['selected_columns'].items():
+                table_object = data_project.table_object[table]
+                column_dict[table] = table_object.get_column_desc_yml(columns=columns, show_category=True, show_pattern=True)
+            
+            yml_content = yaml.dump(column_dict, default_flow_style=False)
+            highlighted_yml_content = highlight_yml_only(yml_content)
+            message = f"😎 <b>RAG from Cocoon</b>: Diving into column details Cocoon prepared... getting a bit technical here! {highlighted_yml_content}"
+            message += f"🤔 <b>Reasoning for column selection</b>: {analysis['reasoning']}"
+            self.para["chatui"].add_message("GenAI", message)
+
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                document = {
+                    'sql_approach': sql_approach,
+                    'join_summary': join_summary,
+                    'column_selection_reasoning': analysis['reasoning'],
+                    'selected_columns': analysis['selected_columns']
+                }
+                callback(document)
+        
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+
+
+class SQLQueryConstructor(Node):
+    default_name = 'SQL Query Constructor'
+    default_description = 'This node constructs the final SQL query based on previous analyses.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🛠️ Constructing the SQL query..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        business_question = self.para["business_question"]
+        previous_node_output = self.get_sibling_document('Business Question Data Sufficiency Check')
+        join_graph_output = self.get_sibling_document('Join Graph Builder')
+        column_selector_output = self.get_sibling_document('Column Selector')
+        
+        sql_approach = previous_node_output['sql_approach']
+        join_summary = join_graph_output['join_summary']
+        selected_columns = column_selector_output['selected_columns']
+        
+        column_descriptions = {}
+        for table, columns in selected_columns.items():
+            table_object = data_project.table_object[table]
+            column_descriptions[table] = table_object.print_column_desc(columns=columns, show_category=True, show_pattern=True)
+        
+        return business_question, sql_approach, join_summary, selected_columns, column_descriptions
+
+    def run(self, extract_output, use_cache=True):
+        business_question, sql_approach, join_summary, selected_columns, column_descriptions = extract_output
+
+        column_info_str = ""
+        for table, columns in selected_columns.items():
+            column_info_str += f"Table: {table}\n{column_descriptions[table]}\n"
+            
+        template = f"""Given the following business question:
+'{business_question}'
+
+And the SQL approach to answer this question:
+'{sql_approach}'
+
+And the following join summary:
+'{join_summary}'
+
+With the following selected columns and their descriptions:
+{column_info_str}
+
+Please construct a complete SQL query that fulfills the requirements. 
+Consider the following:
+1. Use the correct join types as specified in the join summary
+2. Include all necessary columns in the SELECT statement
+3. Add appropriate WHERE clauses based on the SQL approach
+4. Include any required GROUP BY, HAVING, or ORDER BY clauses
+5. Use table aliases if needed for clarity
+
+Your response should be in the following format:
+```yml
+reasoning: >-
+    [Explain the structure of the SQL query and any important considerations]
+sql_query: |
+    [The complete SQL query]
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
+            raise ValueError("Analysis should contain a 'reasoning' key with a string value")
+        
+        if 'sql_query' not in analysis or not isinstance(analysis['sql_query'], str):
+            raise ValueError("Analysis should contain a 'sql_query' key with a string value")
+        
+        return analysis
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        default_analysis = {
+            'reasoning': 'Unable to construct the SQL query based on the provided information.',
+            'sql_query': 'SELECT 1;  -- Placeholder query'
+        }
+        
+        return default_analysis
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        analysis = run_output
+        business_question, sql_approach, join_summary, selected_columns, _ = extract_output
+        
+
+        
+        next_button = widgets.Button(description="Finalize Query", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():                
+                if "chatui" in self.para:
+                    message = "😊 <b>We have written the SQL:</b>"
+                    message += highlight_sql_only(analysis['sql_query'])
+
+                    self.para["chatui"].add_message("GenAI", message)
+                    
+                document = {
+                    'sql_approach': sql_approach,
+                    'join_summary': join_summary,
+                    'selected_columns': selected_columns,
+                    'query_construction_reasoning': analysis['reasoning'],
+                    'sql_query': analysis['sql_query']
+                }
+                callback(document)
+        
+        next_button.on_click(on_button_click)
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+        display(HTML(f"💡 <b>SQL Approach:</b> {sql_approach}"))
+        display(HTML(f"🔗 <b>Join Summary:</b> {join_summary}"))
+        display(HTML(f"🤔 <b>Query Construction Reasoning:</b> {analysis['reasoning']}"))
+        display(HTML("<b>Constructed SQL Query:</b>"))
+        display(HTML(f"<pre><code>{analysis['sql_query']}</code></pre>"))
+        display(next_button)
+        
+        
+class DebugSQLQuery(Node):
+    default_name = 'Debug SQL'
+    default_description = 'Debug the SQL'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+        create_progress_bar_with_numbers(1, transform_steps)
+        display(HTML(f"{running_spinner_html} Debugging the code..."))
+        self.progress = show_progress(1)
+        
+        con = self.item["con"]
+        sql_query = self.get_sibling_document('SQL Query Constructor')['sql_query']
+        
+        return con, sql_query
+    
+    def run(self, extract_output, use_cache=True):
+        con, sql_query = extract_output
+        max_iterations = 10
+        self.messages = []
+        
+        code_clauses = {"sql_query": sql_query}
+        
+        for i in range(max_iterations):
+            try:
+                sql = code_clauses["sql_query"]
+                df = run_sql_return_df(con, sql)
+                code_clauses["output_columns"] = list(df.columns)
+                code_clauses["sample_output"] = df.head(5).to_dict(orient='records')
+                break
+            except Exception as e:
+                detailed_error_info = str(e)
+                
+                template = f"""You have the following SQL:
+{sql}
+It has an error: {detailed_error_info}
+Please correct the SQL, but don't change the logic. Respond in the following format:
+```yml
+reasoning: >-
+    [Explain the error and the correction made]
+new_sql_query: |
+    [The corrected SQL query]
+```
+"""
+                messages = [{"role": "user", "content": template}]
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+                self.messages.append(messages + [response['choices'][0]['message']])
+
+                yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+                correction = yaml.load(yml_code, Loader=yaml.SafeLoader)
+                
+                if 'reasoning' not in correction or 'new_sql_query' not in correction:
+                    raise ValueError("LLM response should contain 'reasoning' and 'new_sql_query' keys")
+                
+                code_clauses["sql_query"] = correction['new_sql_query']
+                code_clauses["debug_reasoning"] = correction['reasoning']
+                
+                if "chatui" in self.para:
+                    message = f"😐 <b>The sql has bug:</b> <div class=\"highlight\">{detailed_error_info}</div>"
+                    message += f"🔧 We have updated the SQL:"
+                    message += highlight_sql_only(code_clauses['sql_query'])
+
+                    self.para["chatui"].add_message("GenAI", message)
+        
+        if i == max_iterations - 1:
+            if "chatui" in self.para:
+                message = "❌ <b>SQL fails to run</b>"
+                self.para["chatui"].add_message("GenAI", message)
+            raise ValueError(f"Failed to debug SQL after {max_iterations} attempts")
+                    
+        return code_clauses
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        code_clauses = run_output
+        
+        display(HTML(f"🐞 <b>SQL Debugging Complete</b>"))
+        if "debug_reasoning" in code_clauses:
+            display(HTML(f"🤔 <b>Debug Reasoning:</b> {code_clauses['debug_reasoning']}"))
+        display(HTML("<b>Final SQL Query:</b>"))
+        display(HTML(f"<pre><code>{code_clauses['sql_query']}</code></pre>"))
+        
+        if "sample_output" in code_clauses:
+            display(HTML("<b>Sample Output:</b>"))
+            display(pd.DataFrame(code_clauses["sample_output"]))
+            
+            if "chatui" in self.para:
+                message = "🎉 <b>SQL runs successful!</b> Here are the samples (first 5 rows):"
+                message += pd.DataFrame(code_clauses["sample_output"]).to_html()
+                self.para["chatui"].add_message("GenAI", message)
+        
+        next_button = widgets.Button(description="Finalize Debugged Query", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                callback(code_clauses)
+        
+        next_button.on_click(on_button_click)
+        display(next_button)
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        con, sql_query = extract_output
+        return {
+            "sql_query": sql_query,
+            "debug_reasoning": "Unable to debug the SQL query due to persistent errors.",
+            "error_message": "SQL debugging failed after multiple attempts."
+        }
+        
+        
+def create_cocoon_genai_workflow(con, query_widget=None, viewer=False, para={}, output=None):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+    
+    workflow_para = {"viewer": viewer}
+    
+    for key, value in para.items():
+        workflow_para[key] = value
+
+    main_workflow = Workflow("GenAI Workflow", 
+                            item = item, 
+                            description="A workflow query data model with GenAI",
+                            para = workflow_para,
+                            output=output)
+    main_workflow.add_to_leaf(DBTProjectConfigAndRead(output=output))
+    main_workflow.add_to_leaf(SimpleBusinessQuestionNode(output=output))
+    main_workflow.add_to_leaf(BusinessQuestionSQLFeasibility(output=output))
+    main_workflow.add_to_leaf(BusinessQuestionEntityRelationNode(output=output))
+    main_workflow.add_to_leaf(BusinessQuestionDataSufficiency(output=output))
+    main_workflow.add_to_leaf(JoinGraphBuilder(output=output))
+    main_workflow.add_to_leaf(ColumnSelector(output=output))
+    main_workflow.add_to_leaf(SQLQueryConstructor(output=output))
+    main_workflow.add_to_leaf(DebugSQLQuery(output=output))
+    return query_widget, main_workflow
+
+def create_dummy_genai_workflow(con, query_widget=None, viewer=False, para={}, output=None):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+    
+    workflow_para = {"viewer": viewer}
+    
+    for key, value in para.items():
+        workflow_para[key] = value
+
+    main_workflow = Workflow("GenAI Workflow", 
+                            item = item, 
+                            description="A workflow query data model with GenAI",
+                            para = workflow_para,
+                            output=output)
+    
+    main_workflow.add_to_leaf(DBTProjectConfigAndReadSourceOnly(output=output))
+    main_workflow.add_to_leaf(SimpleBusinessQuestionNode(output=output))
+    main_workflow.add_to_leaf(BusinessQuestionSQLFeasibility(output=output))
+    main_workflow.add_to_leaf(SQLQueryConstructorDummy(output=output))
+    main_workflow.add_to_leaf(DebugSQLQuery(output=output))
+    return query_widget, main_workflow
+
+class SQLQueryConstructorDummy(Node):
+    default_name = 'SQL Query Constructor'
+    default_description = 'This node constructs an SQL query directly from the business question and database schema.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🛠️ Constructing the SQL query directly..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        business_question = self.para["business_question"]
+        
+        schema_description = data_project.describe_project(limit=999)
+        
+
+        if "chatui" in self.para:
+            message = "😵 <b>Current RAG</b>: Reading all the source data schema from databases... phew, it's a lot!"
+            sql_query = data_project.create_all_tables_ddl()
+            message += highlight_sql_only(sql_query)
+            self.para["chatui"].add_message("GenAI", message)
+        
+        return business_question, schema_description
+
+    def run(self, extract_output, use_cache=True):
+        business_question, schema_description = extract_output
+
+        template = f"""Given the following business question:
+'{business_question}'
+
+And the schema of the database:
+{schema_description}
+
+Please construct a complete SQL query that answers the business question based on the given schema.
+Consider the following:
+1. Ensure the query directly addresses the business question
+2. Use appropriate joins if multiple tables are needed
+3. Include all necessary columns in the SELECT statement
+4. Add appropriate WHERE clauses to filter the data as required
+5. Include any required GROUP BY, HAVING, or ORDER BY clauses
+6. Use table aliases if needed for clarity
+
+Your response should be in the following format:
+```yml
+sql_query: |
+    [The complete SQL query]
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        
+        if 'sql_query' not in analysis or not isinstance(analysis['sql_query'], str):
+            raise ValueError("Analysis should contain a 'sql_query' key with a string value")
+        
+        return analysis
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        default_analysis = {
+            'reasoning': 'Unable to construct the SQL query based on the provided business question and schema.',
+            'sql_query': 'SELECT 1;  -- Placeholder query'
+        }
+        
+        return default_analysis
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        analysis = run_output
+        business_question, _ = extract_output
+        
+        next_button = widgets.Button(description="Finalize Direct Query", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                if "chatui" in self.para:
+                    message = "😐 <b>We have written the SQL:</b>"
+                    message += highlight_sql_only(analysis['sql_query'])
+                    self.para["chatui"].add_message("GenAI", message)
+                    
+                document = {
+                    'business_question': business_question,
+                    'sql_query': analysis['sql_query']
+                }
+                callback(document)
+        
+        next_button.on_click(on_button_click)
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+
+        display(HTML(f"❓ <b>Business Question:</b> {business_question}"))
+        display(HTML("<b>Constructed SQL Query:</b>"))
+        display(HTML(f"<pre><code>{analysis['sql_query']}</code></pre>"))
+        display(next_button)
+        
+        
+class DBTProjectConfigAndReadSourceOnly(Node):
+    default_name = 'DBT Project Configuration and Read'
+    default_description = 'This step allows you to specify an existing DBT project directory and read the project.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        dbt_directory_input = widgets.Text(
+            description='Project Directory:',
+            value=self.para.get("dbt_directory", ""),
+            placeholder="/path/to/your/dbt/project",
+            style={'description_width': 'initial'},
+            layout={'width': '50%'}
+        )
+
+        submit_button = widgets.Button(description="Read Project", button_style='success')
+
+        output = widgets.Output()
+
+        def on_button_click(b):
+            with self.output_context():
+                directory = dbt_directory_input.value
+                
+                if not directory:
+                    print("Please specify a directory.")
+                    return
+
+                con = self.item["con"]
+                data_project = read_data_project_from_dir(directory, con, source_only=True)
+                
+                self.para["data_project"] = data_project
+                self.para["dbt_directory"] = directory
+                
+                print(f"Successfully read project from {directory}")
+                
+                callback({"dbt_directory": directory})
+                
+
+        submit_button.on_click(on_button_click)
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if "dbt_directory" in self.para:
+                dbt_directory_input.value = self.para["dbt_directory"]
+                on_button_click(submit_button)
+                return
+
+        create_progress_bar_with_numbers(1, model_steps)
+        display(HTML("<h3>📂 Specify DBT Directory</h3>Preferably built by Cocoon"))
+        display(dbt_directory_input)
+        display(submit_button)
+        display(output)
+            
+            

@@ -1072,8 +1072,12 @@ border_style = """
 </style>
 """
 
+def highlight_sql_only(sql_query):
+    formatter = HtmlFormatter(style='monokai')
+    return highlight(sql_query, SqlLexer(), formatter)
+
 def highlight_sql(sql_query):
-    formatter = HtmlFormatter(style='default')
+    formatter = HtmlFormatter(style='monokai')
     css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
     combined_css = css_style + border_style
     highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
@@ -1081,8 +1085,14 @@ def highlight_sql(sql_query):
     combined_html = combined_css + bordered_content
     return combined_html
 
+
+
+def highlight_yml_only(yml_content):
+    formatter = HtmlFormatter(style='native')
+    return highlight(yml_content, YamlLexer(), formatter)
+
 def highlight_yml(yml_content):
-    formatter = HtmlFormatter(style='default')
+    formatter = HtmlFormatter(style='native')
     css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
 
     highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
