@@ -54,6 +54,7 @@ cocoon_llm_setting = {
     'vertex_model': os.environ.get("VERTEX_MODEL", "claude-3-5-sonnet@20240620"),
     'vertex_region': os.environ.get("AnthropicVertex_region", None),
     'vertex_project_id': os.environ.get("AnthropicVertex_project_id", None),
+    'openai_model': os.environ.get("OPENAI_MODEL", "gpt-4-turbo"),
 }
     
 
@@ -128,7 +129,7 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
             lru_cache.save_to_disk()
             return response
 
-    if openai.api_type == 'claude':
+    if openai.api_type == 'Anthropic':
         messages = convert_openai_to_claude(messages)
 
         client = anthropic.Anthropic()
