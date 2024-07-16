@@ -181,11 +181,10 @@ class QueryWidget:
     
     def on_database_change(self, change):
         schemas = self.get_schemas()
-        self.schema_dropdown.options = schemas
-        self.schema_dropdown.value = None
         self.table_dropdown.value = None
         self.table_dropdown.options = []
-        
+        self.schema_dropdown.value = None
+        self.schema_dropdown.options = schemas
     
     def on_schema_change(self, change):
         selected_schema = change['new']
@@ -26082,9 +26081,7 @@ class StageForAll(MultipleNode):
                     new_table_name = table_object.table_name
                     table_pipeline = node.para["table_pipeline"]
                     try:
-                        database = self.para.get("database", None)
-                        schema = self.para.get("schema", None)
-                        table_schema = get_table_schema(con, table_pipeline, database=database, schema=schem)
+                        table_schema = get_table_schema(con, table_pipeline)
                         
                         if not table_schema:
                             print(f"⚠️ Can't read {new_table_name}; Is it materialized?")
@@ -26861,7 +26858,7 @@ class ReorderRelationToStory(Node):
 
         self.input_item = item
         
-        relation_df = pd.read_json(self.get_sibling_document('Relation Understand For All'), orient="split")
+        relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
         relation_df = relation_df[relation_df['Relation Name'] != ""]
         
         relation_desc = ""
@@ -27026,7 +27023,7 @@ class BuildERStory(Node):
         data_project = self.para["data_project"]
         con = self.item["con"]
         
-        relation_df = pd.read_json(self.get_sibling_document('Relation Understand For All'), orient="split")
+        relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
         entity_df = pd.read_json(self.get_sibling_document('Entity Understand'), orient="split")
         story_summary = self.get_sibling_document('Reorder Relation To Story')
         
@@ -28301,7 +28298,7 @@ class DocumentProject(Node):
                     
                     if database is not None and schema is not None:
                         source_tables = [
-                            f'{enclose_table_name(database)}.{enclose_table_name(schema)}.{enclose_table_name(table_name)}'
+                            (f'{enclose_table_name(database)}.{enclose_table_name(schema)}.{enclose_table_name(table_name)}', table_name)
                             for table_name in table_names
                         ]
                     
@@ -28309,25 +28306,32 @@ class DocumentProject(Node):
                 
         source_choice_html = ""
         source_div_html = ""
+        success_idx = 0
+
         if len(source_tables) > 0:
-            for idx, table in enumerate(source_tables):
-                source_choice_html += f'<a class="nav-link small {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_source_{table}">{table}</a>'
+            for table_full, table_short in source_tables:
+                try:
+                    df_html = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table_full)} LIMIT 100').to_html()
+                    
+                    source_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_source_{table_short}">{table_short}</a>'
+                    
+                    source_div_html += f"""<div class="tab-pane fade {"show active" if success_idx == 0 else ""}" id="cocoon_source_{table_short}">
+                <p class="text-center mb-0">{table_short} <small class="text-muted">(first 100 rows)</small></p>
+                <div class="code_container mb-4 mx-4">{df_html}</div>
+                </div>"""
+                    
+                    success_idx += 1
+                except Exception as e:
+                    print(f"Error processing table {table_full}: {str(e)}")
 
-            for idx, table in enumerate(source_tables):
-                df_html = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table)} LIMIT 100').to_html()
-                source_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_source_{table}">
-            <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
-            <div class="code_container mb-4 mx-4">{df_html}</div>
-            </div>"""
-            
-
-            side_list_html += f"""<a class="list-group-item list-group-item-action active" data-toggle="list" href="#cocoon_steps_source">
-                <div>
-                    <h6 class="mb-0">{side_list_idx}. Source</h6>
-                    <small>Initial tables from data warehouses</small>
-                </div>
-            </a>"""
-            side_list_idx += 1
+            if success_idx > 0:
+                side_list_html += f"""<a class="list-group-item list-group-item-action active" data-toggle="list" href="#cocoon_steps_source">
+                    <div>
+                        <h6 class="mb-0">{side_list_idx}. Source</h6>
+                        <small>Initial tables from data warehouses</small>
+                    </div>
+                </a>"""
+                side_list_idx += 1
 
 
 
@@ -28341,42 +28345,48 @@ class DocumentProject(Node):
 
         stage_choice_html = ""
         stage_div_html = ""
+        success_idx = 0
+
         if len(stage_tables) > 0:
-            for idx, table in enumerate(stage_tables):
-                stage_choice_html += f'<a class="nav-link small {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_stage_{table}">{table}</a>'
+            for table in stage_tables:
+                try:
+                    with open(os.path.join(dbt_directory, "stage", f"{table}.yml"), "r") as file:
+                        yml_content = file.read()
+                    
+                    with open(os.path.join(dbt_directory, "stage", f"{table}.sql"), "r") as file:
+                        sql_content = file.read()
+                    
+                    table_pipeline = data_project.table_pipelines[table]
+                    df_html = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT 100').to_html()
+                    
+                    stage_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_stage_{table}">{table}</a>'
+                    
+                    stage_div_html += f"""<div class="tab-pane fade {"show active" if success_idx == 0 else ""}" id="cocoon_stage_{table}">
+                <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
+                <div class="code_container mb-4 mx-4">{df_html}</div>
                 
-            for idx, table in enumerate(stage_tables):
-                with open(os.path.join(dbt_directory, "stage", f"{table}.yml"), "r") as file:
-                    yml_content = file.read()
-                
-                with open(os.path.join(dbt_directory, "stage", f"{table}.sql"), "r") as file:
-                    sql_content = file.read()
-                
-                table_pipeline = data_project.table_pipelines[table]
-                df_html = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT 100').to_html()
-                
-                stage_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_stage_{table}">
-            <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
-            <div class="code_container mb-4 mx-4">{df_html}</div>
-            
-            <p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
-            <div class="code_container mb-4 mx-4">
-                <pre><code class="language-sql">{sql_content}</code></pre>
-            </div>
-            <p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
-            <div class="code_container mb-4 mx-4">
-                <pre><code class="language-yaml">{yml_content}</code></pre>
-            </div>
-        </div>"""
-            
-            side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_stage">
-            <div>
-                <h6 class="mb-0">{side_list_idx}. Stage</h6>
-                <small>Clean and document the tables</small>
-            </div>
-        </a>"""
-            side_list_idx += 1
-        
+                <p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
+                <div class="code_container mb-4 mx-4">
+                    <pre><code class="language-sql">{sql_content}</code></pre>
+                </div>
+                <p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
+                <div class="code_container mb-4 mx-4">
+                    <pre><code class="language-yaml">{yml_content}</code></pre>
+                </div>
+            </div>"""
+                    
+                    success_idx += 1
+                except Exception as e:
+                    print(f"Error processing stage table {table}: {str(e)}")
+
+            if success_idx > 0:
+                side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_stage">
+                <div>
+                    <h6 class="mb-0">{side_list_idx}. Stage</h6>
+                    <small>Clean and document the tables</small>
+                </div>
+            </a>"""
+                side_list_idx += 1
 
 
 
@@ -28385,118 +28395,125 @@ class DocumentProject(Node):
             for file_name in os.listdir(os.path.join(dbt_directory, "snapshot")):
                 if file_name.endswith(".yml"):
                     snapshot_tables.append(file_name[:-4])
-                    
+
         snapshot_choice_html = ""
         snapshot_div_html = ""
+        success_idx = 0
 
         if len(snapshot_tables) > 0:
-            for idx, table in enumerate(snapshot_tables):
-                snapshot_choice_html += f'<a class="nav-link small {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_snapshot_{table}">{table}</a>'
-            
-            for idx, table in enumerate(snapshot_tables):
-                with open(os.path.join(dbt_directory, "snapshot", f"{table}.yml"), "r") as file:
-                    yml_content = file.read()
-                
-                with open(os.path.join(dbt_directory, "snapshot", f"{table}.sql"), "r") as file:
-                    sql_content = file.read()
+            for table in snapshot_tables:
+                try:
+                    with open(os.path.join(dbt_directory, "snapshot", f"{table}.yml"), "r") as file:
+                        yml_content = file.read()
                     
-                table_pipeline = data_project.table_pipelines[table]
-                df_html = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT 100').to_html()
+                    with open(os.path.join(dbt_directory, "snapshot", f"{table}.sql"), "r") as file:
+                        sql_content = file.read()
+                    
+                    table_pipeline = data_project.table_pipelines[table]
+                    df_html = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT 100').to_html()
+                    
+                    snapshot_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_snapshot_{table}">{table}</a>'
+                    
+                    snapshot_div_html += f"""<div class="tab-pane fade {"show active" if success_idx == 0 else ""}" id="cocoon_snapshot_{table}">
+                <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
+                <div class="code_container mb-4 mx-4">{df_html}</div>
                 
-                snapshot_div_html += f"""<div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_snapshot_{table}">
-            <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
-            <div class="code_container mb-4 mx-4">{df_html}</div>
-            
-            <p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
-            <div class="code_container mb-4 mx-4">
-                <pre><code class="language-sql">{sql_content}</code></pre>
-            </div>
-            <p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
-            <div class="code_container mb-4 mx-4">
-                <pre><code class="language-yaml">{yml_content}</code></pre>
-            </div>
-        </div>"""
+                <p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
+                <div class="code_container mb-4 mx-4">
+                    <pre><code class="language-sql">{sql_content}</code></pre>
+                </div>
+                <p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
+                <div class="code_container mb-4 mx-4">
+                    <pre><code class="language-yaml">{yml_content}</code></pre>
+                </div>
+            </div>"""
+                    
+                    success_idx += 1
+                except Exception as e:
+                    print(f"Error processing snapshot table {table}: {str(e)}")
 
-            side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_scd">
-            <div>
-                <h6 class="mb-0">{side_list_idx}. SCD Model</h6>
-                <small>Snapshot from the change events</small>
-            </div>
-        </a>"""
-            side_list_idx += 1
-
+            if success_idx > 0:
+                side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_scd">
+                <div>
+                    <h6 class="mb-0">{side_list_idx}. SCD Model</h6>
+                    <small>Snapshot from the change events</small>
+                </div>
+            </a>"""
+                side_list_idx += 1
 
 
         join_yml_content = ""
+        integration_div_html = ""
         if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
             with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r") as file:
                 join_yml_content = file.read()
 
-        join_yml_dict = yaml.load(join_yml_content, Loader=yaml.FullLoader)
-        foreign_key = reverse_join_graph(join_yml_dict)
-        nodes, edges = generate_nodes_edges(foreign_key)
-        join_graph_output = generate_workflow_html_multiple(nodes, edges, directional=True)
+            join_yml_dict = yaml.load(join_yml_content, Loader=yaml.FullLoader)
+            foreign_key = reverse_join_graph(join_yml_dict)
+            nodes, edges = generate_nodes_edges(foreign_key)
+            join_graph_output = generate_workflow_html_multiple(nodes, edges, directional=True)
 
-        integration_div_html = f"""<p class="text-center">Join Graph <small class="text-muted">(FK to PK)</small></p>
-        <div class="container mb-4">{join_graph_output}</div>
-        <p class="text-center">cocoon_join.yml <small class="text-muted"> (Document the joins)</small></p>
-        <div class="code_container mb-4 mx-4">
-            <pre><code class="language-yaml">{join_yml_content}</code></pre>
-        </div>"""
+            integration_div_html = f"""<p class="text-center">Join Graph <small class="text-muted">(FK to PK)</small></p>
+            <div class="container mb-4">{join_graph_output}</div>
+            <p class="text-center">cocoon_join.yml <small class="text-muted"> (Document the joins)</small></p>
+            <div class="code_container mb-4 mx-4">
+                <pre><code class="language-yaml">{join_yml_content}</code></pre>
+            </div>"""
 
-        side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_join">
-            <div>
-                <h6 class="mb-0">{side_list_idx}. Integration</h6>
-                <small>Join graph from PK/FK</small>
-            </div>
-        </a>"""
-        side_list_idx += 1
+            side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_join">
+                <div>
+                    <h6 class="mb-0">{side_list_idx}. Integration</h6>
+                    <small>Join graph from PK/FK</small>
+                </div>
+            </a>"""
+            side_list_idx += 1
 
 
 
         er_yml_content = ""
+        er_div_html = ""
         if os.path.exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
             with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r") as file:
                 er_yml_content = file.read()
 
-        er_yml_dict = yaml.load(er_yml_content, Loader=yaml.FullLoader)
-        relation_map = {entry['relation_name']: entry['entities'] for entry in er_yml_dict['relations'] if 'relation_name' in entry}
-        relation_details = [{'relation_name': entry['relation_name'], 'relation_desc': entry['story_line']} for entry in er_yml_dict['story']]
+            er_yml_dict = yaml.load(er_yml_content, Loader=yaml.FullLoader)
+            relation_map = {entry['relation_name']: entry['entities'] for entry in er_yml_dict['relations'] if 'relation_name' in entry}
+            relation_details = [{'relation_name': entry['relation_name'], 'relation_desc': entry['story_line']} for entry in er_yml_dict['story']]
 
-        er_list_html = "\n".join([f'<li data-target="#cocoon_er_story_carousel" data-slide-to="{idx}" class="{"" if idx == 0 else ""}"></li>' for idx in range(len(relation_details))])
-        er_carousel_html = "\n".join([f'<div class="carousel-item {"active" if idx == 0 else ""}" style="transition: none;">{create_html_content_er_story(relation_map, relation_details, page_no=idx)}</div>' for idx in range(len(relation_details))])
-        er_div_html = f"""<div class="container">
-            <div id="cocoon_er_story_carousel" class="carousel slide" data-interval="false">
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <a class="btn btn-secondary" href="#cocoon_er_story_carousel" role="button"
-                        data-slide="prev">
-                        Prev
-                    </a>
-                    <a class="btn btn-secondary" href="#cocoon_er_story_carousel" role="button"
-                        data-slide="next">
-                        Next
-                    </a>
-                </div>
-                <ol class="carousel-indicators" style="position: relative; bottom: 30px;">
-                    {er_list_html}
-                </ol>
-                <div class="carousel-inner">
-                    {er_carousel_html}
+            er_list_html = "\n".join([f'<li data-target="#cocoon_er_story_carousel" data-slide-to="{idx}" class="{"" if idx == 0 else ""}"></li>' for idx in range(len(relation_details))])
+            er_carousel_html = "\n".join([f'<div class="carousel-item {"active" if idx == 0 else ""}" style="transition: none;">{create_html_content_er_story(relation_map, relation_details, page_no=idx)}</div>' for idx in range(len(relation_details))])
+            er_div_html = f"""<div class="container">
+                <div id="cocoon_er_story_carousel" class="carousel slide" data-interval="false">
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <a class="btn btn-secondary" href="#cocoon_er_story_carousel" role="button"
+                            data-slide="prev">
+                            Prev
+                        </a>
+                        <a class="btn btn-secondary" href="#cocoon_er_story_carousel" role="button"
+                            data-slide="next">
+                            Next
+                        </a>
+                    </div>
+                    <ol class="carousel-indicators" style="position: relative; bottom: 30px;">
+                        {er_list_html}
+                    </ol>
+                    <div class="carousel-inner">
+                        {er_carousel_html}
+                    </div>
                 </div>
             </div>
-        </div>
-        <p class="text-center">cocoon_er.yml <small class="text-muted"> (Document the ER model)</small></p>
-        <div class="code_container mb-4 mx-4">
-            <pre><code class="language-yaml">{er_yml_content}</code></pre>
-        </div>"""
+            <p class="text-center">cocoon_er.yml <small class="text-muted"> (Document the ER model)</small></p>
+            <div class="code_container mb-4 mx-4">
+                <pre><code class="language-yaml">{er_yml_content}</code></pre>
+            </div>"""
 
-        side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_er">
-            <div>
-                <h6 class="mb-0">{side_list_idx}. ER Model</h6>
-                <small>Tell the story behind the tables</small>
-            </div>
-        </a>"""
-        side_list_idx += 1
+            side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_er">
+                <div>
+                    <h6 class="mb-0">{side_list_idx}. ER Model</h6>
+                    <small>Tell the story behind the tables</small>
+                </div>
+            </a>"""
+            side_list_idx += 1
 
 
 
@@ -29463,7 +29480,7 @@ class SimpleBusinessQuestionNode(Node):
                         return html.escape(text)
 
                     escaped = escape_html(business_question)
-                    self.para["chatui"].add_message("You", escaped)
+                    self.para["chatui"].add_message("You", "🙂" + escaped)
 
                 self.para["business_question"] = business_question
 
@@ -30344,7 +30361,7 @@ new_sql_query: |
                 code_clauses["debug_reasoning"] = correction['reasoning']
                 
                 if "chatui" in self.para:
-                    message = f"😐 <b>The sql has bug:</b> <div class=\"highlight\">{detailed_error_info}</div>"
+                    message = f"🤔 <b>The sql has bug:</b> <div class=\"highlight\">{detailed_error_info}</div>"
                     message += f"🔧 We have updated the SQL:"
                     message += highlight_sql_only(code_clauses['sql_query'])
 
@@ -30371,10 +30388,13 @@ new_sql_query: |
             display(HTML("<b>Sample Output:</b>"))
             display(pd.DataFrame(code_clauses["sample_output"]))
             
-            if "chatui" in self.para:
-                message = "🎉 <b>SQL runs successful!</b> Here are the samples (first 5 rows):"
-                message += pd.DataFrame(code_clauses["sample_output"]).to_html()
-                self.para["chatui"].add_message("GenAI", message)
+        if "chatui" in self.para:
+            if len(code_clauses["sample_output"]) == 0:
+                message = "🤨 <b>SQL runs successful!</b> The result is ... empty??"
+            else:
+                message = "✅ <b>SQL runs successful!</b> Here are the samples (first 5 rows):"
+            message += pd.DataFrame(code_clauses["sample_output"]).head(5).to_html()
+            self.para["chatui"].add_message("GenAI", message)
         
         next_button = widgets.Button(description="Finalize Debugged Query", button_style='success', icon='check')
         
@@ -30535,7 +30555,7 @@ sql_query: |
         def on_button_click(b):
             with self.output_context():
                 if "chatui" in self.para:
-                    message = "😐 <b>We have written the SQL:</b>"
+                    message = "🤨 <b>I've done my best with the SQL... fingers crossed it's right!</b>"
                     message += highlight_sql_only(analysis['sql_query'])
                     self.para["chatui"].add_message("GenAI", message)
                     
