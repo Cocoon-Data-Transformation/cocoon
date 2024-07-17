@@ -16,7 +16,6 @@ from pygments.formatters import Terminal256Formatter, HtmlFormatter
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
-import plotly.graph_objects as go
 import ast
 import faiss
 from tqdm import tqdm
@@ -55,6 +54,7 @@ try:
     from shapely.geometry import Polygon
     from shapely.ops import transform
     from rasterio.transform import array_bounds
+    import plotly.graph_objects as go
 except:
     pass
 
@@ -18921,7 +18921,7 @@ def ask_save_files(labels, file_names, contents):
                 error_msg.value += f"<div style='color: orange;'>⚠️ Warning: Failed to save {label}. File already exists.</div>"
             else:
                 try:
-                    with open(file_path, "w") as file:
+                    with open(file_path, "w", encoding="utf-8") as file:
                         file.write(content)
                     error_msg.value += f"<div style='color: green;'>🎉 File saved successfully as {file_path}</div>"
                 except IOError as e:
@@ -20652,7 +20652,8 @@ class WriteStageYMLCode(Node):
                     {dmv_df.to_html()}<br><br><br>"""
                     bottom_idx += 1
 
-                transform_document = self.get_sibling_document('Transform Type For All')
+            transform_document = self.get_sibling_document('Transform Type For All')
+            if transform_document:
                 transform_df = pd.read_json(transform_document, orient="split")
                 if len(transform_df) > 0:
                     bottom_html += f"""<h2>🔧 {bottom_idx}. Data Type</h2><br>
@@ -21305,7 +21306,41 @@ class SelectTable(Node):
         display(mode_selector)
         display(next_button)
         
-         
+def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, table_name = None, para={}, output=None):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+    
+    
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+    
+    workflow_para = {"viewer": viewer, 
+                     "table_name": table_name,
+                     "table_object": Table()}
+    
+    for key, value in para.items():
+        workflow_para[key] = value
+
+    main_workflow = Workflow("Data Stage Workflow", 
+                            item = item, 
+                            description="A workflow to stage table",
+                            para = workflow_para,
+                            output=output)
+    
+    main_workflow.add_to_leaf(SelectTable(output=output))
+    main_workflow.add_to_leaf(CreateShortTableSummary(output=output))
+    main_workflow.add_to_leaf(DescribeColumnsList(output=output))
+    main_workflow.add_to_leaf(DecideStringUnusualForAll(output=output))
+    main_workflow.add_to_leaf(DecideRegexForAll(output=output))
+    main_workflow.add_to_leaf(DecideMissingList(output=output))
+    main_workflow.add_to_leaf(DecideUnique(output=output))
+    main_workflow.add_to_leaf(DecideStringCategoricalForAll(output=output))
+    main_workflow.add_to_leaf(WriteStageYMLCode(output=output))
+    return query_widget, main_workflow
+
+
 
 def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None, para={}, output=None):
     if query_widget is None:
@@ -29480,7 +29515,7 @@ class SimpleBusinessQuestionNode(Node):
                         return html.escape(text)
 
                     escaped = escape_html(business_question)
-                    self.para["chatui"].add_message("You", "🙂" + escaped)
+                    self.para["chatui"].add_message("You", "🙂 " + escaped)
 
                 self.para["business_question"] = business_question
 
@@ -29800,6 +29835,10 @@ class BusinessQuestionDataSufficiency(Node):
 
         schema_description = data_project.describe_project(tables=list(tables), limit=9999)
         
+        for table in tables.copy():
+            if table in data_project.history_table:
+                tables.add(data_project.history_table[table])
+        
         return business_question, schema_description, list(tables)
 
     def run(self, extract_output, use_cache=True):
@@ -29824,6 +29863,7 @@ sufficient: true/false
 sql_approach: >-
     If sufficient, provide a detailed step-by-step instruction of the SQL approach.
     Dictates which tables, columns, and operations to use.
+    However, don't provide codes.
 # from sql_approach, list all related tables
 related_tables: ['table1', 'table2', ...]
 ```"""
@@ -29959,7 +29999,7 @@ And the following related tables with primary key and foreign key information:
 Please provide a natural language description of how these tables should be joined to execute the SQL. Inlude:
 1. The main table(s) that form the base of the query.
 2. How each table should be joined to the others, specifying the join keys.
-3. Any potential issues or considerations with the joins (e.g., one-to-many relationships, semi-outer join...).
+3. Any potential issues or considerations with the joins (e.g., outer join... if you want to keep values)
 
 Your response should be in the following format:
 ```yml
@@ -30226,7 +30266,7 @@ Please construct a complete SQL query that fulfills the requirements.
 Consider the following:
 1. Use the correct join types as specified in the join summary
 2. Include all necessary columns in the SELECT statement
-3. Add appropriate WHERE clauses based on the SQL approach
+3. Add appropriate WHERE clauses based on column description
 4. Include any required GROUP BY, HAVING, or ORDER BY clauses
 5. Use table aliases if needed for clarity
 
