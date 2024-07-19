@@ -5,6 +5,7 @@ except ImportError:
 
 try:
     import snowflake.connector
+    from snowflake.connector.pandas_tools import write_pandas
 except ImportError:
     pass
 
@@ -259,7 +260,7 @@ def generate_queries_for_overlap(table1, attributes1, table2, attributes2, con):
             FROM {table2}
             LEFT JOIN (
                 SELECT DISTINCT {select_clause1}
-                FROM "{table1}"
+                FROM {table1}
                 WHERE {' OR '.join(f'{table1}."{attr1}" IS NOT NULL' for attr1 in attributes1)}
             ) T1 ON {' AND '.join(f'{table2}."{attr2}" = T1."{attr1}"' for attr1, attr2 in zip(attributes1, attributes2))}
             WHERE {' AND '.join(f'T1."{attr1}" IS NULL' for attr1 in attributes1)}
@@ -413,14 +414,22 @@ def list_duckdb_schemas(con, database):
     df = run_sql_return_df(con, query)
     return df['schema_name'].tolist()
 
-def list_duckdb_tables(con, schema, database):
+def list_duckdb_objects(con, schema, database, object_type='BASE TABLE'):
     query = f"""
     SELECT table_name 
     FROM information_schema.tables 
-    WHERE table_schema = '{schema}' AND table_catalog = '{database}' AND table_type = 'BASE TABLE'
+    WHERE table_schema = '{schema}' 
+    AND table_catalog = '{database}' 
+    AND table_type = '{object_type}'
     """
     df = run_sql_return_df(con, query)
     return df['table_name'].tolist()
+
+def list_duckdb_tables(con, schema, database):
+    return list_duckdb_objects(con, schema, database, 'BASE TABLE')
+
+def list_duckdb_views(con, schema, database):
+    return list_duckdb_objects(con, schema, database, 'VIEW')
 
 def get_default_duckdb_database_and_schema(con):
     catalog_query = "SELECT CURRENT_CATALOG()"
@@ -449,6 +458,11 @@ def list_snowflake_schemas(con, database_name):
 
 def list_snowflake_tables(con, database_name, schema):
     query = f'SHOW TABLES IN "{database_name}"."{schema}"'
+    df = run_sql_return_df(con, query)
+    return df['name'].tolist()
+
+def list_snowflake_views(con, database_name, schema):
+    query = f'SHOW VIEWS IN "{database_name}"."{schema}"'
     df = run_sql_return_df(con, query)
     return df['name'].tolist()
 
@@ -485,6 +499,14 @@ def list_tables(con, schema, database):
         return list_duckdb_tables(con, schema, database)
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         return list_snowflake_tables(con, database, schema)
+    else:
+        return []
+        
+def list_views(con, schema, database):
+    if isinstance(con, duckdb.DuckDBPyConnection):
+        return list_duckdb_views(con, schema, database)
+    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+        return list_snowflake_views(con, database, schema)
     else:
         return []
 
@@ -532,7 +554,38 @@ def remove_schema(con, schema_name, database_name=None):
             query = f'DROP SCHEMA IF EXISTS "{schema_name}"'
         run_sql_return_df(con, query)
 
+def remove_table(con, table_name, schema_name=None, database_name=None):
+    if isinstance(con, duckdb.DuckDBPyConnection):
+        if schema_name:
+            query = f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"'
+        else:
+            query = f'DROP TABLE IF EXISTS "{table_name}"'
+        run_sql_return_df(con, query)
+    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+        if database_name and schema_name:
+            query = f'DROP TABLE IF EXISTS "{database_name}"."{schema_name}"."{table_name}"'
+        elif schema_name:
+            query = f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"'
+        else:
+            query = f'DROP TABLE IF EXISTS "{table_name}"'
+        run_sql_return_df(con, query)
 
+def remove_view(con, view_name, schema_name=None, database_name=None):
+    if isinstance(con, duckdb.DuckDBPyConnection):
+        if schema_name:
+            query = f'DROP VIEW IF EXISTS "{schema_name}"."{view_name}"'
+        else:
+            query = f'DROP VIEW IF EXISTS "{view_name}"'
+        run_sql_return_df(con, query)
+    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+        if database_name and schema_name:
+            query = f'DROP VIEW IF EXISTS "{database_name}"."{schema_name}"."{view_name}"'
+        elif schema_name:
+            query = f'DROP VIEW IF EXISTS "{schema_name}"."{view_name}"'
+        else:
+            query = f'DROP VIEW IF EXISTS "{view_name}"'
+        run_sql_return_df(con, query)
+    
 
 def create_schema_and_objects(con, database_name, schema_name):
     try:
@@ -573,3 +626,18 @@ def create_schema_and_objects(con, database_name, schema_name):
 
     return "<div style='color: green;'>🎉 Cocoon have the right access to this schema!</div>"
 
+
+def create_table_from_df(df: pd.DataFrame, con, table_name: str, database: str = None, schema: str = None):
+
+    if isinstance(con, duckdb.DuckDBPyConnection):
+        if schema and database:
+            full_table_name = f'{enclose_table_name(database)}.{enclose_table_name(schema)}.{enclose_table_name(table_name)}'
+        else:
+            full_table_name = enclose_table_name(table_name)
+        con.execute(f"CREATE OR REPLACE TABLE {full_table_name} AS SELECT * FROM df")
+    
+    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+        write_pandas(con, df, table_name, auto_create_table=True, overwrite=True, database=database, schema=schema)
+        
+    else:
+        raise ValueError("Unsupported connection type. Use either DuckDB or Snowflake connection.")

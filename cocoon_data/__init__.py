@@ -27,8 +27,6 @@ import datetime
 from functools import partial
 from contextlib import contextmanager
 import yaml
-import rasterio
-from rasterio.warp import calculate_default_transform, reproject, Resampling
 from datasketch import MinHash, MinHashLSH
 from bs4 import BeautifulSoup
 import time
@@ -45,6 +43,8 @@ from .data_type import *
 from .widgets import *
 
 try:
+    import rasterio
+    from rasterio.warp import calculate_default_transform, reproject, Resampling
     from pyproj import Transformer, CRS
     from rasterio.windows import from_bounds
     from rasterio.features import rasterize
@@ -11670,7 +11670,7 @@ class Node:
 
                 def create_html_content(page_no):
                     html_content = generate_dialogue_html(self.messages[page_no])
-                    return wrap_in_scrollable_div(html_content, height="500px")
+                    return wrap_in_scrollable_div(html_content, height="500px", width="800px")
                 display(HTML(f"<h3>Message History</h3>"))
                 display_pages(len(self.messages), create_html_content)
 
@@ -15496,6 +15496,8 @@ class DataProject:
         
         self.foreign_key = {}
         
+        self.referential_integrity = pd.DataFrame(columns=["pk_table_name", "pk", "fk_table_name", "fk", "% Orphan", 'Explanation'])
+        
         self.key = {}
         
         self.fks = {}
@@ -15562,6 +15564,7 @@ class DataProject:
     def add_table_project(self, table_project):
         table_name = table_project.table_name
         self.table_object[table_name] = table_project
+        
 
     def change_table_name(self, old_table_name, new_table_name):
         if old_table_name not in self.tables:
@@ -15605,7 +15608,16 @@ class DataProject:
 
     def join_graph_dict(self):
         models = OrderedDict()
-
+        
+        integrity_lookup = {}
+        if hasattr(self, 'referential_integrity'):
+            for _, row in self.referential_integrity.iterrows():
+                key = (row['pk_table_name'], row['pk'], row['fk_table_name'], row['fk'])
+                integrity_lookup[key] = {
+                    '% Orphan': row['% Orphan'],
+                    'Explanation': row['Explanation']
+                }
+                
         for (pk_table_name, pk), fk_list in self.foreign_key.items():
             if pk_table_name not in models:
                 models[pk_table_name] = OrderedDict({
@@ -15625,6 +15637,14 @@ class DataProject:
                         'column': pk
                     })
                 })
+                
+                integrity_key = (pk_table_name, pk, fk_table_name, fk)
+                if integrity_key in integrity_lookup:
+                    fk_entry['referential_integrity'] = OrderedDict({
+                        '% Orphan': integrity_lookup[integrity_key]['% Orphan'],
+                        'Explanation': integrity_lookup[integrity_key]['Explanation']
+                    })
+
 
                 if fk_table_name not in models:
                     models[fk_table_name] = OrderedDict({
@@ -18901,8 +18921,6 @@ body {{
         table_name = table_pipeline.__repr__(full=False)
         ask_save_file(f"Cocoon_Profile_{table_name}.html", html_content)
         callback(html_content)
-    
-
 
 def ask_save_files(labels, file_names, contents):
     file_path_inputs = [Text(value=file_name, description=label) for label, file_name in zip(labels, file_names)]
@@ -18945,16 +18963,15 @@ def ask_save_file(file_name, content):
     print(f"🤓 Do you want to save the file?")
 
     def save_file_click(b):
-        with self.output_context():
-            updated_file_name = file_name_input.value
-            allow_overwrite = overwrite_checkbox.value
+        updated_file_name = file_name_input.value
+        allow_overwrite = overwrite_checkbox.value
 
-            if os.path.exists(updated_file_name) and not allow_overwrite:
-                print("\x1b[31m" + "Warning: Failed to save. File already exists." + "\x1b[0m")
-            else:
-                with open(updated_file_name, "w") as file:
-                    file.write(content)
-                print(f"🎉 File saved successfully as {updated_file_name}")
+        if os.path.exists(updated_file_name) and not allow_overwrite:
+            print("\x1b[31m" + "Warning: Failed to save. File already exists." + "\x1b[0m")
+        else:
+            with open(updated_file_name, "w") as file:
+                file.write(content)
+            print(f"🎉 File saved successfully as {updated_file_name}")
 
     file_name_input = Text(value=file_name, description='File Name:')
 
@@ -19346,7 +19363,7 @@ mapping: # just the values need to be changed;
             
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button)
-
+            return
 
 class CleanUnusualForAll(MultipleNode):
     default_name = 'Clean Unusual For All'
@@ -20028,6 +20045,18 @@ class TransformTypeForAll(MultipleNode):
         def on_button_clicked(b):
             with self.output_context():
                 new_df = grid_to_updated_dataframe(grid, long_text=long_text)
+                
+                table_object = self.para["table_object"]
+                for idx, row in new_df.iterrows():
+                    column = row['Column Name']
+                    clause = row['Clause'].strip()
+                    
+                    if column in table_object.data_type:
+                        if clause != f'"{column}"':
+                            del table_object.data_type[column]
+                        else:
+                            pass
+
                 affected_columns = new_df["Column Name"].tolist()
                 document = new_df.to_json(orient="split")
                 table_pipeline = self.para["table_pipeline"]
@@ -20739,7 +20768,10 @@ class WriteStageYMLCode(Node):
                             
                 cocoon_meta = column.get('cocoon_meta', {})
                 if 'missing_acceptable' in cocoon_meta:
-                    single_column_html += "<b>❓ Missing:</b> " + str(cocoon_meta['missing_acceptable']) + "<br>"
+                    if cocoon_meta['missing_acceptable']:
+                        single_column_html += "<b>❓ Missing:</b> " + str(cocoon_meta['missing_acceptable']) + "<br>"
+                    else:
+                        single_column_html += "<b>❓ Missing:</b> Reason unknown <br>"
                 if 'unusal_values' in cocoon_meta:
                     single_column_html += "<b>🚧 Erroneous:</b> " + str(cocoon_meta['unusal_values']) + "<br>"
                 if 'uniqueness' in cocoon_meta:
@@ -21430,6 +21462,8 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
     main_workflow.add_to_leaf(RefinePK(output = output))
     
     main_workflow.add_to_leaf(ConnectPKFKTable(output = output))
+    main_workflow.add_to_leaf(DetectReferentialIntegrity(output = output))
+    
     main_workflow.add_to_leaf(DisplayJoinGraph(output = output))
 
     main_workflow.add_to_leaf(EntityUnderstanding(output = output))
@@ -21823,6 +21857,8 @@ Return in the following format:
                     explanation = row["Explanation"]
                     if missing_acceptable:
                         table_object.missing_acceptable[col] = explanation
+                    else:
+                        table_object.missing_acceptable[col] = ""
                 
                 callback(document)
         
@@ -21941,7 +21977,7 @@ Return in the following format:
         for col in schema:
             current_type = get_reverse_type(schema[col], database_name)
             target_type = json_code[col]
-
+    
             rows_list.append({
                 "column_name": col,
                 "current_type": current_type,
@@ -21980,6 +22016,14 @@ Return in the following format:
                 clear_output(wait=True)
                 df = extract_grid_data_type(grid)
                 
+                table_object = self.para["table_object"]
+                for _, row in df.iterrows():
+                    column = row['column_name']
+                    current_type = row['current_type']
+                    target_type = row['target_type']
+                    if current_type != target_type:
+                        table_object.data_type[column] = (current_type, target_type)
+                        
                 callback(df.to_json(orient="split"))
 
         next_button.on_click(on_button_clicked)
@@ -23786,6 +23830,7 @@ class SelectTables(Node):
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_click(next_button)
+            return
         
 class StageTablesForAll(MultipleNode):
     default_name = 'Stage Tables For All'
@@ -24859,6 +24904,7 @@ class DecideFunctionalDependency(Node):
             with_context = table_pipeline.get_codes(mode="WITH")
             sql_query = with_context + "\n" + sql_query
             ratio_df = run_sql_return_df(con, sql_query)
+            print(ratio_df)
             
             ratio_df = ratio_df.loc[:, ratio_df.iloc[0] < 0.9]
             decide_column_candidates = list(ratio_df.columns)
@@ -24918,7 +24964,7 @@ one_one_columns: [column1, column2, ...]
         summary = run_output
         column_name, _, _, _ = extract_output
         
-        clear_output(wait=True)
+        
         print("Explanation", summary["explanation"])
         print("FD Columns", summary["one_one_columns"])
         groupby = column_name
@@ -25029,7 +25075,7 @@ HAVING count(distinct(coalesce({decide_col}, 'NULL'))) > 1"""
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(submit_button) 
-        
+            return
         
         
 class SourceProjectStoryUnderstanding(Node):
@@ -25282,19 +25328,38 @@ Return in the following format:
 
 class Table:
     def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_acceptable=None, unusualness=None, 
-                 category=None, uniqueness=None, patterns=None, variant=None, potential_category = None):
+                 category=None, uniqueness=None, patterns=None, variant=None, potential_category = None, data_type=None):
         self.table_name = table_name
         self.table_summary = table_summary
         self.columns = columns or []
         self.column_desc = column_desc or {}
         self.missing_acceptable = missing_acceptable or {}
+        self.data_type = data_type or {}
         self.unusualness = unusualness or {}
         self.category = category or {}
         self.potential_category = potential_category or {}
         self.uniqueness = uniqueness or {}
         self.patterns = patterns or {}
         self.variant = variant or {}
+    
+    def get_alerts(self, column):
+        alerts = []
         
+        if column in self.missing_acceptable:
+            alert_name = "❓ Missing Value"
+            if self.missing_acceptable[column]:
+                explanation = f"This is expected because: {self.missing_acceptable[column]}"
+            else:
+                explanation = "The reason for missing is unknown!"
+            alerts.append((alert_name, explanation))
+        
+        if column in self.unusualness and self.unusualness[column]:
+            alert_name = "⚠️ Unusual Data"
+            explanation = self.unusualness[column]
+            alerts.append((alert_name, explanation))
+        
+        return alerts
+    
     def print_category(self):
         category_string = ""
         for column, categories in self.category.items():
@@ -25349,7 +25414,7 @@ class Table:
                     desc += f"  Column is unique: {self.uniqueness[column]}\n"
                 
                 if show_pattern and column in self.patterns:
-                    desc += "   Column has regex patterns:\n"
+                    desc += "   All column values already follow regex patterns:\n"
                     for pattern in self.patterns[column]:
                         desc += f"      - {pattern['summary']}: {pattern['regex']}\n"
                 
@@ -25383,8 +25448,7 @@ class Table:
                 explanation = self.missing_acceptable[missing_acceptable_key]
                 if not explanation:
                     tests.append("not_null")
-                else:
-                    cocoon_meta["missing_acceptable"] = explanation
+                cocoon_meta["missing_acceptable"] = explanation
             else:
                 tests.append("not_null")
 
@@ -25434,6 +25498,13 @@ class Table:
                         else:
                             potential_values = potential_values.split(",")
                     cocoon_meta["future_accepted_values"] = potential_values
+
+            data_type_key = next((key for key in self.data_type if key.lower() == column.lower()), None)
+            if data_type_key:
+                data_type_info = self.data_type[data_type_key]
+                if data_type_info:
+                    cocoon_meta["data_type"] = list(data_type_info)
+
 
             column_data = OrderedDict([
                 ("name", column),
@@ -25498,7 +25569,13 @@ class Table:
                     self.variant[column_name] = cocoon_meta['variant']
                 if 'future_accepted_values' in cocoon_meta:
                     self.potential_category[column_name] = cocoon_meta['future_accepted_values']
-                    
+                if "data_type" in cocoon_meta:
+                    data_type_info = cocoon_meta["data_type"]
+                    if isinstance(data_type_info, list) and len(data_type_info) == 2:
+                        self.data_type[column_name] = tuple(data_type_info)
+                    else:
+                        print(f"Warning: Invalid data_type format for column {column_name}")
+
                     
     def add_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
         if column_name not in self.columns:
@@ -28834,32 +28911,35 @@ def read_source_file(sources_file_path):
     
     
     
-def read_data_project_from_dir(directory, con, source_only=False, create=True):
+def read_data_project_from_dir(directory, con=None, database=None, schema=None, source_only=False, create=True):
     data_project = DataProject()
     dbt_directory = os.path.join(directory, "models")
 
+    mode = "WITH_VIEW"
+    
     seeds_directory = os.path.join(directory, "seeds") 
-    files = os.listdir(seeds_directory)
-    tables = []
+    
+    if os.path.exists(seeds_directory):
+        files = os.listdir(seeds_directory)
+        tables = []
 
-    for file in files:
-        if file.endswith(".csv"):
-            file_path = f"{seeds_directory}/{file}"
-            table_name = file.split(".")[0]
-            table_name = clean_table_name(table_name)
-            df = pd.read_csv(file_path)
-            df.columns = [clean_column_name(col) for col in df.columns]
-            if create:
-                con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM df")
-            tables.append(table_name)
-            
+        for file in files:
+            if file.endswith(".csv"):
+                file_path = f"{seeds_directory}/{file}"
+                table_name = file.split(".")[0]
+                table_name = clean_table_name(table_name)
+                df = pd.read_csv(file_path)
+                df.columns = [clean_column_name(col) for col in df.columns]
+                if create and con:
+                    create_table_from_df(df, con, table_name=table_name, database=database, schema=schema)
+                tables.append(table_name)
+    
     sources_file_path = os.path.join(dbt_directory, "sources.yml")
-    database, schema, source_tables = read_source_file(sources_file_path)
-            
+    source_database, source_schema, source_tables = read_source_file(sources_file_path)
  
     if source_only:
         for table_name in source_tables:
-            data_project.add_table(table_name, get_table_schema(con, table_name, database=database, schema=schema))
+            data_project.add_table(table_name, get_table_schema(con, table_name, database=source_database, schema=source_schema))
 
         return data_project
 
@@ -28875,17 +28955,17 @@ def read_data_project_from_dir(directory, con, source_only=False, create=True):
             sql_query = f.read()
             sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
             table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
-            mode = "WITH_TABLE"
-            if create:
+            
+            if create and con:
                 table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
             data_project.table_pipelines[new_table_name] = table_pipeline
-            data_project.add_table(new_table_name, get_table_schema(con, new_table_name, database=database, schema=schema))
                     
         with open(os.path.join(dbt_directory, "stage", f"{stage_table}.yml"), "r") as f:
             table_object = Table()
             yml_data = yaml.safe_load(f)
             table_object.read_attributes_from_dbt_schema_yml(yml_data)
             data_project.add_table_project(table_object)
+            data_project.add_table(new_table_name, table_object.columns)
             
     snapshot_tables = []
     if os.path.exists(os.path.join(dbt_directory, "snapshot")):
@@ -28899,11 +28979,10 @@ def read_data_project_from_dir(directory, con, source_only=False, create=True):
             sql_query = f.read()
             sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
             table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
-            mode = "WITH_TABLE"
-            if create:
+            
+            if create and con:
                 table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
             data_project.table_pipelines[new_table_name] = table_pipeline
-            
         
         with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.yml"), "r") as f:
             table_object = Table()
@@ -28913,8 +28992,8 @@ def read_data_project_from_dir(directory, con, source_only=False, create=True):
             
             old_table_name = yml_data.get("cocoon_meta", {}).get("scd_base_table", None)
             data_project.history_table[new_table_name] = old_table_name
-        
-        data_project.add_table(new_table_name, get_table_schema(con, new_table_name, database=database, schema=schema))
+            data_project.add_table(new_table_name, table_object.columns)
+            
 
     join_yml_content = ""
     if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
@@ -29166,7 +29245,11 @@ class SelectSchema(Node):
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         clear_output(wait=True)
 
-        con = self.input_item["con"]
+        if "con" in self.input_item and self.input_item["con"]:
+            con = self.input_item["con"]
+        else:
+            callback({})
+            return
 
         try:
             database, _ = get_default_database_and_schema(con)
@@ -29216,6 +29299,11 @@ class SelectSchema(Node):
             return
 
         create_progress_bar_with_numbers(0, model_steps)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_test_button_click(test_button)
+            on_next_button_click(next_button)
+            return 
         
         display(HTML("""
             <h2>🛡️ Access Control</h2>
@@ -29455,10 +29543,15 @@ class DBTProjectConfigAndRead(Node):
                 if not directory:
                     print("Please specify a directory.")
                     return
-
-                con = self.item["con"]
-                data_project = read_data_project_from_dir(directory, con)
                 
+                display(HTML(f"{running_spinner_html} Creating temp views ..."))
+                
+                con = self.item["con"]
+                database = self.para.get("database", None)
+                schema = self.para.get("schema", None)
+                
+                data_project = read_data_project_from_dir(directory, con, database=database, schema=schema)
+                                
                 self.para["data_project"] = data_project
                 self.para["dbt_directory"] = directory
                 
@@ -30232,6 +30325,13 @@ class SQLQueryConstructor(Node):
         join_graph_output = self.get_sibling_document('Join Graph Builder')
         column_selector_output = self.get_sibling_document('Column Selector')
         
+        con = self.item["con"]
+        
+        database_hint = ""
+        if con:
+            database_name = get_database_name(con)
+            database_hint = f"Note that we use {database_name} syntax. {database_general_hint.get(database_name, '')}"
+        
         sql_approach = previous_node_output['sql_approach']
         join_summary = join_graph_output['join_summary']
         selected_columns = column_selector_output['selected_columns']
@@ -30241,10 +30341,10 @@ class SQLQueryConstructor(Node):
             table_object = data_project.table_object[table]
             column_descriptions[table] = table_object.print_column_desc(columns=columns, show_category=True, show_pattern=True)
         
-        return business_question, sql_approach, join_summary, selected_columns, column_descriptions
+        return business_question, sql_approach, join_summary, selected_columns, column_descriptions, database_hint
 
     def run(self, extract_output, use_cache=True):
-        business_question, sql_approach, join_summary, selected_columns, column_descriptions = extract_output
+        business_question, sql_approach, join_summary, selected_columns, column_descriptions, database_hint = extract_output
 
         column_info_str = ""
         for table, columns in selected_columns.items():
@@ -30253,29 +30353,24 @@ class SQLQueryConstructor(Node):
         template = f"""Given the following business question:
 '{business_question}'
 
+With the following selected columns and their descriptions:
+{column_info_str}
+
 And the SQL approach to answer this question:
 '{sql_approach}'
 
 And the following join summary:
 '{join_summary}'
 
-With the following selected columns and their descriptions:
-{column_info_str}
-
-Please construct a complete SQL query that fulfills the requirements. 
-Consider the following:
-1. Use the correct join types as specified in the join summary
-2. Include all necessary columns in the SELECT statement
-3. Add appropriate WHERE clauses based on column description
-4. Include any required GROUP BY, HAVING, or ORDER BY clauses
-5. Use table aliases if needed for clarity
-
+Please construct a complete SQL query. 
+{database_hint}
 Your response should be in the following format:
 ```yml
 reasoning: >-
     [Explain the structure of the SQL query and any important considerations]
 sql_query: |
-    [The complete SQL query]
+    SELECT "col1", "col2"
+    FROM "table"
 ```"""
 
         messages = [{"role": "user", "content": template}]
@@ -30307,7 +30402,7 @@ sql_query: |
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         analysis = run_output
-        business_question, sql_approach, join_summary, selected_columns, _ = extract_output
+        business_question, sql_approach, join_summary, selected_columns, _, _ = extract_output
         
 
         
@@ -30364,6 +30459,18 @@ class DebugSQLQuery(Node):
         max_iterations = 10
         self.messages = []
         
+        
+        if not con:
+            return {
+            "sql_query": sql_query,
+            "error_message": "Database connection not provided"
+        }
+        
+        database_hint = ""
+        if con:
+            database_name = get_database_name(con)
+            database_hint = f"Note that we use {database_name} syntax. {database_general_hint.get(database_name, '')}"
+        
         code_clauses = {"sql_query": sql_query}
         
         for i in range(max_iterations):
@@ -30379,7 +30486,8 @@ class DebugSQLQuery(Node):
                 template = f"""You have the following SQL:
 {sql}
 It has an error: {detailed_error_info}
-Please correct the SQL, but don't change the logic. Respond in the following format:
+Please correct the SQL, but don't change the logic. {database_hint}
+Respond in the following format:
 ```yml
 reasoning: >-
     [Explain the error and the correction made]
@@ -30429,12 +30537,13 @@ new_sql_query: |
             display(pd.DataFrame(code_clauses["sample_output"]))
             
         if "chatui" in self.para:
-            if len(code_clauses["sample_output"]) == 0:
-                message = "🤨 <b>SQL runs successful!</b> The result is ... empty??"
-            else:
-                message = "✅ <b>SQL runs successful!</b> Here are the samples (first 5 rows):"
-            message += pd.DataFrame(code_clauses["sample_output"]).head(5).to_html()
-            self.para["chatui"].add_message("GenAI", message)
+            if "sample_output" in code_clauses:
+                if len(code_clauses["sample_output"]) == 0:
+                    message = "🤨 <b>SQL runs successful!</b> The result is ... empty??"
+                else:
+                    message = "✅ <b>SQL runs successful!</b> Here are the samples (first 5 rows):"
+                message += pd.DataFrame(code_clauses["sample_output"]).head(5).to_html()
+                self.para["chatui"].add_message("GenAI", message)
         
         next_button = widgets.Button(description="Finalize Debugged Query", button_style='success', icon='check')
         
@@ -30454,7 +30563,8 @@ new_sql_query: |
         }
         
         
-def create_cocoon_genai_workflow(con, query_widget=None, viewer=False, para={}, output=None):
+def create_cocoon_genai_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
+    
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -30474,9 +30584,10 @@ def create_cocoon_genai_workflow(con, query_widget=None, viewer=False, para={}, 
                             description="A workflow query data model with GenAI",
                             para = workflow_para,
                             output=output)
+    
+    main_workflow.add_to_leaf(SelectSchema(output=output))
     main_workflow.add_to_leaf(DBTProjectConfigAndRead(output=output))
     main_workflow.add_to_leaf(SimpleBusinessQuestionNode(output=output))
-    main_workflow.add_to_leaf(BusinessQuestionSQLFeasibility(output=output))
     main_workflow.add_to_leaf(BusinessQuestionEntityRelationNode(output=output))
     main_workflow.add_to_leaf(BusinessQuestionDataSufficiency(output=output))
     main_workflow.add_to_leaf(JoinGraphBuilder(output=output))
@@ -30508,7 +30619,6 @@ def create_dummy_genai_workflow(con, query_widget=None, viewer=False, para={}, o
     
     main_workflow.add_to_leaf(DBTProjectConfigAndReadSourceOnly(output=output))
     main_workflow.add_to_leaf(SimpleBusinessQuestionNode(output=output))
-    main_workflow.add_to_leaf(BusinessQuestionSQLFeasibility(output=output))
     main_workflow.add_to_leaf(SQLQueryConstructorDummy(output=output))
     main_workflow.add_to_leaf(DebugSQLQuery(output=output))
     return query_widget, main_workflow
@@ -30525,9 +30635,9 @@ class SQLQueryConstructorDummy(Node):
 
         data_project = self.para["data_project"]
         business_question = self.para["business_question"]
-        
         schema_description = data_project.describe_project(limit=999)
-        
+        con = self.item["con"]
+        database_name = get_database_name(con)
 
         if "chatui" in self.para:
             message = "😵 <b>Current RAG</b>: Reading all the source data schema from databases... phew, it's a lot!"
@@ -30535,10 +30645,10 @@ class SQLQueryConstructorDummy(Node):
             message += highlight_sql_only(sql_query)
             self.para["chatui"].add_message("GenAI", message)
         
-        return business_question, schema_description
+        return business_question, schema_description, database_name
 
     def run(self, extract_output, use_cache=True):
-        business_question, schema_description = extract_output
+        business_question, schema_description, database_name = extract_output
 
         template = f"""Given the following business question:
 '{business_question}'
@@ -30555,6 +30665,7 @@ Consider the following:
 5. Include any required GROUP BY, HAVING, or ORDER BY clauses
 6. Use table aliases if needed for clarity
 
+Note that we use {database_name} syntax.
 Your response should be in the following format:
 ```yml
 sql_query: |
@@ -30588,12 +30699,13 @@ sql_query: |
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         analysis = run_output
-        business_question, _ = extract_output
+        business_question, _, _ = extract_output
         
         next_button = widgets.Button(description="Finalize Direct Query", button_style='success', icon='check')
         
         def on_button_click(b):
             with self.output_context():
+                
                 if "chatui" in self.para:
                     message = "🤨 <b>I've done my best with the SQL... fingers crossed it's right!</b>"
                     message += highlight_sql_only(analysis['sql_query'])
@@ -30645,7 +30757,10 @@ class DBTProjectConfigAndReadSourceOnly(Node):
                     return
 
                 con = self.item["con"]
-                data_project = read_data_project_from_dir(directory, con, source_only=True)
+                database = self.para.get("database", None)
+                schema = self.para.get("schema", None)
+                
+                data_project = read_data_project_from_dir(directory, con, source_only=True, database=database, schema=schema)
                 
                 self.para["data_project"] = data_project
                 self.para["dbt_directory"] = directory
@@ -30669,4 +30784,347 @@ class DBTProjectConfigAndReadSourceOnly(Node):
         display(submit_button)
         display(output)
             
-            
+
+class DetectReferentialIntegrity(Node):
+    default_name = 'Detect Referential Integrity'
+    default_description = 'This node detects referential integrity violations between primary and foreign keys'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        print("🔍 Detecting referential integrity violations...")
+
+        data_project = self.para["data_project"]
+        con = self.item["con"]
+        query_widget = self.item["query_widget"]
+
+        pk_fk_document = self.get_sibling_document('Connect PK FK Table')
+        pk_fk_df = pd.read_json(pk_fk_document, orient="split")
+
+        integrity_data = []
+
+        for _, row in pk_fk_df.iterrows():
+            pk_table, pk_column = row['Table[PK]'].strip('[]').split('[')
+            pk_table_pipeline = data_project.table_pipelines[pk_table]
+
+            for fk in row['Table[FK]']:
+                fk_table, fk_column = fk.strip('[]').split('[')
+                fk_table_pipeline = data_project.table_pipelines[fk_table]
+
+                try:
+                    only1, only2, overlap = generate_queries_for_overlap(pk_table_pipeline, [pk_column], fk_table_pipeline, [fk_column], con)
+
+                    if only2 > 0:
+                        total_fk = only2 + overlap
+                        orphan_percentage = (only2 / total_fk) * 100
+                        integrity_data.append({
+                            'PK': f'{pk_table}[{pk_column}]',
+                            'FK': f'{fk_table}[{fk_column}]',
+                            '% Orphan': f'{orphan_percentage:.2f}%',
+                            'Explanation': ''
+                        })
+                except Exception as e:
+                    write_log(f"""
+The node is {self.name}
+The error is: {e}
+pl_table: {pk_table}, pl_column: {pk_column}, fk_table: {fk_table}, fk_column: {fk_column}
+""")
+                    
+
+        integrity_df = pd.DataFrame(integrity_data)
+
+        if integrity_df.empty:
+            callback(integrity_df.to_json(orient="split"))
+            return
+
+        print("⚠️ Referential Integrity Violations Detected, Please Explain:")
+        dropdown = create_explore_button(query_widget, 
+                            table_name=list(data_project.table_pipelines.keys()),
+                            logical_to_physical=data_project.table_pipelines)
+
+        
+        editable_columns = [False, False, False, True]
+        grid = create_dataframe_grid(integrity_df, editable_columns, reset=True)
+        display(grid)
+
+
+        next_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        def on_button_clicked(b):
+            with self.output_context():
+                updated_df = grid_to_updated_dataframe(grid)
+                document = updated_df.to_json(orient="split")
+                
+                updated_df['pk_table_name'] = updated_df['PK'].apply(lambda x: x.split('[')[0])
+                updated_df['pk'] = updated_df['PK'].apply(lambda x: x.split('[')[1].rstrip(']'))
+                updated_df['fk_table_name'] = updated_df['FK'].apply(lambda x: x.split('[')[0])
+                updated_df['fk'] = updated_df['FK'].apply(lambda x: x.split('[')[1].rstrip(']'))
+                
+                data_project.referential_integrity = updated_df[["pk_table_name", "pk", "fk_table_name", "fk", "% Orphan", "Explanation"]]
+                
+                callback(document)
+
+        next_button.on_click(on_button_clicked)
+        display(next_button)
+
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(next_button)
+            return
+        
+class ChatUI:
+    def __init__(self):
+        self.messages = []
+        self.output = widgets.HTML()
+        self.text_input = widgets.Text(placeholder='Type your message here...', layout=widgets.Layout(width='80%'))
+        
+        
+        
+        self.update_chat()
+        
+    def display(self):
+        display(self.output)
+        
+        
+    
+    def add_message(self, sender, message):
+        self.messages.append((sender, message))
+        self.update_chat()
+    
+    def update_chat(self):
+        chat_html = self.get_chat_html()
+        self.output.value = wrap_in_iframe(chat_html, height="500px", width="1000px")
+    
+    def get_chat_html(self):
+        chat_html = """
+<style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+    }
+    .container {
+        display: flex;
+        height: 100%;
+    }
+        
+    .chat-container {
+        border: 1px solid #e2e2e2;
+        border-radius: 12px;
+        padding: 20px;
+        overflow-y: auto;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+    }
+    
+    .chat-side {
+        width: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+        overflow-y: auto;
+        position: relative;
+    }
+    
+    .message {
+        margin-bottom: 16px;
+        padding: 15px;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        word-wrap: break-word;
+    }
+    .user-message {
+        background-color: #007AFF;
+        color: #ffffff;
+        margin-left: 15%;
+    }
+    .bot-message {
+        background-color: white;
+        color: #000000;
+    }
+    .sender {
+        font-weight: 600;
+        margin-bottom: 5px;
+        font-size: 0.85em;
+    }
+    .user-sender {
+        text-align: right;
+        color: #ffffff;
+    }
+    .bot-sender {
+        color: #8E8E93;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-size: 0.9em;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+th,
+td {
+    padding: 3px 4px;
+    text-align: left;
+    border-bottom: 1px solid #dddddd;
+    border-right: 1px solid #dddddd;
+}
+
+thead tr {
+    background-color: #464646;
+    /* Changed color for header */
+    color: #ffffff;
+    /* Changed text color for better contrast */
+    text-align: left;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+th {
+    top: 0;
+    background-color: #464646;
+    color: #ffffff;
+}
+
+tbody tr {
+    background-color: #f9f9f9;
+    /* Lighter color for content rows */
+    font-size: 10px
+}
+
+
+pre { line-height: 125%; }
+.highlight {
+    background: #272822;
+    color: #f8f8f2;
+    border-radius: 4px;
+    padding: 1em;
+    margin: 1em 0;
+    overflow-x: auto;
+    font-size: 12px;
+}
+
+td.linenos .normal { color: #aaaaaa; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: #aaaaaa; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #404040 }
+.highlight { background: #202020; color: #d0d0d0 }
+.highlight .c { color: #ababab; font-style: italic } /* Comment */
+.highlight .err { color: #a61717; background-color: #e3d2d2 } /* Error */
+.highlight .esc { color: #d0d0d0 } /* Escape */
+.highlight .g { color: #d0d0d0 } /* Generic */
+.highlight .k { color: #6ebf26; font-weight: bold } /* Keyword */
+.highlight .l { color: #d0d0d0 } /* Literal */
+.highlight .n { color: #d0d0d0 } /* Name */
+.highlight .o { color: #d0d0d0 } /* Operator */
+.highlight .x { color: #d0d0d0 } /* Other */
+.highlight .p { color: #d0d0d0 } /* Punctuation */
+.highlight .ch { color: #ababab; font-style: italic } /* Comment.Hashbang */
+.highlight .cm { color: #ababab; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #ff3a3a; font-weight: bold } /* Comment.Preproc */
+.highlight .cpf { color: #ababab; font-style: italic } /* Comment.PreprocFile */
+.highlight .c1 { color: #ababab; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #e50808; font-weight: bold; background-color: #520000 } /* Comment.Special */
+.highlight .gd { color: #ff3a3a } /* Generic.Deleted */
+.highlight .ge { color: #d0d0d0; font-style: italic } /* Generic.Emph */
+.highlight .ges { color: #d0d0d0; font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.highlight .gr { color: #ff3a3a } /* Generic.Error */
+.highlight .gh { color: #ffffff; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #589819 } /* Generic.Inserted */
+.highlight .go { color: #cccccc } /* Generic.Output */
+.highlight .gp { color: #aaaaaa } /* Generic.Prompt */
+.highlight .gs { color: #d0d0d0; font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #ffffff; text-decoration: underline } /* Generic.Subheading */
+.highlight .gt { color: #ff3a3a } /* Generic.Traceback */
+.highlight .kc { color: #6ebf26; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #6ebf26; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #6ebf26; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #6ebf26 } /* Keyword.Pseudo */
+.highlight .kr { color: #6ebf26; font-weight: bold } /* Keyword.Reserved */
+.highlight .kt { color: #6ebf26; font-weight: bold } /* Keyword.Type */
+.highlight .ld { color: #d0d0d0 } /* Literal.Date */
+.highlight .m { color: #51b2fd } /* Literal.Number */
+.highlight .s { color: #ed9d13 } /* Literal.String */
+.highlight .na { color: #bbbbbb } /* Name.Attribute */
+.highlight .nb { color: #2fbccd } /* Name.Builtin */
+.highlight .nc { color: #71adff; text-decoration: underline } /* Name.Class */
+.highlight .no { color: #40ffff } /* Name.Constant */
+.highlight .nd { color: #ffa500 } /* Name.Decorator */
+.highlight .ni { color: #d0d0d0 } /* Name.Entity */
+.highlight .ne { color: #bbbbbb } /* Name.Exception */
+.highlight .nf { color: #71adff } /* Name.Function */
+.highlight .nl { color: #d0d0d0 } /* Name.Label */
+.highlight .nn { color: #71adff; text-decoration: underline } /* Name.Namespace */
+.highlight .nx { color: #d0d0d0 } /* Name.Other */
+.highlight .py { color: #d0d0d0 } /* Name.Property */
+.highlight .nt { color: #6ebf26; font-weight: bold } /* Name.Tag */
+.highlight .nv { color: #40ffff } /* Name.Variable */
+.highlight .ow { color: #6ebf26; font-weight: bold } /* Operator.Word */
+.highlight .pm { color: #d0d0d0 } /* Punctuation.Marker */
+.highlight .w { color: #666666 } /* Text.Whitespace */
+.highlight .mb { color: #51b2fd } /* Literal.Number.Bin */
+.highlight .mf { color: #51b2fd } /* Literal.Number.Float */
+.highlight .mh { color: #51b2fd } /* Literal.Number.Hex */
+.highlight .mi { color: #51b2fd } /* Literal.Number.Integer */
+.highlight .mo { color: #51b2fd } /* Literal.Number.Oct */
+.highlight .sa { color: #ed9d13 } /* Literal.String.Affix */
+.highlight .sb { color: #ed9d13 } /* Literal.String.Backtick */
+.highlight .sc { color: #ed9d13 } /* Literal.String.Char */
+.highlight .dl { color: #ed9d13 } /* Literal.String.Delimiter */
+.highlight .sd { color: #ed9d13 } /* Literal.String.Doc */
+.highlight .s2 { color: #ed9d13 } /* Literal.String.Double */
+.highlight .se { color: #ed9d13 } /* Literal.String.Escape */
+.highlight .sh { color: #ed9d13 } /* Literal.String.Heredoc */
+.highlight .si { color: #ed9d13 } /* Literal.String.Interpol */
+.highlight .sx { color: #ffa500 } /* Literal.String.Other */
+.highlight .sr { color: #ed9d13 } /* Literal.String.Regex */
+.highlight .s1 { color: #ed9d13 } /* Literal.String.Single */
+.highlight .ss { color: #ed9d13 } /* Literal.String.Symbol */
+.highlight .bp { color: #2fbccd } /* Name.Builtin.Pseudo */
+.highlight .fm { color: #71adff } /* Name.Function.Magic */
+.highlight .vc { color: #40ffff } /* Name.Variable.Class */
+.highlight .vg { color: #40ffff } /* Name.Variable.Global */
+.highlight .vi { color: #40ffff } /* Name.Variable.Instance */
+.highlight .vm { color: #40ffff } /* Name.Variable.Magic */
+.highlight .il { color: #51b2fd } /* Literal.Number.Integer.Long */
+        </style>
+        """
+        
+        chat_html += self.get_chat_container_html()
+        return chat_html
+        
+    def get_chat_container_html(self):
+        chat_container_html = "<div class=\"chat-container\">"
+        for sender, message in self.messages:
+            message_class = "user-message" if sender == "You" else "bot-message"
+            sender_class = "user-sender" if sender == "You" else "bot-sender"
+            chat_container_html += f'''
+                <div class="message {message_class}">
+                    <div class="sender {sender_class}">{sender}</div>
+                    {message}
+                </div>
+            '''
+        chat_container_html += "</div>"
+        return chat_container_html
+
+
+
+class DummyChatUI:
+    def __init__(self, processing_func):
+        self.processing_func = processing_func
+
+    def add_message(self, sender, message):
+        self.processing_func(sender, message)
+
+
+
+
+
+

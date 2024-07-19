@@ -47,6 +47,11 @@ data_types_database = {
     }
 }
 
+database_general_hint = {
+    "DuckDB": "",
+    "Snowflake": "Double quote table and column names, if they are not all uppercase", 
+}
+
 transform_hints = {
     'VARCHAR':{
         'DATE': {
