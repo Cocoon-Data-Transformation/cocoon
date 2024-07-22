@@ -1,0 +1,5665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Formatting</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>rentIndex_condos_co_ops_homes_Brooklyn_2018_09</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Brooklyn_All</th>
+      <th>Brooklyn_Q1</th>
+      <th>Brooklyn_Q2</th>
+      <th>Brooklyn_Q3</th>
+      <th>Brooklyn_Q4</th>
+      <th>Brooklyn_Q5</th>
+      <th>Brooklyn_All_MoM</th>
+      <th>Brooklyn_Q1_MoM</th>
+      <th>Brooklyn_Q2_MoM</th>
+      <th>Brooklyn_Q3_MoM</th>
+      <th>Brooklyn_Q4_MoM</th>
+      <th>Brooklyn_Q5_MoM</th>
+      <th>Brooklyn_All_YoY</th>
+      <th>Brooklyn_Q1_YoY</th>
+      <th>Brooklyn_Q2_YoY</th>
+      <th>Brooklyn_Q3_YoY</th>
+      <th>Brooklyn_Q4_YoY</th>
+      <th>Brooklyn_Q5_YoY</th>
+      <th>date_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-02-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-03-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-04-01</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-05-01</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-06-01</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-07-01</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-08-01</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-09-01</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-10-01</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-11-01</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-12-01</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-01-01</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-02-01</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-03-01</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-04-01</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-05-01</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-06-01</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-07-01</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-08-01</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-09-01</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-10-01</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-11-01</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-12-01</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-01-01</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-02-01</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-03-01</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-04-01</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-05-01</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-06-01</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-07-01</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-08-01</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-09-01</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-10-01</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-11-01</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-12-01</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-01-01</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-02-01</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-03-01</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-04-01</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-05-01</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-06-01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-07-01</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-08-01</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-09-01</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-10-01</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-11-01</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-12-01</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-01-01</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-02-01</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-03-01</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-04-01</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-05-01</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-06-01</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-07-01</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-08-01</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-09-01</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-10-01</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-11-01</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-12-01</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-01-01</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-02-01</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-03-01</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-04-01</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-05-01</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-06-01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-07-01</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-08-01</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-09-01</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-10-01</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-11-01</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-12-01</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-01-01</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-02-01</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-03-01</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-04-01</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-05-01</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-06-01</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-07-01</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-08-01</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-09-01</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-10-01</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-11-01</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-12-01</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-01-01</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-02-01</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-03-01</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-04-01</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-05-01</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-06-01</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-07-01</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-08-01</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-09-01</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-10-01</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-11-01</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-12-01</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2003-01-01</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2003-02-01</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2003-03-01</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2003-04-01</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>brooklyn_price_index</th>
+      <th>brooklyn_q1_price_index</th>
+      <th>brooklyn_q2_price_index</th>
+      <th>brooklyn_q3_price_index</th>
+      <th>brooklyn_q4_price_index</th>
+      <th>brooklyn_q5_price_index</th>
+      <th>brooklyn_price_index_mom</th>
+      <th>brooklyn_q1_price_index_mom</th>
+      <th>brooklyn_q2_price_index_mom</th>
+      <th>brooklyn_q3_price_index_mom</th>
+      <th>brooklyn_q4_price_index_mom</th>
+      <th>brooklyn_q5_price_index_mom</th>
+      <th>brooklyn_price_index_yoy</th>
+      <th>brooklyn_q1_price_index_yoy</th>
+      <th>brooklyn_q2_price_index_yoy</th>
+      <th>brooklyn_q3_price_index_yoy</th>
+      <th>brooklyn_q4_price_index_yoy</th>
+      <th>brooklyn_q5_price_index_yoy</th>
+      <th>date_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-02-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-03-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-04-01</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-05-01</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-06-01</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-07-01</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-08-01</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-09-01</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-10-01</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-11-01</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-12-01</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-01-01</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-02-01</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-03-01</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-04-01</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-05-01</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-06-01</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-07-01</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-08-01</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-09-01</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-10-01</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-11-01</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1996-12-01</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-01-01</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-02-01</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-03-01</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-04-01</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-05-01</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-06-01</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-07-01</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-08-01</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-09-01</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-10-01</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-11-01</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1997-12-01</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-01-01</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-02-01</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-03-01</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-04-01</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-05-01</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-06-01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-07-01</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-08-01</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-09-01</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-10-01</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-11-01</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1998-12-01</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-01-01</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-02-01</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-03-01</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-04-01</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-05-01</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-06-01</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-07-01</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-08-01</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-09-01</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-10-01</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-11-01</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1999-12-01</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-01-01</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-02-01</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-03-01</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-04-01</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-05-01</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-06-01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-07-01</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-08-01</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-09-01</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-10-01</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-11-01</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2000-12-01</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-01-01</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-02-01</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-03-01</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-04-01</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-05-01</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-06-01</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-07-01</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-08-01</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-09-01</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-10-01</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-11-01</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2001-12-01</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-01-01</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-02-01</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-03-01</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-04-01</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-05-01</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-06-01</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-07-01</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-08-01</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-09-01</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-10-01</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-11-01</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2002-12-01</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2003-01-01</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2003-02-01</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2003-03-01</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>2003-04-01</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_price_index"></div><b>📃 Summary:</b> Overall price index for Brooklyn<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q1_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q1_price_index"></div><b>📃 Summary:</b> Price index for Brooklyn's 1st quintile<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q2_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q2_price_index"></div><b>📃 Summary:</b> Price index for Brooklyn's 2nd quintile<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q3_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q3_price_index"></div><b>📃 Summary:</b> Price index for Brooklyn's 3rd quintile<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q4_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q4_price_index"></div><b>📃 Summary:</b> Price index for Brooklyn's 4th quintile<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q5_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q5_price_index"></div><b>📃 Summary:</b> Price index for Brooklyn's 5th quintile<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in overall Brooklyn price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q1_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q1_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Brooklyn's 1st quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q2_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q2_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Brooklyn's 2nd quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q3_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q3_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Brooklyn's 3rd quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q4_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q4_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Brooklyn's 4th quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q5_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q5_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Brooklyn's 5th quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in overall Brooklyn price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q1_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q1_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Brooklyn's 1st quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q2_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q2_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Brooklyn's 2nd quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q3_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q3_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Brooklyn's 3rd quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q4_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q4_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Brooklyn's 4th quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">brooklyn_q5_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_brooklyn_q5_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Brooklyn's 5th quintile price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">date_</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_date_"></div><b>📃 Summary:</b> Date of the recorded data<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table shows price indices and rent indices for Brooklyn. Each index uses a repeat-sales method of comparing the sales prices of the same properties since January 1995 in Manhattan and January 2005 in Brooklyn and Queens. It covers condos, co-ops, and homes. Data is split into quintiles. Monthly and yearly changes are included. The table starts from 1995 but has missing early data. It likely continues to 2018.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>18</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>date_</td>
+      <td>Date of the recorded data</td>
+      <td>date_</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Brooklyn_All</td>
+      <td>Overall price index for Brooklyn</td>
+      <td>brooklyn_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Brooklyn_Q1</td>
+      <td>Price index for Brooklyn's 1st quintile</td>
+      <td>brooklyn_q1_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Brooklyn_Q2</td>
+      <td>Price index for Brooklyn's 2nd quintile</td>
+      <td>brooklyn_q2_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Brooklyn_Q3</td>
+      <td>Price index for Brooklyn's 3rd quintile</td>
+      <td>brooklyn_q3_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Brooklyn_Q4</td>
+      <td>Price index for Brooklyn's 4th quintile</td>
+      <td>brooklyn_q4_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Brooklyn_Q5</td>
+      <td>Price index for Brooklyn's 5th quintile</td>
+      <td>brooklyn_q5_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Brooklyn_All_MoM</td>
+      <td>Month-over-month change in overall Brooklyn price index</td>
+      <td>brooklyn_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Brooklyn_Q1_MoM</td>
+      <td>Month-over-month change in Brooklyn's 1st quintile price index</td>
+      <td>brooklyn_q1_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Brooklyn_Q2_MoM</td>
+      <td>Month-over-month change in Brooklyn's 2nd quintile price index</td>
+      <td>brooklyn_q2_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Brooklyn_Q3_MoM</td>
+      <td>Month-over-month change in Brooklyn's 3rd quintile price index</td>
+      <td>brooklyn_q3_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Brooklyn_Q4_MoM</td>
+      <td>Month-over-month change in Brooklyn's 4th quintile price index</td>
+      <td>brooklyn_q4_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Brooklyn_Q5_MoM</td>
+      <td>Month-over-month change in Brooklyn's 5th quintile price index</td>
+      <td>brooklyn_q5_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Brooklyn_All_YoY</td>
+      <td>Year-over-year change in overall Brooklyn price index</td>
+      <td>brooklyn_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Brooklyn_Q1_YoY</td>
+      <td>Year-over-year change in Brooklyn's 1st quintile price index</td>
+      <td>brooklyn_q1_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Brooklyn_Q2_YoY</td>
+      <td>Year-over-year change in Brooklyn's 2nd quintile price index</td>
+      <td>brooklyn_q2_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Brooklyn_Q3_YoY</td>
+      <td>Year-over-year change in Brooklyn's 3rd quintile price index</td>
+      <td>brooklyn_q3_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Brooklyn_Q4_YoY</td>
+      <td>Year-over-year change in Brooklyn's 4th quintile price index</td>
+      <td>brooklyn_q4_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Brooklyn_Q5_YoY</td>
+      <td>Year-over-year change in Brooklyn's 5th quintile price index</td>
+      <td>brooklyn_q5_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>1</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>date_</td>
+      <td>CAST("date_" AS DATE)</td>
+      <td>To transform the 'date_' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the dates in the column ('YYYY-MM-DD') is already compatible with the standard SQL date format, so we don't need to use strptime() or any other date parsing function. A direct CAST to DATE will work.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>18</b> columns have missing values<br>
+                    ❌ No missing value is acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>brooklyn_price_index</td>
+      <td>63.16</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>brooklyn_price_index_mom</td>
+      <td>63.51</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>brooklyn_price_index_yoy</td>
+      <td>67.37</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>brooklyn_q1_price_index</td>
+      <td>63.16</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>brooklyn_q1_price_index_mom</td>
+      <td>63.51</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>brooklyn_q1_price_index_yoy</td>
+      <td>67.37</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>brooklyn_q2_price_index</td>
+      <td>63.16</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>brooklyn_q2_price_index_mom</td>
+      <td>63.51</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>brooklyn_q2_price_index_yoy</td>
+      <td>67.37</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>brooklyn_q3_price_index</td>
+      <td>63.16</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>brooklyn_q3_price_index_mom</td>
+      <td>63.51</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>brooklyn_q3_price_index_yoy</td>
+      <td>67.37</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>brooklyn_q4_price_index</td>
+      <td>63.16</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>brooklyn_q4_price_index_mom</td>
+      <td>63.51</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>brooklyn_q4_price_index_yoy</td>
+      <td>67.37</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>brooklyn_q5_price_index</td>
+      <td>63.16</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>brooklyn_q5_price_index_mom</td>
+      <td>63.51</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>brooklyn_q5_price_index_yoy</td>
+      <td>67.37</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>brooklyn_price_index</td>
+      <td>63.16</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>brooklyn_price_index_mom</td>
+      <td>63.51</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>brooklyn_price_index_yoy</td>
+      <td>67.37</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>brooklyn_q1_price_index</td>
+      <td>63.16</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>brooklyn_q1_price_index_mom</td>
+      <td>63.51</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>brooklyn_q1_price_index_yoy</td>
+      <td>67.37</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>brooklyn_q2_price_index</td>
+      <td>63.16</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>brooklyn_q2_price_index_mom</td>
+      <td>63.51</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>brooklyn_q2_price_index_yoy</td>
+      <td>67.37</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>brooklyn_q3_price_index</td>
+      <td>63.16</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>brooklyn_q3_price_index_mom</td>
+      <td>63.51</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>brooklyn_q3_price_index_yoy</td>
+      <td>67.37</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>brooklyn_q4_price_index</td>
+      <td>63.16</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>brooklyn_q4_price_index_mom</td>
+      <td>63.51</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>brooklyn_q4_price_index_yoy</td>
+      <td>67.37</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>brooklyn_q5_price_index</td>
+      <td>63.16</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>brooklyn_q5_price_index_mom</td>
+      <td>63.51</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>brooklyn_q5_price_index_yoy</td>
+      <td>67.37</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 1858.125, 'y': 4}, {'x': 1896.375, 'y': 3}, {'x': 1934.625, 'y': 8}, {'x': 1972.875, 'y': 1}, {'x': 2011.125, 'y': 3}, {'x': 2049.375, 'y': 6}, {'x': 2087.625, 'y': 2}, {'x': 2125.875, 'y': 3}, {'x': 2164.125, 'y': 3}, {'x': 2202.375, 'y': 6}, {'x': 2240.625, 'y': 1}, {'x': 2278.875, 'y': 2}, {'x': 2317.125, 'y': 9}, {'x': 2355.375, 'y': 2}, {'x': 2393.625, 'y': 7}, {'x': 2431.875, 'y': 4}, {'x': 2470.125, 'y': 3}, {'x': 2508.375, 'y': 15}, {'x': 2546.625, 'y': 16}, {'x': 2584.875, 'y': 7}];
+    binWidth = 38.25;
+    drawHistogram("hist_viz_brooklyn_price_index", data, binWidth);
+data = [{'x': 1090.31465017484, 'y': 2}, {'x': 1123.0900255941199, 'y': 3}, {'x': 1155.8654010134, 'y': 8}, {'x': 1188.64077643268, 'y': 6}, {'x': 1221.41615185196, 'y': 8}, {'x': 1254.19152727124, 'y': 3}, {'x': 1286.9669026905199, 'y': 7}, {'x': 1319.7422781097998, 'y': 4}, {'x': 1352.5176535290798, 'y': 1}, {'x': 1385.29302894836, 'y': 6}, {'x': 1418.06840436764, 'y': 5}, {'x': 1450.8437797869199, 'y': 2}, {'x': 1483.6191552062, 'y': 7}, {'x': 1516.39453062548, 'y': 3}, {'x': 1549.16990604476, 'y': 2}, {'x': 1581.94528146404, 'y': 6}, {'x': 1614.7206568833199, 'y': 4}, {'x': 1647.4960323025998, 'y': 11}, {'x': 1680.2714077218798, 'y': 11}, {'x': 1713.0467831411597, 'y': 6}];
+    binWidth = 32.775375419279996;
+    drawHistogram("hist_viz_brooklyn_q1_price_index", data, binWidth);
+data = [{'x': 1507.3755576469048, 'y': 4}, {'x': 1543.855666704515, 'y': 2}, {'x': 1580.3357757621247, 'y': 6}, {'x': 1616.815884819735, 'y': 4}, {'x': 1653.2959938773452, 'y': 2}, {'x': 1689.776102934955, 'y': 4}, {'x': 1726.256211992565, 'y': 5}, {'x': 1762.7363210501749, 'y': 3}, {'x': 1799.216430107785, 'y': 5}, {'x': 1835.696539165395, 'y': 5}, {'x': 1872.176648223005, 'y': 2}, {'x': 1908.6567572806152, 'y': 1}, {'x': 1945.136866338225, 'y': 9}, {'x': 1981.6169753958352, 'y': 3}, {'x': 2018.097084453445, 'y': 7}, {'x': 2054.577193511055, 'y': 3}, {'x': 2091.0573025686654, 'y': 5}, {'x': 2127.537411626275, 'y': 17}, {'x': 2164.0175206838853, 'y': 14}, {'x': 2200.497629741495, 'y': 4}];
+    binWidth = 36.480109057610015;
+    drawHistogram("hist_viz_brooklyn_q2_price_index", data, binWidth);
+data = [{'x': 1836.2074421719226, 'y': 1}, {'x': 1874.5834989889677, 'y': 2}, {'x': 1912.9595558060125, 'y': 1}, {'x': 1951.3356126230576, 'y': 2}, {'x': 1989.7116694401025, 'y': 10}, {'x': 2028.0877262571476, 'y': 1}, {'x': 2066.4637830741926, 'y': 2}, {'x': 2104.8398398912377, 'y': 6}, {'x': 2143.2158967082823, 'y': 5}, {'x': 2181.591953525328, 'y': 1}, {'x': 2219.9680103423725, 'y': 3}, {'x': 2258.3440671594176, 'y': 2}, {'x': 2296.7201239764627, 'y': 5}, {'x': 2335.0961807935073, 'y': 6}, {'x': 2373.472237610553, 'y': 6}, {'x': 2411.8482944275975, 'y': 3}, {'x': 2450.2243512446425, 'y': 8}, {'x': 2488.6004080616876, 'y': 15}, {'x': 2526.9764648787327, 'y': 15}, {'x': 2565.352521695778, 'y': 11}];
+    binWidth = 38.376056817045004;
+    drawHistogram("hist_viz_brooklyn_q3_price_index", data, binWidth);
+data = [{'x': 2321.5038888245226, 'y': 2}, {'x': 2360.4900306575673, 'y': 3}, {'x': 2399.476172490612, 'y': 3}, {'x': 2438.4623143236577, 'y': 5}, {'x': 2477.4484561567024, 'y': 1}, {'x': 2516.434597989747, 'y': 4}, {'x': 2555.4207398227927, 'y': 2}, {'x': 2594.4068816558374, 'y': 7}, {'x': 2633.393023488882, 'y': 2}, {'x': 2672.3791653219273, 'y': 2}, {'x': 2711.3653071549725, 'y': 2}, {'x': 2750.351448988017, 'y': 1}, {'x': 2789.3375908210623, 'y': 6}, {'x': 2828.3237326541075, 'y': 4}, {'x': 2867.3098744871522, 'y': 8}, {'x': 2906.2960163201974, 'y': 1}, {'x': 2945.2821581532426, 'y': 9}, {'x': 2984.2682999862873, 'y': 9}, {'x': 3023.2544418193324, 'y': 20}, {'x': 3062.2405836523776, 'y': 14}];
+    binWidth = 38.98614183304501;
+    drawHistogram("hist_viz_brooklyn_q4_price_index", data, binWidth);
+data = [{'x': 3154.0284727046273, 'y': 3}, {'x': 3202.0364655726826, 'y': 11}, {'x': 3250.044458440738, 'y': 2}, {'x': 3298.052451308793, 'y': 1}, {'x': 3346.0604441768473, 'y': 3}, {'x': 3394.0684370449026, 'y': 2}, {'x': 3442.076429912958, 'y': 2}, {'x': 3490.084422781013, 'y': 4}, {'x': 3538.0924156490673, 'y': 2}, {'x': 3586.1004085171226, 'y': 3}, {'x': 3634.108401385178, 'y': 3}, {'x': 3682.116394253233, 'y': 3}, {'x': 3730.1243871212873, 'y': 3}, {'x': 3778.1323799893426, 'y': 9}, {'x': 3826.140372857398, 'y': 1}, {'x': 3874.148365725453, 'y': 8}, {'x': 3922.1563585935073, 'y': 4}, {'x': 3970.1643514615625, 'y': 13}, {'x': 4018.1723443296178, 'y': 23}, {'x': 4066.180337197673, 'y': 5}];
+    binWidth = 48.007992868055;
+    drawHistogram("hist_viz_brooklyn_q5_price_index", data, binWidth);
+data = [{'x': -0.007662117338273492, 'y': 1}, {'x': -0.006440333400549678, 'y': 1}, {'x': -0.005218549462825862, 'y': 2}, {'x': -0.003996765525102046, 'y': 2}, {'x': -0.0027749815873782317, 'y': 2}, {'x': -0.0015531976496544163, 'y': 10}, {'x': -0.0003314137119306013, 'y': 5}, {'x': 0.0008903702257932137, 'y': 16}, {'x': 0.0021121541635170295, 'y': 7}, {'x': 0.0033339381012408445, 'y': 14}, {'x': 0.0045557220389646595, 'y': 8}, {'x': 0.005777505976688475, 'y': 10}, {'x': 0.006999289914412291, 'y': 12}, {'x': 0.008221073852136105, 'y': 2}, {'x': 0.00944285778985992, 'y': 4}, {'x': 0.010664641727583735, 'y': 3}, {'x': 0.011886425665307551, 'y': 2}, {'x': 0.013108209603031367, 'y': 1}, {'x': 0.014329993540755181, 'y': 0}, {'x': 0.015551777478478995, 'y': 2}];
+    binWidth = 0.0012217839377238152;
+    drawHistogram("hist_viz_brooklyn_price_index_mom", data, binWidth);
+data = [{'x': -0.020877314627249326, 'y': 1}, {'x': -0.018290284745946576, 'y': 1}, {'x': -0.01570325486464383, 'y': 2}, {'x': -0.013116224983341078, 'y': 1}, {'x': -0.010529195102038327, 'y': 0}, {'x': -0.007942165220735577, 'y': 2}, {'x': -0.005355135339432829, 'y': 4}, {'x': -0.002768105458130079, 'y': 9}, {'x': -0.00018107557682732825, 'y': 14}, {'x': 0.0024059543044754224, 'y': 17}, {'x': 0.004992984185778171, 'y': 11}, {'x': 0.00758001406708092, 'y': 11}, {'x': 0.010167043948383669, 'y': 13}, {'x': 0.012754073829686418, 'y': 8}, {'x': 0.015341103710989169, 'y': 1}, {'x': 0.01792813359229192, 'y': 4}, {'x': 0.02051516347359467, 'y': 2}, {'x': 0.02310219335489742, 'y': 0}, {'x': 0.02568922323620017, 'y': 2}, {'x': 0.028276253117502925, 'y': 1}];
+    binWidth = 0.0025870298813027498;
+    drawHistogram("hist_viz_brooklyn_q1_price_index_mom", data, binWidth);
+data = [{'x': -0.01797502189566923, 'y': 1}, {'x': -0.015592064577875691, 'y': 2}, {'x': -0.013209107260082148, 'y': 1}, {'x': -0.010826149942288608, 'y': 1}, {'x': -0.008443192624495069, 'y': 1}, {'x': -0.0060602353067015285, 'y': 7}, {'x': -0.0036772779889079872, 'y': 6}, {'x': -0.0012943206711144468, 'y': 12}, {'x': 0.0010886366466790927, 'y': 10}, {'x': 0.003471593964472632, 'y': 18}, {'x': 0.0058545512822661735, 'y': 18}, {'x': 0.008237508600059715, 'y': 8}, {'x': 0.010620465917853254, 'y': 3}, {'x': 0.013003423235646796, 'y': 5}, {'x': 0.015386380553440337, 'y': 3}, {'x': 0.017769337871233876, 'y': 6}, {'x': 0.020152295189027416, 'y': 0}, {'x': 0.022535252506820955, 'y': 0}, {'x': 0.024918209824614495, 'y': 0}, {'x': 0.02730116714240803, 'y': 2}];
+    binWidth = 0.0023829573177935404;
+    drawHistogram("hist_viz_brooklyn_q2_price_index_mom", data, binWidth);
+data = [{'x': -0.03206100723789397, 'y': 1}, {'x': -0.028504060843386102, 'y': 0}, {'x': -0.02494711444887824, 'y': 0}, {'x': -0.021390168054370377, 'y': 0}, {'x': -0.017833221659862508, 'y': 1}, {'x': -0.014276275265354646, 'y': 0}, {'x': -0.010719328870846782, 'y': 3}, {'x': -0.007162382476338916, 'y': 10}, {'x': -0.0036054360818310524, 'y': 8}, {'x': -4.848968732318673e-05, 'y': 19}, {'x': 0.003508456707184679, 'y': 27}, {'x': 0.007065403101692541, 'y': 15}, {'x': 0.010622349496200407, 'y': 12}, {'x': 0.014179295890708273, 'y': 4}, {'x': 0.017736242285216138, 'y': 0}, {'x': 0.021293188679724004, 'y': 1}, {'x': 0.024850135074231866, 'y': 2}, {'x': 0.02840708146873973, 'y': 0}, {'x': 0.0319640278632476, 'y': 0}, {'x': 0.03552097425775547, 'y': 1}];
+    binWidth = 0.003556946394507865;
+    drawHistogram("hist_viz_brooklyn_q3_price_index_mom", data, binWidth);
+data = [{'x': -0.018894409796947412, 'y': 1}, {'x': -0.016600070688014446, 'y': 0}, {'x': -0.014305731579081474, 'y': 0}, {'x': -0.012011392470148504, 'y': 0}, {'x': -0.009717053361215535, 'y': 2}, {'x': -0.007422714252282565, 'y': 7}, {'x': -0.005128375143349595, 'y': 3}, {'x': -0.0028340360344166256, 'y': 16}, {'x': -0.000539696925483656, 'y': 10}, {'x': 0.0017546421834493137, 'y': 15}, {'x': 0.004048981292382283, 'y': 18}, {'x': 0.006343320401315253, 'y': 11}, {'x': 0.008637659510248223, 'y': 10}, {'x': 0.010931998619181192, 'y': 3}, {'x': 0.013226337728114164, 'y': 1}, {'x': 0.015520676837047134, 'y': 3}, {'x': 0.0178150159459801, 'y': 0}, {'x': 0.02010935505491307, 'y': 0}, {'x': 0.022403694163846043, 'y': 2}, {'x': 0.024698033272779016, 'y': 2}];
+    binWidth = 0.0022943391089329697;
+    drawHistogram("hist_viz_brooklyn_q4_price_index_mom", data, binWidth);
+data = [{'x': -0.015459521177840463, 'y': 2}, {'x': -0.013639299670557787, 'y': 0}, {'x': -0.011819078163275112, 'y': 0}, {'x': -0.009998856655992438, 'y': 2}, {'x': -0.008178635148709762, 'y': 1}, {'x': -0.006358413641427087, 'y': 3}, {'x': -0.004538192134144412, 'y': 5}, {'x': -0.0027179706268617362, 'y': 6}, {'x': -0.0008977491195790608, 'y': 16}, {'x': 0.0009224723877036146, 'y': 13}, {'x': 0.002742693894986289, 'y': 22}, {'x': 0.004562915402268964, 'y': 9}, {'x': 0.006383136909551638, 'y': 9}, {'x': 0.008203358416834314, 'y': 5}, {'x': 0.01002357992411699, 'y': 3}, {'x': 0.011843801431399665, 'y': 4}, {'x': 0.01366402293868234, 'y': 2}, {'x': 0.015484244445965016, 'y': 0}, {'x': 0.01730446595324769, 'y': 1}, {'x': 0.019124687460530365, 'y': 1}];
+    binWidth = 0.0018202215072826752;
+    drawHistogram("hist_viz_brooklyn_q5_price_index_mom", data, binWidth);
+data = [{'x': 0.00386672255734214, 'y': 5}, {'x': 0.00765227979204222, 'y': 10}, {'x': 0.011437837026742299, 'y': 6}, {'x': 0.01522339426144238, 'y': 4}, {'x': 0.01900895149614246, 'y': 2}, {'x': 0.022794508730842537, 'y': 1}, {'x': 0.026580065965542618, 'y': 1}, {'x': 0.0303656232002427, 'y': 1}, {'x': 0.03415118043494278, 'y': 4}, {'x': 0.03793673766964285, 'y': 6}, {'x': 0.04172229490434294, 'y': 9}, {'x': 0.045507852139043015, 'y': 9}, {'x': 0.04929340937374309, 'y': 2}, {'x': 0.053078966608443176, 'y': 0}, {'x': 0.05686452384314325, 'y': 7}, {'x': 0.06065008107784334, 'y': 9}, {'x': 0.06443563831254343, 'y': 3}, {'x': 0.0682211955472435, 'y': 11}, {'x': 0.07200675278194357, 'y': 1}, {'x': 0.07579231001664366, 'y': 2}];
+    binWidth = 0.00378555723470008;
+    drawHistogram("hist_viz_brooklyn_price_index_yoy", data, binWidth);
+data = [{'x': 0.015293018517056223, 'y': 2}, {'x': 0.019667161291807067, 'y': 7}, {'x': 0.02404130406655791, 'y': 10}, {'x': 0.02841544684130876, 'y': 2}, {'x': 0.0327895896160596, 'y': 3}, {'x': 0.037163732390810444, 'y': 2}, {'x': 0.041537875165561296, 'y': 2}, {'x': 0.04591201794031214, 'y': 8}, {'x': 0.050286160715062984, 'y': 2}, {'x': 0.05466030348981383, 'y': 6}, {'x': 0.05903444626456467, 'y': 6}, {'x': 0.06340858903931552, 'y': 9}, {'x': 0.06778273181406637, 'y': 14}, {'x': 0.07215687458881721, 'y': 4}, {'x': 0.07653101736356806, 'y': 8}, {'x': 0.0809051601383189, 'y': 1}, {'x': 0.08527930291306975, 'y': 4}, {'x': 0.08965344568782059, 'y': 1}, {'x': 0.09402758846257143, 'y': 0}, {'x': 0.09840173123732228, 'y': 2}];
+    binWidth = 0.004374142774750845;
+    drawHistogram("hist_viz_brooklyn_q1_price_index_yoy", data, binWidth);
+data = [{'x': 0.002693687374234786, 'y': 8}, {'x': 0.007976034069641797, 'y': 9}, {'x': 0.01325838076504881, 'y': 4}, {'x': 0.01854072746045582, 'y': 4}, {'x': 0.02382307415586283, 'y': 0}, {'x': 0.02910542085126984, 'y': 3}, {'x': 0.034387767546676856, 'y': 5}, {'x': 0.03967011424208386, 'y': 8}, {'x': 0.044952460937490876, 'y': 8}, {'x': 0.05023480763289788, 'y': 11}, {'x': 0.055517154328304896, 'y': 5}, {'x': 0.060799501023711906, 'y': 6}, {'x': 0.06608184771911892, 'y': 5}, {'x': 0.07136419441452593, 'y': 8}, {'x': 0.07664654110993294, 'y': 1}, {'x': 0.08192888780533994, 'y': 0}, {'x': 0.08721123450074697, 'y': 4}, {'x': 0.09249358119615397, 'y': 2}, {'x': 0.09777592789156098, 'y': 1}, {'x': 0.103058274586968, 'y': 1}];
+    binWidth = 0.005282346695407011;
+    drawHistogram("hist_viz_brooklyn_q2_price_index_yoy", data, binWidth);
+data = [{'x': -0.0025133210865596048, 'y': 3}, {'x': 0.002416333577131985, 'y': 11}, {'x': 0.007345988240823576, 'y': 9}, {'x': 0.012275642904515166, 'y': 3}, {'x': 0.017205297568206754, 'y': 3}, {'x': 0.022134952231898347, 'y': 6}, {'x': 0.027064606895589934, 'y': 4}, {'x': 0.03199426155928152, 'y': 5}, {'x': 0.03692391622297311, 'y': 15}, {'x': 0.04185357088666471, 'y': 4}, {'x': 0.046783225550356286, 'y': 3}, {'x': 0.05171288021404788, 'y': 5}, {'x': 0.05664253487773947, 'y': 6}, {'x': 0.061572189541431066, 'y': 1}, {'x': 0.06650184420512265, 'y': 5}, {'x': 0.07143149886881425, 'y': 1}, {'x': 0.07636115353250583, 'y': 2}, {'x': 0.08129080819619744, 'y': 3}, {'x': 0.08622046285988902, 'y': 2}, {'x': 0.0911501175235806, 'y': 2}];
+    binWidth = 0.00492965466369159;
+    drawHistogram("hist_viz_brooklyn_q3_price_index_yoy", data, binWidth);
+data = [{'x': -0.005761495363340868, 'y': 8}, {'x': -0.0012254492269756032, 'y': 8}, {'x': 0.0033105969093896615, 'y': 8}, {'x': 0.007846643045754926, 'y': 4}, {'x': 0.012382689182120191, 'y': 1}, {'x': 0.016918735318485457, 'y': 4}, {'x': 0.02145478145485072, 'y': 4}, {'x': 0.025990827591215983, 'y': 4}, {'x': 0.030526873727581255, 'y': 9}, {'x': 0.035062919863946516, 'y': 7}, {'x': 0.03959896600031178, 'y': 4}, {'x': 0.044135012136677046, 'y': 2}, {'x': 0.048671058273042314, 'y': 4}, {'x': 0.053207104409407575, 'y': 7}, {'x': 0.05774315054577284, 'y': 6}, {'x': 0.062279196682138105, 'y': 2}, {'x': 0.06681524281850337, 'y': 3}, {'x': 0.07135128895486864, 'y': 3}, {'x': 0.07588733509123391, 'y': 1}, {'x': 0.08042338122759916, 'y': 4}];
+    binWidth = 0.004536046136365265;
+    drawHistogram("hist_viz_brooklyn_q4_price_index_yoy", data, binWidth);
+data = [{'x': -0.023160530295986387, 'y': 1}, {'x': -0.017424251923740156, 'y': 0}, {'x': -0.011687973551493926, 'y': 2}, {'x': -0.0059516951792476964, 'y': 4}, {'x': -0.00021541680700146518, 'y': 9}, {'x': 0.005520861565244763, 'y': 11}, {'x': 0.01125713993749099, 'y': 5}, {'x': 0.01699341830973722, 'y': 0}, {'x': 0.022729696681983453, 'y': 5}, {'x': 0.028465975054229688, 'y': 13}, {'x': 0.03420225342647592, 'y': 12}, {'x': 0.03993853179872214, 'y': 2}, {'x': 0.04567481017096837, 'y': 1}, {'x': 0.0514110885432146, 'y': 4}, {'x': 0.05714736691546083, 'y': 8}, {'x': 0.06288364528770707, 'y': 6}, {'x': 0.06861992365995329, 'y': 4}, {'x': 0.07435620203219953, 'y': 2}, {'x': 0.08009248040444575, 'y': 2}, {'x': 0.085828758776692, 'y': 2}];
+    binWidth = 0.0057362783722462295;
+    drawHistogram("hist_viz_brooklyn_q5_price_index_yoy", data, binWidth);
+data = [{'label': '1995-01-01', 'value': 0.3508771929824561}, {'label': '1995-02-01', 'value': 0.3508771929824561}, {'label': '1995-12-01', 'value': 0.3508771929824561}, {'label': '1996-05-01', 'value': 0.3508771929824561}, {'label': '1996-12-01', 'value': 0.3508771929824561}, {'label': 'Other values', 'value': 98.24561403508771}];
+    drawBarChart("bar_viz_date_", data);
+
+
+</script>
+</body>
+</html>

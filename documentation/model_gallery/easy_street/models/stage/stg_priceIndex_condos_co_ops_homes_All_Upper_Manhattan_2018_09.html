@@ -1,0 +1,2133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Formatting</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>priceIndex_condos_co_ops_homes_All_Upper_Manhattan_2018_09</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>sales</th>
+      <th>MoM</th>
+      <th>YoY</th>
+      <th>date_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>55742.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>65333.0</td>
+      <td>0.172061</td>
+      <td>NaN</td>
+      <td>1995-02-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>68339.0</td>
+      <td>0.046010</td>
+      <td>NaN</td>
+      <td>1995-03-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>79708.0</td>
+      <td>0.166362</td>
+      <td>NaN</td>
+      <td>1995-04-01</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>106694.0</td>
+      <td>0.338561</td>
+      <td>NaN</td>
+      <td>1995-05-01</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>110721.0</td>
+      <td>0.037743</td>
+      <td>NaN</td>
+      <td>1995-06-01</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>124251.0</td>
+      <td>0.122199</td>
+      <td>NaN</td>
+      <td>1995-07-01</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>109764.0</td>
+      <td>-0.116595</td>
+      <td>NaN</td>
+      <td>1995-08-01</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>100026.0</td>
+      <td>-0.088718</td>
+      <td>NaN</td>
+      <td>1995-09-01</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>93218.0</td>
+      <td>-0.068062</td>
+      <td>NaN</td>
+      <td>1995-10-01</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>76941.0</td>
+      <td>-0.174612</td>
+      <td>NaN</td>
+      <td>1995-11-01</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>79872.0</td>
+      <td>0.038094</td>
+      <td>NaN</td>
+      <td>1995-12-01</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>64916.0</td>
+      <td>-0.187250</td>
+      <td>0.164580</td>
+      <td>1996-01-01</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>64916.0</td>
+      <td>0.000000</td>
+      <td>-0.006383</td>
+      <td>1996-02-01</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>92212.0</td>
+      <td>0.420482</td>
+      <td>0.349332</td>
+      <td>1996-03-01</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>93649.0</td>
+      <td>0.015584</td>
+      <td>0.174901</td>
+      <td>1996-04-01</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>95732.0</td>
+      <td>0.022243</td>
+      <td>-0.102742</td>
+      <td>1996-05-01</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>80352.0</td>
+      <td>-0.160657</td>
+      <td>-0.274284</td>
+      <td>1996-06-01</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>92724.0</td>
+      <td>0.153973</td>
+      <td>-0.253736</td>
+      <td>1996-07-01</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>94845.0</td>
+      <td>0.022874</td>
+      <td>-0.135919</td>
+      <td>1996-08-01</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>114060.0</td>
+      <td>0.202594</td>
+      <td>0.140304</td>
+      <td>1996-09-01</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>114060.0</td>
+      <td>0.000000</td>
+      <td>0.223583</td>
+      <td>1996-10-01</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>114060.0</td>
+      <td>0.000000</td>
+      <td>0.482435</td>
+      <td>1996-11-01</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>170822.0</td>
+      <td>0.497650</td>
+      <td>1.138697</td>
+      <td>1996-12-01</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>129077.0</td>
+      <td>-0.244377</td>
+      <td>0.988370</td>
+      <td>1997-01-01</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>110289.0</td>
+      <td>-0.145557</td>
+      <td>0.698949</td>
+      <td>1997-02-01</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>95246.0</td>
+      <td>-0.136396</td>
+      <td>0.032902</td>
+      <td>1997-03-01</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>92465.0</td>
+      <td>-0.029198</td>
+      <td>-0.012643</td>
+      <td>1997-04-01</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>108464.0</td>
+      <td>0.173028</td>
+      <td>0.132996</td>
+      <td>1997-05-01</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>117594.0</td>
+      <td>0.084175</td>
+      <td>0.463486</td>
+      <td>1997-06-01</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>137931.0</td>
+      <td>0.172942</td>
+      <td>0.487544</td>
+      <td>1997-07-01</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>136870.0</td>
+      <td>-0.007692</td>
+      <td>0.443091</td>
+      <td>1997-08-01</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>156824.0</td>
+      <td>0.145788</td>
+      <td>0.374925</td>
+      <td>1997-09-01</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>145607.0</td>
+      <td>-0.071526</td>
+      <td>0.276583</td>
+      <td>1997-10-01</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>160997.0</td>
+      <td>0.105695</td>
+      <td>0.411511</td>
+      <td>1997-11-01</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>149920.0</td>
+      <td>-0.068803</td>
+      <td>-0.122361</td>
+      <td>1997-12-01</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>123150.0</td>
+      <td>-0.178562</td>
+      <td>-0.045918</td>
+      <td>1998-01-01</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>102374.0</td>
+      <td>-0.168705</td>
+      <td>-0.071766</td>
+      <td>1998-02-01</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>89968.0</td>
+      <td>-0.121183</td>
+      <td>-0.055414</td>
+      <td>1998-03-01</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>101323.0</td>
+      <td>0.126212</td>
+      <td>0.095798</td>
+      <td>1998-04-01</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>112083.0</td>
+      <td>0.106195</td>
+      <td>0.033366</td>
+      <td>1998-05-01</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>96301.0</td>
+      <td>-0.140806</td>
+      <td>-0.181072</td>
+      <td>1998-06-01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>90286.0</td>
+      <td>-0.062460</td>
+      <td>-0.345426</td>
+      <td>1998-07-01</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>123323.0</td>
+      <td>0.365915</td>
+      <td>-0.098977</td>
+      <td>1998-08-01</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>120875.0</td>
+      <td>-0.019850</td>
+      <td>-0.229231</td>
+      <td>1998-09-01</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>121369.0</td>
+      <td>0.004087</td>
+      <td>-0.166462</td>
+      <td>1998-10-01</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>94264.0</td>
+      <td>-0.223327</td>
+      <td>-0.414498</td>
+      <td>1998-11-01</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>108502.0</td>
+      <td>0.151044</td>
+      <td>-0.276267</td>
+      <td>1998-12-01</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>117248.0</td>
+      <td>0.080607</td>
+      <td>-0.047925</td>
+      <td>1999-01-01</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>117248.0</td>
+      <td>0.000000</td>
+      <td>0.145291</td>
+      <td>1999-02-01</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>149874.0</td>
+      <td>0.278265</td>
+      <td>0.665859</td>
+      <td>1999-03-01</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>120420.0</td>
+      <td>-0.196525</td>
+      <td>0.188476</td>
+      <td>1999-04-01</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>117676.0</td>
+      <td>-0.022787</td>
+      <td>0.049901</td>
+      <td>1999-05-01</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>90167.0</td>
+      <td>-0.233769</td>
+      <td>-0.063696</td>
+      <td>1999-06-01</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>96655.0</td>
+      <td>0.071955</td>
+      <td>0.070542</td>
+      <td>1999-07-01</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>95049.0</td>
+      <td>-0.016616</td>
+      <td>-0.229268</td>
+      <td>1999-08-01</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>99349.0</td>
+      <td>0.045240</td>
+      <td>-0.178085</td>
+      <td>1999-09-01</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>104819.0</td>
+      <td>0.055058</td>
+      <td>-0.136361</td>
+      <td>1999-10-01</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>116060.0</td>
+      <td>0.107242</td>
+      <td>0.231223</td>
+      <td>1999-11-01</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>137369.0</td>
+      <td>0.183603</td>
+      <td>0.266050</td>
+      <td>1999-12-01</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>135855.0</td>
+      <td>-0.011021</td>
+      <td>0.158698</td>
+      <td>2000-01-01</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>151766.0</td>
+      <td>0.117118</td>
+      <td>0.294402</td>
+      <td>2000-02-01</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>155078.0</td>
+      <td>0.021823</td>
+      <td>0.034723</td>
+      <td>2000-03-01</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>155078.0</td>
+      <td>0.000000</td>
+      <td>0.287809</td>
+      <td>2000-04-01</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>156304.0</td>
+      <td>0.007906</td>
+      <td>0.328257</td>
+      <td>2000-05-01</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>177070.0</td>
+      <td>0.132856</td>
+      <td>0.963801</td>
+      <td>2000-06-01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>195320.0</td>
+      <td>0.103067</td>
+      <td>1.020796</td>
+      <td>2000-07-01</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>209634.0</td>
+      <td>0.073285</td>
+      <td>1.205536</td>
+      <td>2000-08-01</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>217271.0</td>
+      <td>0.036430</td>
+      <td>1.186947</td>
+      <td>2000-09-01</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>200495.0</td>
+      <td>-0.077212</td>
+      <td>0.912773</td>
+      <td>2000-10-01</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>181286.0</td>
+      <td>-0.095808</td>
+      <td>0.562002</td>
+      <td>2000-11-01</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>140593.0</td>
+      <td>-0.224469</td>
+      <td>0.023470</td>
+      <td>2000-12-01</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>196716.0</td>
+      <td>0.399188</td>
+      <td>0.447985</td>
+      <td>2001-01-01</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>219686.0</td>
+      <td>0.116767</td>
+      <td>0.447531</td>
+      <td>2001-02-01</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>200800.0</td>
+      <td>-0.085968</td>
+      <td>0.294832</td>
+      <td>2001-03-01</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>186130.0</td>
+      <td>-0.073058</td>
+      <td>0.200235</td>
+      <td>2001-04-01</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>159284.0</td>
+      <td>-0.144233</td>
+      <td>0.019065</td>
+      <td>2001-05-01</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>154313.0</td>
+      <td>-0.031208</td>
+      <td>-0.128520</td>
+      <td>2001-06-01</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>170264.0</td>
+      <td>0.103368</td>
+      <td>-0.128282</td>
+      <td>2001-07-01</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>179908.0</td>
+      <td>0.056641</td>
+      <td>-0.141800</td>
+      <td>2001-08-01</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>195275.0</td>
+      <td>0.085416</td>
+      <td>-0.101238</td>
+      <td>2001-09-01</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>194762.0</td>
+      <td>-0.002627</td>
+      <td>-0.028594</td>
+      <td>2001-10-01</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>194762.0</td>
+      <td>0.000000</td>
+      <td>0.074336</td>
+      <td>2001-11-01</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>219323.0</td>
+      <td>0.126108</td>
+      <td>0.559985</td>
+      <td>2001-12-01</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>194676.0</td>
+      <td>-0.112378</td>
+      <td>-0.010370</td>
+      <td>2002-01-01</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>183813.0</td>
+      <td>-0.055800</td>
+      <td>-0.163292</td>
+      <td>2002-02-01</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>191118.0</td>
+      <td>0.039741</td>
+      <td>-0.048217</td>
+      <td>2002-03-01</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>201823.0</td>
+      <td>0.056013</td>
+      <td>0.084312</td>
+      <td>2002-04-01</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>204308.0</td>
+      <td>0.012313</td>
+      <td>0.282665</td>
+      <td>2002-05-01</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>224011.0</td>
+      <td>0.096438</td>
+      <td>0.451666</td>
+      <td>2002-06-01</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>215991.0</td>
+      <td>-0.035802</td>
+      <td>0.268565</td>
+      <td>2002-07-01</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>202436.0</td>
+      <td>-0.062757</td>
+      <td>0.125220</td>
+      <td>2002-08-01</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>170180.0</td>
+      <td>-0.159339</td>
+      <td>-0.128511</td>
+      <td>2002-09-01</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>174584.0</td>
+      <td>0.025878</td>
+      <td>-0.103603</td>
+      <td>2002-10-01</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>252503.0</td>
+      <td>0.446312</td>
+      <td>0.296470</td>
+      <td>2002-11-01</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>234742.0</td>
+      <td>-0.070340</td>
+      <td>0.070303</td>
+      <td>2002-12-01</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>246911.0</td>
+      <td>0.051840</td>
+      <td>0.268318</td>
+      <td>2003-01-01</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>241928.0</td>
+      <td>-0.020181</td>
+      <td>0.316164</td>
+      <td>2003-02-01</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>245379.0</td>
+      <td>0.014265</td>
+      <td>0.283914</td>
+      <td>2003-03-01</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>252980.0</td>
+      <td>0.030977</td>
+      <td>0.253475</td>
+      <td>2003-04-01</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>average_sales_price</th>
+      <th>month_over_month_change</th>
+      <th>year_over_year_change</th>
+      <th>date_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>55742.0</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>65333.0</td>
+      <td>0.172061</td>
+      <td>NaN</td>
+      <td>1995-02-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>68339.0</td>
+      <td>0.046010</td>
+      <td>NaN</td>
+      <td>1995-03-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>79708.0</td>
+      <td>0.166362</td>
+      <td>NaN</td>
+      <td>1995-04-01</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>106694.0</td>
+      <td>0.338561</td>
+      <td>NaN</td>
+      <td>1995-05-01</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>110721.0</td>
+      <td>0.037743</td>
+      <td>NaN</td>
+      <td>1995-06-01</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>124251.0</td>
+      <td>0.122199</td>
+      <td>NaN</td>
+      <td>1995-07-01</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>109764.0</td>
+      <td>-0.116595</td>
+      <td>NaN</td>
+      <td>1995-08-01</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>100026.0</td>
+      <td>-0.088718</td>
+      <td>NaN</td>
+      <td>1995-09-01</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>93218.0</td>
+      <td>-0.068062</td>
+      <td>NaN</td>
+      <td>1995-10-01</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>76941.0</td>
+      <td>-0.174612</td>
+      <td>NaN</td>
+      <td>1995-11-01</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>79872.0</td>
+      <td>0.038094</td>
+      <td>NaN</td>
+      <td>1995-12-01</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>64916.0</td>
+      <td>-0.187250</td>
+      <td>0.164580</td>
+      <td>1996-01-01</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>64916.0</td>
+      <td>0.000000</td>
+      <td>-0.006383</td>
+      <td>1996-02-01</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>92212.0</td>
+      <td>0.420482</td>
+      <td>0.349332</td>
+      <td>1996-03-01</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>93649.0</td>
+      <td>0.015584</td>
+      <td>0.174901</td>
+      <td>1996-04-01</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>95732.0</td>
+      <td>0.022243</td>
+      <td>-0.102742</td>
+      <td>1996-05-01</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>80352.0</td>
+      <td>-0.160657</td>
+      <td>-0.274284</td>
+      <td>1996-06-01</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>92724.0</td>
+      <td>0.153973</td>
+      <td>-0.253736</td>
+      <td>1996-07-01</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>94845.0</td>
+      <td>0.022874</td>
+      <td>-0.135919</td>
+      <td>1996-08-01</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>114060.0</td>
+      <td>0.202594</td>
+      <td>0.140304</td>
+      <td>1996-09-01</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>114060.0</td>
+      <td>0.000000</td>
+      <td>0.223583</td>
+      <td>1996-10-01</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>114060.0</td>
+      <td>0.000000</td>
+      <td>0.482435</td>
+      <td>1996-11-01</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>170822.0</td>
+      <td>0.497650</td>
+      <td>1.138697</td>
+      <td>1996-12-01</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>129077.0</td>
+      <td>-0.244377</td>
+      <td>0.988370</td>
+      <td>1997-01-01</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>110289.0</td>
+      <td>-0.145557</td>
+      <td>0.698949</td>
+      <td>1997-02-01</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>95246.0</td>
+      <td>-0.136396</td>
+      <td>0.032902</td>
+      <td>1997-03-01</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>92465.0</td>
+      <td>-0.029198</td>
+      <td>-0.012643</td>
+      <td>1997-04-01</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>108464.0</td>
+      <td>0.173028</td>
+      <td>0.132996</td>
+      <td>1997-05-01</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>117594.0</td>
+      <td>0.084175</td>
+      <td>0.463486</td>
+      <td>1997-06-01</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>137931.0</td>
+      <td>0.172942</td>
+      <td>0.487544</td>
+      <td>1997-07-01</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>136870.0</td>
+      <td>-0.007692</td>
+      <td>0.443091</td>
+      <td>1997-08-01</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>156824.0</td>
+      <td>0.145788</td>
+      <td>0.374925</td>
+      <td>1997-09-01</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>145607.0</td>
+      <td>-0.071526</td>
+      <td>0.276583</td>
+      <td>1997-10-01</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>160997.0</td>
+      <td>0.105695</td>
+      <td>0.411511</td>
+      <td>1997-11-01</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>149920.0</td>
+      <td>-0.068803</td>
+      <td>-0.122361</td>
+      <td>1997-12-01</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>123150.0</td>
+      <td>-0.178562</td>
+      <td>-0.045918</td>
+      <td>1998-01-01</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>102374.0</td>
+      <td>-0.168705</td>
+      <td>-0.071766</td>
+      <td>1998-02-01</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>89968.0</td>
+      <td>-0.121183</td>
+      <td>-0.055414</td>
+      <td>1998-03-01</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>101323.0</td>
+      <td>0.126212</td>
+      <td>0.095798</td>
+      <td>1998-04-01</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>112083.0</td>
+      <td>0.106195</td>
+      <td>0.033366</td>
+      <td>1998-05-01</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>96301.0</td>
+      <td>-0.140806</td>
+      <td>-0.181072</td>
+      <td>1998-06-01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>90286.0</td>
+      <td>-0.062460</td>
+      <td>-0.345426</td>
+      <td>1998-07-01</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>123323.0</td>
+      <td>0.365915</td>
+      <td>-0.098977</td>
+      <td>1998-08-01</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>120875.0</td>
+      <td>-0.019850</td>
+      <td>-0.229231</td>
+      <td>1998-09-01</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>121369.0</td>
+      <td>0.004087</td>
+      <td>-0.166462</td>
+      <td>1998-10-01</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>94264.0</td>
+      <td>-0.223327</td>
+      <td>-0.414498</td>
+      <td>1998-11-01</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>108502.0</td>
+      <td>0.151044</td>
+      <td>-0.276267</td>
+      <td>1998-12-01</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>117248.0</td>
+      <td>0.080607</td>
+      <td>-0.047925</td>
+      <td>1999-01-01</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>117248.0</td>
+      <td>0.000000</td>
+      <td>0.145291</td>
+      <td>1999-02-01</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>149874.0</td>
+      <td>0.278265</td>
+      <td>0.665859</td>
+      <td>1999-03-01</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>120420.0</td>
+      <td>-0.196525</td>
+      <td>0.188476</td>
+      <td>1999-04-01</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>117676.0</td>
+      <td>-0.022787</td>
+      <td>0.049901</td>
+      <td>1999-05-01</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>90167.0</td>
+      <td>-0.233769</td>
+      <td>-0.063696</td>
+      <td>1999-06-01</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>96655.0</td>
+      <td>0.071955</td>
+      <td>0.070542</td>
+      <td>1999-07-01</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>95049.0</td>
+      <td>-0.016616</td>
+      <td>-0.229268</td>
+      <td>1999-08-01</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>99349.0</td>
+      <td>0.045240</td>
+      <td>-0.178085</td>
+      <td>1999-09-01</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>104819.0</td>
+      <td>0.055058</td>
+      <td>-0.136361</td>
+      <td>1999-10-01</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>116060.0</td>
+      <td>0.107242</td>
+      <td>0.231223</td>
+      <td>1999-11-01</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>137369.0</td>
+      <td>0.183603</td>
+      <td>0.266050</td>
+      <td>1999-12-01</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>135855.0</td>
+      <td>-0.011021</td>
+      <td>0.158698</td>
+      <td>2000-01-01</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>151766.0</td>
+      <td>0.117118</td>
+      <td>0.294402</td>
+      <td>2000-02-01</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>155078.0</td>
+      <td>0.021823</td>
+      <td>0.034723</td>
+      <td>2000-03-01</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>155078.0</td>
+      <td>0.000000</td>
+      <td>0.287809</td>
+      <td>2000-04-01</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>156304.0</td>
+      <td>0.007906</td>
+      <td>0.328257</td>
+      <td>2000-05-01</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>177070.0</td>
+      <td>0.132856</td>
+      <td>0.963801</td>
+      <td>2000-06-01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>195320.0</td>
+      <td>0.103067</td>
+      <td>1.020796</td>
+      <td>2000-07-01</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>209634.0</td>
+      <td>0.073285</td>
+      <td>1.205536</td>
+      <td>2000-08-01</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>217271.0</td>
+      <td>0.036430</td>
+      <td>1.186947</td>
+      <td>2000-09-01</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>200495.0</td>
+      <td>-0.077212</td>
+      <td>0.912773</td>
+      <td>2000-10-01</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>181286.0</td>
+      <td>-0.095808</td>
+      <td>0.562002</td>
+      <td>2000-11-01</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>140593.0</td>
+      <td>-0.224469</td>
+      <td>0.023470</td>
+      <td>2000-12-01</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>196716.0</td>
+      <td>0.399188</td>
+      <td>0.447985</td>
+      <td>2001-01-01</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>219686.0</td>
+      <td>0.116767</td>
+      <td>0.447531</td>
+      <td>2001-02-01</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>200800.0</td>
+      <td>-0.085968</td>
+      <td>0.294832</td>
+      <td>2001-03-01</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>186130.0</td>
+      <td>-0.073058</td>
+      <td>0.200235</td>
+      <td>2001-04-01</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>159284.0</td>
+      <td>-0.144233</td>
+      <td>0.019065</td>
+      <td>2001-05-01</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>154313.0</td>
+      <td>-0.031208</td>
+      <td>-0.128520</td>
+      <td>2001-06-01</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>170264.0</td>
+      <td>0.103368</td>
+      <td>-0.128282</td>
+      <td>2001-07-01</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>179908.0</td>
+      <td>0.056641</td>
+      <td>-0.141800</td>
+      <td>2001-08-01</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>195275.0</td>
+      <td>0.085416</td>
+      <td>-0.101238</td>
+      <td>2001-09-01</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>194762.0</td>
+      <td>-0.002627</td>
+      <td>-0.028594</td>
+      <td>2001-10-01</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>194762.0</td>
+      <td>0.000000</td>
+      <td>0.074336</td>
+      <td>2001-11-01</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>219323.0</td>
+      <td>0.126108</td>
+      <td>0.559985</td>
+      <td>2001-12-01</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>194676.0</td>
+      <td>-0.112378</td>
+      <td>-0.010370</td>
+      <td>2002-01-01</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>183813.0</td>
+      <td>-0.055800</td>
+      <td>-0.163292</td>
+      <td>2002-02-01</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>191118.0</td>
+      <td>0.039741</td>
+      <td>-0.048217</td>
+      <td>2002-03-01</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>201823.0</td>
+      <td>0.056013</td>
+      <td>0.084312</td>
+      <td>2002-04-01</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>204308.0</td>
+      <td>0.012313</td>
+      <td>0.282665</td>
+      <td>2002-05-01</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>224011.0</td>
+      <td>0.096438</td>
+      <td>0.451666</td>
+      <td>2002-06-01</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>215991.0</td>
+      <td>-0.035802</td>
+      <td>0.268565</td>
+      <td>2002-07-01</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>202436.0</td>
+      <td>-0.062757</td>
+      <td>0.125220</td>
+      <td>2002-08-01</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>170180.0</td>
+      <td>-0.159339</td>
+      <td>-0.128511</td>
+      <td>2002-09-01</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>174584.0</td>
+      <td>0.025878</td>
+      <td>-0.103603</td>
+      <td>2002-10-01</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>252503.0</td>
+      <td>0.446312</td>
+      <td>0.296470</td>
+      <td>2002-11-01</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>234742.0</td>
+      <td>-0.070340</td>
+      <td>0.070303</td>
+      <td>2002-12-01</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>246911.0</td>
+      <td>0.051840</td>
+      <td>0.268318</td>
+      <td>2003-01-01</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>241928.0</td>
+      <td>-0.020181</td>
+      <td>0.316164</td>
+      <td>2003-02-01</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>245379.0</td>
+      <td>0.014265</td>
+      <td>0.283914</td>
+      <td>2003-03-01</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>252980.0</td>
+      <td>0.030977</td>
+      <td>0.253475</td>
+      <td>2003-04-01</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">average_sales_price</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_average_sales_price"></div><b>📃 Summary:</b> Sales price of housing in the area<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">month_over_month_change</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_month_over_month_change"></div><b>📃 Summary:</b> Month-over-month change in housing prices<br><b>❓ Missing:</b> First month in dataset has no previous month for comparison.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">year_over_year_change</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_year_over_year_change"></div><b>📃 Summary:</b> Year-over-year change in housing prices<br><b>❓ Missing:</b> First year in dataset has no previous year for comparison.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">date_</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_date_"></div><b>📃 Summary:</b> Date of the housing price data<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table shows price indices for housing in NYC boroughs. Each index uses a repeat-sales method of comparing the sales prices of the same properties. It includes data for Downtown, Midtown, Upper East Side, and other neighborhoods. Each partition has columns for date, sales price, month-over-month change, and year-over-year change. The data spans from 1995 to at least 2018. It tracks housing market trends across various NYC areas.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>3</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>date_</td>
+      <td>Date of the housing price data</td>
+      <td>date_</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>sales</td>
+      <td>Sales price of housing in the area</td>
+      <td>average_sales_price</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>MoM</td>
+      <td>Month-over-month change in housing prices</td>
+      <td>month_over_month_change</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>YoY</td>
+      <td>Year-over-year change in housing prices</td>
+      <td>year_over_year_change</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>1</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>date_</td>
+      <td>CAST("date_" AS DATE)</td>
+      <td>To transform the 'date_' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the dates in the column ('YYYY-MM-DD') is already compatible with the standard SQL date format, so we don't need to use strptime() or any other date parsing function. A direct CAST to DATE will work.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>2</b> columns have missing values<br>
+                    ✔️ <b>2</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>month_over_month_change</td>
+      <td>0.35</td>
+      <td>True</td>
+      <td>First month in dataset has no previous month for comparison.</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>year_over_year_change</td>
+      <td>4.21</td>
+      <td>True</td>
+      <td>First year in dataset has no previous year for comparison.</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 68493.875, 'y': 9}, {'x': 93997.625, 'y': 21}, {'x': 119501.375, 'y': 21}, {'x': 145005.125, 'y': 14}, {'x': 170508.875, 'y': 9}, {'x': 196012.625, 'y': 15}, {'x': 221516.375, 'y': 9}, {'x': 247020.125, 'y': 10}, {'x': 272523.875, 'y': 3}, {'x': 298027.625, 'y': 4}, {'x': 323531.375, 'y': 6}, {'x': 349035.125, 'y': 10}, {'x': 374538.875, 'y': 36}, {'x': 400042.625, 'y': 20}, {'x': 425546.375, 'y': 17}, {'x': 451050.125, 'y': 37}, {'x': 476553.875, 'y': 7}, {'x': 502057.625, 'y': 5}, {'x': 527561.375, 'y': 21}, {'x': 553065.125, 'y': 11}];
+    binWidth = 25503.75;
+    drawHistogram("hist_viz_average_sales_price", data, binWidth);
+data = [{'x': -0.2258264992647807, 'y': 4}, {'x': -0.18872512189428256, 'y': 5}, {'x': -0.1516237445237844, 'y': 8}, {'x': -0.11452236715328624, 'y': 4}, {'x': -0.0774209897827881, 'y': 13}, {'x': -0.04031961241228993, 'y': 31}, {'x': -0.0032182350417917782, 'y': 108}, {'x': 0.03388314232870637, 'y': 64}, {'x': 0.07098451969920455, 'y': 16}, {'x': 0.1080858970697027, 'y': 13}, {'x': 0.14518727444020085, 'y': 5}, {'x': 0.18228865181069903, 'y': 5}, {'x': 0.21939002918119718, 'y': 1}, {'x': 0.2564914065516953, 'y': 0}, {'x': 0.29359278392219346, 'y': 1}, {'x': 0.33069416129269164, 'y': 1}, {'x': 0.36779553866318976, 'y': 1}, {'x': 0.40489691603368794, 'y': 2}, {'x': 0.4419982934041861, 'y': 1}, {'x': 0.47909967077468424, 'y': 1}];
+    binWidth = 0.03710137737049816;
+    drawHistogram("hist_viz_month_over_month_change", data, binWidth);
+data = [{'x': -0.3739975443347837, 'y': 2}, {'x': -0.29299581939912867, 'y': 3}, {'x': -0.21199409446347373, 'y': 4}, {'x': -0.13099236952781876, 'y': 28}, {'x': -0.04999064459216376, 'y': 41}, {'x': 0.031011080343491204, 'y': 72}, {'x': 0.1120128052791462, 'y': 45}, {'x': 0.1930145302148012, 'y': 23}, {'x': 0.27401625515045613, 'y': 19}, {'x': 0.35501798008611113, 'y': 12}, {'x': 0.4360197050217661, 'y': 9}, {'x': 0.5170214299574211, 'y': 4}, {'x': 0.598023154893076, 'y': 2}, {'x': 0.679024879828731, 'y': 2}, {'x': 0.7600266047643861, 'y': 0}, {'x': 0.841028329700041, 'y': 0}, {'x': 0.922030054635696, 'y': 1}, {'x': 1.003031779571351, 'y': 3}, {'x': 1.084033504507006, 'y': 0}, {'x': 1.165035229442661, 'y': 3}];
+    binWidth = 0.08100172493565498;
+    drawHistogram("hist_viz_year_over_year_change", data, binWidth);
+data = [{'label': '1995-06-01', 'value': 0.3508771929824561}, {'label': '1995-09-01', 'value': 0.3508771929824561}, {'label': '1995-10-01', 'value': 0.3508771929824561}, {'label': '1996-07-01', 'value': 0.3508771929824561}, {'label': '1996-08-01', 'value': 0.3508771929824561}, {'label': 'Other values', 'value': 98.24561403508771}];
+    drawBarChart("bar_viz_date_", data);
+
+
+</script>
+</body>
+</html>

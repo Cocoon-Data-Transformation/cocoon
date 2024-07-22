@@ -1,0 +1,5551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Cocoon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+
+<style>
+  html {
+    height: 100%; /* Ensure the html element covers the full height */
+    background-color: #f0f0f0; /* Set your desired background color */
+  }
+
+  body {
+    /* Scale the entire content to 70% */
+    transform: scale(0.75);
+    transform-origin: top left; /* Adjust as needed */
+    width: 133.33%; /* Increase width to fit, since scaling down shrinks the viewport */
+    height: 133.33%; /* Adjust height similarly if necessary */
+    overflow: auto; /* Add scrollbars if content overflows */
+  }
+
+  body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+  }
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* This ensures the items are aligned in the middle vertically */
+  }
+
+  .map-container {
+    width: 300px;
+    height: 200px;
+    border: 1px solid black;
+  }
+  
+  .histogram-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .chart-container { /* Style for the container */
+    width: 200px;
+    height: 80px;
+    border: 1px solid black;
+  }
+  
+  .bar-chart-container {
+    width: 300px;
+    height: 100px;
+    border: 1px solid black;
+  }
+
+  .dashboard {
+    display: grid;
+    grid-template-areas:
+      "main-panel right-panel"
+      "bottom-panel right-panel";
+    grid-template-rows: 1fr 1fr; /* Equal height for both rows */
+    gap: 10px;
+    height: 130vh;
+    padding: 10px;
+    background-color: #f0f0f0;
+  }
+
+  .main-panel {
+    grid-area: main-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    position: relative; /* Set the main-panel to relative to position the chat box inside it */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column; /* Stack the children vertically */
+  }
+
+  .table-container {
+    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-y: auto; /* Allows vertical scrolling for the table */
+    flex-grow: 1;
+    max-width: 100%; /* Ensures that the container doesn't exceed the width of its parent */
+    display: none;
+  }
+
+  .right-panel {
+    grid-area: right-panel;
+    background-color: #fff;
+    padding: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-y: auto; /* Enable scrolling for the panel */
+    width: 360px;
+  }
+
+  .indent {
+    padding-left: 5px; /* Increase as needed for deeper indents */
+    font-size: small;
+    display: none;
+  }
+
+  .card-item {
+    display: flex;
+    align-items: center;
+    background-color: #626262; /* White background for the card */
+    border: 1px solid #626262; /* Light grey border */
+    color: white;
+    border-radius: 4px; /* Slightly rounded corners */
+    margin-bottom: 6px; /* Space between card items */
+    padding: 3px;
+    padding-left: 10px;
+    width: 320px;
+  }
+
+  .card-item-collapsed {
+    background-color: #d0d0d0; /* Lighter background for collapsed card */
+    border: 1px solid #d0d0d0; /* Lighter border for collapsed card */
+    color: black; /* Change text color for better contrast on light background */
+  }
+
+  .icon {
+    /* Styles for the icon, you can replace it with an actual icon font or image */
+    padding-right: 20px;
+  }
+
+  .field-name {
+    /* Styles for the field name */
+    flex-grow: 1;
+    padding-right: 20px;
+    font-size: 14px;
+
+  }
+
+  .circle {
+    background-color: red;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .circle2 {
+    background-color: green;
+    font-size: small;
+    border-radius: 50%;
+    color: white;
+    padding: 0px;
+    text-align: center;
+    display: inline-block;
+    /* Changes for a better circle */
+      width: 16px;         /* Fixed width */
+      height: 16px;        /* Fixed height */
+      line-height: 16px;   /* Center the number vertically */
+  }
+
+  .card-controls {
+    display: flex;
+  }
+
+  .drop-down-btn,
+  .add-btn {
+    /* Shared styles for buttons */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 2px; /* Slightly rounded corners for the buttons */
+    cursor: pointer;
+    padding: 2px 6px; /* Smaller padding for a compact look */
+    margin-left: 4px; /* Spacing between buttons */
+  }
+
+  .drop-down-btn:hover,
+  .add-btn:hover {
+    background-color: #45a049; /* Darker green on hover */
+  }
+
+  .bottom-panel {
+    grid-area: bottom-panel;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    overflow-x: auto;
+  }
+
+  
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #dddddd;
+  border-right: 1px solid #dddddd;
+}
+
+th:last-child, td:last-child {
+  border-right: none; /* Removes the border from the last cell of each row */
+}
+
+thead tr {
+  background-color: #bebebe; /* Changed color for header */
+  color: #ffffff; /* Changed text color for better contrast */
+  text-align: left;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background-color: #bebebe; /* Ensure the sticky header has the same background color */
+}
+
+tbody tr {
+  background-color: #f9f9f9; /* Lighter color for content rows */
+  font-size: 14px
+}
+
+tbody tr:last-of-type {
+  border-bottom: 2px solid #6e6e6e;
+}
+
+tbody tr.active-row {
+  font-weight: bold;
+  color: #6e6e6e;
+}
+
+
+  .link {
+      fill: none;
+      stroke: #555;
+      stroke-opacity: 0.4;
+      stroke-width: 1.5px;
+  }
+
+  .node {
+      cursor: pointer;
+  }
+
+  .node circle {
+      fill: #999;
+      stroke: black;
+      stroke-width: 1.5px;
+  }
+
+  .node text {
+      font: 12px sans-serif;
+      fill: #555;
+  }
+
+  .icons {
+    /* Making the icon larger */
+    font-size: 20px; /* You can adjust this value as needed */
+    color: white; /* Icon color */
+    background-color: black; /* Background color */
+    padding: 6px 6px; /* Top/bottom padding and left/right padding */
+    border-radius: 3px; /* Making the corners sharp for a rectangular look */
+  }
+
+  .switch-container {
+    display: flex;
+    align-items: center;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    margin: 0 10px;
+  }
+
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+  }
+
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+
+  .label-text {
+    font-family: Verdana, sans-serif;
+    font-size: 14px;
+  }
+
+  .table-container.active {
+    display: block;
+  }
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 12px;
+  margin-right: 6px;
+  border-radius: 4px;
+}
+
+.tag-red {
+  background-color: #ffcccb;
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.tag-blue {
+  background-color: #e0f2ff;
+  color: #0066ff;
+  border: 1px solid #0066ff;
+}
+
+.tag-purple {
+  background-color: #e6ccff;
+  color: #9900ff;
+  border: 1px solid #9900ff;
+}
+
+code {
+  font-family: Consolas,"courier new";
+  color: crimson;
+  background-color: #f1f1f1;
+  padding: 2px;
+  font-size: 105%;
+}
+</style>
+
+</head>
+<body>
+
+<div class="dashboard">
+
+    <div class="main-panel">
+        <div class="container">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
+    <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
+    <div style="margin: 0; padding: 0;"><h2 style="margin: 0; padding: 0;">Data Formatting</h2>
+        <p style="margin: 0; padding: 0;">Powered by Cocoon</p>
+    </div>
+</a>
+            <div><h1>priceIndex_condos_co_ops_homes_Manhattan_2018_09</h1>(First 100 rows)</div>
+            <div>
+                <div class="switch-container">
+<span class="label-text">Before</span>
+<label class="switch">
+    <input type="checkbox">
+    <span class="slider"></span>
+</label>
+<span class="label-text">After</span>
+</div>
+            </div>
+        </div>
+
+        <div class="table-container before active">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Manhattan_All</th>
+      <th>Manhattan_Q1</th>
+      <th>Manhattan_Q2</th>
+      <th>Manhattan_Q3</th>
+      <th>Manhattan_Q4</th>
+      <th>Manhattan_Q5</th>
+      <th>Manhattan_All_MoM</th>
+      <th>Manhattan_Q1_MoM</th>
+      <th>Manhattan_Q2_MoM</th>
+      <th>Manhattan_Q3_MoM</th>
+      <th>Manhattan_Q4_MoM</th>
+      <th>Manhattan_Q5_MoM</th>
+      <th>Manhattan_All_YoY</th>
+      <th>Manhattan_Q1_YoY</th>
+      <th>Manhattan_Q2_YoY</th>
+      <th>Manhattan_Q3_YoY</th>
+      <th>Manhattan_Q4_YoY</th>
+      <th>Manhattan_Q5_YoY</th>
+      <th>date_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>276994.0</td>
+      <td>68864.803318</td>
+      <td>169752.133088</td>
+      <td>280318.552834</td>
+      <td>5.206496e+05</td>
+      <td>1.404508e+06</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>256149.0</td>
+      <td>66488.512211</td>
+      <td>160929.245951</td>
+      <td>247855.558464</td>
+      <td>4.850192e+05</td>
+      <td>1.222565e+06</td>
+      <td>-0.075254</td>
+      <td>-0.034507</td>
+      <td>-0.051975</td>
+      <td>-0.115808</td>
+      <td>-0.068435</td>
+      <td>-0.129542</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-02-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>254342.0</td>
+      <td>64810.537405</td>
+      <td>153576.925673</td>
+      <td>250216.367303</td>
+      <td>4.731897e+05</td>
+      <td>1.276202e+06</td>
+      <td>-0.007054</td>
+      <td>-0.025237</td>
+      <td>-0.045687</td>
+      <td>0.009525</td>
+      <td>-0.024390</td>
+      <td>0.043872</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-03-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>260790.0</td>
+      <td>70825.190697</td>
+      <td>149882.697876</td>
+      <td>261208.084885</td>
+      <td>4.938930e+05</td>
+      <td>1.265281e+06</td>
+      <td>0.025352</td>
+      <td>0.092804</td>
+      <td>-0.024055</td>
+      <td>0.043929</td>
+      <td>0.043753</td>
+      <td>-0.008557</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-04-01</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>266956.0</td>
+      <td>72709.942160</td>
+      <td>157849.650444</td>
+      <td>277516.000185</td>
+      <td>5.033581e+05</td>
+      <td>1.258718e+06</td>
+      <td>0.023644</td>
+      <td>0.026611</td>
+      <td>0.053155</td>
+      <td>0.062433</td>
+      <td>0.019164</td>
+      <td>-0.005188</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-05-01</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>269324.0</td>
+      <td>82009.425584</td>
+      <td>163273.128248</td>
+      <td>276688.356681</td>
+      <td>4.997969e+05</td>
+      <td>1.280429e+06</td>
+      <td>0.008870</td>
+      <td>0.127898</td>
+      <td>0.034359</td>
+      <td>-0.002982</td>
+      <td>-0.007075</td>
+      <td>0.017249</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-06-01</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>271663.0</td>
+      <td>79003.157440</td>
+      <td>160628.485758</td>
+      <td>277078.639825</td>
+      <td>4.982674e+05</td>
+      <td>1.306320e+06</td>
+      <td>0.008685</td>
+      <td>-0.036658</td>
+      <td>-0.016198</td>
+      <td>0.001411</td>
+      <td>-0.003060</td>
+      <td>0.020220</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-07-01</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>272533.0</td>
+      <td>78851.049691</td>
+      <td>163184.582665</td>
+      <td>273884.003130</td>
+      <td>4.947829e+05</td>
+      <td>1.305733e+06</td>
+      <td>0.003202</td>
+      <td>-0.001925</td>
+      <td>0.015913</td>
+      <td>-0.011530</td>
+      <td>-0.006993</td>
+      <td>-0.000449</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-08-01</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>276948.0</td>
+      <td>79884.226976</td>
+      <td>162229.573965</td>
+      <td>279074.615427</td>
+      <td>5.064712e+05</td>
+      <td>1.302371e+06</td>
+      <td>0.016200</td>
+      <td>0.013103</td>
+      <td>-0.005852</td>
+      <td>0.018952</td>
+      <td>0.023623</td>
+      <td>-0.002575</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-09-01</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>280744.0</td>
+      <td>83927.717979</td>
+      <td>170684.066289</td>
+      <td>278892.201316</td>
+      <td>5.175390e+05</td>
+      <td>1.278767e+06</td>
+      <td>0.013707</td>
+      <td>0.050617</td>
+      <td>0.052114</td>
+      <td>-0.000654</td>
+      <td>0.021853</td>
+      <td>-0.018124</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-10-01</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>270819.0</td>
+      <td>78767.775516</td>
+      <td>162337.205327</td>
+      <td>280150.327874</td>
+      <td>5.083173e+05</td>
+      <td>1.270289e+06</td>
+      <td>-0.035352</td>
+      <td>-0.061481</td>
+      <td>-0.048902</td>
+      <td>0.004511</td>
+      <td>-0.017818</td>
+      <td>-0.006630</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-11-01</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>268106.0</td>
+      <td>78081.850228</td>
+      <td>161322.496788</td>
+      <td>281698.616421</td>
+      <td>4.795738e+05</td>
+      <td>1.225941e+06</td>
+      <td>-0.010018</td>
+      <td>-0.008708</td>
+      <td>-0.006251</td>
+      <td>0.005527</td>
+      <td>-0.056546</td>
+      <td>-0.034911</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-12-01</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>276721.0</td>
+      <td>78595.606013</td>
+      <td>166571.776336</td>
+      <td>289225.083480</td>
+      <td>4.999958e+05</td>
+      <td>1.265204e+06</td>
+      <td>0.032133</td>
+      <td>0.006580</td>
+      <td>0.032539</td>
+      <td>0.026718</td>
+      <td>0.042584</td>
+      <td>0.032027</td>
+      <td>-0.000986</td>
+      <td>0.141303</td>
+      <td>-0.018735</td>
+      <td>0.031773</td>
+      <td>-0.039669</td>
+      <td>-0.099183</td>
+      <td>1996-01-01</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>268285.0</td>
+      <td>63698.599010</td>
+      <td>182371.001164</td>
+      <td>284888.393785</td>
+      <td>5.109525e+05</td>
+      <td>1.242774e+06</td>
+      <td>-0.030486</td>
+      <td>-0.189540</td>
+      <td>0.094849</td>
+      <td>-0.014994</td>
+      <td>0.021913</td>
+      <td>-0.017728</td>
+      <td>0.047379</td>
+      <td>-0.041961</td>
+      <td>0.133237</td>
+      <td>0.149413</td>
+      <td>0.053469</td>
+      <td>0.016530</td>
+      <td>1996-02-01</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>278617.0</td>
+      <td>69382.151837</td>
+      <td>182879.266594</td>
+      <td>284420.050272</td>
+      <td>5.120290e+05</td>
+      <td>1.307927e+06</td>
+      <td>0.038511</td>
+      <td>0.089226</td>
+      <td>0.002787</td>
+      <td>-0.001644</td>
+      <td>0.002107</td>
+      <td>0.052425</td>
+      <td>0.095442</td>
+      <td>0.070538</td>
+      <td>0.190799</td>
+      <td>0.136696</td>
+      <td>0.082080</td>
+      <td>0.024859</td>
+      <td>1996-03-01</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>280016.0</td>
+      <td>76842.205593</td>
+      <td>176656.625405</td>
+      <td>278617.286159</td>
+      <td>5.216192e+05</td>
+      <td>1.250136e+06</td>
+      <td>0.005021</td>
+      <td>0.107521</td>
+      <td>-0.034026</td>
+      <td>-0.020402</td>
+      <td>0.018730</td>
+      <td>-0.044185</td>
+      <td>0.073722</td>
+      <td>0.084956</td>
+      <td>0.178633</td>
+      <td>0.066649</td>
+      <td>0.056138</td>
+      <td>-0.011970</td>
+      <td>1996-04-01</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>278604.0</td>
+      <td>81618.020675</td>
+      <td>174376.891815</td>
+      <td>273849.300762</td>
+      <td>5.123489e+05</td>
+      <td>1.268400e+06</td>
+      <td>-0.005043</td>
+      <td>0.062151</td>
+      <td>-0.012905</td>
+      <td>-0.017113</td>
+      <td>-0.017772</td>
+      <td>0.014610</td>
+      <td>0.043633</td>
+      <td>0.122515</td>
+      <td>0.104702</td>
+      <td>-0.013213</td>
+      <td>0.017862</td>
+      <td>0.007692</td>
+      <td>1996-05-01</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>273715.0</td>
+      <td>77843.593118</td>
+      <td>169875.489673</td>
+      <td>274820.069318</td>
+      <td>4.971116e+05</td>
+      <td>1.286509e+06</td>
+      <td>-0.017548</td>
+      <td>-0.046245</td>
+      <td>-0.025814</td>
+      <td>0.003545</td>
+      <td>-0.029740</td>
+      <td>0.014277</td>
+      <td>0.016304</td>
+      <td>-0.050797</td>
+      <td>0.040438</td>
+      <td>-0.006752</td>
+      <td>-0.005373</td>
+      <td>0.004748</td>
+      <td>1996-06-01</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>274595.0</td>
+      <td>75411.801726</td>
+      <td>168926.562560</td>
+      <td>285118.100980</td>
+      <td>5.068963e+05</td>
+      <td>1.293013e+06</td>
+      <td>0.003215</td>
+      <td>-0.031239</td>
+      <td>-0.005586</td>
+      <td>0.037472</td>
+      <td>0.019683</td>
+      <td>0.005056</td>
+      <td>0.010793</td>
+      <td>-0.045458</td>
+      <td>0.051660</td>
+      <td>0.029015</td>
+      <td>0.017318</td>
+      <td>-0.010186</td>
+      <td>1996-07-01</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>278571.0</td>
+      <td>77053.574075</td>
+      <td>170629.894264</td>
+      <td>286680.000783</td>
+      <td>5.110674e+05</td>
+      <td>1.287382e+06</td>
+      <td>0.014480</td>
+      <td>0.021771</td>
+      <td>0.010083</td>
+      <td>0.005478</td>
+      <td>0.008229</td>
+      <td>-0.004355</td>
+      <td>0.022155</td>
+      <td>-0.022796</td>
+      <td>0.045625</td>
+      <td>0.046721</td>
+      <td>0.032912</td>
+      <td>-0.014054</td>
+      <td>1996-08-01</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>281304.0</td>
+      <td>77510.614221</td>
+      <td>172395.760501</td>
+      <td>290059.350031</td>
+      <td>5.135826e+05</td>
+      <td>1.299889e+06</td>
+      <td>0.009811</td>
+      <td>0.005931</td>
+      <td>0.010349</td>
+      <td>0.011788</td>
+      <td>0.004921</td>
+      <td>0.009715</td>
+      <td>0.015729</td>
+      <td>-0.029713</td>
+      <td>0.062665</td>
+      <td>0.039361</td>
+      <td>0.014041</td>
+      <td>-0.001906</td>
+      <td>1996-09-01</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>278396.0</td>
+      <td>78036.409016</td>
+      <td>174656.713761</td>
+      <td>285695.157884</td>
+      <td>5.131431e+05</td>
+      <td>1.255697e+06</td>
+      <td>-0.010338</td>
+      <td>0.006784</td>
+      <td>0.013115</td>
+      <td>-0.015046</td>
+      <td>-0.000856</td>
+      <td>-0.033997</td>
+      <td>-0.008363</td>
+      <td>-0.070195</td>
+      <td>0.023275</td>
+      <td>0.024393</td>
+      <td>-0.008494</td>
+      <td>-0.018041</td>
+      <td>1996-10-01</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>290476.0</td>
+      <td>83685.358833</td>
+      <td>179804.520470</td>
+      <td>292168.389639</td>
+      <td>5.299837e+05</td>
+      <td>1.277956e+06</td>
+      <td>0.043391</td>
+      <td>0.072389</td>
+      <td>0.029474</td>
+      <td>0.022658</td>
+      <td>0.032819</td>
+      <td>0.017727</td>
+      <td>0.072584</td>
+      <td>0.062431</td>
+      <td>0.107599</td>
+      <td>0.042899</td>
+      <td>0.042624</td>
+      <td>0.006036</td>
+      <td>1996-11-01</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>286622.0</td>
+      <td>78190.468799</td>
+      <td>178353.879770</td>
+      <td>294532.642352</td>
+      <td>5.350491e+05</td>
+      <td>1.273222e+06</td>
+      <td>-0.013268</td>
+      <td>-0.065661</td>
+      <td>-0.008068</td>
+      <td>0.008092</td>
+      <td>0.009558</td>
+      <td>-0.003704</td>
+      <td>0.069062</td>
+      <td>0.001391</td>
+      <td>0.105574</td>
+      <td>0.045559</td>
+      <td>0.115676</td>
+      <td>0.038567</td>
+      <td>1996-12-01</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>300407.0</td>
+      <td>85971.869333</td>
+      <td>182970.712075</td>
+      <td>302196.761718</td>
+      <td>5.494652e+05</td>
+      <td>1.363724e+06</td>
+      <td>0.048095</td>
+      <td>0.099519</td>
+      <td>0.025886</td>
+      <td>0.026021</td>
+      <td>0.026944</td>
+      <td>0.071081</td>
+      <td>0.085595</td>
+      <td>0.093851</td>
+      <td>0.098450</td>
+      <td>0.044850</td>
+      <td>0.098940</td>
+      <td>0.077869</td>
+      <td>1997-01-01</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>300426.0</td>
+      <td>87099.347669</td>
+      <td>187502.961672</td>
+      <td>303462.856282</td>
+      <td>5.564340e+05</td>
+      <td>1.335981e+06</td>
+      <td>0.000063</td>
+      <td>0.013115</td>
+      <td>0.024770</td>
+      <td>0.004190</td>
+      <td>0.012683</td>
+      <td>-0.020343</td>
+      <td>0.119802</td>
+      <td>0.367367</td>
+      <td>0.028140</td>
+      <td>0.065199</td>
+      <td>0.089013</td>
+      <td>0.074999</td>
+      <td>1997-02-01</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>296342.0</td>
+      <td>84842.175289</td>
+      <td>187718.534330</td>
+      <td>303231.294991</td>
+      <td>5.516757e+05</td>
+      <td>1.315573e+06</td>
+      <td>-0.013594</td>
+      <td>-0.025915</td>
+      <td>0.001150</td>
+      <td>-0.000763</td>
+      <td>-0.008551</td>
+      <td>-0.015276</td>
+      <td>0.063618</td>
+      <td>0.222824</td>
+      <td>0.026462</td>
+      <td>0.066139</td>
+      <td>0.077431</td>
+      <td>0.005846</td>
+      <td>1997-03-01</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>306129.0</td>
+      <td>91158.447494</td>
+      <td>190348.091226</td>
+      <td>311901.736071</td>
+      <td>5.545857e+05</td>
+      <td>1.340768e+06</td>
+      <td>0.033026</td>
+      <td>0.074447</td>
+      <td>0.014008</td>
+      <td>0.028593</td>
+      <td>0.005275</td>
+      <td>0.019152</td>
+      <td>0.093255</td>
+      <td>0.186307</td>
+      <td>0.077503</td>
+      <td>0.119463</td>
+      <td>0.063200</td>
+      <td>0.072498</td>
+      <td>1997-04-01</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>308205.0</td>
+      <td>90609.116227</td>
+      <td>190424.967421</td>
+      <td>311927.011015</td>
+      <td>5.691011e+05</td>
+      <td>1.346939e+06</td>
+      <td>0.006781</td>
+      <td>-0.006026</td>
+      <td>0.000404</td>
+      <td>0.000081</td>
+      <td>0.026173</td>
+      <td>0.004602</td>
+      <td>0.106248</td>
+      <td>0.110161</td>
+      <td>0.092031</td>
+      <td>0.139046</td>
+      <td>0.110769</td>
+      <td>0.061919</td>
+      <td>1997-05-01</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>318391.0</td>
+      <td>91367.007148</td>
+      <td>198470.620511</td>
+      <td>316521.649803</td>
+      <td>5.756135e+05</td>
+      <td>1.364490e+06</td>
+      <td>0.033049</td>
+      <td>0.008364</td>
+      <td>0.042251</td>
+      <td>0.014730</td>
+      <td>0.011443</td>
+      <td>0.013030</td>
+      <td>0.163221</td>
+      <td>0.173725</td>
+      <td>0.168330</td>
+      <td>0.151741</td>
+      <td>0.157916</td>
+      <td>0.060614</td>
+      <td>1997-06-01</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>319594.0</td>
+      <td>91136.532076</td>
+      <td>199013.475738</td>
+      <td>315869.715799</td>
+      <td>5.818476e+05</td>
+      <td>1.363146e+06</td>
+      <td>0.003778</td>
+      <td>-0.002523</td>
+      <td>0.002735</td>
+      <td>-0.002060</td>
+      <td>0.010830</td>
+      <td>-0.000985</td>
+      <td>0.163874</td>
+      <td>0.208518</td>
+      <td>0.178106</td>
+      <td>0.107856</td>
+      <td>0.147863</td>
+      <td>0.054240</td>
+      <td>1997-07-01</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>307165.0</td>
+      <td>76842.384823</td>
+      <td>201607.623086</td>
+      <td>312418.169175</td>
+      <td>5.731670e+05</td>
+      <td>1.361625e+06</td>
+      <td>-0.038890</td>
+      <td>-0.156843</td>
+      <td>0.013035</td>
+      <td>-0.010927</td>
+      <td>-0.014919</td>
+      <td>-0.001115</td>
+      <td>0.102645</td>
+      <td>-0.002741</td>
+      <td>0.181549</td>
+      <td>0.089780</td>
+      <td>0.121510</td>
+      <td>0.057670</td>
+      <td>1997-08-01</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>320982.0</td>
+      <td>94004.324712</td>
+      <td>208204.226147</td>
+      <td>309856.906812</td>
+      <td>5.800480e+05</td>
+      <td>1.374831e+06</td>
+      <td>0.044982</td>
+      <td>0.223340</td>
+      <td>0.032720</td>
+      <td>-0.008198</td>
+      <td>0.012005</td>
+      <td>0.009699</td>
+      <td>0.141050</td>
+      <td>0.212793</td>
+      <td>0.207711</td>
+      <td>0.068253</td>
+      <td>0.129415</td>
+      <td>0.057653</td>
+      <td>1997-09-01</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>331578.0</td>
+      <td>96292.538564</td>
+      <td>211010.408180</td>
+      <td>324656.421682</td>
+      <td>6.039584e+05</td>
+      <td>1.409777e+06</td>
+      <td>0.033011</td>
+      <td>0.024342</td>
+      <td>0.013478</td>
+      <td>0.047762</td>
+      <td>0.041221</td>
+      <td>0.025418</td>
+      <td>0.191030</td>
+      <td>0.233944</td>
+      <td>0.208144</td>
+      <td>0.136374</td>
+      <td>0.176979</td>
+      <td>0.122705</td>
+      <td>1997-10-01</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>330522.0</td>
+      <td>94671.630894</td>
+      <td>209635.246014</td>
+      <td>332595.136420</td>
+      <td>6.186172e+05</td>
+      <td>1.355027e+06</td>
+      <td>-0.003185</td>
+      <td>-0.016833</td>
+      <td>-0.006517</td>
+      <td>0.024453</td>
+      <td>0.024271</td>
+      <td>-0.038836</td>
+      <td>0.137863</td>
+      <td>0.131281</td>
+      <td>0.165906</td>
+      <td>0.138368</td>
+      <td>0.167238</td>
+      <td>0.060308</td>
+      <td>1997-11-01</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>326465.0</td>
+      <td>87570.678523</td>
+      <td>201543.894415</td>
+      <td>320673.695691</td>
+      <td>6.180175e+05</td>
+      <td>1.393095e+06</td>
+      <td>-0.012275</td>
+      <td>-0.075006</td>
+      <td>-0.038597</td>
+      <td>-0.035844</td>
+      <td>-0.000969</td>
+      <td>0.028094</td>
+      <td>0.139009</td>
+      <td>0.119966</td>
+      <td>0.130022</td>
+      <td>0.088754</td>
+      <td>0.155067</td>
+      <td>0.094150</td>
+      <td>1997-12-01</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>332063.0</td>
+      <td>87285.166163</td>
+      <td>203309.200976</td>
+      <td>326861.429278</td>
+      <td>6.253070e+05</td>
+      <td>1.438915e+06</td>
+      <td>0.017147</td>
+      <td>-0.003260</td>
+      <td>0.008759</td>
+      <td>0.019296</td>
+      <td>0.011795</td>
+      <td>0.032891</td>
+      <td>0.105377</td>
+      <td>0.015276</td>
+      <td>0.111157</td>
+      <td>0.081618</td>
+      <td>0.138028</td>
+      <td>0.055136</td>
+      <td>1998-01-01</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>329090.0</td>
+      <td>84862.813386</td>
+      <td>210535.469677</td>
+      <td>328166.722318</td>
+      <td>6.240737e+05</td>
+      <td>1.452940e+06</td>
+      <td>-0.008953</td>
+      <td>-0.027752</td>
+      <td>0.035543</td>
+      <td>0.003993</td>
+      <td>-0.001972</td>
+      <td>0.009747</td>
+      <td>0.095411</td>
+      <td>-0.025678</td>
+      <td>0.122838</td>
+      <td>0.081407</td>
+      <td>0.121559</td>
+      <td>0.087546</td>
+      <td>1998-02-01</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>332644.0</td>
+      <td>85856.084581</td>
+      <td>208464.396669</td>
+      <td>339880.557116</td>
+      <td>6.422799e+05</td>
+      <td>1.474988e+06</td>
+      <td>0.010799</td>
+      <td>0.011704</td>
+      <td>-0.009837</td>
+      <td>0.035695</td>
+      <td>0.029173</td>
+      <td>0.015174</td>
+      <td>0.122500</td>
+      <td>0.011951</td>
+      <td>0.110516</td>
+      <td>0.120862</td>
+      <td>0.164235</td>
+      <td>0.121175</td>
+      <td>1998-03-01</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>340798.0</td>
+      <td>92623.391869</td>
+      <td>214351.694523</td>
+      <td>339192.204640</td>
+      <td>6.406890e+05</td>
+      <td>1.489137e+06</td>
+      <td>0.024513</td>
+      <td>0.078822</td>
+      <td>0.028241</td>
+      <td>-0.002025</td>
+      <td>-0.002477</td>
+      <td>0.009593</td>
+      <td>0.113250</td>
+      <td>0.016070</td>
+      <td>0.126104</td>
+      <td>0.087497</td>
+      <td>0.155257</td>
+      <td>0.110660</td>
+      <td>1998-04-01</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>347670.0</td>
+      <td>96757.862528</td>
+      <td>217679.977078</td>
+      <td>345404.812191</td>
+      <td>6.541191e+05</td>
+      <td>1.491464e+06</td>
+      <td>0.020164</td>
+      <td>0.044637</td>
+      <td>0.015527</td>
+      <td>0.018316</td>
+      <td>0.020962</td>
+      <td>0.001562</td>
+      <td>0.128048</td>
+      <td>0.067860</td>
+      <td>0.143127</td>
+      <td>0.107326</td>
+      <td>0.149390</td>
+      <td>0.107299</td>
+      <td>1998-05-01</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>353764.0</td>
+      <td>102136.828938</td>
+      <td>219427.225790</td>
+      <td>350083.849755</td>
+      <td>6.616017e+05</td>
+      <td>1.519858e+06</td>
+      <td>0.017528</td>
+      <td>0.055592</td>
+      <td>0.008027</td>
+      <td>0.013547</td>
+      <td>0.011439</td>
+      <td>0.019038</td>
+      <td>0.111099</td>
+      <td>0.117874</td>
+      <td>0.105590</td>
+      <td>0.106034</td>
+      <td>0.149385</td>
+      <td>0.113865</td>
+      <td>1998-06-01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>357066.0</td>
+      <td>96638.810086</td>
+      <td>222112.743786</td>
+      <td>355753.015989</td>
+      <td>6.578428e+05</td>
+      <td>1.587245e+06</td>
+      <td>0.009334</td>
+      <td>-0.053830</td>
+      <td>0.012239</td>
+      <td>0.016194</td>
+      <td>-0.005682</td>
+      <td>0.044338</td>
+      <td>0.117249</td>
+      <td>0.060374</td>
+      <td>0.116069</td>
+      <td>0.126265</td>
+      <td>0.130610</td>
+      <td>0.164399</td>
+      <td>1998-07-01</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>366108.0</td>
+      <td>101679.654680</td>
+      <td>224414.039937</td>
+      <td>361580.036419</td>
+      <td>6.659632e+05</td>
+      <td>1.604448e+06</td>
+      <td>0.025323</td>
+      <td>0.052162</td>
+      <td>0.010361</td>
+      <td>0.016379</td>
+      <td>0.012344</td>
+      <td>0.010838</td>
+      <td>0.191894</td>
+      <td>0.323224</td>
+      <td>0.113123</td>
+      <td>0.157359</td>
+      <td>0.161901</td>
+      <td>0.178333</td>
+      <td>1998-08-01</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>365501.0</td>
+      <td>104563.702644</td>
+      <td>230561.905369</td>
+      <td>361834.865914</td>
+      <td>6.573731e+05</td>
+      <td>1.606720e+06</td>
+      <td>-0.001658</td>
+      <td>0.028364</td>
+      <td>0.027395</td>
+      <td>0.000705</td>
+      <td>-0.012899</td>
+      <td>0.001416</td>
+      <td>0.138696</td>
+      <td>0.112329</td>
+      <td>0.107383</td>
+      <td>0.167748</td>
+      <td>0.133308</td>
+      <td>0.168667</td>
+      <td>1998-09-01</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>375780.0</td>
+      <td>108135.061225</td>
+      <td>226368.418763</td>
+      <td>379035.045767</td>
+      <td>6.707278e+05</td>
+      <td>1.606650e+06</td>
+      <td>0.028123</td>
+      <td>0.034155</td>
+      <td>-0.018188</td>
+      <td>0.047536</td>
+      <td>0.020315</td>
+      <td>-0.000044</td>
+      <td>0.133308</td>
+      <td>0.122985</td>
+      <td>0.072783</td>
+      <td>0.167496</td>
+      <td>0.110553</td>
+      <td>0.139648</td>
+      <td>1998-10-01</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>369676.0</td>
+      <td>96719.517508</td>
+      <td>220039.259634</td>
+      <td>378687.631898</td>
+      <td>6.640359e+05</td>
+      <td>1.639321e+06</td>
+      <td>-0.016244</td>
+      <td>-0.105567</td>
+      <td>-0.027960</td>
+      <td>-0.000917</td>
+      <td>-0.009977</td>
+      <td>0.020335</td>
+      <td>0.118461</td>
+      <td>0.021631</td>
+      <td>0.049629</td>
+      <td>0.138584</td>
+      <td>0.073420</td>
+      <td>0.209807</td>
+      <td>1998-11-01</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>357757.0</td>
+      <td>81465.344709</td>
+      <td>202575.424165</td>
+      <td>377109.765378</td>
+      <td>6.556666e+05</td>
+      <td>1.625446e+06</td>
+      <td>-0.032242</td>
+      <td>-0.157716</td>
+      <td>-0.079367</td>
+      <td>-0.004167</td>
+      <td>-0.012604</td>
+      <td>-0.008464</td>
+      <td>0.095851</td>
+      <td>-0.069719</td>
+      <td>0.005118</td>
+      <td>0.175992</td>
+      <td>0.060919</td>
+      <td>0.166788</td>
+      <td>1998-12-01</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>368088.0</td>
+      <td>85034.636460</td>
+      <td>214740.712925</td>
+      <td>373893.157830</td>
+      <td>6.480829e+05</td>
+      <td>1.690565e+06</td>
+      <td>0.028877</td>
+      <td>0.043814</td>
+      <td>0.060053</td>
+      <td>-0.008530</td>
+      <td>-0.011566</td>
+      <td>0.040062</td>
+      <td>0.108488</td>
+      <td>-0.025784</td>
+      <td>0.056227</td>
+      <td>0.143889</td>
+      <td>0.036424</td>
+      <td>0.174889</td>
+      <td>1999-01-01</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>367475.0</td>
+      <td>90124.264555</td>
+      <td>215502.970681</td>
+      <td>376500.715759</td>
+      <td>6.492066e+05</td>
+      <td>1.632282e+06</td>
+      <td>-0.001665</td>
+      <td>0.059854</td>
+      <td>0.003550</td>
+      <td>0.006974</td>
+      <td>0.001734</td>
+      <td>-0.034475</td>
+      <td>0.116640</td>
+      <td>0.061999</td>
+      <td>0.023595</td>
+      <td>0.147285</td>
+      <td>0.040272</td>
+      <td>0.123434</td>
+      <td>1999-02-01</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>367519.0</td>
+      <td>93381.436973</td>
+      <td>219195.424217</td>
+      <td>373870.522732</td>
+      <td>6.514428e+05</td>
+      <td>1.598351e+06</td>
+      <td>0.000120</td>
+      <td>0.036141</td>
+      <td>0.017134</td>
+      <td>-0.006986</td>
+      <td>0.003444</td>
+      <td>-0.020788</td>
+      <td>0.104842</td>
+      <td>0.087651</td>
+      <td>0.051477</td>
+      <td>0.100006</td>
+      <td>0.014266</td>
+      <td>0.083637</td>
+      <td>1999-03-01</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>377565.0</td>
+      <td>99534.290902</td>
+      <td>220496.560469</td>
+      <td>382858.029953</td>
+      <td>6.786326e+05</td>
+      <td>1.612945e+06</td>
+      <td>0.027335</td>
+      <td>0.065889</td>
+      <td>0.005936</td>
+      <td>0.024039</td>
+      <td>0.041738</td>
+      <td>0.009131</td>
+      <td>0.107885</td>
+      <td>0.074613</td>
+      <td>0.028667</td>
+      <td>0.128735</td>
+      <td>0.059223</td>
+      <td>0.083140</td>
+      <td>1999-04-01</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>389013.0</td>
+      <td>111823.930286</td>
+      <td>237342.947079</td>
+      <td>398310.484904</td>
+      <td>6.837534e+05</td>
+      <td>1.602491e+06</td>
+      <td>0.030321</td>
+      <td>0.123471</td>
+      <td>0.076402</td>
+      <td>0.040361</td>
+      <td>0.007546</td>
+      <td>-0.006481</td>
+      <td>0.118914</td>
+      <td>0.155709</td>
+      <td>0.090330</td>
+      <td>0.153170</td>
+      <td>0.045304</td>
+      <td>0.074442</td>
+      <td>1999-05-01</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>392157.0</td>
+      <td>104752.063266</td>
+      <td>243880.773710</td>
+      <td>411838.372054</td>
+      <td>6.926253e+05</td>
+      <td>1.623966e+06</td>
+      <td>0.008082</td>
+      <td>-0.063241</td>
+      <td>0.027546</td>
+      <td>0.033963</td>
+      <td>0.012975</td>
+      <td>0.013401</td>
+      <td>0.108527</td>
+      <td>0.025605</td>
+      <td>0.111443</td>
+      <td>0.176399</td>
+      <td>0.046892</td>
+      <td>0.068499</td>
+      <td>1999-06-01</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>408522.0</td>
+      <td>119978.739037</td>
+      <td>252564.691919</td>
+      <td>417628.788559</td>
+      <td>7.145316e+05</td>
+      <td>1.678050e+06</td>
+      <td>0.041731</td>
+      <td>0.145359</td>
+      <td>0.035607</td>
+      <td>0.014060</td>
+      <td>0.031628</td>
+      <td>0.033304</td>
+      <td>0.144108</td>
+      <td>0.241517</td>
+      <td>0.137101</td>
+      <td>0.173929</td>
+      <td>0.086174</td>
+      <td>0.057209</td>
+      <td>1999-07-01</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>416972.0</td>
+      <td>126254.690552</td>
+      <td>261276.200387</td>
+      <td>422089.442736</td>
+      <td>7.229866e+05</td>
+      <td>1.691666e+06</td>
+      <td>0.020684</td>
+      <td>0.052309</td>
+      <td>0.034492</td>
+      <td>0.010681</td>
+      <td>0.011833</td>
+      <td>0.008114</td>
+      <td>0.138932</td>
+      <td>0.241691</td>
+      <td>0.164260</td>
+      <td>0.167347</td>
+      <td>0.085625</td>
+      <td>0.054360</td>
+      <td>1999-08-01</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>421434.0</td>
+      <td>125925.918632</td>
+      <td>265079.088201</td>
+      <td>420910.397803</td>
+      <td>7.308386e+05</td>
+      <td>1.716226e+06</td>
+      <td>0.010701</td>
+      <td>-0.002604</td>
+      <td>0.014555</td>
+      <td>-0.002793</td>
+      <td>0.010860</td>
+      <td>0.014518</td>
+      <td>0.153031</td>
+      <td>0.204299</td>
+      <td>0.149709</td>
+      <td>0.163267</td>
+      <td>0.111756</td>
+      <td>0.068155</td>
+      <td>1999-09-01</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>425687.0</td>
+      <td>130081.967588</td>
+      <td>274607.106957</td>
+      <td>422194.786426</td>
+      <td>7.299822e+05</td>
+      <td>1.736354e+06</td>
+      <td>0.010092</td>
+      <td>0.033004</td>
+      <td>0.035944</td>
+      <td>0.003051</td>
+      <td>-0.001172</td>
+      <td>0.011728</td>
+      <td>0.132809</td>
+      <td>0.202958</td>
+      <td>0.213098</td>
+      <td>0.113867</td>
+      <td>0.088343</td>
+      <td>0.080729</td>
+      <td>1999-10-01</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>423474.0</td>
+      <td>123151.198448</td>
+      <td>268541.115800</td>
+      <td>427795.996120</td>
+      <td>7.496717e+05</td>
+      <td>1.763600e+06</td>
+      <td>-0.005199</td>
+      <td>-0.053280</td>
+      <td>-0.022090</td>
+      <td>0.013267</td>
+      <td>0.026973</td>
+      <td>0.015692</td>
+      <td>0.145527</td>
+      <td>0.273282</td>
+      <td>0.220424</td>
+      <td>0.129680</td>
+      <td>0.128963</td>
+      <td>0.075811</td>
+      <td>1999-11-01</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>427757.0</td>
+      <td>121565.029453</td>
+      <td>256694.838739</td>
+      <td>434581.725953</td>
+      <td>7.706343e+05</td>
+      <td>1.765340e+06</td>
+      <td>0.010114</td>
+      <td>-0.012880</td>
+      <td>-0.044113</td>
+      <td>0.015862</td>
+      <td>0.027962</td>
+      <td>0.000986</td>
+      <td>0.195664</td>
+      <td>0.492230</td>
+      <td>0.267157</td>
+      <td>0.152401</td>
+      <td>0.175345</td>
+      <td>0.086064</td>
+      <td>1999-12-01</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>434814.0</td>
+      <td>132157.597305</td>
+      <td>256926.469236</td>
+      <td>438854.157824</td>
+      <td>7.778140e+05</td>
+      <td>1.799056e+06</td>
+      <td>0.016498</td>
+      <td>0.087135</td>
+      <td>0.000902</td>
+      <td>0.009831</td>
+      <td>0.009317</td>
+      <td>0.019099</td>
+      <td>0.181277</td>
+      <td>0.554162</td>
+      <td>0.196450</td>
+      <td>0.173742</td>
+      <td>0.200177</td>
+      <td>0.064174</td>
+      <td>2000-01-01</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>452027.0</td>
+      <td>131525.274993</td>
+      <td>275266.903063</td>
+      <td>448529.474783</td>
+      <td>8.002595e+05</td>
+      <td>1.836045e+06</td>
+      <td>0.039587</td>
+      <td>-0.004785</td>
+      <td>0.071384</td>
+      <td>0.022047</td>
+      <td>0.028857</td>
+      <td>0.020560</td>
+      <td>0.230089</td>
+      <td>0.459377</td>
+      <td>0.277323</td>
+      <td>0.191311</td>
+      <td>0.232673</td>
+      <td>0.124833</td>
+      <td>2000-02-01</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>459851.0</td>
+      <td>133483.197632</td>
+      <td>279094.984060</td>
+      <td>461524.881231</td>
+      <td>8.042343e+05</td>
+      <td>1.872479e+06</td>
+      <td>0.017309</td>
+      <td>0.014886</td>
+      <td>0.013907</td>
+      <td>0.028973</td>
+      <td>0.004967</td>
+      <td>0.019844</td>
+      <td>0.251231</td>
+      <td>0.429440</td>
+      <td>0.273270</td>
+      <td>0.234451</td>
+      <td>0.234543</td>
+      <td>0.171507</td>
+      <td>2000-03-01</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>465700.0</td>
+      <td>131170.692866</td>
+      <td>287713.564809</td>
+      <td>471917.190535</td>
+      <td>8.111205e+05</td>
+      <td>1.924558e+06</td>
+      <td>0.012719</td>
+      <td>-0.017324</td>
+      <td>0.030880</td>
+      <td>0.022517</td>
+      <td>0.008562</td>
+      <td>0.027813</td>
+      <td>0.233430</td>
+      <td>0.317844</td>
+      <td>0.304844</td>
+      <td>0.232617</td>
+      <td>0.195228</td>
+      <td>0.193195</td>
+      <td>2000-04-01</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>482364.0</td>
+      <td>133061.854896</td>
+      <td>303882.448397</td>
+      <td>479910.041512</td>
+      <td>8.427987e+05</td>
+      <td>2.060889e+06</td>
+      <td>0.035783</td>
+      <td>0.014418</td>
+      <td>0.056198</td>
+      <td>0.016937</td>
+      <td>0.039055</td>
+      <td>0.070837</td>
+      <td>0.239969</td>
+      <td>0.189923</td>
+      <td>0.280352</td>
+      <td>0.204864</td>
+      <td>0.232606</td>
+      <td>0.286053</td>
+      <td>2000-05-01</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>499291.0</td>
+      <td>147061.485917</td>
+      <td>310148.693901</td>
+      <td>488360.064585</td>
+      <td>8.565412e+05</td>
+      <td>2.143794e+06</td>
+      <td>0.035092</td>
+      <td>0.105211</td>
+      <td>0.020621</td>
+      <td>0.017608</td>
+      <td>0.016306</td>
+      <td>0.040228</td>
+      <td>0.273192</td>
+      <td>0.403901</td>
+      <td>0.271723</td>
+      <td>0.185805</td>
+      <td>0.236659</td>
+      <td>0.320098</td>
+      <td>2000-06-01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>495987.0</td>
+      <td>144960.488373</td>
+      <td>311233.617304</td>
+      <td>479708.481833</td>
+      <td>8.423242e+05</td>
+      <td>2.108022e+06</td>
+      <td>-0.006617</td>
+      <td>-0.014287</td>
+      <td>0.003498</td>
+      <td>-0.017716</td>
+      <td>-0.016598</td>
+      <td>-0.016686</td>
+      <td>0.214101</td>
+      <td>0.208218</td>
+      <td>0.232293</td>
+      <td>0.148648</td>
+      <td>0.178848</td>
+      <td>0.256233</td>
+      <td>2000-07-01</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>493168.0</td>
+      <td>133420.622546</td>
+      <td>313795.194807</td>
+      <td>484969.488167</td>
+      <td>8.357037e+05</td>
+      <td>2.082107e+06</td>
+      <td>-0.005684</td>
+      <td>-0.079607</td>
+      <td>0.008230</td>
+      <td>0.010967</td>
+      <td>-0.007860</td>
+      <td>-0.012293</td>
+      <td>0.182736</td>
+      <td>0.056758</td>
+      <td>0.201009</td>
+      <td>0.148973</td>
+      <td>0.155905</td>
+      <td>0.230803</td>
+      <td>2000-08-01</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>502066.0</td>
+      <td>143021.966824</td>
+      <td>323048.544776</td>
+      <td>479379.705217</td>
+      <td>8.422166e+05</td>
+      <td>2.131299e+06</td>
+      <td>0.018043</td>
+      <td>0.071963</td>
+      <td>0.029489</td>
+      <td>-0.011526</td>
+      <td>0.007793</td>
+      <td>0.023626</td>
+      <td>0.191328</td>
+      <td>0.135763</td>
+      <td>0.218687</td>
+      <td>0.138912</td>
+      <td>0.152398</td>
+      <td>0.241852</td>
+      <td>2000-09-01</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>517141.0</td>
+      <td>152733.590881</td>
+      <td>325101.462651</td>
+      <td>490193.988830</td>
+      <td>8.596784e+05</td>
+      <td>2.172956e+06</td>
+      <td>0.030026</td>
+      <td>0.067903</td>
+      <td>0.006355</td>
+      <td>0.022559</td>
+      <td>0.020733</td>
+      <td>0.019545</td>
+      <td>0.214839</td>
+      <td>0.174133</td>
+      <td>0.183879</td>
+      <td>0.161061</td>
+      <td>0.177670</td>
+      <td>0.251448</td>
+      <td>2000-10-01</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>518245.0</td>
+      <td>153391.805639</td>
+      <td>315786.280750</td>
+      <td>511464.695856</td>
+      <td>8.614825e+05</td>
+      <td>2.176597e+06</td>
+      <td>0.002135</td>
+      <td>0.004310</td>
+      <td>-0.028653</td>
+      <td>0.043392</td>
+      <td>0.002099</td>
+      <td>0.001676</td>
+      <td>0.223794</td>
+      <td>0.245557</td>
+      <td>0.175933</td>
+      <td>0.195581</td>
+      <td>0.149146</td>
+      <td>0.234178</td>
+      <td>2000-11-01</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>509021.0</td>
+      <td>133896.195578</td>
+      <td>315459.199129</td>
+      <td>520707.307149</td>
+      <td>8.730593e+05</td>
+      <td>2.154229e+06</td>
+      <td>-0.017799</td>
+      <td>-0.127097</td>
+      <td>-0.001036</td>
+      <td>0.018071</td>
+      <td>0.013438</td>
+      <td>-0.010277</td>
+      <td>0.189977</td>
+      <td>0.101437</td>
+      <td>0.228927</td>
+      <td>0.198180</td>
+      <td>0.132910</td>
+      <td>0.220292</td>
+      <td>2000-12-01</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>533896.0</td>
+      <td>160015.299432</td>
+      <td>329471.239330</td>
+      <td>545512.583465</td>
+      <td>8.929299e+05</td>
+      <td>2.185651e+06</td>
+      <td>0.048868</td>
+      <td>0.195070</td>
+      <td>0.044418</td>
+      <td>0.047638</td>
+      <td>0.022760</td>
+      <td>0.014586</td>
+      <td>0.227872</td>
+      <td>0.210792</td>
+      <td>0.282356</td>
+      <td>0.243038</td>
+      <td>0.147999</td>
+      <td>0.214888</td>
+      <td>2001-01-01</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>535266.0</td>
+      <td>150494.842958</td>
+      <td>326772.074876</td>
+      <td>548611.486886</td>
+      <td>9.075201e+05</td>
+      <td>2.251344e+06</td>
+      <td>0.002566</td>
+      <td>-0.059497</td>
+      <td>-0.008192</td>
+      <td>0.005681</td>
+      <td>0.016340</td>
+      <td>0.030057</td>
+      <td>0.184146</td>
+      <td>0.144228</td>
+      <td>0.187110</td>
+      <td>0.223134</td>
+      <td>0.134032</td>
+      <td>0.226192</td>
+      <td>2001-02-01</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>547367.0</td>
+      <td>149736.375687</td>
+      <td>337645.571934</td>
+      <td>553017.998730</td>
+      <td>9.374109e+05</td>
+      <td>2.289183e+06</td>
+      <td>0.022607</td>
+      <td>-0.005040</td>
+      <td>0.033275</td>
+      <td>0.008032</td>
+      <td>0.032937</td>
+      <td>0.016808</td>
+      <td>0.190314</td>
+      <td>0.121762</td>
+      <td>0.209787</td>
+      <td>0.198241</td>
+      <td>0.165594</td>
+      <td>0.222541</td>
+      <td>2001-03-01</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>551365.0</td>
+      <td>170517.688755</td>
+      <td>332861.961336</td>
+      <td>543096.521787</td>
+      <td>9.338005e+05</td>
+      <td>2.270885e+06</td>
+      <td>0.007304</td>
+      <td>0.138786</td>
+      <td>-0.014168</td>
+      <td>-0.017941</td>
+      <td>-0.003851</td>
+      <td>-0.007993</td>
+      <td>0.183949</td>
+      <td>0.299968</td>
+      <td>0.156921</td>
+      <td>0.150830</td>
+      <td>0.151247</td>
+      <td>0.179952</td>
+      <td>2001-04-01</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>542752.0</td>
+      <td>158381.915305</td>
+      <td>316835.425680</td>
+      <td>542954.309857</td>
+      <td>9.330194e+05</td>
+      <td>2.293520e+06</td>
+      <td>-0.015621</td>
+      <td>-0.071170</td>
+      <td>-0.048148</td>
+      <td>-0.000262</td>
+      <td>-0.000836</td>
+      <td>0.009968</td>
+      <td>0.125192</td>
+      <td>0.190288</td>
+      <td>0.042625</td>
+      <td>0.131367</td>
+      <td>0.107049</td>
+      <td>0.112879</td>
+      <td>2001-05-01</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>549278.0</td>
+      <td>161120.479880</td>
+      <td>331521.646980</td>
+      <td>555373.176247</td>
+      <td>9.390913e+05</td>
+      <td>2.307073e+06</td>
+      <td>0.012024</td>
+      <td>0.017291</td>
+      <td>0.046353</td>
+      <td>0.022873</td>
+      <td>0.006508</td>
+      <td>0.005909</td>
+      <td>0.100116</td>
+      <td>0.095599</td>
+      <td>0.068912</td>
+      <td>0.137221</td>
+      <td>0.096376</td>
+      <td>0.076164</td>
+      <td>2001-06-01</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>547587.0</td>
+      <td>152914.109193</td>
+      <td>332352.295164</td>
+      <td>561225.520275</td>
+      <td>9.564016e+05</td>
+      <td>2.334552e+06</td>
+      <td>-0.003079</td>
+      <td>-0.050933</td>
+      <td>0.002506</td>
+      <td>0.010538</td>
+      <td>0.018433</td>
+      <td>0.011911</td>
+      <td>0.104035</td>
+      <td>0.054868</td>
+      <td>0.067855</td>
+      <td>0.169930</td>
+      <td>0.135432</td>
+      <td>0.107461</td>
+      <td>2001-07-01</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>554981.0</td>
+      <td>163755.330456</td>
+      <td>348042.172631</td>
+      <td>571186.116577</td>
+      <td>9.535607e+05</td>
+      <td>2.287354e+06</td>
+      <td>0.013503</td>
+      <td>0.070897</td>
+      <td>0.047209</td>
+      <td>0.017748</td>
+      <td>-0.002970</td>
+      <td>-0.020217</td>
+      <td>0.125339</td>
+      <td>0.227361</td>
+      <td>0.109138</td>
+      <td>0.177777</td>
+      <td>0.141027</td>
+      <td>0.098576</td>
+      <td>2001-08-01</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>564221.0</td>
+      <td>174350.555457</td>
+      <td>346893.831166</td>
+      <td>564340.019992</td>
+      <td>9.714418e+05</td>
+      <td>2.306646e+06</td>
+      <td>0.016649</td>
+      <td>0.064702</td>
+      <td>-0.003299</td>
+      <td>-0.011986</td>
+      <td>0.018752</td>
+      <td>0.008434</td>
+      <td>0.123798</td>
+      <td>0.219047</td>
+      <td>0.073813</td>
+      <td>0.177230</td>
+      <td>0.153435</td>
+      <td>0.082272</td>
+      <td>2001-09-01</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>572777.0</td>
+      <td>187998.401748</td>
+      <td>357535.633362</td>
+      <td>570111.333466</td>
+      <td>9.448867e+05</td>
+      <td>2.298504e+06</td>
+      <td>0.015164</td>
+      <td>0.078278</td>
+      <td>0.030677</td>
+      <td>0.010227</td>
+      <td>-0.027336</td>
+      <td>-0.003530</td>
+      <td>0.107584</td>
+      <td>0.230891</td>
+      <td>0.099766</td>
+      <td>0.163032</td>
+      <td>0.099117</td>
+      <td>0.057777</td>
+      <td>2001-10-01</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>565012.0</td>
+      <td>171428.708031</td>
+      <td>363674.714916</td>
+      <td>579353.639533</td>
+      <td>9.258515e+05</td>
+      <td>2.306688e+06</td>
+      <td>-0.013557</td>
+      <td>-0.088137</td>
+      <td>0.017171</td>
+      <td>0.016211</td>
+      <td>-0.020146</td>
+      <td>0.003561</td>
+      <td>0.090241</td>
+      <td>0.117587</td>
+      <td>0.151648</td>
+      <td>0.132734</td>
+      <td>0.074719</td>
+      <td>0.059768</td>
+      <td>2001-11-01</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>560379.0</td>
+      <td>173923.179477</td>
+      <td>353239.739509</td>
+      <td>566297.805369</td>
+      <td>9.416579e+05</td>
+      <td>2.258063e+06</td>
+      <td>-0.008200</td>
+      <td>0.014551</td>
+      <td>-0.028693</td>
+      <td>-0.022535</td>
+      <td>0.017072</td>
+      <td>-0.021080</td>
+      <td>0.100896</td>
+      <td>0.298940</td>
+      <td>0.119764</td>
+      <td>0.087555</td>
+      <td>0.078573</td>
+      <td>0.048200</td>
+      <td>2001-12-01</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>557411.0</td>
+      <td>182437.943642</td>
+      <td>334508.663498</td>
+      <td>568721.573090</td>
+      <td>9.499651e+05</td>
+      <td>2.179044e+06</td>
+      <td>-0.005296</td>
+      <td>0.048957</td>
+      <td>-0.053027</td>
+      <td>0.004280</td>
+      <td>0.008822</td>
+      <td>-0.034994</td>
+      <td>0.044044</td>
+      <td>0.140128</td>
+      <td>0.015289</td>
+      <td>0.042545</td>
+      <td>0.063874</td>
+      <td>-0.003022</td>
+      <td>2002-01-01</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>557229.0</td>
+      <td>178241.427460</td>
+      <td>339265.474064</td>
+      <td>560740.980002</td>
+      <td>9.560790e+05</td>
+      <td>2.187875e+06</td>
+      <td>-0.000327</td>
+      <td>-0.023002</td>
+      <td>0.014220</td>
+      <td>-0.014033</td>
+      <td>0.006436</td>
+      <td>0.004052</td>
+      <td>0.041032</td>
+      <td>0.184369</td>
+      <td>0.038233</td>
+      <td>0.022109</td>
+      <td>0.053507</td>
+      <td>-0.028192</td>
+      <td>2002-02-01</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>563155.0</td>
+      <td>179701.642373</td>
+      <td>349126.377571</td>
+      <td>554716.828008</td>
+      <td>9.583829e+05</td>
+      <td>2.219100e+06</td>
+      <td>0.010635</td>
+      <td>0.008192</td>
+      <td>0.029065</td>
+      <td>-0.010743</td>
+      <td>0.002410</td>
+      <td>0.014272</td>
+      <td>0.028844</td>
+      <td>0.200120</td>
+      <td>0.034003</td>
+      <td>0.003072</td>
+      <td>0.022372</td>
+      <td>-0.030615</td>
+      <td>2002-03-01</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>567775.0</td>
+      <td>174757.736195</td>
+      <td>355543.543514</td>
+      <td>557804.360248</td>
+      <td>9.668987e+05</td>
+      <td>2.263586e+06</td>
+      <td>0.008204</td>
+      <td>-0.027512</td>
+      <td>0.018381</td>
+      <td>0.005566</td>
+      <td>0.008886</td>
+      <td>0.020047</td>
+      <td>0.029762</td>
+      <td>0.024866</td>
+      <td>0.068141</td>
+      <td>0.027081</td>
+      <td>0.035445</td>
+      <td>-0.003214</td>
+      <td>2002-04-01</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>578860.0</td>
+      <td>177427.370862</td>
+      <td>369549.254397</td>
+      <td>576346.954486</td>
+      <td>9.794934e+05</td>
+      <td>2.312674e+06</td>
+      <td>0.019524</td>
+      <td>0.015276</td>
+      <td>0.039392</td>
+      <td>0.033242</td>
+      <td>0.013026</td>
+      <td>0.021686</td>
+      <td>0.066528</td>
+      <td>0.120250</td>
+      <td>0.166376</td>
+      <td>0.061502</td>
+      <td>0.049810</td>
+      <td>0.008351</td>
+      <td>2002-05-01</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>590773.0</td>
+      <td>186216.720780</td>
+      <td>376521.856780</td>
+      <td>593808.145847</td>
+      <td>1.013403e+06</td>
+      <td>2.297111e+06</td>
+      <td>0.020580</td>
+      <td>0.049538</td>
+      <td>0.018868</td>
+      <td>0.030296</td>
+      <td>0.034620</td>
+      <td>-0.006730</td>
+      <td>0.075545</td>
+      <td>0.155761</td>
+      <td>0.135738</td>
+      <td>0.069206</td>
+      <td>0.079132</td>
+      <td>-0.004318</td>
+      <td>2002-06-01</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>596764.0</td>
+      <td>188392.638094</td>
+      <td>377639.676978</td>
+      <td>593484.845835</td>
+      <td>1.029304e+06</td>
+      <td>2.344571e+06</td>
+      <td>0.010141</td>
+      <td>0.011685</td>
+      <td>0.002969</td>
+      <td>-0.000544</td>
+      <td>0.015690</td>
+      <td>0.020661</td>
+      <td>0.089807</td>
+      <td>0.232016</td>
+      <td>0.136263</td>
+      <td>0.057480</td>
+      <td>0.076226</td>
+      <td>0.004292</td>
+      <td>2002-07-01</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>611430.0</td>
+      <td>198006.076566</td>
+      <td>388268.497359</td>
+      <td>609623.617163</td>
+      <td>1.040803e+06</td>
+      <td>2.402079e+06</td>
+      <td>0.024576</td>
+      <td>0.051029</td>
+      <td>0.028145</td>
+      <td>0.027193</td>
+      <td>0.011171</td>
+      <td>0.024528</td>
+      <td>0.101713</td>
+      <td>0.209158</td>
+      <td>0.115579</td>
+      <td>0.067294</td>
+      <td>0.091491</td>
+      <td>0.050157</td>
+      <td>2002-08-01</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>621531.0</td>
+      <td>207892.731198</td>
+      <td>389143.707772</td>
+      <td>623543.184941</td>
+      <td>1.054708e+06</td>
+      <td>2.542078e+06</td>
+      <td>0.016520</td>
+      <td>0.049931</td>
+      <td>0.002254</td>
+      <td>0.022833</td>
+      <td>0.013360</td>
+      <td>0.058282</td>
+      <td>0.101574</td>
+      <td>0.192384</td>
+      <td>0.121795</td>
+      <td>0.104907</td>
+      <td>0.085714</td>
+      <td>0.102067</td>
+      <td>2002-09-01</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>625888.0</td>
+      <td>217676.622426</td>
+      <td>383974.624374</td>
+      <td>622322.739530</td>
+      <td>1.073227e+06</td>
+      <td>2.497645e+06</td>
+      <td>0.007010</td>
+      <td>0.047062</td>
+      <td>-0.013283</td>
+      <td>-0.001957</td>
+      <td>0.017558</td>
+      <td>-0.017479</td>
+      <td>0.092725</td>
+      <td>0.157864</td>
+      <td>0.073948</td>
+      <td>0.091581</td>
+      <td>0.135826</td>
+      <td>0.086640</td>
+      <td>2002-10-01</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>619764.0</td>
+      <td>204832.861054</td>
+      <td>387025.621137</td>
+      <td>612300.827063</td>
+      <td>1.056445e+06</td>
+      <td>2.422078e+06</td>
+      <td>-0.009784</td>
+      <td>-0.059004</td>
+      <td>0.007946</td>
+      <td>-0.016104</td>
+      <td>-0.015637</td>
+      <td>-0.030256</td>
+      <td>0.096904</td>
+      <td>0.194857</td>
+      <td>0.064208</td>
+      <td>0.056869</td>
+      <td>0.141052</td>
+      <td>0.050024</td>
+      <td>2002-11-01</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>615850.0</td>
+      <td>197338.705214</td>
+      <td>383274.326397</td>
+      <td>612880.460578</td>
+      <td>1.043466e+06</td>
+      <td>2.377019e+06</td>
+      <td>-0.006315</td>
+      <td>-0.036587</td>
+      <td>-0.009693</td>
+      <td>0.000947</td>
+      <td>-0.012286</td>
+      <td>-0.018603</td>
+      <td>0.098988</td>
+      <td>0.134631</td>
+      <td>0.085026</td>
+      <td>0.082258</td>
+      <td>0.108116</td>
+      <td>0.052681</td>
+      <td>2002-12-01</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>622913.0</td>
+      <td>205939.972855</td>
+      <td>397649.404130</td>
+      <td>618536.757415</td>
+      <td>1.048500e+06</td>
+      <td>2.380734e+06</td>
+      <td>0.011469</td>
+      <td>0.043586</td>
+      <td>0.037506</td>
+      <td>0.009229</td>
+      <td>0.004824</td>
+      <td>0.001563</td>
+      <td>0.117511</td>
+      <td>0.128822</td>
+      <td>0.188757</td>
+      <td>0.087592</td>
+      <td>0.103725</td>
+      <td>0.092559</td>
+      <td>2003-01-01</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>589807.0</td>
+      <td>199914.893841</td>
+      <td>363841.024055</td>
+      <td>576551.914758</td>
+      <td>9.855742e+05</td>
+      <td>2.318506e+06</td>
+      <td>-0.053147</td>
+      <td>-0.029256</td>
+      <td>-0.085021</td>
+      <td>-0.067878</td>
+      <td>-0.060015</td>
+      <td>-0.026138</td>
+      <td>0.058464</td>
+      <td>0.121596</td>
+      <td>0.072438</td>
+      <td>0.028197</td>
+      <td>0.030850</td>
+      <td>0.059707</td>
+      <td>2003-02-01</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>603480.0</td>
+      <td>216635.042514</td>
+      <td>364807.597857</td>
+      <td>592173.949143</td>
+      <td>1.006303e+06</td>
+      <td>2.402639e+06</td>
+      <td>0.023182</td>
+      <td>0.083636</td>
+      <td>0.002657</td>
+      <td>0.027096</td>
+      <td>0.021032</td>
+      <td>0.036288</td>
+      <td>0.071606</td>
+      <td>0.205526</td>
+      <td>0.044916</td>
+      <td>0.067525</td>
+      <td>0.050001</td>
+      <td>0.082709</td>
+      <td>2003-03-01</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>611805.0</td>
+      <td>232285.943900</td>
+      <td>365005.777078</td>
+      <td>589869.679784</td>
+      <td>1.003746e+06</td>
+      <td>2.361726e+06</td>
+      <td>0.013795</td>
+      <td>0.072245</td>
+      <td>0.000543</td>
+      <td>-0.003891</td>
+      <td>-0.002541</td>
+      <td>-0.017028</td>
+      <td>0.077548</td>
+      <td>0.329188</td>
+      <td>0.026613</td>
+      <td>0.057485</td>
+      <td>0.038108</td>
+      <td>0.043356</td>
+      <td>2003-04-01</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+        <div class="table-container after">
+            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>manhattan_price_index</th>
+      <th>manhattan_q1_price_index</th>
+      <th>manhattan_q2_price_index</th>
+      <th>manhattan_q3_price_index</th>
+      <th>manhattan_q4_price_index</th>
+      <th>manhattan_q5_price_index</th>
+      <th>manhattan_price_index_mom</th>
+      <th>manhattan_q1_price_index_mom</th>
+      <th>manhattan_q2_price_index_mom</th>
+      <th>manhattan_q3_price_index_mom</th>
+      <th>manhattan_q4_price_index_mom</th>
+      <th>manhattan_q5_price_index_mom</th>
+      <th>manhattan_price_index_yoy</th>
+      <th>manhattan_q1_price_index_yoy</th>
+      <th>manhattan_q2_price_index_yoy</th>
+      <th>manhattan_q3_price_index_yoy</th>
+      <th>manhattan_q4_price_index_yoy</th>
+      <th>manhattan_q5_price_index_yoy</th>
+      <th>date_</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>276994.0</td>
+      <td>68864.803318</td>
+      <td>169752.133088</td>
+      <td>280318.552834</td>
+      <td>5.206496e+05</td>
+      <td>1.404508e+06</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-01-01</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>256149.0</td>
+      <td>66488.512211</td>
+      <td>160929.245951</td>
+      <td>247855.558464</td>
+      <td>4.850192e+05</td>
+      <td>1.222565e+06</td>
+      <td>-0.075254</td>
+      <td>-0.034507</td>
+      <td>-0.051975</td>
+      <td>-0.115808</td>
+      <td>-0.068435</td>
+      <td>-0.129542</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-02-01</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>254342.0</td>
+      <td>64810.537405</td>
+      <td>153576.925673</td>
+      <td>250216.367303</td>
+      <td>4.731897e+05</td>
+      <td>1.276202e+06</td>
+      <td>-0.007054</td>
+      <td>-0.025237</td>
+      <td>-0.045687</td>
+      <td>0.009525</td>
+      <td>-0.024390</td>
+      <td>0.043872</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-03-01</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>260790.0</td>
+      <td>70825.190697</td>
+      <td>149882.697876</td>
+      <td>261208.084885</td>
+      <td>4.938930e+05</td>
+      <td>1.265281e+06</td>
+      <td>0.025352</td>
+      <td>0.092804</td>
+      <td>-0.024055</td>
+      <td>0.043929</td>
+      <td>0.043753</td>
+      <td>-0.008557</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-04-01</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>266956.0</td>
+      <td>72709.942160</td>
+      <td>157849.650444</td>
+      <td>277516.000185</td>
+      <td>5.033581e+05</td>
+      <td>1.258718e+06</td>
+      <td>0.023644</td>
+      <td>0.026611</td>
+      <td>0.053155</td>
+      <td>0.062433</td>
+      <td>0.019164</td>
+      <td>-0.005188</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-05-01</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>269324.0</td>
+      <td>82009.425584</td>
+      <td>163273.128248</td>
+      <td>276688.356681</td>
+      <td>4.997969e+05</td>
+      <td>1.280429e+06</td>
+      <td>0.008870</td>
+      <td>0.127898</td>
+      <td>0.034359</td>
+      <td>-0.002982</td>
+      <td>-0.007075</td>
+      <td>0.017249</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-06-01</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>271663.0</td>
+      <td>79003.157440</td>
+      <td>160628.485758</td>
+      <td>277078.639825</td>
+      <td>4.982674e+05</td>
+      <td>1.306320e+06</td>
+      <td>0.008685</td>
+      <td>-0.036658</td>
+      <td>-0.016198</td>
+      <td>0.001411</td>
+      <td>-0.003060</td>
+      <td>0.020220</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-07-01</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>272533.0</td>
+      <td>78851.049691</td>
+      <td>163184.582665</td>
+      <td>273884.003130</td>
+      <td>4.947829e+05</td>
+      <td>1.305733e+06</td>
+      <td>0.003202</td>
+      <td>-0.001925</td>
+      <td>0.015913</td>
+      <td>-0.011530</td>
+      <td>-0.006993</td>
+      <td>-0.000449</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-08-01</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>276948.0</td>
+      <td>79884.226976</td>
+      <td>162229.573965</td>
+      <td>279074.615427</td>
+      <td>5.064712e+05</td>
+      <td>1.302371e+06</td>
+      <td>0.016200</td>
+      <td>0.013103</td>
+      <td>-0.005852</td>
+      <td>0.018952</td>
+      <td>0.023623</td>
+      <td>-0.002575</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-09-01</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>280744.0</td>
+      <td>83927.717979</td>
+      <td>170684.066289</td>
+      <td>278892.201316</td>
+      <td>5.175390e+05</td>
+      <td>1.278767e+06</td>
+      <td>0.013707</td>
+      <td>0.050617</td>
+      <td>0.052114</td>
+      <td>-0.000654</td>
+      <td>0.021853</td>
+      <td>-0.018124</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-10-01</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>270819.0</td>
+      <td>78767.775516</td>
+      <td>162337.205327</td>
+      <td>280150.327874</td>
+      <td>5.083173e+05</td>
+      <td>1.270289e+06</td>
+      <td>-0.035352</td>
+      <td>-0.061481</td>
+      <td>-0.048902</td>
+      <td>0.004511</td>
+      <td>-0.017818</td>
+      <td>-0.006630</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-11-01</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>268106.0</td>
+      <td>78081.850228</td>
+      <td>161322.496788</td>
+      <td>281698.616421</td>
+      <td>4.795738e+05</td>
+      <td>1.225941e+06</td>
+      <td>-0.010018</td>
+      <td>-0.008708</td>
+      <td>-0.006251</td>
+      <td>0.005527</td>
+      <td>-0.056546</td>
+      <td>-0.034911</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>1995-12-01</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>276721.0</td>
+      <td>78595.606013</td>
+      <td>166571.776336</td>
+      <td>289225.083480</td>
+      <td>4.999958e+05</td>
+      <td>1.265204e+06</td>
+      <td>0.032133</td>
+      <td>0.006580</td>
+      <td>0.032539</td>
+      <td>0.026718</td>
+      <td>0.042584</td>
+      <td>0.032027</td>
+      <td>-0.000986</td>
+      <td>0.141303</td>
+      <td>-0.018735</td>
+      <td>0.031773</td>
+      <td>-0.039669</td>
+      <td>-0.099183</td>
+      <td>1996-01-01</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>268285.0</td>
+      <td>63698.599010</td>
+      <td>182371.001164</td>
+      <td>284888.393785</td>
+      <td>5.109525e+05</td>
+      <td>1.242774e+06</td>
+      <td>-0.030486</td>
+      <td>-0.189540</td>
+      <td>0.094849</td>
+      <td>-0.014994</td>
+      <td>0.021913</td>
+      <td>-0.017728</td>
+      <td>0.047379</td>
+      <td>-0.041961</td>
+      <td>0.133237</td>
+      <td>0.149413</td>
+      <td>0.053469</td>
+      <td>0.016530</td>
+      <td>1996-02-01</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>278617.0</td>
+      <td>69382.151837</td>
+      <td>182879.266594</td>
+      <td>284420.050272</td>
+      <td>5.120290e+05</td>
+      <td>1.307927e+06</td>
+      <td>0.038511</td>
+      <td>0.089226</td>
+      <td>0.002787</td>
+      <td>-0.001644</td>
+      <td>0.002107</td>
+      <td>0.052425</td>
+      <td>0.095442</td>
+      <td>0.070538</td>
+      <td>0.190799</td>
+      <td>0.136696</td>
+      <td>0.082080</td>
+      <td>0.024859</td>
+      <td>1996-03-01</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>280016.0</td>
+      <td>76842.205593</td>
+      <td>176656.625405</td>
+      <td>278617.286159</td>
+      <td>5.216192e+05</td>
+      <td>1.250136e+06</td>
+      <td>0.005021</td>
+      <td>0.107521</td>
+      <td>-0.034026</td>
+      <td>-0.020402</td>
+      <td>0.018730</td>
+      <td>-0.044185</td>
+      <td>0.073722</td>
+      <td>0.084956</td>
+      <td>0.178633</td>
+      <td>0.066649</td>
+      <td>0.056138</td>
+      <td>-0.011970</td>
+      <td>1996-04-01</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>278604.0</td>
+      <td>81618.020675</td>
+      <td>174376.891815</td>
+      <td>273849.300762</td>
+      <td>5.123489e+05</td>
+      <td>1.268400e+06</td>
+      <td>-0.005043</td>
+      <td>0.062151</td>
+      <td>-0.012905</td>
+      <td>-0.017113</td>
+      <td>-0.017772</td>
+      <td>0.014610</td>
+      <td>0.043633</td>
+      <td>0.122515</td>
+      <td>0.104702</td>
+      <td>-0.013213</td>
+      <td>0.017862</td>
+      <td>0.007692</td>
+      <td>1996-05-01</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>273715.0</td>
+      <td>77843.593118</td>
+      <td>169875.489673</td>
+      <td>274820.069318</td>
+      <td>4.971116e+05</td>
+      <td>1.286509e+06</td>
+      <td>-0.017548</td>
+      <td>-0.046245</td>
+      <td>-0.025814</td>
+      <td>0.003545</td>
+      <td>-0.029740</td>
+      <td>0.014277</td>
+      <td>0.016304</td>
+      <td>-0.050797</td>
+      <td>0.040438</td>
+      <td>-0.006752</td>
+      <td>-0.005373</td>
+      <td>0.004748</td>
+      <td>1996-06-01</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>274595.0</td>
+      <td>75411.801726</td>
+      <td>168926.562560</td>
+      <td>285118.100980</td>
+      <td>5.068963e+05</td>
+      <td>1.293013e+06</td>
+      <td>0.003215</td>
+      <td>-0.031239</td>
+      <td>-0.005586</td>
+      <td>0.037472</td>
+      <td>0.019683</td>
+      <td>0.005056</td>
+      <td>0.010793</td>
+      <td>-0.045458</td>
+      <td>0.051660</td>
+      <td>0.029015</td>
+      <td>0.017318</td>
+      <td>-0.010186</td>
+      <td>1996-07-01</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>278571.0</td>
+      <td>77053.574075</td>
+      <td>170629.894264</td>
+      <td>286680.000783</td>
+      <td>5.110674e+05</td>
+      <td>1.287382e+06</td>
+      <td>0.014480</td>
+      <td>0.021771</td>
+      <td>0.010083</td>
+      <td>0.005478</td>
+      <td>0.008229</td>
+      <td>-0.004355</td>
+      <td>0.022155</td>
+      <td>-0.022796</td>
+      <td>0.045625</td>
+      <td>0.046721</td>
+      <td>0.032912</td>
+      <td>-0.014054</td>
+      <td>1996-08-01</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>281304.0</td>
+      <td>77510.614221</td>
+      <td>172395.760501</td>
+      <td>290059.350031</td>
+      <td>5.135826e+05</td>
+      <td>1.299889e+06</td>
+      <td>0.009811</td>
+      <td>0.005931</td>
+      <td>0.010349</td>
+      <td>0.011788</td>
+      <td>0.004921</td>
+      <td>0.009715</td>
+      <td>0.015729</td>
+      <td>-0.029713</td>
+      <td>0.062665</td>
+      <td>0.039361</td>
+      <td>0.014041</td>
+      <td>-0.001906</td>
+      <td>1996-09-01</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>278396.0</td>
+      <td>78036.409016</td>
+      <td>174656.713761</td>
+      <td>285695.157884</td>
+      <td>5.131431e+05</td>
+      <td>1.255697e+06</td>
+      <td>-0.010338</td>
+      <td>0.006784</td>
+      <td>0.013115</td>
+      <td>-0.015046</td>
+      <td>-0.000856</td>
+      <td>-0.033997</td>
+      <td>-0.008363</td>
+      <td>-0.070195</td>
+      <td>0.023275</td>
+      <td>0.024393</td>
+      <td>-0.008494</td>
+      <td>-0.018041</td>
+      <td>1996-10-01</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>290476.0</td>
+      <td>83685.358833</td>
+      <td>179804.520470</td>
+      <td>292168.389639</td>
+      <td>5.299837e+05</td>
+      <td>1.277956e+06</td>
+      <td>0.043391</td>
+      <td>0.072389</td>
+      <td>0.029474</td>
+      <td>0.022658</td>
+      <td>0.032819</td>
+      <td>0.017727</td>
+      <td>0.072584</td>
+      <td>0.062431</td>
+      <td>0.107599</td>
+      <td>0.042899</td>
+      <td>0.042624</td>
+      <td>0.006036</td>
+      <td>1996-11-01</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>286622.0</td>
+      <td>78190.468799</td>
+      <td>178353.879770</td>
+      <td>294532.642352</td>
+      <td>5.350491e+05</td>
+      <td>1.273222e+06</td>
+      <td>-0.013268</td>
+      <td>-0.065661</td>
+      <td>-0.008068</td>
+      <td>0.008092</td>
+      <td>0.009558</td>
+      <td>-0.003704</td>
+      <td>0.069062</td>
+      <td>0.001391</td>
+      <td>0.105574</td>
+      <td>0.045559</td>
+      <td>0.115676</td>
+      <td>0.038567</td>
+      <td>1996-12-01</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>300407.0</td>
+      <td>85971.869333</td>
+      <td>182970.712075</td>
+      <td>302196.761718</td>
+      <td>5.494652e+05</td>
+      <td>1.363724e+06</td>
+      <td>0.048095</td>
+      <td>0.099519</td>
+      <td>0.025886</td>
+      <td>0.026021</td>
+      <td>0.026944</td>
+      <td>0.071081</td>
+      <td>0.085595</td>
+      <td>0.093851</td>
+      <td>0.098450</td>
+      <td>0.044850</td>
+      <td>0.098940</td>
+      <td>0.077869</td>
+      <td>1997-01-01</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>300426.0</td>
+      <td>87099.347669</td>
+      <td>187502.961672</td>
+      <td>303462.856282</td>
+      <td>5.564340e+05</td>
+      <td>1.335981e+06</td>
+      <td>0.000063</td>
+      <td>0.013115</td>
+      <td>0.024770</td>
+      <td>0.004190</td>
+      <td>0.012683</td>
+      <td>-0.020343</td>
+      <td>0.119802</td>
+      <td>0.367367</td>
+      <td>0.028140</td>
+      <td>0.065199</td>
+      <td>0.089013</td>
+      <td>0.074999</td>
+      <td>1997-02-01</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>296342.0</td>
+      <td>84842.175289</td>
+      <td>187718.534330</td>
+      <td>303231.294991</td>
+      <td>5.516757e+05</td>
+      <td>1.315573e+06</td>
+      <td>-0.013594</td>
+      <td>-0.025915</td>
+      <td>0.001150</td>
+      <td>-0.000763</td>
+      <td>-0.008551</td>
+      <td>-0.015276</td>
+      <td>0.063618</td>
+      <td>0.222824</td>
+      <td>0.026462</td>
+      <td>0.066139</td>
+      <td>0.077431</td>
+      <td>0.005846</td>
+      <td>1997-03-01</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>306129.0</td>
+      <td>91158.447494</td>
+      <td>190348.091226</td>
+      <td>311901.736071</td>
+      <td>5.545857e+05</td>
+      <td>1.340768e+06</td>
+      <td>0.033026</td>
+      <td>0.074447</td>
+      <td>0.014008</td>
+      <td>0.028593</td>
+      <td>0.005275</td>
+      <td>0.019152</td>
+      <td>0.093255</td>
+      <td>0.186307</td>
+      <td>0.077503</td>
+      <td>0.119463</td>
+      <td>0.063200</td>
+      <td>0.072498</td>
+      <td>1997-04-01</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>308205.0</td>
+      <td>90609.116227</td>
+      <td>190424.967421</td>
+      <td>311927.011015</td>
+      <td>5.691011e+05</td>
+      <td>1.346939e+06</td>
+      <td>0.006781</td>
+      <td>-0.006026</td>
+      <td>0.000404</td>
+      <td>0.000081</td>
+      <td>0.026173</td>
+      <td>0.004602</td>
+      <td>0.106248</td>
+      <td>0.110161</td>
+      <td>0.092031</td>
+      <td>0.139046</td>
+      <td>0.110769</td>
+      <td>0.061919</td>
+      <td>1997-05-01</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>318391.0</td>
+      <td>91367.007148</td>
+      <td>198470.620511</td>
+      <td>316521.649803</td>
+      <td>5.756135e+05</td>
+      <td>1.364490e+06</td>
+      <td>0.033049</td>
+      <td>0.008364</td>
+      <td>0.042251</td>
+      <td>0.014730</td>
+      <td>0.011443</td>
+      <td>0.013030</td>
+      <td>0.163221</td>
+      <td>0.173725</td>
+      <td>0.168330</td>
+      <td>0.151741</td>
+      <td>0.157916</td>
+      <td>0.060614</td>
+      <td>1997-06-01</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>319594.0</td>
+      <td>91136.532076</td>
+      <td>199013.475738</td>
+      <td>315869.715799</td>
+      <td>5.818476e+05</td>
+      <td>1.363146e+06</td>
+      <td>0.003778</td>
+      <td>-0.002523</td>
+      <td>0.002735</td>
+      <td>-0.002060</td>
+      <td>0.010830</td>
+      <td>-0.000985</td>
+      <td>0.163874</td>
+      <td>0.208518</td>
+      <td>0.178106</td>
+      <td>0.107856</td>
+      <td>0.147863</td>
+      <td>0.054240</td>
+      <td>1997-07-01</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>307165.0</td>
+      <td>76842.384823</td>
+      <td>201607.623086</td>
+      <td>312418.169175</td>
+      <td>5.731670e+05</td>
+      <td>1.361625e+06</td>
+      <td>-0.038890</td>
+      <td>-0.156843</td>
+      <td>0.013035</td>
+      <td>-0.010927</td>
+      <td>-0.014919</td>
+      <td>-0.001115</td>
+      <td>0.102645</td>
+      <td>-0.002741</td>
+      <td>0.181549</td>
+      <td>0.089780</td>
+      <td>0.121510</td>
+      <td>0.057670</td>
+      <td>1997-08-01</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>320982.0</td>
+      <td>94004.324712</td>
+      <td>208204.226147</td>
+      <td>309856.906812</td>
+      <td>5.800480e+05</td>
+      <td>1.374831e+06</td>
+      <td>0.044982</td>
+      <td>0.223340</td>
+      <td>0.032720</td>
+      <td>-0.008198</td>
+      <td>0.012005</td>
+      <td>0.009699</td>
+      <td>0.141050</td>
+      <td>0.212793</td>
+      <td>0.207711</td>
+      <td>0.068253</td>
+      <td>0.129415</td>
+      <td>0.057653</td>
+      <td>1997-09-01</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>331578.0</td>
+      <td>96292.538564</td>
+      <td>211010.408180</td>
+      <td>324656.421682</td>
+      <td>6.039584e+05</td>
+      <td>1.409777e+06</td>
+      <td>0.033011</td>
+      <td>0.024342</td>
+      <td>0.013478</td>
+      <td>0.047762</td>
+      <td>0.041221</td>
+      <td>0.025418</td>
+      <td>0.191030</td>
+      <td>0.233944</td>
+      <td>0.208144</td>
+      <td>0.136374</td>
+      <td>0.176979</td>
+      <td>0.122705</td>
+      <td>1997-10-01</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>330522.0</td>
+      <td>94671.630894</td>
+      <td>209635.246014</td>
+      <td>332595.136420</td>
+      <td>6.186172e+05</td>
+      <td>1.355027e+06</td>
+      <td>-0.003185</td>
+      <td>-0.016833</td>
+      <td>-0.006517</td>
+      <td>0.024453</td>
+      <td>0.024271</td>
+      <td>-0.038836</td>
+      <td>0.137863</td>
+      <td>0.131281</td>
+      <td>0.165906</td>
+      <td>0.138368</td>
+      <td>0.167238</td>
+      <td>0.060308</td>
+      <td>1997-11-01</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>326465.0</td>
+      <td>87570.678523</td>
+      <td>201543.894415</td>
+      <td>320673.695691</td>
+      <td>6.180175e+05</td>
+      <td>1.393095e+06</td>
+      <td>-0.012275</td>
+      <td>-0.075006</td>
+      <td>-0.038597</td>
+      <td>-0.035844</td>
+      <td>-0.000969</td>
+      <td>0.028094</td>
+      <td>0.139009</td>
+      <td>0.119966</td>
+      <td>0.130022</td>
+      <td>0.088754</td>
+      <td>0.155067</td>
+      <td>0.094150</td>
+      <td>1997-12-01</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>332063.0</td>
+      <td>87285.166163</td>
+      <td>203309.200976</td>
+      <td>326861.429278</td>
+      <td>6.253070e+05</td>
+      <td>1.438915e+06</td>
+      <td>0.017147</td>
+      <td>-0.003260</td>
+      <td>0.008759</td>
+      <td>0.019296</td>
+      <td>0.011795</td>
+      <td>0.032891</td>
+      <td>0.105377</td>
+      <td>0.015276</td>
+      <td>0.111157</td>
+      <td>0.081618</td>
+      <td>0.138028</td>
+      <td>0.055136</td>
+      <td>1998-01-01</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>329090.0</td>
+      <td>84862.813386</td>
+      <td>210535.469677</td>
+      <td>328166.722318</td>
+      <td>6.240737e+05</td>
+      <td>1.452940e+06</td>
+      <td>-0.008953</td>
+      <td>-0.027752</td>
+      <td>0.035543</td>
+      <td>0.003993</td>
+      <td>-0.001972</td>
+      <td>0.009747</td>
+      <td>0.095411</td>
+      <td>-0.025678</td>
+      <td>0.122838</td>
+      <td>0.081407</td>
+      <td>0.121559</td>
+      <td>0.087546</td>
+      <td>1998-02-01</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>332644.0</td>
+      <td>85856.084581</td>
+      <td>208464.396669</td>
+      <td>339880.557116</td>
+      <td>6.422799e+05</td>
+      <td>1.474988e+06</td>
+      <td>0.010799</td>
+      <td>0.011704</td>
+      <td>-0.009837</td>
+      <td>0.035695</td>
+      <td>0.029173</td>
+      <td>0.015174</td>
+      <td>0.122500</td>
+      <td>0.011951</td>
+      <td>0.110516</td>
+      <td>0.120862</td>
+      <td>0.164235</td>
+      <td>0.121175</td>
+      <td>1998-03-01</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>340798.0</td>
+      <td>92623.391869</td>
+      <td>214351.694523</td>
+      <td>339192.204640</td>
+      <td>6.406890e+05</td>
+      <td>1.489137e+06</td>
+      <td>0.024513</td>
+      <td>0.078822</td>
+      <td>0.028241</td>
+      <td>-0.002025</td>
+      <td>-0.002477</td>
+      <td>0.009593</td>
+      <td>0.113250</td>
+      <td>0.016070</td>
+      <td>0.126104</td>
+      <td>0.087497</td>
+      <td>0.155257</td>
+      <td>0.110660</td>
+      <td>1998-04-01</td>
+    </tr>
+    <tr>
+      <th>40</th>
+      <td>347670.0</td>
+      <td>96757.862528</td>
+      <td>217679.977078</td>
+      <td>345404.812191</td>
+      <td>6.541191e+05</td>
+      <td>1.491464e+06</td>
+      <td>0.020164</td>
+      <td>0.044637</td>
+      <td>0.015527</td>
+      <td>0.018316</td>
+      <td>0.020962</td>
+      <td>0.001562</td>
+      <td>0.128048</td>
+      <td>0.067860</td>
+      <td>0.143127</td>
+      <td>0.107326</td>
+      <td>0.149390</td>
+      <td>0.107299</td>
+      <td>1998-05-01</td>
+    </tr>
+    <tr>
+      <th>41</th>
+      <td>353764.0</td>
+      <td>102136.828938</td>
+      <td>219427.225790</td>
+      <td>350083.849755</td>
+      <td>6.616017e+05</td>
+      <td>1.519858e+06</td>
+      <td>0.017528</td>
+      <td>0.055592</td>
+      <td>0.008027</td>
+      <td>0.013547</td>
+      <td>0.011439</td>
+      <td>0.019038</td>
+      <td>0.111099</td>
+      <td>0.117874</td>
+      <td>0.105590</td>
+      <td>0.106034</td>
+      <td>0.149385</td>
+      <td>0.113865</td>
+      <td>1998-06-01</td>
+    </tr>
+    <tr>
+      <th>42</th>
+      <td>357066.0</td>
+      <td>96638.810086</td>
+      <td>222112.743786</td>
+      <td>355753.015989</td>
+      <td>6.578428e+05</td>
+      <td>1.587245e+06</td>
+      <td>0.009334</td>
+      <td>-0.053830</td>
+      <td>0.012239</td>
+      <td>0.016194</td>
+      <td>-0.005682</td>
+      <td>0.044338</td>
+      <td>0.117249</td>
+      <td>0.060374</td>
+      <td>0.116069</td>
+      <td>0.126265</td>
+      <td>0.130610</td>
+      <td>0.164399</td>
+      <td>1998-07-01</td>
+    </tr>
+    <tr>
+      <th>43</th>
+      <td>366108.0</td>
+      <td>101679.654680</td>
+      <td>224414.039937</td>
+      <td>361580.036419</td>
+      <td>6.659632e+05</td>
+      <td>1.604448e+06</td>
+      <td>0.025323</td>
+      <td>0.052162</td>
+      <td>0.010361</td>
+      <td>0.016379</td>
+      <td>0.012344</td>
+      <td>0.010838</td>
+      <td>0.191894</td>
+      <td>0.323224</td>
+      <td>0.113123</td>
+      <td>0.157359</td>
+      <td>0.161901</td>
+      <td>0.178333</td>
+      <td>1998-08-01</td>
+    </tr>
+    <tr>
+      <th>44</th>
+      <td>365501.0</td>
+      <td>104563.702644</td>
+      <td>230561.905369</td>
+      <td>361834.865914</td>
+      <td>6.573731e+05</td>
+      <td>1.606720e+06</td>
+      <td>-0.001658</td>
+      <td>0.028364</td>
+      <td>0.027395</td>
+      <td>0.000705</td>
+      <td>-0.012899</td>
+      <td>0.001416</td>
+      <td>0.138696</td>
+      <td>0.112329</td>
+      <td>0.107383</td>
+      <td>0.167748</td>
+      <td>0.133308</td>
+      <td>0.168667</td>
+      <td>1998-09-01</td>
+    </tr>
+    <tr>
+      <th>45</th>
+      <td>375780.0</td>
+      <td>108135.061225</td>
+      <td>226368.418763</td>
+      <td>379035.045767</td>
+      <td>6.707278e+05</td>
+      <td>1.606650e+06</td>
+      <td>0.028123</td>
+      <td>0.034155</td>
+      <td>-0.018188</td>
+      <td>0.047536</td>
+      <td>0.020315</td>
+      <td>-0.000044</td>
+      <td>0.133308</td>
+      <td>0.122985</td>
+      <td>0.072783</td>
+      <td>0.167496</td>
+      <td>0.110553</td>
+      <td>0.139648</td>
+      <td>1998-10-01</td>
+    </tr>
+    <tr>
+      <th>46</th>
+      <td>369676.0</td>
+      <td>96719.517508</td>
+      <td>220039.259634</td>
+      <td>378687.631898</td>
+      <td>6.640359e+05</td>
+      <td>1.639321e+06</td>
+      <td>-0.016244</td>
+      <td>-0.105567</td>
+      <td>-0.027960</td>
+      <td>-0.000917</td>
+      <td>-0.009977</td>
+      <td>0.020335</td>
+      <td>0.118461</td>
+      <td>0.021631</td>
+      <td>0.049629</td>
+      <td>0.138584</td>
+      <td>0.073420</td>
+      <td>0.209807</td>
+      <td>1998-11-01</td>
+    </tr>
+    <tr>
+      <th>47</th>
+      <td>357757.0</td>
+      <td>81465.344709</td>
+      <td>202575.424165</td>
+      <td>377109.765378</td>
+      <td>6.556666e+05</td>
+      <td>1.625446e+06</td>
+      <td>-0.032242</td>
+      <td>-0.157716</td>
+      <td>-0.079367</td>
+      <td>-0.004167</td>
+      <td>-0.012604</td>
+      <td>-0.008464</td>
+      <td>0.095851</td>
+      <td>-0.069719</td>
+      <td>0.005118</td>
+      <td>0.175992</td>
+      <td>0.060919</td>
+      <td>0.166788</td>
+      <td>1998-12-01</td>
+    </tr>
+    <tr>
+      <th>48</th>
+      <td>368088.0</td>
+      <td>85034.636460</td>
+      <td>214740.712925</td>
+      <td>373893.157830</td>
+      <td>6.480829e+05</td>
+      <td>1.690565e+06</td>
+      <td>0.028877</td>
+      <td>0.043814</td>
+      <td>0.060053</td>
+      <td>-0.008530</td>
+      <td>-0.011566</td>
+      <td>0.040062</td>
+      <td>0.108488</td>
+      <td>-0.025784</td>
+      <td>0.056227</td>
+      <td>0.143889</td>
+      <td>0.036424</td>
+      <td>0.174889</td>
+      <td>1999-01-01</td>
+    </tr>
+    <tr>
+      <th>49</th>
+      <td>367475.0</td>
+      <td>90124.264555</td>
+      <td>215502.970681</td>
+      <td>376500.715759</td>
+      <td>6.492066e+05</td>
+      <td>1.632282e+06</td>
+      <td>-0.001665</td>
+      <td>0.059854</td>
+      <td>0.003550</td>
+      <td>0.006974</td>
+      <td>0.001734</td>
+      <td>-0.034475</td>
+      <td>0.116640</td>
+      <td>0.061999</td>
+      <td>0.023595</td>
+      <td>0.147285</td>
+      <td>0.040272</td>
+      <td>0.123434</td>
+      <td>1999-02-01</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>367519.0</td>
+      <td>93381.436973</td>
+      <td>219195.424217</td>
+      <td>373870.522732</td>
+      <td>6.514428e+05</td>
+      <td>1.598351e+06</td>
+      <td>0.000120</td>
+      <td>0.036141</td>
+      <td>0.017134</td>
+      <td>-0.006986</td>
+      <td>0.003444</td>
+      <td>-0.020788</td>
+      <td>0.104842</td>
+      <td>0.087651</td>
+      <td>0.051477</td>
+      <td>0.100006</td>
+      <td>0.014266</td>
+      <td>0.083637</td>
+      <td>1999-03-01</td>
+    </tr>
+    <tr>
+      <th>51</th>
+      <td>377565.0</td>
+      <td>99534.290902</td>
+      <td>220496.560469</td>
+      <td>382858.029953</td>
+      <td>6.786326e+05</td>
+      <td>1.612945e+06</td>
+      <td>0.027335</td>
+      <td>0.065889</td>
+      <td>0.005936</td>
+      <td>0.024039</td>
+      <td>0.041738</td>
+      <td>0.009131</td>
+      <td>0.107885</td>
+      <td>0.074613</td>
+      <td>0.028667</td>
+      <td>0.128735</td>
+      <td>0.059223</td>
+      <td>0.083140</td>
+      <td>1999-04-01</td>
+    </tr>
+    <tr>
+      <th>52</th>
+      <td>389013.0</td>
+      <td>111823.930286</td>
+      <td>237342.947079</td>
+      <td>398310.484904</td>
+      <td>6.837534e+05</td>
+      <td>1.602491e+06</td>
+      <td>0.030321</td>
+      <td>0.123471</td>
+      <td>0.076402</td>
+      <td>0.040361</td>
+      <td>0.007546</td>
+      <td>-0.006481</td>
+      <td>0.118914</td>
+      <td>0.155709</td>
+      <td>0.090330</td>
+      <td>0.153170</td>
+      <td>0.045304</td>
+      <td>0.074442</td>
+      <td>1999-05-01</td>
+    </tr>
+    <tr>
+      <th>53</th>
+      <td>392157.0</td>
+      <td>104752.063266</td>
+      <td>243880.773710</td>
+      <td>411838.372054</td>
+      <td>6.926253e+05</td>
+      <td>1.623966e+06</td>
+      <td>0.008082</td>
+      <td>-0.063241</td>
+      <td>0.027546</td>
+      <td>0.033963</td>
+      <td>0.012975</td>
+      <td>0.013401</td>
+      <td>0.108527</td>
+      <td>0.025605</td>
+      <td>0.111443</td>
+      <td>0.176399</td>
+      <td>0.046892</td>
+      <td>0.068499</td>
+      <td>1999-06-01</td>
+    </tr>
+    <tr>
+      <th>54</th>
+      <td>408522.0</td>
+      <td>119978.739037</td>
+      <td>252564.691919</td>
+      <td>417628.788559</td>
+      <td>7.145316e+05</td>
+      <td>1.678050e+06</td>
+      <td>0.041731</td>
+      <td>0.145359</td>
+      <td>0.035607</td>
+      <td>0.014060</td>
+      <td>0.031628</td>
+      <td>0.033304</td>
+      <td>0.144108</td>
+      <td>0.241517</td>
+      <td>0.137101</td>
+      <td>0.173929</td>
+      <td>0.086174</td>
+      <td>0.057209</td>
+      <td>1999-07-01</td>
+    </tr>
+    <tr>
+      <th>55</th>
+      <td>416972.0</td>
+      <td>126254.690552</td>
+      <td>261276.200387</td>
+      <td>422089.442736</td>
+      <td>7.229866e+05</td>
+      <td>1.691666e+06</td>
+      <td>0.020684</td>
+      <td>0.052309</td>
+      <td>0.034492</td>
+      <td>0.010681</td>
+      <td>0.011833</td>
+      <td>0.008114</td>
+      <td>0.138932</td>
+      <td>0.241691</td>
+      <td>0.164260</td>
+      <td>0.167347</td>
+      <td>0.085625</td>
+      <td>0.054360</td>
+      <td>1999-08-01</td>
+    </tr>
+    <tr>
+      <th>56</th>
+      <td>421434.0</td>
+      <td>125925.918632</td>
+      <td>265079.088201</td>
+      <td>420910.397803</td>
+      <td>7.308386e+05</td>
+      <td>1.716226e+06</td>
+      <td>0.010701</td>
+      <td>-0.002604</td>
+      <td>0.014555</td>
+      <td>-0.002793</td>
+      <td>0.010860</td>
+      <td>0.014518</td>
+      <td>0.153031</td>
+      <td>0.204299</td>
+      <td>0.149709</td>
+      <td>0.163267</td>
+      <td>0.111756</td>
+      <td>0.068155</td>
+      <td>1999-09-01</td>
+    </tr>
+    <tr>
+      <th>57</th>
+      <td>425687.0</td>
+      <td>130081.967588</td>
+      <td>274607.106957</td>
+      <td>422194.786426</td>
+      <td>7.299822e+05</td>
+      <td>1.736354e+06</td>
+      <td>0.010092</td>
+      <td>0.033004</td>
+      <td>0.035944</td>
+      <td>0.003051</td>
+      <td>-0.001172</td>
+      <td>0.011728</td>
+      <td>0.132809</td>
+      <td>0.202958</td>
+      <td>0.213098</td>
+      <td>0.113867</td>
+      <td>0.088343</td>
+      <td>0.080729</td>
+      <td>1999-10-01</td>
+    </tr>
+    <tr>
+      <th>58</th>
+      <td>423474.0</td>
+      <td>123151.198448</td>
+      <td>268541.115800</td>
+      <td>427795.996120</td>
+      <td>7.496717e+05</td>
+      <td>1.763600e+06</td>
+      <td>-0.005199</td>
+      <td>-0.053280</td>
+      <td>-0.022090</td>
+      <td>0.013267</td>
+      <td>0.026973</td>
+      <td>0.015692</td>
+      <td>0.145527</td>
+      <td>0.273282</td>
+      <td>0.220424</td>
+      <td>0.129680</td>
+      <td>0.128963</td>
+      <td>0.075811</td>
+      <td>1999-11-01</td>
+    </tr>
+    <tr>
+      <th>59</th>
+      <td>427757.0</td>
+      <td>121565.029453</td>
+      <td>256694.838739</td>
+      <td>434581.725953</td>
+      <td>7.706343e+05</td>
+      <td>1.765340e+06</td>
+      <td>0.010114</td>
+      <td>-0.012880</td>
+      <td>-0.044113</td>
+      <td>0.015862</td>
+      <td>0.027962</td>
+      <td>0.000986</td>
+      <td>0.195664</td>
+      <td>0.492230</td>
+      <td>0.267157</td>
+      <td>0.152401</td>
+      <td>0.175345</td>
+      <td>0.086064</td>
+      <td>1999-12-01</td>
+    </tr>
+    <tr>
+      <th>60</th>
+      <td>434814.0</td>
+      <td>132157.597305</td>
+      <td>256926.469236</td>
+      <td>438854.157824</td>
+      <td>7.778140e+05</td>
+      <td>1.799056e+06</td>
+      <td>0.016498</td>
+      <td>0.087135</td>
+      <td>0.000902</td>
+      <td>0.009831</td>
+      <td>0.009317</td>
+      <td>0.019099</td>
+      <td>0.181277</td>
+      <td>0.554162</td>
+      <td>0.196450</td>
+      <td>0.173742</td>
+      <td>0.200177</td>
+      <td>0.064174</td>
+      <td>2000-01-01</td>
+    </tr>
+    <tr>
+      <th>61</th>
+      <td>452027.0</td>
+      <td>131525.274993</td>
+      <td>275266.903063</td>
+      <td>448529.474783</td>
+      <td>8.002595e+05</td>
+      <td>1.836045e+06</td>
+      <td>0.039587</td>
+      <td>-0.004785</td>
+      <td>0.071384</td>
+      <td>0.022047</td>
+      <td>0.028857</td>
+      <td>0.020560</td>
+      <td>0.230089</td>
+      <td>0.459377</td>
+      <td>0.277323</td>
+      <td>0.191311</td>
+      <td>0.232673</td>
+      <td>0.124833</td>
+      <td>2000-02-01</td>
+    </tr>
+    <tr>
+      <th>62</th>
+      <td>459851.0</td>
+      <td>133483.197632</td>
+      <td>279094.984060</td>
+      <td>461524.881231</td>
+      <td>8.042343e+05</td>
+      <td>1.872479e+06</td>
+      <td>0.017309</td>
+      <td>0.014886</td>
+      <td>0.013907</td>
+      <td>0.028973</td>
+      <td>0.004967</td>
+      <td>0.019844</td>
+      <td>0.251231</td>
+      <td>0.429440</td>
+      <td>0.273270</td>
+      <td>0.234451</td>
+      <td>0.234543</td>
+      <td>0.171507</td>
+      <td>2000-03-01</td>
+    </tr>
+    <tr>
+      <th>63</th>
+      <td>465700.0</td>
+      <td>131170.692866</td>
+      <td>287713.564809</td>
+      <td>471917.190535</td>
+      <td>8.111205e+05</td>
+      <td>1.924558e+06</td>
+      <td>0.012719</td>
+      <td>-0.017324</td>
+      <td>0.030880</td>
+      <td>0.022517</td>
+      <td>0.008562</td>
+      <td>0.027813</td>
+      <td>0.233430</td>
+      <td>0.317844</td>
+      <td>0.304844</td>
+      <td>0.232617</td>
+      <td>0.195228</td>
+      <td>0.193195</td>
+      <td>2000-04-01</td>
+    </tr>
+    <tr>
+      <th>64</th>
+      <td>482364.0</td>
+      <td>133061.854896</td>
+      <td>303882.448397</td>
+      <td>479910.041512</td>
+      <td>8.427987e+05</td>
+      <td>2.060889e+06</td>
+      <td>0.035783</td>
+      <td>0.014418</td>
+      <td>0.056198</td>
+      <td>0.016937</td>
+      <td>0.039055</td>
+      <td>0.070837</td>
+      <td>0.239969</td>
+      <td>0.189923</td>
+      <td>0.280352</td>
+      <td>0.204864</td>
+      <td>0.232606</td>
+      <td>0.286053</td>
+      <td>2000-05-01</td>
+    </tr>
+    <tr>
+      <th>65</th>
+      <td>499291.0</td>
+      <td>147061.485917</td>
+      <td>310148.693901</td>
+      <td>488360.064585</td>
+      <td>8.565412e+05</td>
+      <td>2.143794e+06</td>
+      <td>0.035092</td>
+      <td>0.105211</td>
+      <td>0.020621</td>
+      <td>0.017608</td>
+      <td>0.016306</td>
+      <td>0.040228</td>
+      <td>0.273192</td>
+      <td>0.403901</td>
+      <td>0.271723</td>
+      <td>0.185805</td>
+      <td>0.236659</td>
+      <td>0.320098</td>
+      <td>2000-06-01</td>
+    </tr>
+    <tr>
+      <th>66</th>
+      <td>495987.0</td>
+      <td>144960.488373</td>
+      <td>311233.617304</td>
+      <td>479708.481833</td>
+      <td>8.423242e+05</td>
+      <td>2.108022e+06</td>
+      <td>-0.006617</td>
+      <td>-0.014287</td>
+      <td>0.003498</td>
+      <td>-0.017716</td>
+      <td>-0.016598</td>
+      <td>-0.016686</td>
+      <td>0.214101</td>
+      <td>0.208218</td>
+      <td>0.232293</td>
+      <td>0.148648</td>
+      <td>0.178848</td>
+      <td>0.256233</td>
+      <td>2000-07-01</td>
+    </tr>
+    <tr>
+      <th>67</th>
+      <td>493168.0</td>
+      <td>133420.622546</td>
+      <td>313795.194807</td>
+      <td>484969.488167</td>
+      <td>8.357037e+05</td>
+      <td>2.082107e+06</td>
+      <td>-0.005684</td>
+      <td>-0.079607</td>
+      <td>0.008230</td>
+      <td>0.010967</td>
+      <td>-0.007860</td>
+      <td>-0.012293</td>
+      <td>0.182736</td>
+      <td>0.056758</td>
+      <td>0.201009</td>
+      <td>0.148973</td>
+      <td>0.155905</td>
+      <td>0.230803</td>
+      <td>2000-08-01</td>
+    </tr>
+    <tr>
+      <th>68</th>
+      <td>502066.0</td>
+      <td>143021.966824</td>
+      <td>323048.544776</td>
+      <td>479379.705217</td>
+      <td>8.422166e+05</td>
+      <td>2.131299e+06</td>
+      <td>0.018043</td>
+      <td>0.071963</td>
+      <td>0.029489</td>
+      <td>-0.011526</td>
+      <td>0.007793</td>
+      <td>0.023626</td>
+      <td>0.191328</td>
+      <td>0.135763</td>
+      <td>0.218687</td>
+      <td>0.138912</td>
+      <td>0.152398</td>
+      <td>0.241852</td>
+      <td>2000-09-01</td>
+    </tr>
+    <tr>
+      <th>69</th>
+      <td>517141.0</td>
+      <td>152733.590881</td>
+      <td>325101.462651</td>
+      <td>490193.988830</td>
+      <td>8.596784e+05</td>
+      <td>2.172956e+06</td>
+      <td>0.030026</td>
+      <td>0.067903</td>
+      <td>0.006355</td>
+      <td>0.022559</td>
+      <td>0.020733</td>
+      <td>0.019545</td>
+      <td>0.214839</td>
+      <td>0.174133</td>
+      <td>0.183879</td>
+      <td>0.161061</td>
+      <td>0.177670</td>
+      <td>0.251448</td>
+      <td>2000-10-01</td>
+    </tr>
+    <tr>
+      <th>70</th>
+      <td>518245.0</td>
+      <td>153391.805639</td>
+      <td>315786.280750</td>
+      <td>511464.695856</td>
+      <td>8.614825e+05</td>
+      <td>2.176597e+06</td>
+      <td>0.002135</td>
+      <td>0.004310</td>
+      <td>-0.028653</td>
+      <td>0.043392</td>
+      <td>0.002099</td>
+      <td>0.001676</td>
+      <td>0.223794</td>
+      <td>0.245557</td>
+      <td>0.175933</td>
+      <td>0.195581</td>
+      <td>0.149146</td>
+      <td>0.234178</td>
+      <td>2000-11-01</td>
+    </tr>
+    <tr>
+      <th>71</th>
+      <td>509021.0</td>
+      <td>133896.195578</td>
+      <td>315459.199129</td>
+      <td>520707.307149</td>
+      <td>8.730593e+05</td>
+      <td>2.154229e+06</td>
+      <td>-0.017799</td>
+      <td>-0.127097</td>
+      <td>-0.001036</td>
+      <td>0.018071</td>
+      <td>0.013438</td>
+      <td>-0.010277</td>
+      <td>0.189977</td>
+      <td>0.101437</td>
+      <td>0.228927</td>
+      <td>0.198180</td>
+      <td>0.132910</td>
+      <td>0.220292</td>
+      <td>2000-12-01</td>
+    </tr>
+    <tr>
+      <th>72</th>
+      <td>533896.0</td>
+      <td>160015.299432</td>
+      <td>329471.239330</td>
+      <td>545512.583465</td>
+      <td>8.929299e+05</td>
+      <td>2.185651e+06</td>
+      <td>0.048868</td>
+      <td>0.195070</td>
+      <td>0.044418</td>
+      <td>0.047638</td>
+      <td>0.022760</td>
+      <td>0.014586</td>
+      <td>0.227872</td>
+      <td>0.210792</td>
+      <td>0.282356</td>
+      <td>0.243038</td>
+      <td>0.147999</td>
+      <td>0.214888</td>
+      <td>2001-01-01</td>
+    </tr>
+    <tr>
+      <th>73</th>
+      <td>535266.0</td>
+      <td>150494.842958</td>
+      <td>326772.074876</td>
+      <td>548611.486886</td>
+      <td>9.075201e+05</td>
+      <td>2.251344e+06</td>
+      <td>0.002566</td>
+      <td>-0.059497</td>
+      <td>-0.008192</td>
+      <td>0.005681</td>
+      <td>0.016340</td>
+      <td>0.030057</td>
+      <td>0.184146</td>
+      <td>0.144228</td>
+      <td>0.187110</td>
+      <td>0.223134</td>
+      <td>0.134032</td>
+      <td>0.226192</td>
+      <td>2001-02-01</td>
+    </tr>
+    <tr>
+      <th>74</th>
+      <td>547367.0</td>
+      <td>149736.375687</td>
+      <td>337645.571934</td>
+      <td>553017.998730</td>
+      <td>9.374109e+05</td>
+      <td>2.289183e+06</td>
+      <td>0.022607</td>
+      <td>-0.005040</td>
+      <td>0.033275</td>
+      <td>0.008032</td>
+      <td>0.032937</td>
+      <td>0.016808</td>
+      <td>0.190314</td>
+      <td>0.121762</td>
+      <td>0.209787</td>
+      <td>0.198241</td>
+      <td>0.165594</td>
+      <td>0.222541</td>
+      <td>2001-03-01</td>
+    </tr>
+    <tr>
+      <th>75</th>
+      <td>551365.0</td>
+      <td>170517.688755</td>
+      <td>332861.961336</td>
+      <td>543096.521787</td>
+      <td>9.338005e+05</td>
+      <td>2.270885e+06</td>
+      <td>0.007304</td>
+      <td>0.138786</td>
+      <td>-0.014168</td>
+      <td>-0.017941</td>
+      <td>-0.003851</td>
+      <td>-0.007993</td>
+      <td>0.183949</td>
+      <td>0.299968</td>
+      <td>0.156921</td>
+      <td>0.150830</td>
+      <td>0.151247</td>
+      <td>0.179952</td>
+      <td>2001-04-01</td>
+    </tr>
+    <tr>
+      <th>76</th>
+      <td>542752.0</td>
+      <td>158381.915305</td>
+      <td>316835.425680</td>
+      <td>542954.309857</td>
+      <td>9.330194e+05</td>
+      <td>2.293520e+06</td>
+      <td>-0.015621</td>
+      <td>-0.071170</td>
+      <td>-0.048148</td>
+      <td>-0.000262</td>
+      <td>-0.000836</td>
+      <td>0.009968</td>
+      <td>0.125192</td>
+      <td>0.190288</td>
+      <td>0.042625</td>
+      <td>0.131367</td>
+      <td>0.107049</td>
+      <td>0.112879</td>
+      <td>2001-05-01</td>
+    </tr>
+    <tr>
+      <th>77</th>
+      <td>549278.0</td>
+      <td>161120.479880</td>
+      <td>331521.646980</td>
+      <td>555373.176247</td>
+      <td>9.390913e+05</td>
+      <td>2.307073e+06</td>
+      <td>0.012024</td>
+      <td>0.017291</td>
+      <td>0.046353</td>
+      <td>0.022873</td>
+      <td>0.006508</td>
+      <td>0.005909</td>
+      <td>0.100116</td>
+      <td>0.095599</td>
+      <td>0.068912</td>
+      <td>0.137221</td>
+      <td>0.096376</td>
+      <td>0.076164</td>
+      <td>2001-06-01</td>
+    </tr>
+    <tr>
+      <th>78</th>
+      <td>547587.0</td>
+      <td>152914.109193</td>
+      <td>332352.295164</td>
+      <td>561225.520275</td>
+      <td>9.564016e+05</td>
+      <td>2.334552e+06</td>
+      <td>-0.003079</td>
+      <td>-0.050933</td>
+      <td>0.002506</td>
+      <td>0.010538</td>
+      <td>0.018433</td>
+      <td>0.011911</td>
+      <td>0.104035</td>
+      <td>0.054868</td>
+      <td>0.067855</td>
+      <td>0.169930</td>
+      <td>0.135432</td>
+      <td>0.107461</td>
+      <td>2001-07-01</td>
+    </tr>
+    <tr>
+      <th>79</th>
+      <td>554981.0</td>
+      <td>163755.330456</td>
+      <td>348042.172631</td>
+      <td>571186.116577</td>
+      <td>9.535607e+05</td>
+      <td>2.287354e+06</td>
+      <td>0.013503</td>
+      <td>0.070897</td>
+      <td>0.047209</td>
+      <td>0.017748</td>
+      <td>-0.002970</td>
+      <td>-0.020217</td>
+      <td>0.125339</td>
+      <td>0.227361</td>
+      <td>0.109138</td>
+      <td>0.177777</td>
+      <td>0.141027</td>
+      <td>0.098576</td>
+      <td>2001-08-01</td>
+    </tr>
+    <tr>
+      <th>80</th>
+      <td>564221.0</td>
+      <td>174350.555457</td>
+      <td>346893.831166</td>
+      <td>564340.019992</td>
+      <td>9.714418e+05</td>
+      <td>2.306646e+06</td>
+      <td>0.016649</td>
+      <td>0.064702</td>
+      <td>-0.003299</td>
+      <td>-0.011986</td>
+      <td>0.018752</td>
+      <td>0.008434</td>
+      <td>0.123798</td>
+      <td>0.219047</td>
+      <td>0.073813</td>
+      <td>0.177230</td>
+      <td>0.153435</td>
+      <td>0.082272</td>
+      <td>2001-09-01</td>
+    </tr>
+    <tr>
+      <th>81</th>
+      <td>572777.0</td>
+      <td>187998.401748</td>
+      <td>357535.633362</td>
+      <td>570111.333466</td>
+      <td>9.448867e+05</td>
+      <td>2.298504e+06</td>
+      <td>0.015164</td>
+      <td>0.078278</td>
+      <td>0.030677</td>
+      <td>0.010227</td>
+      <td>-0.027336</td>
+      <td>-0.003530</td>
+      <td>0.107584</td>
+      <td>0.230891</td>
+      <td>0.099766</td>
+      <td>0.163032</td>
+      <td>0.099117</td>
+      <td>0.057777</td>
+      <td>2001-10-01</td>
+    </tr>
+    <tr>
+      <th>82</th>
+      <td>565012.0</td>
+      <td>171428.708031</td>
+      <td>363674.714916</td>
+      <td>579353.639533</td>
+      <td>9.258515e+05</td>
+      <td>2.306688e+06</td>
+      <td>-0.013557</td>
+      <td>-0.088137</td>
+      <td>0.017171</td>
+      <td>0.016211</td>
+      <td>-0.020146</td>
+      <td>0.003561</td>
+      <td>0.090241</td>
+      <td>0.117587</td>
+      <td>0.151648</td>
+      <td>0.132734</td>
+      <td>0.074719</td>
+      <td>0.059768</td>
+      <td>2001-11-01</td>
+    </tr>
+    <tr>
+      <th>83</th>
+      <td>560379.0</td>
+      <td>173923.179477</td>
+      <td>353239.739509</td>
+      <td>566297.805369</td>
+      <td>9.416579e+05</td>
+      <td>2.258063e+06</td>
+      <td>-0.008200</td>
+      <td>0.014551</td>
+      <td>-0.028693</td>
+      <td>-0.022535</td>
+      <td>0.017072</td>
+      <td>-0.021080</td>
+      <td>0.100896</td>
+      <td>0.298940</td>
+      <td>0.119764</td>
+      <td>0.087555</td>
+      <td>0.078573</td>
+      <td>0.048200</td>
+      <td>2001-12-01</td>
+    </tr>
+    <tr>
+      <th>84</th>
+      <td>557411.0</td>
+      <td>182437.943642</td>
+      <td>334508.663498</td>
+      <td>568721.573090</td>
+      <td>9.499651e+05</td>
+      <td>2.179044e+06</td>
+      <td>-0.005296</td>
+      <td>0.048957</td>
+      <td>-0.053027</td>
+      <td>0.004280</td>
+      <td>0.008822</td>
+      <td>-0.034994</td>
+      <td>0.044044</td>
+      <td>0.140128</td>
+      <td>0.015289</td>
+      <td>0.042545</td>
+      <td>0.063874</td>
+      <td>-0.003022</td>
+      <td>2002-01-01</td>
+    </tr>
+    <tr>
+      <th>85</th>
+      <td>557229.0</td>
+      <td>178241.427460</td>
+      <td>339265.474064</td>
+      <td>560740.980002</td>
+      <td>9.560790e+05</td>
+      <td>2.187875e+06</td>
+      <td>-0.000327</td>
+      <td>-0.023002</td>
+      <td>0.014220</td>
+      <td>-0.014033</td>
+      <td>0.006436</td>
+      <td>0.004052</td>
+      <td>0.041032</td>
+      <td>0.184369</td>
+      <td>0.038233</td>
+      <td>0.022109</td>
+      <td>0.053507</td>
+      <td>-0.028192</td>
+      <td>2002-02-01</td>
+    </tr>
+    <tr>
+      <th>86</th>
+      <td>563155.0</td>
+      <td>179701.642373</td>
+      <td>349126.377571</td>
+      <td>554716.828008</td>
+      <td>9.583829e+05</td>
+      <td>2.219100e+06</td>
+      <td>0.010635</td>
+      <td>0.008192</td>
+      <td>0.029065</td>
+      <td>-0.010743</td>
+      <td>0.002410</td>
+      <td>0.014272</td>
+      <td>0.028844</td>
+      <td>0.200120</td>
+      <td>0.034003</td>
+      <td>0.003072</td>
+      <td>0.022372</td>
+      <td>-0.030615</td>
+      <td>2002-03-01</td>
+    </tr>
+    <tr>
+      <th>87</th>
+      <td>567775.0</td>
+      <td>174757.736195</td>
+      <td>355543.543514</td>
+      <td>557804.360248</td>
+      <td>9.668987e+05</td>
+      <td>2.263586e+06</td>
+      <td>0.008204</td>
+      <td>-0.027512</td>
+      <td>0.018381</td>
+      <td>0.005566</td>
+      <td>0.008886</td>
+      <td>0.020047</td>
+      <td>0.029762</td>
+      <td>0.024866</td>
+      <td>0.068141</td>
+      <td>0.027081</td>
+      <td>0.035445</td>
+      <td>-0.003214</td>
+      <td>2002-04-01</td>
+    </tr>
+    <tr>
+      <th>88</th>
+      <td>578860.0</td>
+      <td>177427.370862</td>
+      <td>369549.254397</td>
+      <td>576346.954486</td>
+      <td>9.794934e+05</td>
+      <td>2.312674e+06</td>
+      <td>0.019524</td>
+      <td>0.015276</td>
+      <td>0.039392</td>
+      <td>0.033242</td>
+      <td>0.013026</td>
+      <td>0.021686</td>
+      <td>0.066528</td>
+      <td>0.120250</td>
+      <td>0.166376</td>
+      <td>0.061502</td>
+      <td>0.049810</td>
+      <td>0.008351</td>
+      <td>2002-05-01</td>
+    </tr>
+    <tr>
+      <th>89</th>
+      <td>590773.0</td>
+      <td>186216.720780</td>
+      <td>376521.856780</td>
+      <td>593808.145847</td>
+      <td>1.013403e+06</td>
+      <td>2.297111e+06</td>
+      <td>0.020580</td>
+      <td>0.049538</td>
+      <td>0.018868</td>
+      <td>0.030296</td>
+      <td>0.034620</td>
+      <td>-0.006730</td>
+      <td>0.075545</td>
+      <td>0.155761</td>
+      <td>0.135738</td>
+      <td>0.069206</td>
+      <td>0.079132</td>
+      <td>-0.004318</td>
+      <td>2002-06-01</td>
+    </tr>
+    <tr>
+      <th>90</th>
+      <td>596764.0</td>
+      <td>188392.638094</td>
+      <td>377639.676978</td>
+      <td>593484.845835</td>
+      <td>1.029304e+06</td>
+      <td>2.344571e+06</td>
+      <td>0.010141</td>
+      <td>0.011685</td>
+      <td>0.002969</td>
+      <td>-0.000544</td>
+      <td>0.015690</td>
+      <td>0.020661</td>
+      <td>0.089807</td>
+      <td>0.232016</td>
+      <td>0.136263</td>
+      <td>0.057480</td>
+      <td>0.076226</td>
+      <td>0.004292</td>
+      <td>2002-07-01</td>
+    </tr>
+    <tr>
+      <th>91</th>
+      <td>611430.0</td>
+      <td>198006.076566</td>
+      <td>388268.497359</td>
+      <td>609623.617163</td>
+      <td>1.040803e+06</td>
+      <td>2.402079e+06</td>
+      <td>0.024576</td>
+      <td>0.051029</td>
+      <td>0.028145</td>
+      <td>0.027193</td>
+      <td>0.011171</td>
+      <td>0.024528</td>
+      <td>0.101713</td>
+      <td>0.209158</td>
+      <td>0.115579</td>
+      <td>0.067294</td>
+      <td>0.091491</td>
+      <td>0.050157</td>
+      <td>2002-08-01</td>
+    </tr>
+    <tr>
+      <th>92</th>
+      <td>621531.0</td>
+      <td>207892.731198</td>
+      <td>389143.707772</td>
+      <td>623543.184941</td>
+      <td>1.054708e+06</td>
+      <td>2.542078e+06</td>
+      <td>0.016520</td>
+      <td>0.049931</td>
+      <td>0.002254</td>
+      <td>0.022833</td>
+      <td>0.013360</td>
+      <td>0.058282</td>
+      <td>0.101574</td>
+      <td>0.192384</td>
+      <td>0.121795</td>
+      <td>0.104907</td>
+      <td>0.085714</td>
+      <td>0.102067</td>
+      <td>2002-09-01</td>
+    </tr>
+    <tr>
+      <th>93</th>
+      <td>625888.0</td>
+      <td>217676.622426</td>
+      <td>383974.624374</td>
+      <td>622322.739530</td>
+      <td>1.073227e+06</td>
+      <td>2.497645e+06</td>
+      <td>0.007010</td>
+      <td>0.047062</td>
+      <td>-0.013283</td>
+      <td>-0.001957</td>
+      <td>0.017558</td>
+      <td>-0.017479</td>
+      <td>0.092725</td>
+      <td>0.157864</td>
+      <td>0.073948</td>
+      <td>0.091581</td>
+      <td>0.135826</td>
+      <td>0.086640</td>
+      <td>2002-10-01</td>
+    </tr>
+    <tr>
+      <th>94</th>
+      <td>619764.0</td>
+      <td>204832.861054</td>
+      <td>387025.621137</td>
+      <td>612300.827063</td>
+      <td>1.056445e+06</td>
+      <td>2.422078e+06</td>
+      <td>-0.009784</td>
+      <td>-0.059004</td>
+      <td>0.007946</td>
+      <td>-0.016104</td>
+      <td>-0.015637</td>
+      <td>-0.030256</td>
+      <td>0.096904</td>
+      <td>0.194857</td>
+      <td>0.064208</td>
+      <td>0.056869</td>
+      <td>0.141052</td>
+      <td>0.050024</td>
+      <td>2002-11-01</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>615850.0</td>
+      <td>197338.705214</td>
+      <td>383274.326397</td>
+      <td>612880.460578</td>
+      <td>1.043466e+06</td>
+      <td>2.377019e+06</td>
+      <td>-0.006315</td>
+      <td>-0.036587</td>
+      <td>-0.009693</td>
+      <td>0.000947</td>
+      <td>-0.012286</td>
+      <td>-0.018603</td>
+      <td>0.098988</td>
+      <td>0.134631</td>
+      <td>0.085026</td>
+      <td>0.082258</td>
+      <td>0.108116</td>
+      <td>0.052681</td>
+      <td>2002-12-01</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>622913.0</td>
+      <td>205939.972855</td>
+      <td>397649.404130</td>
+      <td>618536.757415</td>
+      <td>1.048500e+06</td>
+      <td>2.380734e+06</td>
+      <td>0.011469</td>
+      <td>0.043586</td>
+      <td>0.037506</td>
+      <td>0.009229</td>
+      <td>0.004824</td>
+      <td>0.001563</td>
+      <td>0.117511</td>
+      <td>0.128822</td>
+      <td>0.188757</td>
+      <td>0.087592</td>
+      <td>0.103725</td>
+      <td>0.092559</td>
+      <td>2003-01-01</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>589807.0</td>
+      <td>199914.893841</td>
+      <td>363841.024055</td>
+      <td>576551.914758</td>
+      <td>9.855742e+05</td>
+      <td>2.318506e+06</td>
+      <td>-0.053147</td>
+      <td>-0.029256</td>
+      <td>-0.085021</td>
+      <td>-0.067878</td>
+      <td>-0.060015</td>
+      <td>-0.026138</td>
+      <td>0.058464</td>
+      <td>0.121596</td>
+      <td>0.072438</td>
+      <td>0.028197</td>
+      <td>0.030850</td>
+      <td>0.059707</td>
+      <td>2003-02-01</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>603480.0</td>
+      <td>216635.042514</td>
+      <td>364807.597857</td>
+      <td>592173.949143</td>
+      <td>1.006303e+06</td>
+      <td>2.402639e+06</td>
+      <td>0.023182</td>
+      <td>0.083636</td>
+      <td>0.002657</td>
+      <td>0.027096</td>
+      <td>0.021032</td>
+      <td>0.036288</td>
+      <td>0.071606</td>
+      <td>0.205526</td>
+      <td>0.044916</td>
+      <td>0.067525</td>
+      <td>0.050001</td>
+      <td>0.082709</td>
+      <td>2003-03-01</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>611805.0</td>
+      <td>232285.943900</td>
+      <td>365005.777078</td>
+      <td>589869.679784</td>
+      <td>1.003746e+06</td>
+      <td>2.361726e+06</td>
+      <td>0.013795</td>
+      <td>0.072245</td>
+      <td>0.000543</td>
+      <td>-0.003891</td>
+      <td>-0.002541</td>
+      <td>-0.017028</td>
+      <td>0.077548</td>
+      <td>0.329188</td>
+      <td>0.026613</td>
+      <td>0.057485</td>
+      <td>0.038108</td>
+      <td>0.043356</td>
+      <td>2003-04-01</td>
+    </tr>
+  </tbody>
+</table>
+        </div>
+    </div>
+    <div class="right-panel">
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_manhattan_price_index"></div><b>📃 Summary:</b> Overall price index for Manhattan properties<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q1_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_manhattan_q1_price_index"></div><b>📃 Summary:</b> Price index for 1st quintile Manhattan properties<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q2_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_manhattan_q2_price_index"></div><b>📃 Summary:</b> Price index for 2nd quintile Manhattan properties<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q3_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_manhattan_q3_price_index"></div><b>📃 Summary:</b> Price index for 3rd quintile Manhattan properties<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q4_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_manhattan_q4_price_index"></div><b>📃 Summary:</b> Price index for 4th quintile Manhattan properties<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q5_price_index</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><br><br><div id="hist_viz_manhattan_q5_price_index"></div><b>📃 Summary:</b> Price index for 5th quintile Manhattan properties<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in overall price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q1_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q1_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Q1 price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q2_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q2_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Q2 price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q3_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q3_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Q3 price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q4_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q4_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Q4 price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q5_price_index_mom</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q5_price_index_mom"></div><b>📃 Summary:</b> Month-over-month change in Q5 price index<br><b>❓ Missing:</b> Unknown<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in overall price index<br><b>❓ Missing:</b> First year of data has no previous year for comparison.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q1_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q1_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Q1 price index<br><b>❓ Missing:</b> First year of data has no previous year for comparison.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q2_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q2_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Q2 price index<br><b>❓ Missing:</b> First year of data has no previous year for comparison.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q3_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q3_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Q3 price index<br><b>❓ Missing:</b> First year of data has no previous year for comparison.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q4_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q4_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Q4 price index<br><b>❓ Missing:</b> First year of data has no previous year for comparison.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">manhattan_q5_price_index_yoy</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><div id="hist_viz_manhattan_q5_price_index_yoy"></div><b>📃 Summary:</b> Year-over-year change in Q5 price index<br><b>❓ Missing:</b> First year of data has no previous year for comparison.<br><br></div>
+
+<div class="card-item card-item-collapsed">
+    <span class="field-name">date_</span>
+    <div class="card-controls">
+        <span class="toggle">▲</span>
+    </div>
+</div>
+<div class="indent" style="display: block;"><span class="tag tag-red">not_null</span><span class="tag tag-blue">unique</span><br><br><div id="bar_viz_date_"></div><b>📃 Summary:</b> Date of the price index data<br><br></div>
+
+    </div>
+
+    <div class="bottom-panel">
+        <h1>Cocoon Cleaning Summary 🤗</h1><hr><br><h2>📃 1. Table Summary</h2><br>The table shows price indices for Manhattan properties. Each index uses a repeat-sales method of comparing the sales prices of the same properties since January 1995 in Manhattan and January 2005. Values are given for different dates. Monthly and yearly changes are calculated. The rent index partition likely has a similar structure for rental prices.<br><br><br><h2>📊 2. Column Rename</h2><br>
+                    😎 <b>18</b> columns have been renamed<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>Summary</th>
+      <th>New Column Name</th>
+      <th>Renamed?</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>date_</td>
+      <td>Date of the price index data</td>
+      <td>date_</td>
+      <td>❌ No</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Manhattan_All</td>
+      <td>Overall price index for Manhattan properties</td>
+      <td>manhattan_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Manhattan_Q1</td>
+      <td>Price index for 1st quintile Manhattan properties</td>
+      <td>manhattan_q1_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Manhattan_Q2</td>
+      <td>Price index for 2nd quintile Manhattan properties</td>
+      <td>manhattan_q2_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Manhattan_Q3</td>
+      <td>Price index for 3rd quintile Manhattan properties</td>
+      <td>manhattan_q3_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Manhattan_Q4</td>
+      <td>Price index for 4th quintile Manhattan properties</td>
+      <td>manhattan_q4_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Manhattan_Q5</td>
+      <td>Price index for 5th quintile Manhattan properties</td>
+      <td>manhattan_q5_price_index</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>Manhattan_All_MoM</td>
+      <td>Month-over-month change in overall price index</td>
+      <td>manhattan_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>Manhattan_Q1_MoM</td>
+      <td>Month-over-month change in Q1 price index</td>
+      <td>manhattan_q1_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>Manhattan_Q2_MoM</td>
+      <td>Month-over-month change in Q2 price index</td>
+      <td>manhattan_q2_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>Manhattan_Q3_MoM</td>
+      <td>Month-over-month change in Q3 price index</td>
+      <td>manhattan_q3_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>Manhattan_Q4_MoM</td>
+      <td>Month-over-month change in Q4 price index</td>
+      <td>manhattan_q4_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>Manhattan_Q5_MoM</td>
+      <td>Month-over-month change in Q5 price index</td>
+      <td>manhattan_q5_price_index_mom</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>Manhattan_All_YoY</td>
+      <td>Year-over-year change in overall price index</td>
+      <td>manhattan_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>Manhattan_Q1_YoY</td>
+      <td>Year-over-year change in Q1 price index</td>
+      <td>manhattan_q1_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>Manhattan_Q2_YoY</td>
+      <td>Year-over-year change in Q2 price index</td>
+      <td>manhattan_q2_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>Manhattan_Q3_YoY</td>
+      <td>Year-over-year change in Q3 price index</td>
+      <td>manhattan_q3_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>Manhattan_Q4_YoY</td>
+      <td>Year-over-year change in Q4 price index</td>
+      <td>manhattan_q4_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>Manhattan_Q5_YoY</td>
+      <td>Year-over-year change in Q5 price index</td>
+      <td>manhattan_q5_price_index_yoy</td>
+      <td>✔️ Yes</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>🔧 3. Data Type</h2><br>
+                    ✔️ <b>1</b> columns have been casted<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column Name</th>
+      <th>Clause</th>
+      <th>Reasoning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>date_</td>
+      <td>CAST("date_" AS DATE)</td>
+      <td>To transform the 'date_' column from VARCHAR to DATE, we can use a simple CAST function. The current format of the dates in the column ('YYYY-MM-DD') is already compatible with the standard SQL date format, so we don't need to use strptime() or any other date parsing function. A direct CAST to DATE will work.\n</td>
+    </tr>
+  </tbody>
+</table><br><br><br><h2>❓ 4. Missing Values</h2><br>
+                    🔍 <b>12</b> columns have missing values<br>
+                    ✔️ <b>6</b> of them are acceptable<br>
+                    <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Is NULL Acceptable?</th>
+      <th>Explanation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>manhattan_price_index_mom</td>
+      <td>0.35</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>manhattan_price_index_yoy</td>
+      <td>4.21</td>
+      <td>True</td>
+      <td>First year of data has no previous year for comparison.</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>manhattan_q1_price_index_mom</td>
+      <td>0.35</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>manhattan_q1_price_index_yoy</td>
+      <td>4.21</td>
+      <td>True</td>
+      <td>First year of data has no previous year for comparison.</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>manhattan_q2_price_index_mom</td>
+      <td>0.35</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>manhattan_q2_price_index_yoy</td>
+      <td>4.21</td>
+      <td>True</td>
+      <td>First year of data has no previous year for comparison.</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>manhattan_q3_price_index_mom</td>
+      <td>0.35</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>manhattan_q3_price_index_yoy</td>
+      <td>4.21</td>
+      <td>True</td>
+      <td>First year of data has no previous year for comparison.</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>manhattan_q4_price_index_mom</td>
+      <td>0.35</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>manhattan_q4_price_index_yoy</td>
+      <td>4.21</td>
+      <td>True</td>
+      <td>First year of data has no previous year for comparison.</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>manhattan_q5_price_index_mom</td>
+      <td>0.35</td>
+      <td>False</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>manhattan_q5_price_index_yoy</td>
+      <td>4.21</td>
+      <td>True</td>
+      <td>First year of data has no previous year for comparison.</td>
+    </tr>
+  </tbody>
+</table><br>🧩 These missing values are handled as follows:<br>
+                            <table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Column</th>
+      <th>NULL (%)</th>
+      <th>Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>manhattan_price_index_mom</td>
+      <td>0.35</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>manhattan_q1_price_index_mom</td>
+      <td>0.35</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>manhattan_q2_price_index_mom</td>
+      <td>0.35</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>manhattan_q3_price_index_mom</td>
+      <td>0.35</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>manhattan_q4_price_index_mom</td>
+      <td>0.35</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>manhattan_q5_price_index_mom</td>
+      <td>0.35</td>
+      <td>🔄 Unchanged</td>
+    </tr>
+  </tbody>
+</table><br><br><br>
+    </div>
+</div>
+
+<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+<script src="https://d3js.org/topojson.v3.min.js"></script>
+<script>
+document.querySelectorAll('.card-item').forEach(function(card) {{
+    card.addEventListener('click', function() {{
+        var indent = this.nextElementSibling;
+        var toggle = this.querySelector('.toggle');
+        if (indent.style.display === "block") {{
+            indent.style.display = "none";
+            toggle.textContent = '▼';
+            this.classList.remove('card-item-collapsed');
+        }} else {{
+            indent.style.display = "block";
+            toggle.textContent = '▲';
+            this.classList.add('card-item-collapsed');
+        }}
+    }});
+}});
+  const toggleSwitch = document.querySelector('.switch input[type="checkbox"]');
+  const labelTextAfter = document.querySelector('.label-text:last-of-type');
+  const tableContainerBefore = document.querySelector('.table-container.before');
+  const tableContainerAfter = document.querySelector('.table-container.after');
+
+  const handleToggle = () => {
+    if (toggleSwitch.checked) {
+      labelTextAfter.style.color = 'blue';
+      tableContainerBefore.classList.remove('active');
+      tableContainerAfter.classList.add('active');
+    } else {
+      labelTextAfter.style.color = '';
+      tableContainerBefore.classList.add('active');
+      tableContainerAfter.classList.remove('active');
+    }
+  };
+
+  toggleSwitch.addEventListener('change', handleToggle);
+</script>
+<script>
+    function drawBarChart(divId, data) {
+      const margin = {top: 10, right: 10, bottom: 25, left: 100},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("bar-chart-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const y = d3.scaleBand()
+                  .range([0, height])
+                  .domain(data.map(d => d.label))
+                  .padding(0.1);
+
+      const x = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])  // Percent scale
+                  .range([0, width]);
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+      svg.selectAll(".bar")
+         .data(data)
+         .enter().append("rect")
+           .attr("class", "bar")
+           .attr("y", d => y(d.label))
+           .attr("height", y.bandwidth())
+           .attr("x", 0)
+           .attr("width", d => x(d.value))
+           .attr("fill", "steelblue");
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(d3.axisBottom(x).ticks(5).tickFormat(d => d + "%"));
+    }
+    
+    function drawHistogram(divId, data, binWidth) {
+      const margin = {top: 10, right: 10, bottom: 20, left: 40},
+            width = 300 - margin.left - margin.right,
+            height = 100 - margin.top - margin.bottom;
+            
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("histogram-container", true);
+
+      const svg = targetDiv
+                    .append("svg")
+                      .attr("width", width + margin.left + margin.right)
+                      .attr("height", height + margin.top + margin.bottom)
+                    .append("g")
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      const x = d3.scaleLinear()
+                  .domain([d3.min(data, d => d.x) - binWidth, d3.max(data, d => d.x) + binWidth])
+                  .range([0, width]);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.y) * 1.1]) // Increase the y-axis limit by 10% for margin
+                  .range([height, 0]);
+
+      const xAxis = d3.axisBottom(x).ticks(5);
+      const yAxis = d3.axisLeft(y).ticks(5);
+
+      svg.append("g")
+         .attr("transform", "translate(0," + height + ")")
+         .call(xAxis)
+
+      svg.append("g")
+         .call(yAxis)
+
+      svg.selectAll("rect")
+         .data(data)
+         .enter().append("rect")
+           .attr("x", d => x(d.x - binWidth / 2))
+           .attr("y", d => y(d.y))
+           .attr("width", x(binWidth) - x(0))
+           .attr("height", d => height - y(d.y))
+           .attr("fill", "steelblue");
+    }
+    
+    function drawMap(divId, coordinates) {
+      const targetDiv = d3.select("#" + divId);
+      targetDiv.classed("map-container", true);
+
+      const width = 300;
+      const height = 200;
+      const projection = d3.geoNaturalEarth1()
+          .scale(width / 1.5 / Math.PI)
+          .translate([width / 2, height / 2]);
+      const path = d3.geoPath().projection(projection);
+
+      const svg = targetDiv.append("svg")
+          .attr("width", width)
+          .attr("height", height);
+
+      d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson").then(data => {
+        // Draw the map
+        svg.append("g")
+          .selectAll("path")
+          .data(data.features)
+          .join("path")
+              .attr("fill", "#ccc")
+              .attr("d", path)
+              .style("stroke", "#fff");
+
+        // Plotting the points
+        coordinates.forEach(coords => {
+          svg.append("circle")
+            .attr("cx", projection(coords)[0])
+            .attr("cy", projection(coords)[1])
+            .attr("r", 2)
+            .attr("fill", "red");
+        });
+      });
+    }
+    
+    let data = [];
+    let binWidth = 5;
+data = [{'x': 277243.0, 'y': 25}, {'x': 323045.0, 'y': 15}, {'x': 368847.0, 'y': 13}, {'x': 414649.0, 'y': 8}, {'x': 460451.0, 'y': 4}, {'x': 506253.0, 'y': 7}, {'x': 552055.0, 'y': 16}, {'x': 597857.0, 'y': 11}, {'x': 643659.0, 'y': 10}, {'x': 689461.0, 'y': 4}, {'x': 735263.0, 'y': 2}, {'x': 781065.0, 'y': 6}, {'x': 826867.0, 'y': 4}, {'x': 872669.0, 'y': 38}, {'x': 918471.0, 'y': 29}, {'x': 964273.0, 'y': 15}, {'x': 1010075.0, 'y': 23}, {'x': 1055877.0, 'y': 9}, {'x': 1101679.0, 'y': 8}, {'x': 1147481.0, 'y': 38}];
+    binWidth = 45802.0;
+    drawHistogram("hist_viz_manhattan_price_index", data, binWidth);
+data = [{'x': 74425.92797307229, 'y': 29}, {'x': 95880.58589996188, 'y': 23}, {'x': 117335.24382685148, 'y': 7}, {'x': 138789.90175374108, 'y': 11}, {'x': 160244.55968063066, 'y': 10}, {'x': 181699.21760752026, 'y': 11}, {'x': 203153.87553440983, 'y': 7}, {'x': 224608.53346129943, 'y': 7}, {'x': 246063.19138818904, 'y': 3}, {'x': 267517.8493150786, 'y': 5}, {'x': 288972.5072419682, 'y': 1}, {'x': 310427.1651688578, 'y': 4}, {'x': 331881.8230957474, 'y': 9}, {'x': 353336.481022637, 'y': 40}, {'x': 374791.13894952653, 'y': 28}, {'x': 396245.79687641613, 'y': 22}, {'x': 417700.45480330574, 'y': 22}, {'x': 439155.11273019534, 'y': 24}, {'x': 460609.7706570849, 'y': 7}, {'x': 482064.4285839745, 'y': 15}];
+    binWidth = 21454.65792688959;
+    drawHistogram("hist_viz_manhattan_q1_price_index", data, binWidth);
+data = [{'x': 164971.65950183448, 'y': 22}, {'x': 195149.58275370582, 'y': 16}, {'x': 225327.50600557716, 'y': 15}, {'x': 255505.42925744853, 'y': 7}, {'x': 285683.3525093199, 'y': 4}, {'x': 315861.2757611912, 'y': 11}, {'x': 346039.1990130626, 'y': 12}, {'x': 376217.12226493395, 'y': 15}, {'x': 406395.04551680526, 'y': 6}, {'x': 436572.9687686766, 'y': 5}, {'x': 466750.892020548, 'y': 2}, {'x': 496928.81527241936, 'y': 5}, {'x': 527106.7385242907, 'y': 4}, {'x': 557284.661776162, 'y': 32}, {'x': 587462.5850280334, 'y': 31}, {'x': 617640.5082799047, 'y': 21}, {'x': 647818.4315317761, 'y': 22}, {'x': 677996.3547836475, 'y': 14}, {'x': 708174.2780355187, 'y': 8}, {'x': 738352.2012873902, 'y': 33}];
+    binWidth = 30177.92325187135;
+    drawHistogram("hist_viz_manhattan_q2_price_index", data, binWidth);
+data = [{'x': 270508.3170555398, 'y': 23}, {'x': 315813.8342386398, 'y': 15}, {'x': 361119.35142173985, 'y': 14}, {'x': 406424.8686048399, 'y': 7}, {'x': 451730.38578793994, 'y': 5}, {'x': 497035.90297103993, 'y': 7}, {'x': 542341.42015414, 'y': 12}, {'x': 587646.93733724, 'y': 16}, {'x': 632952.4545203401, 'y': 10}, {'x': 678257.9717034402, 'y': 4}, {'x': 723563.48888654, 'y': 2}, {'x': 768869.0060696402, 'y': 6}, {'x': 814174.5232527402, 'y': 4}, {'x': 859480.0404358401, 'y': 46}, {'x': 904785.5576189402, 'y': 29}, {'x': 950091.0748020404, 'y': 11}, {'x': 995396.5919851402, 'y': 20}, {'x': 1040702.1091682403, 'y': 8}, {'x': 1086007.6263513404, 'y': 7}, {'x': 1131313.1435344405, 'y': 39}];
+    binWidth = 45305.51718310003;
+    drawHistogram("hist_viz_manhattan_q3_price_index", data, binWidth);
+data = [{'x': 511799.2724808977, 'y': 25}, {'x': 589018.3957796297, 'y': 13}, {'x': 666237.5190783618, 'y': 16}, {'x': 743456.6423770939, 'y': 7}, {'x': 820675.765675826, 'y': 8}, {'x': 897894.8889745581, 'y': 8}, {'x': 975114.0122732902, 'y': 16}, {'x': 1052333.135572022, 'y': 15}, {'x': 1129552.2588707542, 'y': 4}, {'x': 1206771.3821694863, 'y': 2}, {'x': 1283990.5054682184, 'y': 7}, {'x': 1361209.6287669505, 'y': 3}, {'x': 1438428.7520656826, 'y': 23}, {'x': 1515647.8753644146, 'y': 31}, {'x': 1592866.9986631467, 'y': 23}, {'x': 1670086.1219618788, 'y': 23}, {'x': 1747305.245260611, 'y': 6}, {'x': 1824524.368559343, 'y': 4}, {'x': 1901743.4918580751, 'y': 16}, {'x': 1978962.6151568072, 'y': 35}];
+    binWidth = 77219.12329873207;
+    drawHistogram("hist_viz_manhattan_q4_price_index", data, binWidth);
+data = [{'x': 1306362.7594427988, 'y': 33}, {'x': 1473958.972861805, 'y': 9}, {'x': 1641555.1862808112, 'y': 15}, {'x': 1809151.3996998174, 'y': 6}, {'x': 1976747.6131188236, 'y': 1}, {'x': 2144343.82653783, 'y': 12}, {'x': 2311940.0399568356, 'y': 22}, {'x': 2479536.253375842, 'y': 14}, {'x': 2647132.466794848, 'y': 2}, {'x': 2814728.680213854, 'y': 7}, {'x': 2982324.8936328604, 'y': 4}, {'x': 3149921.1070518666, 'y': 9}, {'x': 3317517.320470873, 'y': 18}, {'x': 3485113.533889879, 'y': 34}, {'x': 3652709.747308885, 'y': 27}, {'x': 3820305.9607278914, 'y': 9}, {'x': 3987902.1741468976, 'y': 5}, {'x': 4155498.387565904, 'y': 13}, {'x': 4323094.6009849105, 'y': 24}, {'x': 4490690.814403916, 'y': 21}];
+    binWidth = 167596.21341900618;
+    drawHistogram("hist_viz_manhattan_q5_price_index", data, binWidth);
+data = [{'x': -0.07215127125285357, 'y': 1}, {'x': -0.06594513848039593, 'y': 0}, {'x': -0.059739005707938275, 'y': 0}, {'x': -0.053532872935480626, 'y': 1}, {'x': -0.047326740163022976, 'y': 0}, {'x': -0.04112060739056532, 'y': 1}, {'x': -0.03491447461810768, 'y': 2}, {'x': -0.028708341845650024, 'y': 2}, {'x': -0.022502209073192374, 'y': 2}, {'x': -0.016296076300734725, 'y': 14}, {'x': -0.010089943528277075, 'y': 21}, {'x': -0.0038838107558194224, 'y': 46}, {'x': 0.002322322016638227, 'y': 61}, {'x': 0.008528454789095877, 'y': 55}, {'x': 0.014734587561553526, 'y': 34}, {'x': 0.020940720334011176, 'y': 16}, {'x': 0.027146853106468832, 'y': 11}, {'x': 0.03335298587892648, 'y': 10}, {'x': 0.03955911865138413, 'y': 3}, {'x': 0.04576525142384178, 'y': 4}];
+    binWidth = 0.00620613277245765;
+    drawHistogram("hist_viz_manhattan_price_index_mom", data, binWidth);
+data = [{'x': -0.17921796086636235, 'y': 1}, {'x': -0.1585739884581121, 'y': 2}, {'x': -0.13793001604986183, 'y': 0}, {'x': -0.11728604364161155, 'y': 1}, {'x': -0.0966420712333613, 'y': 3}, {'x': -0.07599809882511102, 'y': 5}, {'x': -0.05535412641686076, 'y': 15}, {'x': -0.034710154008610494, 'y': 24}, {'x': -0.014066181600360217, 'y': 53}, {'x': 0.0065777908078900466, 'y': 82}, {'x': 0.02722176321614031, 'y': 40}, {'x': 0.04786573562439059, 'y': 28}, {'x': 0.06850970803264086, 'y': 14}, {'x': 0.08915368044089111, 'y': 7}, {'x': 0.10979765284914136, 'y': 3}, {'x': 0.13044162525739164, 'y': 3}, {'x': 0.15108559766564192, 'y': 1}, {'x': 0.1717295700738922, 'y': 0}, {'x': 0.19237354248214245, 'y': 1}, {'x': 0.21301751489039267, 'y': 1}];
+    binWidth = 0.020643972408250267;
+    drawHistogram("hist_viz_manhattan_q1_price_index_mom", data, binWidth);
+data = [{'x': -0.0805238246195823, 'y': 2}, {'x': -0.07153032845010085, 'y': 0}, {'x': -0.06253683228061943, 'y': 0}, {'x': -0.053543336111138005, 'y': 3}, {'x': -0.04454983994165657, 'y': 4}, {'x': -0.03555634377217515, 'y': 2}, {'x': -0.02656284760269372, 'y': 9}, {'x': -0.01756935143321229, 'y': 14}, {'x': -0.008575855263730857, 'y': 52}, {'x': 0.0004176409057505756, 'y': 57}, {'x': 0.009411137075232001, 'y': 58}, {'x': 0.018404633244713427, 'y': 35}, {'x': 0.02739812941419486, 'y': 22}, {'x': 0.036391625583676285, 'y': 14}, {'x': 0.04538512175315772, 'y': 5}, {'x': 0.05437861792263915, 'y': 3}, {'x': 0.06337211409212057, 'y': 1}, {'x': 0.072365610261602, 'y': 2}, {'x': 0.08135910643108343, 'y': 0}, {'x': 0.09035260260056488, 'y': 1}];
+    binWidth = 0.008993496169481429;
+    drawHistogram("hist_viz_manhattan_q2_price_index_mom", data, binWidth);
+data = [{'x': -0.11135150841650177, 'y': 1}, {'x': -0.10243949982948967, 'y': 0}, {'x': -0.09352749124247758, 'y': 0}, {'x': -0.08461548265546551, 'y': 0}, {'x': -0.07570347406845343, 'y': 0}, {'x': -0.06679146548144133, 'y': 1}, {'x': -0.05787945689442925, 'y': 0}, {'x': -0.04896744830741716, 'y': 0}, {'x': -0.040055439720405074, 'y': 2}, {'x': -0.03114343113339299, 'y': 2}, {'x': -0.022231422546380906, 'y': 5}, {'x': -0.013319413959368816, 'y': 33}, {'x': -0.004407405372356732, 'y': 53}, {'x': 0.004504603214655352, 'y': 80}, {'x': 0.013416611801667443, 'y': 57}, {'x': 0.022328620388679526, 'y': 30}, {'x': 0.031240628975691603, 'y': 12}, {'x': 0.040152637562703694, 'y': 4}, {'x': 0.049064646149715785, 'y': 3}, {'x': 0.05797665473672786, 'y': 1}];
+    binWidth = 0.008912008587012086;
+    drawHistogram("hist_viz_manhattan_q3_price_index_mom", data, binWidth);
+data = [{'x': -0.06555379482869224, 'y': 1}, {'x': -0.05979237242167411, 'y': 1}, {'x': -0.05403095001465598, 'y': 1}, {'x': -0.04826952760763785, 'y': 0}, {'x': -0.04250810520061972, 'y': 0}, {'x': -0.03674668279360159, 'y': 2}, {'x': -0.03098526038658346, 'y': 1}, {'x': -0.02522383797956533, 'y': 2}, {'x': -0.0194624155725472, 'y': 8}, {'x': -0.013700993165529071, 'y': 14}, {'x': -0.007939570758510942, 'y': 28}, {'x': -0.002178148351492812, 'y': 47}, {'x': 0.003583274055525318, 'y': 53}, {'x': 0.009344696462543448, 'y': 47}, {'x': 0.015106118869561577, 'y': 33}, {'x': 0.020867541276579707, 'y': 22}, {'x': 0.026628963683597837, 'y': 12}, {'x': 0.032390386090615966, 'y': 6}, {'x': 0.038151808497634096, 'y': 1}, {'x': 0.043913230904652226, 'y': 5}];
+    binWidth = 0.00576142240701813;
+    drawHistogram("hist_viz_manhattan_q4_price_index_mom", data, binWidth);
+data = [{'x': -0.12452652282055704, 'y': 1}, {'x': -0.1144953458180821, 'y': 0}, {'x': -0.10446416881560718, 'y': 0}, {'x': -0.09443299181313225, 'y': 0}, {'x': -0.08440181481065731, 'y': 0}, {'x': -0.07437063780818239, 'y': 0}, {'x': -0.06433946080570746, 'y': 0}, {'x': -0.05430828380323253, 'y': 0}, {'x': -0.0442771068007576, 'y': 1}, {'x': -0.03424592979828268, 'y': 6}, {'x': -0.024214752795807745, 'y': 12}, {'x': -0.014183575793332813, 'y': 33}, {'x': -0.004152398790857888, 'y': 59}, {'x': 0.0058787782116170445, 'y': 78}, {'x': 0.01590995521409197, 'y': 63}, {'x': 0.025941132216566895, 'y': 17}, {'x': 0.035972309219041834, 'y': 6}, {'x': 0.04600348622151676, 'y': 4}, {'x': 0.056034663223991685, 'y': 2}, {'x': 0.06606584022646662, 'y': 2}];
+    binWidth = 0.010031177002474929;
+    drawHistogram("hist_viz_manhattan_q5_price_index_mom", data, binWidth);
+data = [{'x': -0.14054696273451633, 'y': 6}, {'x': -0.11932960031823661, 'y': 2}, {'x': -0.09811223790195688, 'y': 2}, {'x': -0.07689487548567714, 'y': 4}, {'x': -0.05567751306939741, 'y': 1}, {'x': -0.03446015065311768, 'y': 2}, {'x': -0.013242788236837943, 'y': 11}, {'x': 0.007974574179441793, 'y': 47}, {'x': 0.029191936595721515, 'y': 29}, {'x': 0.05040929901200125, 'y': 33}, {'x': 0.07162666142828099, 'y': 26}, {'x': 0.09284402384456071, 'y': 24}, {'x': 0.11406138626084045, 'y': 29}, {'x': 0.1352787486771202, 'y': 15}, {'x': 0.15649611109339992, 'y': 6}, {'x': 0.17771347350967964, 'y': 8}, {'x': 0.1989308359259594, 'y': 12}, {'x': 0.22014819834223912, 'y': 11}, {'x': 0.24136556075851884, 'y': 4}, {'x': 0.2625829231747986, 'y': 1}];
+    binWidth = 0.021217362416279733;
+    drawHistogram("hist_viz_manhattan_price_index_yoy", data, binWidth);
+data = [{'x': -0.1669666094816875, 'y': 5}, {'x': -0.12998565717848315, 'y': 4}, {'x': -0.09300470487527882, 'y': 3}, {'x': -0.05602375257207445, 'y': 16}, {'x': -0.01904280026887009, 'y': 28}, {'x': 0.017938152034334257, 'y': 39}, {'x': 0.054919104337538605, 'y': 44}, {'x': 0.09190005664074297, 'y': 39}, {'x': 0.12888100894394733, 'y': 25}, {'x': 0.1658619612471517, 'y': 10}, {'x': 0.20284291355035605, 'y': 20}, {'x': 0.23982386585356041, 'y': 11}, {'x': 0.2768048181567647, 'y': 10}, {'x': 0.3137857704599691, 'y': 8}, {'x': 0.3507667227631735, 'y': 4}, {'x': 0.38774767506637786, 'y': 2}, {'x': 0.42472862736958217, 'y': 1}, {'x': 0.46170957967278653, 'y': 2}, {'x': 0.4986905319759909, 'y': 1}, {'x': 0.5356714842791952, 'y': 1}];
+    binWidth = 0.036980952303204355;
+    drawHistogram("hist_viz_manhattan_q1_price_index_yoy", data, binWidth);
+data = [{'x': -0.13303164272497187, 'y': 7}, {'x': -0.11057649298813378, 'y': 1}, {'x': -0.08812134325129571, 'y': 2}, {'x': -0.06566619351445764, 'y': 5}, {'x': -0.04321104377761957, 'y': 4}, {'x': -0.0207558940407815, 'y': 11}, {'x': 0.0016992556960565702, 'y': 30}, {'x': 0.02415440543289464, 'y': 37}, {'x': 0.04660955516973271, 'y': 36}, {'x': 0.06906470490657078, 'y': 39}, {'x': 0.09151985464340885, 'y': 21}, {'x': 0.11397500438024692, 'y': 19}, {'x': 0.13643015411708498, 'y': 8}, {'x': 0.15888530385392305, 'y': 9}, {'x': 0.18134045359076115, 'y': 12}, {'x': 0.20379560332759922, 'y': 8}, {'x': 0.22625075306443726, 'y': 12}, {'x': 0.24870590280127533, 'y': 2}, {'x': 0.2711610525381134, 'y': 9}, {'x': 0.2936162022749515, 'y': 1}];
+    binWidth = 0.02245514973683807;
+    drawHistogram("hist_viz_manhattan_q2_price_index_yoy", data, binWidth);
+data = [{'x': -0.1349911315286645, 'y': 5}, {'x': -0.113912415413794, 'y': 2}, {'x': -0.09283369929892353, 'y': 4}, {'x': -0.07175498318405306, 'y': 3}, {'x': -0.05067626706918259, 'y': 4}, {'x': -0.029597550954312116, 'y': 4}, {'x': -0.008518834839441644, 'y': 27}, {'x': 0.012559881275428827, 'y': 47}, {'x': 0.0336385973902993, 'y': 23}, {'x': 0.05471731350516977, 'y': 24}, {'x': 0.07579602962004024, 'y': 26}, {'x': 0.09687474573491071, 'y': 20}, {'x': 0.11795346184978117, 'y': 15}, {'x': 0.13903217796465164, 'y': 19}, {'x': 0.16011089407952214, 'y': 15}, {'x': 0.18118961019439261, 'y': 10}, {'x': 0.20226832630926306, 'y': 14}, {'x': 0.22334704242413353, 'y': 5}, {'x': 0.24442575853900403, 'y': 4}, {'x': 0.2655044746538745, 'y': 2}];
+    binWidth = 0.02107871611487047;
+    drawHistogram("hist_viz_manhattan_q3_price_index_yoy", data, binWidth);
+data = [{'x': -0.14106080113225192, 'y': 6}, {'x': -0.12150121205200118, 'y': 3}, {'x': -0.10194162297175044, 'y': 2}, {'x': -0.0823820338914997, 'y': 1}, {'x': -0.06282244481124896, 'y': 2}, {'x': -0.04326285573099822, 'y': 3}, {'x': -0.023703266650747484, 'y': 12}, {'x': -0.0041436775704967455, 'y': 21}, {'x': 0.015415911509753993, 'y': 29}, {'x': 0.03497550059000473, 'y': 41}, {'x': 0.05453508967025547, 'y': 30}, {'x': 0.07409467875050621, 'y': 24}, {'x': 0.09365426783075695, 'y': 20}, {'x': 0.11321385691100769, 'y': 16}, {'x': 0.13277344599125843, 'y': 16}, {'x': 0.15233303507150917, 'y': 14}, {'x': 0.1718926241517599, 'y': 14}, {'x': 0.19145221323201064, 'y': 7}, {'x': 0.21101180231226138, 'y': 4}, {'x': 0.23057139139251212, 'y': 8}];
+    binWidth = 0.01955958908025074;
+    drawHistogram("hist_viz_manhattan_q4_price_index_yoy", data, binWidth);
+data = [{'x': -0.14501019297106799, 'y': 6}, {'x': -0.12115849281166734, 'y': 2}, {'x': -0.09730679265226669, 'y': 2}, {'x': -0.07345509249286603, 'y': 4}, {'x': -0.04960339233346538, 'y': 9}, {'x': -0.025751692174064734, 'y': 24}, {'x': -0.0018999920146640786, 'y': 24}, {'x': 0.02195170814473657, 'y': 27}, {'x': 0.045803408304137205, 'y': 54}, {'x': 0.06965510846353785, 'y': 35}, {'x': 0.09350680862293852, 'y': 26}, {'x': 0.11735850878233917, 'y': 16}, {'x': 0.1412102089417398, 'y': 6}, {'x': 0.16506190910114046, 'y': 14}, {'x': 0.18891360926054113, 'y': 11}, {'x': 0.21276530941994176, 'y': 5}, {'x': 0.2366170095793424, 'y': 4}, {'x': 0.26046870973874303, 'y': 2}, {'x': 0.28432040989814367, 'y': 1}, {'x': 0.30817211005754436, 'y': 1}];
+    binWidth = 0.02385170015940065;
+    drawHistogram("hist_viz_manhattan_q5_price_index_yoy", data, binWidth);
+data = [{'label': '1995-01-01', 'value': 0.3508771929824561}, {'label': '1995-02-01', 'value': 0.3508771929824561}, {'label': '1995-12-01', 'value': 0.3508771929824561}, {'label': '1996-05-01', 'value': 0.3508771929824561}, {'label': '1996-12-01', 'value': 0.3508771929824561}, {'label': 'Other values', 'value': 98.24561403508771}];
+    drawBarChart("bar_viz_date_", data);
+
+
+</script>
+</body>
+</html>
