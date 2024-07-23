@@ -52,6 +52,9 @@ database_general_hint = {
     "Snowflake": "Double quote table and column names, if they are not all uppercase", 
 }
 
+def is_type_time(data_type):
+    return data_type in ["TIME", "DATE", "TIMESTAMP"]
+
 transform_hints = {
     'VARCHAR':{
         'DATE': {
@@ -166,10 +169,7 @@ TO_TIMESTAMP(TO_CHAR(19920302083200), 'YYYYMMDDHH24MISS')""",
 
 def is_type_numeric(data_type):
     return data_type in ["INT", "DECIMAL"]
-
-def is_type_time(data_type):
-    return data_type in ["TIME", "DATE", "TIMESTAMP"]
-        
+    
     
 def get_reverse_type(data_type, database):
     data_type = data_type.upper().replace(" ", "")

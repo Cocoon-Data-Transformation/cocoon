@@ -32,6 +32,7 @@ from bs4 import BeautifulSoup
 import time
 from collections import OrderedDict
 import warnings
+import copy
 
 from .database import *
 from .llm import *
@@ -14690,10 +14691,6 @@ def create_data_product_workflow(dbt_directory, output=False):
     return main_workflow
 
 
-import yaml
-import os
-import re
-
 def get_dbt_model_info(sql_file_path):
     model_name = os.path.splitext(os.path.basename(sql_file_path))[0]
     referenced_tables = []
@@ -15488,8 +15485,6 @@ class DataProject:
         
         self.links = {}
 
-        self.story = []
-        
         self.history_table = {}
         
         self.primary_key = {}
@@ -15506,7 +15501,70 @@ class DataProject:
         
         self.relations = {}
         
+        self.groups = pd.DataFrame(columns=["Group Name", "Group Summary", "Tables", "Join Info"])
+        
         self.story = []
+        
+        self.partition_mapping = {}
+    
+    def get_key_info(self, tables=None):
+        if not tables:
+            return self.key
+        
+        key_info = {}
+        for table in self.key:
+            if table in tables:
+                key_info[table] = self.key[table]
+                
+            if table in self.partition_mapping:
+                partitions = self.partition_mapping[table]
+                related_tables = set(partitions) & set(tables)
+                if related_tables:
+                    if len(related_tables) == 1:
+                        related_table = next(iter(related_tables))
+                        key_info[related_table] = self.key[table]
+                    else:
+                        related_tables_key = ", ".join(sorted(related_tables))
+                        key_info[f"[{related_tables_key}]"] = self.key[table]
+            
+            if table in self.history_table:
+                history_table = self.history_table[table]
+                if history_table in tables:
+                    key_info[history_table] = self.key[table]
+        
+        return key_info
+                    
+    
+    def get_referential_integrity_warning(self, table_attributes):
+
+        warnings = []
+        tables = set(table_attributes.keys())
+        mask = self.referential_integrity['pk_table_name'].isin(tables) & self.referential_integrity['fk_table_name'].isin(tables)
+        relevant_integrity = self.referential_integrity[mask]
+        
+        for _, row in relevant_integrity.iterrows():
+            pk_table = row['pk_table_name']
+            fk_table = row['fk_table_name']
+            pk = row['pk']
+            fk = row['fk']
+            orphan_percentage = row['% Orphan']
+            
+            if pk in table_attributes[pk_table] and fk in table_attributes[fk_table]:
+                alert_name = f"⚠️ Referential Integrity Violation from {fk_table} to {pk_table}"
+                explanation = f"{fk_table}[{fk}] contains {orphan_percentage} orphaned records, not found {pk_table}[{pk}]."
+                warnings.append((alert_name, explanation))
+        
+        return warnings
+    
+    
+
+
+
+
+
+
+
+
     
     def create_table_ddl(self, table_name):
         if table_name not in self.tables:
@@ -15535,7 +15593,7 @@ class DataProject:
     def build_er_story_from_yml(self, er_yml):
         if isinstance(er_yml, str):
             er_yml = yaml.safe_load(er_yml)
-
+        
         for entity in er_yml.get('entities', []):
             table_name = entity.get('table_name')
             if table_name:
@@ -15543,7 +15601,7 @@ class DataProject:
                     'entity_name': entity.get('entity_name'),
                     'entity_desc': entity.get('entity_description')
                 }
-
+        
         for relation in er_yml.get('relations', []):
             table_name = relation.get('table_name')
             if table_name:
@@ -15552,13 +15610,24 @@ class DataProject:
                     'entities': relation.get('entities', []),
                     'relation_desc': relation.get('relation_description')
                 }
-
+        
+        groups_data = []
+        for group in er_yml.get('groups', []):
+            groups_data.append({
+                'Group Name': group.get('group_name'),
+                'Group Summary': group.get('group_summary'),
+                'Tables': group.get('tables'),
+                'Join Info': group.get('join_info', '')
+            })
+        self.groups = pd.DataFrame(groups_data)
+        
         self.story = [
             {
-                'relation_name': story_item.get('relation_name'),
-                'relation_desc': story_item.get('story_line')
+                'Name': item.get('name'),
+                'Type': item.get('type'),
+                'Description': item.get('description')
             }
-            for story_item in er_yml.get('story', [])
+            for item in er_yml.get('story', [])
         ]
         
     def add_table_project(self, table_project):
@@ -15606,7 +15675,7 @@ class DataProject:
             self.entities[new_table_name] = self.entities.pop(old_table_name)
     
 
-    def join_graph_dict(self):
+    def join_graph_dict(self, add_time_keys=True):
         models = OrderedDict()
         
         integrity_lookup = {}
@@ -15614,8 +15683,8 @@ class DataProject:
             for _, row in self.referential_integrity.iterrows():
                 key = (row['pk_table_name'], row['pk'], row['fk_table_name'], row['fk'])
                 integrity_lookup[key] = {
-                    '% Orphan': row['% Orphan'],
-                    'Explanation': row['Explanation']
+                    '% orphan': row['% Orphan'],
+                    'explanation': row['Explanation']
                 }
                 
         for (pk_table_name, pk), fk_list in self.foreign_key.items():
@@ -15641,8 +15710,8 @@ class DataProject:
                 integrity_key = (pk_table_name, pk, fk_table_name, fk)
                 if integrity_key in integrity_lookup:
                     fk_entry['referential_integrity'] = OrderedDict({
-                        '% Orphan': integrity_lookup[integrity_key]['% Orphan'],
-                        'Explanation': integrity_lookup[integrity_key]['Explanation']
+                        '% orphan': integrity_lookup[integrity_key]['% orphan'],
+                        'explanation': integrity_lookup[integrity_key]['explanation']
                     })
 
 
@@ -15655,11 +15724,23 @@ class DataProject:
                     if 'foreign_keys' not in models[fk_table_name]:
                         models[fk_table_name]['foreign_keys'] = []
                     models[fk_table_name]['foreign_keys'].append(fk_entry)
+        
+        
+        for table_name, attributes in self.tables.items():
+            if table_name not in models:
+                models[table_name] = OrderedDict({
+                    'table_name': table_name
+                })
+            if add_time_keys:
+                time_keys = [attr for attr, type_ in attributes.items() if is_type_time(type_)]
+                
+                if time_keys:
+                    models[table_name]['time_keys'] = time_keys
 
         return OrderedDict({'join_graph': list(models.values())})
         
-    def join_graph_yaml(self):
-        join_graph_dict = self.join_graph_dict()
+    def join_graph_yaml(self, add_time_keys=True):
+        join_graph_dict = self.join_graph_dict(add_time_keys=add_time_keys)
         yml_content = yaml.dump(join_graph_dict, default_flow_style=False)
         return yml_content
     
@@ -15669,7 +15750,33 @@ class DataProject:
             
         foreign_key = reverse_join_graph(join_graph_yml)
         self.foreign_key = foreign_key
-    
+        
+        self.referential_integrity = pd.DataFrame(columns=["pk_table_name", "pk", "fk_table_name", "fk", "% Orphan", 'Explanation'])
+
+        for table in join_graph_yml['join_graph']:
+            if 'foreign_keys' in table:
+                for fk in table['foreign_keys']:
+                    fk_table_name = table['table_name']
+                    fk_column = fk['column']
+                    pk_table_name = fk['reference']['table_name']
+                    pk_column = fk['reference']['column']
+
+                    orphan_percent = fk.get('referential_integrity', {}).get('% Orphan', 0)
+                    explanation = fk.get('referential_integrity', {}).get('Explanation', 0)
+                    if orphan_percent == 0:
+                        continue
+                    
+                    new_row = pd.DataFrame({
+                        "pk_table_name": [pk_table_name],
+                        "pk": [pk_column],
+                        "fk_table_name": [fk_table_name],
+                        "fk": [fk_column],
+                        "% Orphan": [orphan_percent],
+                        "Explanation": [explanation]
+                    })
+
+                    self.referential_integrity = pd.concat([self.referential_integrity, new_row], ignore_index=True)
+                    
     def add_foreign_key_to_primary_key(self, fk_table_name, fk, pk_table_name, pk):
         if (pk_table_name, pk) not in self.foreign_key:
             self.foreign_key[(pk_table_name, pk)] = []
@@ -15779,8 +15886,15 @@ class DataProject:
                 continue
             
             table_info = OrderedDict()
-            table_info['table_name'] = table
             
+            if table in self.partition_mapping:
+                partitons = self.partition_mapping[table]
+                table_info['partitons'] = f'The data for {table} is partitioned into {len(partitons)} tables' 
+                table_info['table_names'] = partitons
+                
+            else:
+                table_info['table_name'] = table
+                
             if hasattr(self, 'table_object') and table in self.table_object:
                 table_desc = getattr(self.table_object[table], 'table_summary', None)
                 if table_desc:
@@ -15793,7 +15907,7 @@ class DataProject:
             if len(attributes) > limit:
                 attribute_list.append('...')
             
-            table_info['attributes'] = str(attribute_list)
+            table_info['attributes'] = attribute_list
             
             if table in self.history_table:
                 history_table = self.history_table[table]
@@ -15808,7 +15922,8 @@ class DataProject:
                 
                 table_info['history_table'] = {
                     'table_name': history_table,
-                    'attributes': str(history_attribute_list)
+                    'table_desc': "This is the full history table of the snapshot " + table,
+                    'attributes': history_attribute_list
                 }
             
             result.append(table_info)
@@ -15874,12 +15989,17 @@ class DataProject:
         display_draggable_graph_html(graph_data)
 
     def generate_nodes_edges(self):
-        return generate_nodes_edges(self.foreign_key)
+        nodes, edges = generate_nodes_edges(self.foreign_key)
+        for table in self.tables.keys():
+            if table not in nodes:
+                nodes.append(table)
+        
+        return nodes, edges
 
     def generate_story_html(self):
         html_items = []
         for i, item in enumerate(self.story):
-            html_item = f"<li>'{item['relation_name']}': {item['relation_desc']}</li>"
+            html_item = f"<li>'{item['Name']}': {item['Description']}</li>"
             html_items.append(html_item)
         
         html_content = "<ol>\n" + "\n".join(html_items) + "\n</ol>"
@@ -15887,12 +16007,57 @@ class DataProject:
         
     def generate_html_graph_static(self, highlight_nodes=None):
         nodes, edges = self.generate_nodes_edges()
+        edge_labels = [''] * len(edges)
         
-        highlight_nodes_indices = None
+        highlight_nodes_indices = set()
         if highlight_nodes is not None:
-            highlight_nodes_indices = [nodes.index(node) for node in highlight_nodes if node in nodes]
+            highlight_nodes_indices = {nodes.index(node) for node in highlight_nodes if node in nodes}
         
-        html_output = generate_workflow_html_multiple(nodes, edges, directional=True, highlight_nodes_indices=highlight_nodes_indices)
+        highlight_edges_indices = set()
+        
+        
+        for partition, table_list in self.partition_mapping.items():
+            if partition not in nodes:
+                nodes.append(partition)
+            partition_index = nodes.index(partition)
+            
+            for table in table_list:
+                if table in highlight_nodes:
+                    if table not in nodes:
+                        nodes.append(table)
+                    table_index = nodes.index(table)
+                    
+                    edges.append((partition_index, table_index))
+                    edge_labels.append("partition")
+                    
+                    highlight_nodes_indices.add(table_index)
+                    highlight_edges_indices.add(len(edges) - 1)
+        
+        
+        for snapshot_table, history_table in self.history_table.items():
+            if snapshot_table not in nodes:
+                nodes.append(snapshot_table)
+            snapshot_index = nodes.index(snapshot_table)
+            
+            if history_table in highlight_nodes:
+                if history_table not in nodes:
+                    nodes.append(history_table)
+                history_index = nodes.index(history_table)
+        
+                edges.append((snapshot_index, history_index))
+                edge_labels.append("history")
+                
+                highlight_nodes_indices.add(history_index)
+                highlight_edges_indices.add(len(edges) - 1)
+        
+        html_output = generate_workflow_html_multiple(
+            nodes, edges, 
+            edge_labels=edge_labels, 
+            directional=True, 
+            highlight_nodes_indices=list(highlight_nodes_indices),
+            highlight_edges_indices=list(highlight_edges_indices)
+        )
+        
         return html_output
 
     def display_graph_static(self, highlight_nodes=None):
@@ -16227,7 +16392,7 @@ class DecideProjection(Node):
             return
             
         display(HTML(f"🧐 Please select the columns to <b>include</b>.<br> 😊 Cocoon is currently not robust for >50 columns. Support for wide table is under development."))
-        except_columns = ["_fivetran_synced"]
+        except_columns = ["_fivetran_synced", "fivetran_synced"]
         multi_select = create_column_selector(column_names, default=True, except_columns = except_columns)
 
         submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
@@ -17702,7 +17867,8 @@ non_continuous_columns:
             (lambda jc: "continuous_columns" in jc, "The 'continuous_columns' key is missing."),
             (lambda jc: "non_continuous_columns" in jc, "The 'non_continuous_columns' key is missing."),
             (lambda jc: isinstance(jc["continuous_columns"], list), "The value of 'continuous_columns' is not a list."),
-            (lambda jc: isinstance(jc["non_continuous_columns"], dict), "The value of 'non_continuous_columns' is not a dictionary."),
+            (lambda jc: isinstance(jc["non_continuous_columns"], dict) or not jc["non_continuous_columns"], 
+     "The value of 'non_continuous_columns' is neither a dictionary nor empty."),
         ]
 
         for check, error_message in checks:
@@ -17803,9 +17969,13 @@ non_continuous_columns:
                 document = new_df.to_json(orient="split")
                 
                 table_object = self.para["table_object"]
+                
                 for index, row in new_df.iterrows():
+                    table_object.uniqueness[row["Column"]] = {"current_unique": False}
+                    if row["Is Unique?"]:
+                        table_object.uniqueness[row["Column"]]["current_unique"] = True
                     if row["Should Unique?"]:
-                        table_object.uniqueness[row["Column"]] = row["Explanation"]
+                        table_object.uniqueness[row["Column"]]["unique_reason"] = row["Explanation"]
                         
                 callback(document)
         
@@ -19392,11 +19562,12 @@ class CleanUnusualForAll(MultipleNode):
 
         idx = 0
         for col in columns:
-            if document[col]["Unusualness"]:
-                unusual_reason = document[col]["Examples"]
-                self.elements.append(col)
-                self.nodes[col] = self.construct_node(col, idx, len(columns), unusual_reason)
-                idx += 1
+            if col in document:
+                if document[col]["Unusualness"]:
+                    unusual_reason = document[col]["Examples"]
+                    self.elements.append(col)
+                    self.nodes[col] = self.construct_node(col, idx, len(columns), unusual_reason)
+                    idx += 1
 
     def display_after_finish_workflow(self, callback, document):
         clean_unusual = document.get("Clean Unusual", {})
@@ -19521,7 +19692,7 @@ class HandleMissing(Node):
         
         categories = [UNCHANGE, DROP_COLUMN, REMOVE_ROWS]
         
-        df["Strategy"] = np.where(df["NULL (%)"] > 90, DROP_COLUMN, UNCHANGE)
+        df["Strategy"] = UNCHANGE
         
         editable_columns = [False, False, True]
         reset = True
@@ -19840,8 +20011,7 @@ cast_clause: |
                 clause = clause[:-(len(column_name) + 3)].strip()
                 
             clause = clause.replace(f'"{column_name}"', column_name).replace(column_name, f'"{column_name}"')
-                
-            return  clause
+            return clause
 
         summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
         
@@ -20045,17 +20215,6 @@ class TransformTypeForAll(MultipleNode):
         def on_button_clicked(b):
             with self.output_context():
                 new_df = grid_to_updated_dataframe(grid, long_text=long_text)
-                
-                table_object = self.para["table_object"]
-                for idx, row in new_df.iterrows():
-                    column = row['Column Name']
-                    clause = row['Clause'].strip()
-                    
-                    if column in table_object.data_type:
-                        if clause != f'"{column}"':
-                            del table_object.data_type[column]
-                        else:
-                            pass
 
                 affected_columns = new_df["Column Name"].tolist()
                 document = new_df.to_json(orient="split")
@@ -20069,7 +20228,7 @@ class TransformTypeForAll(MultipleNode):
                 non_affected_columns = [f'"{col}"' for col in columns if col not in affected_columns]
 
                 sql_query = "SELECT\n"
-                sql_query += indent_paragraph(",\n".join(non_affected_columns + [f"{row['Clause']} AS \"{row['Column Name']}\"" for i, row in new_df.iterrows()]))
+                sql_query += indent_paragraph(",\n".join(non_affected_columns + [f"{row['Clause']} \nAS \"{row['Column Name']}\"" for i, row in new_df.iterrows()]))
 
                 comment = "-- Column Type Casting: \n"
 
@@ -20089,6 +20248,21 @@ class TransformTypeForAll(MultipleNode):
                 database = self.para.get("database", None)
                 schema = self.para.get("schema", None)
                 table_pipeline.materialize(con=con, database=database, schema=schema)
+                
+                schema = table_pipeline.get_schema(con)
+                database_name = get_database_name(con)
+                
+                table_object = self.para["table_object"]
+                for idx, row in new_df.iterrows():
+                    column = row['Column Name']
+                    
+                    if column in table_object.data_type:
+                        current_type = get_reverse_type(schema[column], database_name)
+                        table_object.data_type[column]["current_data_type"] = current_type
+                        
+                        if "expected_data_type" in table_object.data_type[column]:
+                            if table_object.data_type[column]["expected_data_type"] == current_type:
+                                del table_object.data_type[column]["expected_data_type"]
 
                 callback(document)
         
@@ -20471,7 +20645,7 @@ models:
                 tests.append("not_null")
             else:
                 explanation = miss_df.loc[miss_df['Column'].str.lower() == column.lower(), 'Explanation'].values[0]
-                cocoon_meta["missing_acceptable"] = explanation
+                cocoon_meta["missing_reason"] = explanation
         else:
             tests.append("not_null")
                 
@@ -20767,9 +20941,9 @@ class WriteStageYMLCode(Node):
                 single_column_html += "<b>📃 Summary:</b> " + column["description"] + "<br>"
                             
                 cocoon_meta = column.get('cocoon_meta', {})
-                if 'missing_acceptable' in cocoon_meta:
-                    if cocoon_meta['missing_acceptable']:
-                        single_column_html += "<b>❓ Missing:</b> " + str(cocoon_meta['missing_acceptable']) + "<br>"
+                if 'missing_reason' in cocoon_meta:
+                    if cocoon_meta['missing_reason']:
+                        single_column_html += "<b>❓ Missing:</b> " + str(cocoon_meta['missing_reason']) + "<br>"
                     else:
                         single_column_html += "<b>❓ Missing:</b> Reason unknown <br>"
                 if 'unusal_values' in cocoon_meta:
@@ -20965,7 +21139,11 @@ class CreateShortTableSummary(Node):
     
     def run(self, extract_output, use_cache=True):
         table_name, table_desc, source_name = extract_output
-
+        
+        table_object = self.para.get("table_object")
+        if table_object and hasattr(table_object, 'table_summary') and table_object.table_summary:
+            return table_object.table_summary
+        
         template = f"""You have the table '{source_name}' with samples:
 {table_desc}
 
@@ -21373,12 +21551,13 @@ def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, t
     return query_widget, main_workflow
 
 
-
-def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None, para={}, output=None):
+def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None, para={}, output=None, table_object=None):
     if query_widget is None:
         query_widget = QueryWidget(con)
     
-    
+    if table_object is None:
+        table_object = Table()
+        
     item = {
         "con": con,
         "query_widget": query_widget
@@ -21386,7 +21565,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
     
     workflow_para = {"viewer": viewer, 
                      "table_name": table_name,
-                     "table_object": Table()}
+                     "table_object": table_object}
     
     for key, value in para.items():
         workflow_para[key] = value
@@ -21454,17 +21633,22 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
     main_workflow.add_to_leaf(SelectSchema(output = output))
     main_workflow.add_to_leaf(DBTProjectConfig(output = output))
     main_workflow.add_to_leaf(SelectTables(output = output))
+    main_workflow.add_to_leaf(DecidePartition(output = output))
+    main_workflow.add_to_leaf(DescribePartitionForAll(output = output))
+    
     main_workflow.add_to_leaf(StageForAll(output = output))
-
     main_workflow.add_to_leaf(DecideSCDForAll(output = output))
     main_workflow.add_to_leaf(PerformSCDForAll(output = output))
+    main_workflow.add_to_leaf(WriteSCDForAll(output = output))
+    
     main_workflow.add_to_leaf(DecideKeysForAll(output = output))
     main_workflow.add_to_leaf(RefinePK(output = output))
     
     main_workflow.add_to_leaf(ConnectPKFKTable(output = output))
     main_workflow.add_to_leaf(DetectReferentialIntegrity(output = output))
-    
     main_workflow.add_to_leaf(DisplayJoinGraph(output = output))
+
+    main_workflow.add_to_leaf(GroupSimilarTables(output = output))
 
     main_workflow.add_to_leaf(EntityUnderstanding(output = output))
     main_workflow.add_to_leaf(RelationUnderstandingForAll(output = output))
@@ -21502,19 +21686,26 @@ class DescribeColumnsList(ListNode):
         
         outputs = []
         
-        columns = sorted(columns)
         
         for i in range(0, len(columns), 30):
             chunk_columns = columns[i:i + 30]
             sample_df = table_pipeline.get_samples(con, columns=chunk_columns, sample_size=sample_size)
             sample_df = sample_df.applymap(truncate_cell)
             table_desc = sample_df.to_csv(index=False, quoting=1)
-            outputs.append((table_desc, table_summary, chunk_columns))
+            outputs.append((table_desc, table_summary, chunk_columns, i))
         
         return outputs
     
     def run(self, extract_output, use_cache=True):
-        table_desc, table_summary, column_names = extract_output
+        table_desc, table_summary, column_names, start_index = extract_output 
+
+        table_object = self.para.get("table_object")
+        if table_object and hasattr(table_object, 'column_desc'):
+            existing_columns = list(table_object.column_desc.keys())
+            if len(existing_columns) >= start_index + len(column_names):
+                result = {old_col: [table_object.column_desc[new_col], new_col] 
+                        for old_col, new_col in zip(column_names, existing_columns[start_index:start_index+len(column_names)])}
+                return result
 
         template = f"""You have the following table:
 {table_desc}
@@ -21853,12 +22044,12 @@ Return in the following format:
                 table_object = self.para["table_object"]
                 for index, row in new_df.iterrows():
                     col = row["Column"]
-                    missing_acceptable = row["Is NULL Acceptable?"]
+                    missing_reason = row["Is NULL Acceptable?"]
                     explanation = row["Explanation"]
-                    if missing_acceptable:
-                        table_object.missing_acceptable[col] = explanation
+                    if missing_reason:
+                        table_object.missing_reason[col] = explanation
                     else:
-                        table_object.missing_acceptable[col] = ""
+                        table_object.missing_reason[col] = "Unknown"
                 
                 callback(document)
         
@@ -21900,17 +22091,21 @@ class DecideDataTypeList(ListNode):
             chunk_columns = columns[i:i + 30]
             sample_df = table_pipeline.get_samples(con, columns=chunk_columns, sample_size=sample_size)
             sample_df = sample_df.applymap(truncate_cell)
-            table_desc = sample_df.to_csv(index=False, quoting=1)
+            sample_desc = sample_df.to_csv(index=False, quoting=1)
+            
+            table_object = self.para["table_object"]
+            table_desc = table_object.print_column_desc(columns=chunk_columns)
             
             chunk_schema = {col: schema[col] for col in chunk_columns}
-            outputs.append((table_desc, all_data_types, database_name, chunk_schema))
+            outputs.append((sample_desc, table_desc, all_data_types, database_name, chunk_schema))
 
         return outputs
 
     def run(self, extract_output, use_cache=True):
-        table_desc, all_data_types, database_name, schema = extract_output
+        sample_desc, table_desc, all_data_types, database_name, schema = extract_output
 
         template = f"""You have the following table:
+{sample_desc}
 {table_desc}
 
 For each column, classify what the column type should be.
@@ -21951,7 +22146,7 @@ Return in the following format:
         return merged_output
     
     def run_but_fail(self, extract_output, use_cache=True):
-        _, _, database_name, schema = extract_output
+        _,_, _, database_name, schema = extract_output
         return {col: get_reverse_type(schema[col], database_name) for col in schema}
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -21959,12 +22154,12 @@ Return in the following format:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
         json_code = run_output
-        _, all_data_types, database_name, _ = extract_output[0]
+        _, _, all_data_types, database_name, _ = extract_output[0]
         
         schema = {}
         outputs = extract_output
         for output in outputs:
-            schema.update(output[3])
+            schema.update(output[4])
         
         self.progress.value += 1
         table_pipeline = self.para["table_pipeline"]
@@ -22004,11 +22199,17 @@ Return in the following format:
             icon='close'
         )
         
+        table_object = self.para["table_object"]
+        for _, row in df.iterrows():
+            column = row['column_name']
+            current_type = row['current_type']
+            table_object.data_type[column] = {"current_data_type": current_type}
+        
         def on_button_clicked2(b):
             with self.output_context():
                 clear_output(wait=True)
                 df = extract_grid_data_type(grid)
-                df["target_type"] = df["current_type"]
+                df["Target Type"] = df["Current Type"]
                 callback(df.to_json(orient="split"))
 
         def on_button_clicked(b):
@@ -22016,13 +22217,12 @@ Return in the following format:
                 clear_output(wait=True)
                 df = extract_grid_data_type(grid)
                 
-                table_object = self.para["table_object"]
                 for _, row in df.iterrows():
-                    column = row['column_name']
-                    current_type = row['current_type']
-                    target_type = row['target_type']
+                    column = row['Column']
+                    current_type = row['Current Type']
+                    target_type = row['Target Type']
                     if current_type != target_type:
-                        table_object.data_type[column] = (current_type, target_type)
+                        table_object.data_type[column] = {"current_data_type": current_type, "expected_data_type": target_type}
                         
                 callback(df.to_json(orient="split"))
 
@@ -23531,8 +23731,11 @@ class VerifyTests(Node):
                 table_object = self.para["table_object"]
                 
                 for index, row in unique_df.iterrows():
+                    table_object.uniqueness[row["Column"]] = {}
+                    if row["Is Unique?"]:
+                        table_object.uniqueness[row["Column"]]["current_unique"] = True
                     if row["Should Unique?"]:
-                        table_object.uniqueness[row["Column"]] = row["Explanation"]
+                        table_object.uniqueness[row["Column"]]["unique_reason"] = row["Explanation"]
                 
                 category_df =  grid_to_updated_dataframe(category_grid, 
                                                         reset=category_reset, 
@@ -23799,7 +24002,12 @@ class SelectTables(Node):
                 for table_name in selected_tables:
                     data_project.add_table(table_name, get_table_schema(con, table_name, 
                                            database=database_dropdown.value, schema=schema_dropdown.value))
-                
+                    
+                    sql_step = SQLStep(table_name=table_name, con=con, database=database_dropdown.value, 
+                                       schema=schema_dropdown.value, materialized=True)
+                    pipeline = TransformationSQLPipeline(steps=[sql_step], edges=[])
+                    data_project.table_pipelines[table_name] = pipeline
+                    
                 if "dbt_directory" in self.para:
                     yml_dict = OrderedDict()
                     yml_dict["version"] = 2
@@ -25327,13 +25535,13 @@ Return in the following format:
         
 
 class Table:
-    def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_acceptable=None, unusualness=None, 
+    def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_reason=None, unusualness=None, 
                  category=None, uniqueness=None, patterns=None, variant=None, potential_category = None, data_type=None):
         self.table_name = table_name
         self.table_summary = table_summary
         self.columns = columns or []
-        self.column_desc = column_desc or {}
-        self.missing_acceptable = missing_acceptable or {}
+        self.column_desc = column_desc or OrderedDict()
+        self.missing_reason = missing_reason or {}
         self.data_type = data_type or {}
         self.unusualness = unusualness or {}
         self.category = category or {}
@@ -25342,19 +25550,22 @@ class Table:
         self.patterns = patterns or {}
         self.variant = variant or {}
     
+    def deep_copy(self):
+        return copy.deepcopy(self)
+    
     def get_alerts(self, column):
         alerts = []
         
-        if column in self.missing_acceptable:
-            alert_name = "❓ Missing Value"
-            if self.missing_acceptable[column]:
-                explanation = f"This is expected because: {self.missing_acceptable[column]}"
+        if column in self.missing_reason:
+            alert_name = f"❓ {self.table_name}[{column}] has Missing Value"
+            if self.missing_reason[column]:
+                explanation = f"{self.missing_reason[column]}"
             else:
-                explanation = "The reason for missing is unknown!"
+                explanation = "Unknown"
             alerts.append((alert_name, explanation))
         
         if column in self.unusualness and self.unusualness[column]:
-            alert_name = "⚠️ Unusual Data"
+            alert_name = f"⚠️ {self.table_name}[{column}] has Unusual Value"
             explanation = self.unusualness[column]
             alerts.append((alert_name, explanation))
         
@@ -25398,7 +25609,8 @@ class Table:
         return result
 
     def print_column_desc(self, columns=None, show_category=False, 
-                          show_unique=False, show_pattern=False):
+                          show_unique=False, show_pattern=False,
+                          show_type=False):
         column_desc_string = ""
         if columns is None:
             columns = self.columns
@@ -25411,12 +25623,24 @@ class Table:
                     desc += f"  Column domain: {categories}\n"
                 
                 if show_unique and column in self.uniqueness:
-                    desc += f"  Column is unique: {self.uniqueness[column]}\n"
+                    current_unique = self.uniqueness[column].get("current_unique", False)
+                    unique_reason = self.uniqueness[column].get("unique_reason", None)
+                    if current_unique:
+                        desc += "  Column is already unique\n"
+                    else:
+                        desc += "  Column is not unique\n"
+                        
+                    if unique_reason:
+                        desc += f"  It should be unique because: {unique_reason}\n"
                 
                 if show_pattern and column in self.patterns:
                     desc += "   All column values already follow regex patterns:\n"
                     for pattern in self.patterns[column]:
                         desc += f"      - {pattern['summary']}: {pattern['regex']}\n"
+                
+                if show_type and column in self.data_type:
+                    data_type = self.data_type[column]["current_data_type"]
+                    desc += f"  Current data type: {data_type}\n"
                 
                 column_desc_string += f"'{column}': {desc}"
         return column_desc_string.strip()
@@ -25443,12 +25667,12 @@ class Table:
             tests = []
             cocoon_meta = OrderedDict()
 
-            missing_acceptable_key = next((key for key in self.missing_acceptable if key.lower() == column.lower()), None)
-            if missing_acceptable_key:
-                explanation = self.missing_acceptable[missing_acceptable_key]
+            missing_reason_key = next((key for key in self.missing_reason if key.lower() == column.lower()), None)
+            if missing_reason_key:
+                explanation = self.missing_reason[missing_reason_key]
                 if not explanation:
                     tests.append("not_null")
-                cocoon_meta["missing_acceptable"] = explanation
+                cocoon_meta["missing_reason"] = explanation
             else:
                 tests.append("not_null")
 
@@ -25460,10 +25684,13 @@ class Table:
 
             uniqueness_key = next((key for key in self.uniqueness if key.lower() == column.lower()), None)
             if uniqueness_key:
-                unique_reason = self.uniqueness[uniqueness_key]
-                if unique_reason:
+                current_unique = self.uniqueness[column].get("current_unique", False)
+                unique_reason = self.uniqueness[column].get("unique_reason", None)
+                if current_unique and unique_reason:
                     tests.append("unique")
-                    cocoon_meta["uniqueness"] = unique_reason
+                
+                if unique_reason:
+                    cocoon_meta["unique_reason"] = unique_reason
 
             category_key = next((key for key in self.category if key.lower() == column.lower()), None)
             if category_key:
@@ -25501,10 +25728,7 @@ class Table:
 
             data_type_key = next((key for key in self.data_type if key.lower() == column.lower()), None)
             if data_type_key:
-                data_type_info = self.data_type[data_type_key]
-                if data_type_info:
-                    cocoon_meta["data_type"] = list(data_type_info)
-
+                cocoon_meta["data_type"] = self.data_type[data_type_key]
 
             column_data = OrderedDict([
                 ("name", column),
@@ -25544,25 +25768,31 @@ class Table:
                     if isinstance(test, dict):
                         test_type = list(test.keys())[0]
                         test_value = test[test_type]
-                        if test_type == 'not_null':
-                            self.missing_acceptable[column_name] = ''
-                        elif test_type == 'accepted_values':
+                        if test_type == 'accepted_values':
                             accepted_values = test_value['values']
                             self.category[column_name] = accepted_values
                         elif test_type == 'unique':
-                            self.uniqueness[column_name] = ''
-                    elif test == 'not_null':
-                        self.missing_acceptable[column_name] = ''
+                            if column_name not in self.uniqueness:
+                                self.uniqueness[column_name] = {}
+                            self.uniqueness[column_name]["current_unique"] = True
                     elif test == 'unique':
-                        self.uniqueness[column_name] = ''
-
+                        if column_name not in self.uniqueness:
+                            self.uniqueness[column_name] = {}
+                        self.uniqueness[column_name]["current_unique"] = True
+                
                 cocoon_meta = column.get('cocoon_meta', {})
-                if 'missing_acceptable' in cocoon_meta:
-                    self.missing_acceptable[column_name] = cocoon_meta['missing_acceptable']
+                if 'missing_reason' in cocoon_meta:
+                    self.missing_reason[column_name] = cocoon_meta['missing_reason']
                 if 'unusal_values' in cocoon_meta:
                     self.unusualness[column_name] = cocoon_meta['unusal_values']
                 if 'uniqueness' in cocoon_meta:
-                    self.uniqueness[column_name] = cocoon_meta['uniqueness']
+                    if column_name not in self.uniqueness:
+                        self.uniqueness[column_name] = {}
+                    self.uniqueness[column_name]["unique_reason"] = cocoon_meta['uniqueness']
+                if 'unique_reason' in cocoon_meta:
+                    if column_name not in self.uniqueness:
+                        self.uniqueness[column_name] = {}
+                    self.uniqueness[column_name]["unique_reason"] = cocoon_meta['unique_reason']
                 if 'patterns' in cocoon_meta:
                     self.patterns[column_name] = cocoon_meta['patterns']
                 if 'variant' in cocoon_meta:
@@ -25570,11 +25800,8 @@ class Table:
                 if 'future_accepted_values' in cocoon_meta:
                     self.potential_category[column_name] = cocoon_meta['future_accepted_values']
                 if "data_type" in cocoon_meta:
-                    data_type_info = cocoon_meta["data_type"]
-                    if isinstance(data_type_info, list) and len(data_type_info) == 2:
-                        self.data_type[column_name] = tuple(data_type_info)
-                    else:
-                        print(f"Warning: Invalid data_type format for column {column_name}")
+                    self.data_type[column_name] = cocoon_meta["data_type"]
+
 
                     
     def add_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
@@ -25583,7 +25810,7 @@ class Table:
         if description is not None:
             self.column_desc[column_name] = description
         if missing_desc is not None:
-            self.missing_acceptable[column_name] = missing_desc
+            self.missing_reason[column_name] = missing_desc
         if unusual_desc is not None:
             self.unusualness[column_name] = unusual_desc
         if categories is not None:
@@ -25593,7 +25820,7 @@ class Table:
         if column_name in self.columns:
             self.columns.remove(column_name)
         self.column_desc.pop(column_name, None)
-        self.missing_acceptable.pop(column_name, None)
+        self.missing_reason.pop(column_name, None)
         self.unusualness.pop(column_name, None)
         self.category.pop(column_name, None)
 
@@ -25602,7 +25829,7 @@ class Table:
             if description is not None:
                 self.column_desc[column_name] = description
             if missing_desc is not None:
-                self.missing_acceptable[column_name] = missing_desc
+                self.missing_reason[column_name] = missing_desc
             if unusual_desc is not None:
                 self.unusualness[column_name] = unusual_desc
             if categories is not None:
@@ -25610,6 +25837,56 @@ class Table:
 
     def __repr__(self):
         return f"Table(table_summary={self.table_summary}, columns={self.columns})"
+
+class PartitionTable(Table):
+    def __init__(self, table_name="", table_summary="", columns=None, column_desc=None, missing_reason=None, unusualness=None, 
+                 category=None, uniqueness=None, patterns=None, variant=None, potential_category=None, data_type=None):
+        super().__init__(table_name, table_summary, columns, column_desc, missing_reason, unusualness, 
+                         category, uniqueness, patterns, variant, potential_category, data_type)
+        self.partitions = []
+        
+    def create_dbt_schema_dict(self, table_cocoon_meta=None):
+        combined_cocoon_meta = OrderedDict()
+
+        if self.partitions:
+            combined_cocoon_meta["partitions"] = self.partitions
+
+        if table_cocoon_meta:
+            combined_cocoon_meta.update(table_cocoon_meta)
+
+        data = super().create_dbt_schema_dict(table_cocoon_meta=combined_cocoon_meta)
+
+        return data
+    
+    def create_table_copy(self):
+        table_copy = Table(
+            table_name=self.table_name,
+            table_summary=self.table_summary,
+            columns=copy.deepcopy(self.columns),
+            column_desc=copy.deepcopy(self.column_desc),
+            missing_reason=copy.deepcopy(self.missing_reason),
+            unusualness=copy.deepcopy(self.unusualness),
+            category=copy.deepcopy(self.category),
+            uniqueness=copy.deepcopy(self.uniqueness),
+            patterns=copy.deepcopy(self.patterns),
+            variant=copy.deepcopy(self.variant),
+            potential_category=copy.deepcopy(self.potential_category),
+            data_type=copy.deepcopy(self.data_type)
+        )
+        return table_copy
+    
+    def read_attributes_from_dbt_schema_yml(self, yml_data):
+        super().read_attributes_from_dbt_schema_yml(yml_data)
+
+        if isinstance(yml_data, str):
+            yml_data = yaml.safe_load(yml_data)
+
+        cocoon_meta = yml_data.get('cocoon_meta', {})
+        if 'partitions' in cocoon_meta:
+            self.partitions = cocoon_meta['partitions']
+
+        return self
+    
 
 class DescribeColumnsListAndTableSummaryNoRename(DescribeColumnsList):
     default_name = 'Describe Columns'
@@ -26094,9 +26371,18 @@ class StageForAll(MultipleNode):
         for key in self.para:
             para[key] = self.para[key]
             
+        table_object = None
+        if "data_project" in self.para:
+            data_project = self.para["data_project"]
+            
+            for partition_name, tables in data_project.partition_mapping.items():
+                if table_name in tables:
+                    table_object = data_project.table_object[partition_name].create_table_copy()
+                    break
         
         _, workflow = create_cocoon_stage_workflow(con=con, query_widget=query_widget, 
-                                                   table_name=table_name, para=para, output=self.output)
+                                                   table_name=table_name, para=para, output=self.output,
+                                                   table_object=table_object)
         workflow.add_as_root(StageProgress())
         
         return workflow
@@ -26120,6 +26406,7 @@ class StageForAll(MultipleNode):
         
         data_project = self.para["data_project"]
         con = self.item["con"] 
+        
         data_project.tables = {}
         
         table_data = []
@@ -26189,21 +26476,48 @@ class StageForAll(MultipleNode):
                 display(HTML(f'{running_spinner_html} Verifying tables ...'))
                 
                 for node in self.nodes.values():
+                    
                     table_object = node.para["table_object"]
-                    new_table_name = table_object.table_name
                     table_pipeline = node.para["table_pipeline"]
-                    try:
-                        table_schema = get_table_schema(con, table_pipeline)
-                        
-                        if not table_schema:
-                            print(f"⚠️ Can't read {new_table_name}; Is it materialized?")
+                    old_table_name = node.para["table_name"]
+                    new_table_name = table_object.table_name
+                    
+                    old_table_found = False
+                    for partition_name, table_list in data_project.partition_mapping.items():
+                        if old_table_name in table_list:
+                            old_table_found = True
+                            table_list[table_list.index(old_table_name)] = new_table_name
+                            
+                            if partition_name not in data_project.tables or partition_name not in data_project.table_pipelines:
+                                try:
+                                    table_schema = get_table_schema(con, table_pipeline)
+                                    
+                                    if not table_schema:
+                                        print(f"⚠️ Can't read {partition_name}; Is it materialized?")
+                                        retrun
+                                    
+                                    data_project.add_table(partition_name, table_schema)
+                                    data_project.table_pipelines[partition_name] = table_pipeline
+                                    
+                                except Exception as e:
+                                    print(f"⚠️ Error reading {partition_name}; Is it materialized?\n {str(e)}")
+                                    retrun
+                            
+                            break
+                    
+                    if not old_table_found:
+                        try:
+                            table_schema = get_table_schema(con, table_pipeline)
+                            
+                            if not table_schema:
+                                print(f"⚠️ Can't read {new_table_name}; Is it materialized?")
+                                return
+                            
+                            data_project.add_table(new_table_name, table_schema)
+                            
+                        except Exception as e:
+                            print(f"⚠️ Error reading {new_table_name}; Is it materialized?\n {str(e)}")
                             return
-                        
-                        data_project.add_table(new_table_name, table_schema)
-                        
-                    except Exception as e:
-                        print(f"⚠️ Error reading {new_table_name}: {str(e)}")
-                        return                  
                 
                 callback({})
         
@@ -26618,7 +26932,10 @@ class DecidePKforAll(Node):
         table_unique_columns = {}
         table_summarys = {}
         for table_name, table_object in data_project.table_object.items():
-            table_unique_columns[table_name] = list(table_object.uniqueness.keys())
+            table_unique_columns[table_name] = [
+                col for col, info in (table_object.uniqueness or {}).items() 
+                if info.get("current_unique", False)
+            ]
             table_summarys[table_name] = table_object.table_summary
             
         return table_unique_columns, table_summarys
@@ -26731,7 +27048,7 @@ Return in the following format:
         display(HTML(f"😎 Next, we construct the join graph."))
         display(next_button)
         
-        
+ 
         
 class EntityUnderstanding(Node):
     default_name = 'Entity Understand'
@@ -26758,6 +27075,9 @@ class EntityUnderstanding(Node):
 
     def run(self, extract_output, use_cache=True):
         pk_table_column_pairs, pk_table_description = extract_output
+        
+        if not pk_table_column_pairs:
+            return {}
 
         template = f"""You have the following tables with primary keys:
 {pk_table_description}
@@ -26815,14 +27135,17 @@ Return in the following format:
             'Entity Description': [],
         }
         
-        for  pk_table, pk in pk_table_column_pairs:
+        for pk_table, pk in pk_table_column_pairs:
             data['Table'].append(pk_table)
             data['Primary Key'].append(pk)
             data['Entity Name'].append(summary[pk_table]["entity_name"])
             data['Entity Description'].append(summary[pk_table]["entity_description"])
             
-            
         df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
         
         editable_columns = [False, False, True, True]
         reset = True
@@ -26910,6 +27233,10 @@ class RelationUnderstandingForAll(MultipleNode):
                 
         df = pd.DataFrame(data)
         
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
         editable_columns = [False, True, True, True]
         lists = ['Entities']
         reset = True
@@ -26957,91 +27284,7 @@ class RelationUnderstandingForAll(MultipleNode):
 
     
    
-        
-class ReorderRelationToStory(Node):
-    default_name = 'Reorder Relation To Story'
-    default_description = 'This reorders the relation to story'
-
-    def extract(self, item):
-        clear_output(wait=True)
-
-        display(HTML("📖 Telling the story..."))
-        create_progress_bar_with_numbers(3, model_steps)
-
-        self.input_item = item
-        
-        relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
-        relation_df = relation_df[relation_df['Relation Name'] != ""]
-        
-        relation_desc = ""
-        for idx, row in relation_df.iterrows():
-            relation_desc += f"""'{row['Relation Name']}': 
-    Entity: {', '.join(row['Entities'])}
-    Descriptions: {row['Relation Description']}"""
-        
-        return relation_df, relation_desc
-    
-    def run(self, extract_output, use_cache=True):
-        relation_df, relation_desc = extract_output
-
-        template = f"""For a database, you have the following 'Relation Name': 'Relation Description'
-{relation_desc}
-Now, tell a story using the relations. 
-First, reorder the relations based on the sequence of events. E.g., "Customer opens account" should come before "Customer deposits money".
-Then, modifidy the description for each relation
-(1) Make the story coherent. 
-(2) Be clear about how the entities are related.
-(3) Avoid general terms (e.g., 'relates', 'has', etc)
-
-Return in the following format:
-```yml
-reasoning: >
-    The tables are ... The sequence should be ...
-story: # Reorder the relations
-    -   relation_name: Relation Name
-        relation_desc: short and simple SVO in < 10 words
-    -   ...
-```"""
-        messages = [{"role": "user", "content": template}]
-        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-        messages.append(response['choices'][0]['message'])
-        self.messages.append(messages)
-
-        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
-
-        if not isinstance(summary, dict):
-            raise TypeError("summary must be a dictionary")
-
-        required_keys = ['reasoning', 'story']
-        for key in required_keys:
-            if key not in summary:
-                raise KeyError(f"summary is missing the '{key}' key")
-
-        if not isinstance(summary['reasoning'], str):
-            raise TypeError("summary['reasoning'] must be a string")
-        if not isinstance(summary['story'], list):
-            raise TypeError("summary['story'] must be a list")
-
-        for i, item in enumerate(summary['story']):
-            if not isinstance(item, dict):
-                raise TypeError(f"Item {i} in summary['story'] must be a dictionary")
-            if 'relation_name' not in item or 'relation_desc' not in item:
-                raise KeyError(f"Item {i} in summary['story'] is missing 'relation_name' or 'relation_desc'")
-            if not isinstance(item['relation_name'], str) or not isinstance(item['relation_desc'], str):
-                raise TypeError(f"'relation_name' and 'relation_desc' in item {i} of summary['story'] must be strings")
-
-        return summary
-    
-    def run_but_fail(self, extract_output, use_cache=True):
-        relation_df, relation_desc = extract_output
-        story_list = []
-        for idx, row in relation_df.iterrows():
-            story_list.append({"relation_name": row['Relation Name'], "relation_desc": row['Relation Description']})
-        return {"reasoning": "Fail to run", "story": story_list}
-                
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        callback(run_output["story"])
+      
 
 
 
@@ -27051,40 +27294,63 @@ story: # Reorder the relations
 
 
 
-
-def generate_workflow_graph(relation_map, relation_details):
+def generate_workflow_graph(relation_map, relation_details, highlight_indices=None):
     nodes = []
     edges = []
     node_shapes = []
-
+    
+    for item in relation_details:
+        if item['Type'] == 'Relation':
+            if item['Name'] not in nodes:
+                nodes.append(item['Name'])
+                node_shapes.append("box")
+        else:
+            if item['Name'] not in nodes:
+                nodes.append(item['Name'])
+                node_shapes.append("octagon")
+    
     for relation, entities in relation_map.items():
-        nodes.append(relation)
-        node_shapes.append("box")
-        for entity in entities:
-            if entity not in nodes:
-                nodes.append(entity)
-                node_shapes.append("oval")
-
-    for relation, entities in relation_map.items():
-        relation_index = nodes.index(relation)
-        for entity in entities:
-            entity_index = nodes.index(entity)
-            edges.append((relation_index, entity_index))
-
-    last_relation = list(relation_map.keys())[-1]
-    last_relation_desc = next(detail['relation_desc'] for detail in relation_details if detail['relation_name'] == last_relation)
-
-    last_relation_index = nodes.index(last_relation)
-    highlight_nodes_indices = [nodes.index(entity) for entity in relation_map[last_relation]]
-    highlight_nodes_indices.append(last_relation_index)
-    highlight_edges_indices = [edges.index((last_relation_index, nodes.index(entity))) for entity in relation_map[last_relation]]
-
+        if relation in nodes:
+            relation_index = nodes.index(relation)
+            for entity in entities:
+                if entity not in nodes:
+                    nodes.append(entity)
+                    node_shapes.append("oval")
+                entity_index = nodes.index(entity)
+                edges.append((relation_index, entity_index))
+    
+    highlight_nodes_indices = []
+    highlight_edges_indices = []
+    
+    if highlight_indices is None:
+        highlight_indices = [len(relation_details) - 1]
+    
+    for index in highlight_indices:
+        if 0 <= index < len(relation_details):
+            highlight_item = relation_details[index]
+            highlight_item_name = highlight_item['Name']
+            
+            if highlight_item_name in nodes:
+                highlight_nodes_indices.append(nodes.index(highlight_item_name))
+            
+            if highlight_item['Type'] == 'Relation' and highlight_item_name in relation_map:
+                related_entities = relation_map[highlight_item_name]
+                for entity in related_entities:
+                    if entity in nodes:
+                        entity_index = nodes.index(entity)
+                        highlight_nodes_indices.append(entity_index)
+                        edge = (nodes.index(highlight_item_name), entity_index)
+                        if edge in edges:
+                            highlight_edges_indices.append(edges.index(edge))
+    
+    highlight_nodes_indices = list(set(highlight_nodes_indices))
+    highlight_edges_indices = list(set(highlight_edges_indices))
+    
     html_output = generate_workflow_html_multiple(nodes, edges, node_shape=node_shapes, directional=False,
                                                   highlight_nodes_indices=highlight_nodes_indices,
                                                   highlight_edges_indices=highlight_edges_indices)
-
-    return html_output
     
+    return html_output
 
 
 
@@ -27094,18 +27360,17 @@ def create_html_content_er_story(relation_map, relation_details, df_display=None
 
     for i in range(page_no):
         entry = relation_details[i]
-        relation_name, relation_desc = entry['relation_name'], entry['relation_desc']
+        relation_name, relation_desc = entry['Name'], entry['Description']
         list_of_descriptions += f"<li>[{relation_name}]: {relation_desc}</li>"
     
     entry = relation_details[page_no]
-    relation_name, relation_desc = entry['relation_name'], entry['relation_desc']
+    relation_name, relation_desc = entry['Name'], entry['Description']
     list_of_descriptions += f"<li><b>[{relation_name}]: {relation_desc}</b></li>"
     list_of_descriptions += "</ol>"
 
     relation_details = relation_details[:page_no+1]
 
-    included_relations = [detail['relation_name'] for detail in relation_details]
-    relation_map = {key: relation_map[key] for key in included_relations}
+    included_relations = [detail['Name'] for detail in relation_details]
 
     graph_html = generate_workflow_graph(relation_map, relation_details)
     
@@ -27138,6 +27403,7 @@ class BuildERStory(Node):
         relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
         entity_df = pd.read_json(self.get_sibling_document('Entity Understand'), orient="split")
         story_summary = self.get_sibling_document('Reorder Relation To Story')
+        group_df = data_project.groups
         
         relation_to_entities = {}
         for idx, row in relation_df.iterrows():
@@ -27145,14 +27411,14 @@ class BuildERStory(Node):
         
         relation_story = story_summary
         
-        display(HTML(f"🥳 We have modeled your data warehouse (oval for entity, box for relation):"))
+        display(HTML(f"🥳 We have modeled your data warehouse (oval for entity, box for relation, octagon for table group):"))
 
         display_pages(total_page=len(relation_story), 
                       create_html_content=partial(create_html_content_er_story, relation_to_entities, relation_story, None))
         
         
         
-        yml_dict = build_story_yml_dict(relation_df, entity_df, story_summary)
+        yml_dict = build_story_yml_dict(relation_df, entity_df, story_summary, group_df)
         yml_content = yaml.dump(yml_dict, default_flow_style=False)
         
         highlighted_yml = highlight_yml(yml_content)
@@ -27452,7 +27718,375 @@ class DBTProjectConfig(Node):
         display(VBox([dbt_name_input, dbt_directory_input]))
         display(next_button)
             
+class WriteSCDForAll(MultipleNode):
+    default_name = 'Write SCD For All'
+    default_description = 'This writes SCD queries for the given tables'
+    
+    def construct_node(self, element_name, idx=0, total=0, order_by_clause=None, id_columns=None, version_columns=None):
+        para = self.para.copy()
+        para["element_name"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        para["order_by_clause"] = order_by_clause
+        para["id_columns"] = id_columns
+        para["version_columns"] = version_columns
+        
+        node = WriteSCDTable(para=para)
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        document = self.get_sibling_document("Perform SCD For All").get('Perform SCD Table', {})
+        print(document)
+        self.elements = []
+        self.nodes = {}
+        
+        for idx, (table, table_data) in enumerate(document.items()):
+            if isinstance(table_data, dict) and "order_by_clause" in table_data:
+                self.elements.append(table)
+                self.nodes[table] = self.construct_node(
+                    element_name=table,
+                    idx=idx,
+                    total=len(document),
+                    order_by_clause=table_data["order_by_clause"],
+                    id_columns=table_data.get("id_columns", []),
+                    version_columns=table_data.get("version_columns", [])
+                )
+        
+        self.item = item
+        
+        
+class WriteSCDTable(Node):
+    default_name = 'Write SCD Table'
+    default_description = 'This writes SCD for the given table'
 
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        
+        table_name = self.para["element_name"]
+        
+        display(HTML(f'{running_spinner_html} Writing Slowly Changing Dimensions for <i>{table_name}</i> ...'))
+
+        idx = self.para["idx"]
+        total = self.para["total"]
+        con = self.item["con"]
+        self.progress = show_progress(max_value=total, value=idx)
+        
+        order_by_clause = self.para["order_by_clause"]
+        id_columns = self.para["id_columns"]
+        version_columns = self.para["version_columns"]
+        
+        data_project = self.para["data_project"]
+        table_pipeline = data_project.table_pipelines[table_name]
+        
+        sample_size = 5
+        sample_df = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT {sample_size}')
+        sample_df = sample_df.applymap(truncate_cell)
+        
+        table_object = data_project.table_object[table_name]
+        table_summary = table_object.table_summary
+
+        return table_name, order_by_clause, id_columns, version_columns, sample_df, table_summary, table_object
+    
+    def run(self, extract_output, use_cache=True):
+        table_name, order_by_clause, id_columns, version_columns, sample_df, table_summary, table_object = extract_output
+        
+        template = f"""You have table '{table_name}' with the following sample rows:
+{sample_df.to_csv(index=False, quoting=1)}
+
+Its current summary:
+{table_summary}
+
+This is a slowly changing dimension table.
+The columns that uniquely identify objects are: {id_columns}
+The ORDER BY clause for identifying the latest version is: {order_by_clause}
+
+We are going to create a snapshot table from this table, where 
+(1) only the latest version of each object is kept
+(2) The version columns are removed
+
+Please update the summary of the new table, in short simple SVO sentences and < 500 chars
+Respond with the following format:
+```yml
+new_summary: The table is about ... It tracks the most recent version of ...
+```"""
+        messages = [{"role": "user", "content": template}]
+        
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
+        if 'new_summary' not in summary:
+            raise KeyError("summary is missing the 'new_summary' key")
+        if not isinstance(summary['new_summary'], str):
+            raise TypeError("summary['new_summary'] must be a string")
+        
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        table_name, order_by_clause, id_columns, version_columns, sample_df, table_summary, table_object = extract_output
+        return {"new_summary": table_summary}
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output
+        table_name, order_by_clause, id_columns, version_columns, sample_df, table_summary, table_object = extract_output
+        
+        labels = []
+        file_names = []
+        contents = []
+        con = self.item["con"]
+        
+        new_table_name = "snapshot_" + table_name.replace("stg_", "")
+        data_project = self.para["data_project"]
+        columns = table_object.columns
+        
+        id_column_string = ", ".join([f'"{col}"' for col in id_columns])
+        columns_except_version_string = ",\n".join([f'"{col}"' for col in columns if col not in version_columns])
+        
+        comment = f"""-- Slowly Changing Dimension: Dimension keys are {id_column_string}
+-- Version columns are {', '.join(version_columns)}
+-- We will create Type 1 SCD (latest snapshot)
+"""
+        sql_query = f"""
+SELECT 
+{indent_paragraph(columns_except_version_string)}
+FROM {enclose_table_name(table_name)}
+QUALIFY ROW_NUMBER() OVER ( 
+    PARTITION BY {id_column_string}
+    ORDER BY
+{indent_paragraph(order_by_clause, spaces=8)}
+) = 1"""
+        sql_query = comment + sql_query
+
+        labels.append("SQL")
+        file_names.append(f"{new_table_name}.sql")
+        contents.append(sql_query)
+        
+        table_pipeline = data_project.table_pipelines[table_name]
+        sql_query = f"""
+SELECT 
+{indent_paragraph(columns_except_version_string)}
+FROM {enclose_table_name(table_pipeline)}
+QUALIFY ROW_NUMBER() OVER ( 
+    PARTITION BY {id_column_string}
+    ORDER BY
+{indent_paragraph(order_by_clause, spaces=8)}
+) = 1"""
+
+        sql_step = SQLStep(table_name=table_name, con=con)
+        new_table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+
+        sql_query = comment + sql_query
+        
+        database = self.para.get("database", None)
+        schema = self.para.get("schema", None)
+
+        step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
+        new_table_pipeline.add_step_to_final(step)
+        new_table_pipeline.run_codes(con=con, mode="WITH_VIEW")
+        
+        data_project.table_pipelines[new_table_name] = new_table_pipeline
+        
+        schema = new_table_pipeline.get_schema(con)
+        columns = list(schema.keys())
+        
+        table_object.columns = columns
+        table_object.table_name = new_table_name
+        table_object.table_summary = summary["new_summary"]
+        
+        if len(id_columns) == 1:
+            id_column = id_columns[0]
+            table_object.uniqueness[id_column] = {}
+            table_object.uniqueness[id_column]["current_unique"] = True
+            table_object.uniqueness[id_column]["unique_reason"] = "Unique dimension key, derived from the slowly changing dimension"
+        
+        yml_dict = table_object.create_dbt_schema_dict(table_cocoon_meta={"scd_base_table": table_name})
+        yml_content = yaml.dump(yml_dict, default_flow_style=False)
+        labels.append("YML")
+        file_names.append(f"{new_table_name}.yml")
+        contents.append(yml_content)
+
+        if "dbt_directory" in self.para:
+            if not os.path.exists(os.path.join(self.para["dbt_directory"], "snapshot")):
+                os.makedirs(os.path.join(self.para["dbt_directory"], "snapshot"))
+            file_names = [os.path.join(self.para["dbt_directory"], "snapshot", file_name) for file_name in file_names]
+       
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        overwrite_checkbox.value = True
+        save_files_click(save_button)  
+        
+        data_project.change_table_name(table_name, new_table_name)
+        callback({"sql": sql_query, "yml": yml_content})
+        
+class PerformSCDForAll(MultipleNode):
+    default_name = 'Perform SCD For All'
+    default_description = 'This perform SCD for the given tables'
+    
+    def construct_node(self, element_name, idx=0, total=0, version_columns = None, id_columns = None):
+        
+        para = self.para.copy()
+        para["element_name"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        para["version_columns"] = version_columns
+        para["id_columns"] = id_columns
+        
+        node = PerformSCDTable(para=para)
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        df = pd.read_json(self.get_sibling_document('Decide SCD For All'), orient="split")
+        
+        scd_tables = df[df['Is SCD'] == True]['Table'].tolist()
+         
+        self.elements = scd_tables
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements), 
+                                                   df[df["Table"] == element]["Version Columns"].iloc[0],
+                                                    df[df["Table"] == element]["ID Columns"].iloc[0])
+                      for idx, element in enumerate(self.elements)}
+        self.item = item
+
+
+class PerformSCDTable(Node):
+    default_name = 'Perform SCD Table'
+    default_description = 'This perform SCD for the given table'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        
+        table_name = self.para["element_name"]
+        
+        display(HTML(f'{running_spinner_html} Performing Slowly Changing Dimensions for <i>{table_name}</i> ...'))
+
+        idx = self.para["idx"]
+        total = self.para["total"]
+        con = self.item["con"]
+        self.progress = show_progress(max_value=total, value=idx)
+        
+        version_columns = self.para["version_columns"]
+        id_columns = self.para["id_columns"]
+        data_project = self.para["data_project"]
+        table_pipeline = data_project.table_pipelines[table_name]
+        table_object = data_project.table_object[table_name]
+        column_desc = table_object.print_column_desc(columns = version_columns, show_category=True, show_pattern=True, show_type=True)
+
+        return con, table_pipeline, version_columns, id_columns, column_desc
+    
+    def run(self, extract_output, use_cache=True):
+        con, table_pipeline, version_columns, id_columns, column_desc = extract_output
+        table_name = self.para["element_name"]
+        database_name = get_database_name(con)
+        max_iterations = 10
+        
+        initial_template = f"""Table '{table_name}' has the following version columns:
+{column_desc}
+
+Task: Create the ORDER BY clause for an SCD (Slowly Changing Dimension) query for this table.
+Version columns: {version_columns}
+
+The ORDER BY clause should be in the following format:
+SELECT * 
+FROM table
+QUALIFY ROW_NUMBER() OVER ( 
+    PARTITION BY id_col 
+    ORDER BY 
+        {{order_by_clause}}
+) = 1
+
+Example order by:
+    "update time" DESC,
+    "is_deleted",
+    "valid_until" IS NULL DESC,
+    ...
+
+Note that we use {database_name} syntax.
+
+Return the result in yml
+```yml
+reasoning: >
+    To create the ORDER BY clause for the SCD query, we need to ...
+
+order_by_clause: |
+    "update time",
+    CASE WHEN "is_deleted" = true THEN 0 ELSE 1 END,
+    "valid_until" IS NULL
+```"""
+        messages = [{"role": "user", "content": initial_template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        reasoning = summary["reasoning"]
+        
+        for i in range(max_iterations):
+            try:
+                test_query = f"""
+                SELECT 1
+                FROM {table_pipeline}
+                ORDER BY
+                {summary['order_by_clause']}
+                LIMIT 1
+                """
+                df = run_sql_return_df(con, test_query)
+                break
+            except Exception:
+                detailed_error_info = get_detailed_error_info()
+                debug_template = f"""Table '{table_name}' has the following version columns:
+{column_desc}
+
+You have the following order_by_clause:
+{summary['order_by_clause']}
+
+The order_by_clause is used in the following query:
+SELECT * FROM "TABLE" ORDER BY {{order_by_clause}}
+
+It has an error: {detailed_error_info}
+
+Please correct the ORDER BY clause, but don't change the logic.
+Note that we use {database_name} syntax.
+Return the result in yml
+```yml
+reasoning: >
+    The error is caused by ...
+
+order_by_clause: |
+    
+```"""
+                messages = [{"role": "user", "content": debug_template}]
+                response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=(i == 0))
+                messages.append(response['choices'][0]['message'])
+                self.messages.append(messages)
+
+                yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+                summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+                
+        if i == max_iterations - 1:
+            return self.run_but_fail(extract_output, use_cache)
+        
+        summary["reasoning"] = reasoning
+        summary["id_columns"] = id_columns
+        summary["version_columns"] = version_columns
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        con, table_pipeline, version_columns, id_columns, column_desc = extract_output
+        return {"reasoning": "Failed to create ORDER BY clause", "order_by_clause": ",\n".join(version_columns),
+                "id_columns": id_columns, "version_columns": version_columns}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+    
+    
 class DecideSCDTable(Node):
     default_name = 'Decide SCD Table'
     default_description = 'This decide if the given table contains SCD'
@@ -27504,7 +28138,7 @@ reasoning: >-
 scd: true/false
 # if scd is true, specify the following
 id_cols: ["col1", "col2"...]
-update_timestamp_cols: ["col1", "col2"...] # preferably, only update time stamp; valid_to is also fine
+version_cols: ["col1", "col2"...] # columns related to the update timestamp/version
 ```"""
         messages = [{"role": "user", "content": template}]
 
@@ -27529,7 +28163,7 @@ update_timestamp_cols: ["col1", "col2"...] # preferably, only update time stamp;
             raise TypeError("summary['scd'] must be a boolean")
 
         if summary['scd']:
-            for key in ['id_cols', 'update_timestamp_cols']:
+            for key in ['id_cols', 'version_cols']:
                 if key not in summary:
                     raise KeyError(f"summary is missing required key for SCD: {key}")
                 if not isinstance(summary[key], list):
@@ -27537,7 +28171,7 @@ update_timestamp_cols: ["col1", "col2"...] # preferably, only update time stamp;
                 if not all(isinstance(col, str) for col in summary[key]):
                     raise TypeError(f"All elements in summary['{key}'] must be strings")
 
-            all_cols = set(summary['id_cols'] + summary['update_timestamp_cols'])
+            all_cols = set(summary['id_cols'] + summary['version_cols'])
             missing_cols = all_cols - set(sample_df.columns)
             if missing_cols:
                 raise ValueError(f"The following columns are missing from the DataFrame: {missing_cols}")
@@ -27570,7 +28204,11 @@ class DecideSCDForAll(MultipleNode):
 
     def extract(self, item):
         data_project = self.para["data_project"]
-        self.elements = list(data_project.tables.keys())
+        
+        candidate_elements = set(data_project.tables.keys())
+        candidate_elements -= set(data_project.partition_mapping.keys())
+        self.elements = list(candidate_elements)
+        
         self.nodes = {element: self.construct_node(element, idx, len(self.elements))
                       for idx, element in enumerate(self.elements)}
         self.item = item
@@ -27599,7 +28237,7 @@ class DecideSCDForAll(MultipleNode):
                 data['Table'].append(table)
                 data['Is SCD'].append(summary["scd"])
                 if summary["scd"]:
-                    data['Version Columns'].append(summary["update_timestamp_cols"])
+                    data['Version Columns'].append(summary["version_cols"])
                     data['ID Columns'].append(summary["id_cols"])
                 else:
                     data['Version Columns'].append([])
@@ -27634,214 +28272,7 @@ class DecideSCDForAll(MultipleNode):
         next_button.on_click(on_button_click)
                 
         display(next_button)
-                
-class PerformSCDForAll(MultipleNode):
-    default_name = 'Perform SCD For All'
-    default_description = 'This perform SCD for the given tables'
-    
-    def construct_node(self, element_name, idx=0, total=0, version_columns = None, id_columns = None):
         
-        para = self.para.copy()
-        para["element_name"] = element_name
-        para["idx"] = idx
-        para["total"] = total
-        para["version_columns"] = version_columns
-        para["id_columns"] = id_columns
-        
-        node = PerformSCDTable(para=para)
-        node.inherit(self)
-        return node
-    
-    def extract(self, item):
-        df = pd.read_json(self.get_sibling_document('Decide SCD For All'), orient="split")
-        
-        scd_tables = df[df['Is SCD'] == True]['Table'].tolist()
-         
-        self.elements = scd_tables
-        self.nodes = {element: self.construct_node(element, idx, len(self.elements), 
-                                                   df[df["Table"] == element]["Version Columns"].iloc[0],
-                                                    df[df["Table"] == element]["ID Columns"].iloc[0])
-                      for idx, element in enumerate(self.elements)}
-        self.item = item
-
-class PerformSCDTable(Node):
-    default_name = 'Perform SCD Table'
-    default_description = 'This perform SCD for the given table'
-
-    def extract(self, item):
-        clear_output(wait=True)
-        self.input_item = item
-        
-        table_name = self.para["element_name"]
-        
-        display(HTML(f'{running_spinner_html} Performing Slowly Changing Dimensions for <i>{table_name}</i> ...'))
-
-        idx = self.para["idx"]
-        total = self.para["total"]
-        con = self.item["con"]
-        self.progress = show_progress(max_value=total, value=idx)
-        
-        version_columns = self.para["version_columns"]
-        id_columns = self.para["id_columns"]
-        
-        data_project = self.para["data_project"]
-        table_pipeline = data_project.table_pipelines[table_name]
-        
-        sample_size = 5
-        sample_df = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT {sample_size}')
-        sample_df = sample_df.applymap(truncate_cell)
-        
-        
-        data_project = self.para["data_project"]
-
-        data_project = self.para["data_project"]
-        table_object = data_project.table_object[table_name]
-        table_summary = table_object.table_summary
-
-        return table_name, version_columns, id_columns, sample_df, table_summary
-    
-    def run(self, extract_output, use_cache=True):
-        table_name, version_columns, id_columns, sample_df, table_summary = extract_output
-        
-        template =  f"""You have table '{table_name}' with the following sample rows:
-{sample_df.to_csv(index=False, quoting=1)}
-
-Its current summary:
-{table_summary}
-
-This is a slowly changing dimension table.
-The columns that uniquely identify objects are: {id_columns}
-The columns that identify version are: {version_columns}
-
-We are going to create a snapshot table from this table, where 
-(1) only the latest version of each object is kept
-(2) The version columns are removed
-
-Please update the summary of the new table, in short simple SVO sentences and < 500 chars
-Respond with the following format:
-```yml
-new_summary: The table is about ... It tracks the most recent version of ...
-```"""
-        messages = [{"role": "user", "content": template}]
-        
-        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
-        messages.append(response['choices'][0]['message'])
-        self.messages.append(messages)
-        
-        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
-        
-        if not isinstance(summary, dict):
-            raise TypeError("summary must be a dictionary")
-        if 'new_summary' not in summary:
-            raise KeyError("summary is missing the 'new_summary' key")
-        if not isinstance(summary['new_summary'], str):
-            raise TypeError("summary['new_summary'] must be a string")
-        
-        return summary
-    
-    def run_but_fail(self, extract_output, use_cache=True):
-        table_name, version_columns, id_columns, sample_df, table_summary = extract_output
-        return {"new_summary": table_summary}
-
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        summary = run_output
-        table_name, version_columns, id_columns, sample_df, table_summary = extract_output
-        
-        labels = []
-        file_names = []
-        contents = []
-        con = self.item["con"]
-        
-        new_table_name = "snapshot_" + table_name.replace("stg_", "")
-        data_project = self.para["data_project"]
-        table_object = data_project.table_object[table_name]
-        columns = table_object.columns
-        
-        version_column_string = ", ".join([f'"{col}"' for col in version_columns])
-        id_column_string = ", ".join([f'"{col}"' for col in id_columns])
-        columns_except_version_string = ",\n".join([f'"{col}"' for col in columns if col not in version_columns])
-        
-        comment = f"""-- Slowly Changing Dimension: Dimension keys are {id_column_string}
--- Effective date columns are {version_column_string}
--- We will create Type 1 SCD (latest snapshot)
-"""
-        sql_query = f"""SELECT 
-{indent_paragraph(columns_except_version_string)}
-FROM (
-     SELECT 
-{indent_paragraph(columns_except_version_string, spaces=12)},
-            ROW_NUMBER() OVER (
-                PARTITION BY {id_column_string} 
-                ORDER BY {version_column_string} 
-            DESC) AS "cocoon_rn"
-    FROM "{table_name}"
-) ranked
-WHERE "cocoon_rn" = 1"""
-        sql_query = comment + sql_query
-
-        labels.append("SQL")
-        file_names.append(f"{new_table_name}.sql")
-        contents.append(sql_query)
-        
-        table_pipeline = data_project.table_pipelines[table_name]
-        sql_query = f"""SELECT 
-{indent_paragraph(columns_except_version_string)}
-FROM (
-     SELECT 
-{indent_paragraph(columns_except_version_string, spaces=12)},
-            ROW_NUMBER() OVER (
-                PARTITION BY {id_column_string} 
-                ORDER BY {version_column_string} 
-            DESC) AS "cocoon_rn"
-    FROM {table_pipeline}
-) ranked
-WHERE "cocoon_rn" = 1"""
-
-        sql_step = SQLStep(table_name=table_name, con=con)
-        new_table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
-
-        sql_query = comment + sql_query
-        
-        database = self.para.get("database", None)
-        schema = self.para.get("schema", None)
-
-        step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
-        new_table_pipeline.add_step_to_final(step)
-        new_table_pipeline.run_codes(con=con, mode="WITH_VIEW")
-        
-        data_project.table_pipelines[new_table_name] = new_table_pipeline
-        
-        schema = new_table_pipeline.get_schema(con)
-        columns = list(schema.keys())
-        
-        table_object.columns = columns
-        table_object.table_name = new_table_name
-        table_object.table_summary = summary["new_summary"]
-        
-        if len(id_columns) == 1:
-            id_column = id_columns[0]
-            table_object.uniqueness[id_column] = "Unique dimension key, derived from the slowly changing dimension"
-        
-        yml_dict = table_object.create_dbt_schema_dict(table_cocoon_meta={"scd_base_table": table_name})
-        yml_content = yaml.dump(yml_dict, default_flow_style=False)
-        labels.append("YML")
-        file_names.append(f"{new_table_name}.yml")
-        contents.append(yml_content)
-
-        if "dbt_directory" in self.para:
-            if not os.path.exists(os.path.join(self.para["dbt_directory"], "snapshot")):
-                os.makedirs(os.path.join(self.para["dbt_directory"], "snapshot"))
-            file_names = [os.path.join(self.para["dbt_directory"], "snapshot", file_name) for file_name in file_names]
-       
-        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
-        overwrite_checkbox.value = True
-        save_files_click(save_button)  
-        
-        data_project.change_table_name(table_name, new_table_name)
-        callback({"sql": sql_query, "yml": yml_content})
-        
-
 class DecideKeysForAll(MultipleNode):
     default_name = 'Decide Keys For All'
     default_description = 'This decide keys for the given tables'
@@ -27868,9 +28299,10 @@ class DecideKeysForAll(MultipleNode):
     def display_after_finish_workflow(self, callback, document):
         
         query_widget = self.item["query_widget"]
-        
+        data_project = self.para["data_project"]
         dropdown = create_explore_button(query_widget, 
-                                         table_name=self.elements)
+                                         table_name=self.elements,
+                                         logical_to_physical=data_project.table_pipelines)
         
         data = {
             'Table': [],
@@ -28055,6 +28487,9 @@ class ConnectPKFKTable(ListNode):
                 table_desc += indent_paragraph(column_desc) + "\n"
                 database_desc += table_desc + "\n"
 
+        if database_desc == "":
+            return tables_to_process
+        
         for idx, row in key_df.iterrows():
             table_name = row["Table"]
             keys = row["Keys"]
@@ -28151,7 +28586,6 @@ fks:
         return {k: v for d in run_outputs for k, v in d.items()}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        self.progress.value += 1
         data_project = self.para["data_project"]
         
         query_widget = self.item["query_widget"]
@@ -28189,6 +28623,10 @@ fks:
             data['Table[FK]'].append(fk_list)
         
         df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
         
         editable_columns = [False, True]
         reset = True
@@ -28336,9 +28774,18 @@ relation_desc: >-
         callback(run_output)
         
 
-
-def build_story_yml_dict(relation_df, entity_df, story_summary):
+def build_story_yml_dict(relation_df, entity_df, story_summary, group_df):
     yml_dict = OrderedDict()
+
+    yml_dict['groups'] = [
+        OrderedDict([
+            ('group_name', row['Group Name']),
+            ('group_summary', row['Group Summary']),
+            ('tables', row['Tables']),
+            *([('join_info', row['Join Info'])] if pd.notna(row['Join Info']) and row['Join Info'] != '' else [])
+        ])
+        for _, row in group_df.iterrows()
+    ]
 
     yml_dict['entities'] = [
         OrderedDict([
@@ -28346,7 +28793,6 @@ def build_story_yml_dict(relation_df, entity_df, story_summary):
             ('entity_description', row['Entity Description']),
             ('table_name', row['Table']),
             ('primary_key', row['Primary Key']),
-
         ])
         for _, row in entity_df.iterrows()
     ]
@@ -28357,21 +28803,20 @@ def build_story_yml_dict(relation_df, entity_df, story_summary):
             ('relation_description', row['Relation Description']),
             ('table_name', row['Table']),
             ('entities', row['Entities']),
-
         ])
         for _, row in relation_df.iterrows()
     ]
 
     yml_dict['story'] = [
         OrderedDict([
-            ('relation_name', item['relation_name']),
-            ('story_line', item['relation_desc'])
+            ('name', item['Name']),
+            ('description', item['Description']),
+            ('type', item['Type'])
         ])
         for item in story_summary
     ]
 
     return yml_dict
-
 
 
 
@@ -28390,6 +28835,8 @@ class DocumentProject(Node):
         con = self.item["con"]
         side_list_idx = 1
         side_list_html = ""
+        
+        tab_content_html = ""
         
         source_tables = []
         if os.path.exists(os.path.join(dbt_directory, "sources.yml")):
@@ -28445,7 +28892,115 @@ class DocumentProject(Node):
                 </a>"""
                 side_list_idx += 1
 
+        tab_content_html += f"""
+<div class="tab-pane fade show active" id="cocoon_steps_source">
+    <nav class="navbar navbar-light bg-light">
+        <span class="navbar-brand mb-0">
+            <h5 class="card-title mb-0">Source Table</h5>
+        </span>
+        <ul class="nav">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle active" href="#"
+                    id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
+                    aria-expanded="false">
+                    Select Table
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                    {source_choice_html}
+                </div>
+            </li>
+        </ul>
+    </nav>
+    <div class="container">
+        <small class="text-muted">We display the source tables from the data warehouses to
+            model.</small>
+    </div>
+    <hr>
+    <div class="scroll-container overflow-auto">
+        <div class="tab-content mt-3">
+            {source_div_html}
+        </div>
+    </div>
+</div>
+"""
+        partition_tables = []
 
+        if os.path.exists(os.path.join(dbt_directory, "partition")):
+            for file_name in os.listdir(os.path.join(dbt_directory, "partition")):
+                if file_name.endswith(".yml"):
+                    partition_tables.append(file_name[:-4])
+
+        partition_choice_html = ""
+        partition_div_html = ""
+        success_idx = 0
+
+        if len(partition_tables) > 0:
+            for table in partition_tables:
+                try:
+                    with open(os.path.join(dbt_directory, "partition", f"{table}.yml"), "r") as file:
+                        yml_content = file.read()
+                    
+                    partition_yml_dict = yaml.safe_load(yml_content)
+                    
+                    nodes = [partition_yml_dict['models'][0]['name']] + partition_yml_dict['cocoon_meta']['partitions']
+                    edges = [(i, 0) for i in range(1, len(nodes))]
+                    
+                    partition_cluster_output = generate_workflow_html_multiple(nodes, edges, directional=True)
+                    
+                    partition_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_partition_{table}">{table}</a>'
+                    
+                    partition_div_html += f"""<div class="tab-pane fade {"show active" if success_idx == 0 else ""}" id="cocoon_partition_{table}">
+                <p class="text-center">Table Partitions <small class="text-muted">(Partitions to cluster)</small></p>
+                <div class="container mb-4">{partition_cluster_output}</div>
+                <p class="text-center">{table}.yml <small class="text-muted"> (Document the partitions)</small></p>
+                <div class="code_container mb-4 mx-4">
+                    <pre><code class="language-yaml">{yml_content}</code></pre>
+                </div>
+            </div>"""
+                    
+                    success_idx += 1
+                except Exception as e:
+                    print(f"Error processing partition table {table}: {str(e)}")
+
+            if success_idx > 0:
+                side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_partition">
+                <div>
+                    <h6 class="mb-0">{side_list_idx}. Partition</h6>
+                    <small>Cluster table partitions</small>
+                </div>
+            </a>"""
+                side_list_idx += 1
+
+            tab_content_html += f"""
+<div class="tab-pane fade" id="cocoon_steps_partition">
+    <nav class="navbar navbar-light bg-light">
+        <span class="navbar-brand mb-0">
+            <h5 class="card-title mb-0">Partition Table</h5>
+        </span>
+        <ul class="nav">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle active" href="#"
+                    id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
+                    aria-expanded="false">
+                    Select Table
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                    {partition_choice_html}
+                </div>
+            </li>
+        </ul>
+    </nav>
+    <div class="container">
+        <small class="text-muted">Cluster tables that are stored separately, but for a similar purpose.</small>
+    </div>
+    <hr>
+    <div class="scroll-container overflow-auto">
+        <div class="tab-content mt-3">
+        {partition_div_html}
+        </div>
+    </div>
+</div>
+"""
 
 
         stage_tables = []
@@ -28500,6 +29055,37 @@ class DocumentProject(Node):
             </a>"""
                 side_list_idx += 1
 
+            tab_content_html += f"""
+<div class="tab-pane fade" id="cocoon_steps_stage">
+    <nav class="navbar navbar-light bg-light">
+        <span class="navbar-brand mb-0">
+            <h5 class="card-title mb-0">Stage Table</h5>
+        </span>
+        <ul class="nav">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle active" href="#"
+                    id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
+                    aria-expanded="false">
+                    Select Table
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                    {stage_choice_html}
+                </div>
+            </li>
+        </ul>
+    </nav>
+    <div class="container">
+        <small class="text-muted">Source tables may have typos, unclear names, incorrect
+            column types, etc. We clean these tables.</small>
+    </div>
+    <hr>
+    <div class="scroll-container overflow-auto">
+        <div class="tab-content mt-3">
+        {stage_div_html}
+        </div>
+    </div>
+</div>
+"""
 
 
         snapshot_tables = []
@@ -28552,6 +29138,40 @@ class DocumentProject(Node):
                 </div>
             </a>"""
                 side_list_idx += 1
+                
+            tab_content_html += f"""
+<div class="tab-pane fade" id="cocoon_steps_scd">
+    <nav class="navbar navbar-light bg-light">
+        <span class="navbar-brand mb-0">
+            <h5 class="card-title mb-0">Slowly Changing Dimension Model</h5>
+        </span>
+        <ul class="nav">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle active" href="#"
+                    id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
+                    aria-expanded="false">
+                    Select Table
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                    {snapshot_choice_html}
+                </div>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <small class="text-muted">Some tables log change events, which may be redundant to
+            query. Instead, we take a snapshot of the latest.</small>
+    </div>
+    <hr>
+    <div class="scroll-container overflow-auto">
+        <div class="tab-content mt-3">
+            {snapshot_div_html}
+        </div>
+    </div>
+</div>
+"""
+
 
 
         join_yml_content = ""
@@ -28563,24 +29183,45 @@ class DocumentProject(Node):
             join_yml_dict = yaml.load(join_yml_content, Loader=yaml.FullLoader)
             foreign_key = reverse_join_graph(join_yml_dict)
             nodes, edges = generate_nodes_edges(foreign_key)
+            
+            for entry in join_yml_dict['join_graph']:
+                table = entry['table_name']
+                if table not in nodes:
+                    nodes.append(table)
+                    
             join_graph_output = generate_workflow_html_multiple(nodes, edges, directional=True)
 
             integration_div_html = f"""<p class="text-center">Join Graph <small class="text-muted">(FK to PK)</small></p>
-            <div class="container mb-4">{join_graph_output}</div>
-            <p class="text-center">cocoon_join.yml <small class="text-muted"> (Document the joins)</small></p>
-            <div class="code_container mb-4 mx-4">
-                <pre><code class="language-yaml">{join_yml_content}</code></pre>
-            </div>"""
+<div class="container mb-4">{join_graph_output}</div>
+<p class="text-center">cocoon_join.yml <small class="text-muted"> (Document the joins)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-yaml">{join_yml_content}</code></pre>
+</div>"""
 
             side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_join">
-                <div>
-                    <h6 class="mb-0">{side_list_idx}. Integration</h6>
-                    <small>Join graph from PK/FK</small>
-                </div>
-            </a>"""
+    <div>
+        <h6 class="mb-0">{side_list_idx}. Integration</h6>
+        <small>Join graph from PK/FK</small>
+    </div>
+</a>"""
             side_list_idx += 1
 
+            tab_content_html += f"""
+<div class="tab-pane fade" id="cocoon_steps_join">
+<nav class="navbar navbar-light bg-light">
+<span class="navbar-brand mb-0">
+    <h5 class="card-title mb-0">Integration</h5>
+</span>
+</nav>
 
+<div class="container">
+<small class="text-muted">We identify the primary key (PK) and foreign key (FK) from
+    tables. We build a join graph that connects FK to PK.</small>
+</div>
+<hr>
+{integration_div_html}
+</div>
+        """
 
         er_yml_content = ""
         er_div_html = ""
@@ -28590,7 +29231,7 @@ class DocumentProject(Node):
 
             er_yml_dict = yaml.load(er_yml_content, Loader=yaml.FullLoader)
             relation_map = {entry['relation_name']: entry['entities'] for entry in er_yml_dict['relations'] if 'relation_name' in entry}
-            relation_details = [{'relation_name': entry['relation_name'], 'relation_desc': entry['story_line']} for entry in er_yml_dict['story']]
+            relation_details = [{'Name': entry['name'], 'Description': entry['description'], 'Type': entry['type']} for entry in er_yml_dict['story']]
 
             er_list_html = "\n".join([f'<li data-target="#cocoon_er_story_carousel" data-slide-to="{idx}" class="{"" if idx == 0 else ""}"></li>' for idx in range(len(relation_details))])
             er_carousel_html = "\n".join([f'<div class="carousel-item {"active" if idx == 0 else ""}" style="transition: none;">{create_html_content_er_story(relation_map, relation_details, page_no=idx)}</div>' for idx in range(len(relation_details))])
@@ -28626,8 +29267,22 @@ class DocumentProject(Node):
                 </div>
             </a>"""
             side_list_idx += 1
-
-
+            
+            tab_content_html += f"""
+                                    <div class="tab-pane fade" id="cocoon_steps_er">
+                                        <nav class="navbar navbar-light bg-light">
+                                            <span class="navbar-brand mb-0">
+                                                <h5 class="card-title mb-0">Entity–Relationship model</h5>
+                                            </span>
+                                        </nav>
+                                        <div class="container">
+                                            <small class="text-muted">We identify the entities and relationships behind the
+                                                tables, and tell the story among these relationships.</small>
+                                        </div>
+                                        <hr>
+                                        {er_div_html}
+                                    </div>
+"""
 
 
 
@@ -28737,127 +29392,7 @@ class DocumentProject(Node):
                         <div class="card">
                             <div class="card-body">
                                 <div class="tab-content">
-                                    <div class="tab-pane fade show active" id="cocoon_steps_source">
-
-                                        <nav class="navbar navbar-light bg-light">
-                                            <span class="navbar-brand mb-0">
-                                                <h5 class="card-title mb-0">Source Table</h5>
-                                            </span>
-                                            <ul class="nav">
-                                                <li class="nav-item dropdown">
-                                                    <a class="nav-link dropdown-toggle active" href="#"
-                                                        id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
-                                                        aria-expanded="false">
-                                                        Select Table
-                                                    </a>
-                                                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                                                        {source_choice_html}
-                                                    </div>
-                                                </li>
-                                            </ul>
-                                        </nav>
-                                        <div class="container">
-                                            <small class="text-muted">We display the source tables from the data warehouses to
-                                                model.</small>
-                                        </div>
-                                        <hr>
-                                        <div class="scroll-container overflow-auto">
-                                            <div class="tab-content mt-3">
-                                                {source_div_html}
-                                            </div>
-                                        </div>
-
-                                    </div>
-
-                                    <div class="tab-pane fade" id="cocoon_steps_stage">
-                                        <nav class="navbar navbar-light bg-light">
-                                            <span class="navbar-brand mb-0">
-                                                <h5 class="card-title mb-0">Stage Table</h5>
-                                            </span>
-                                            <ul class="nav">
-                                                <li class="nav-item dropdown">
-                                                    <a class="nav-link dropdown-toggle active" href="#"
-                                                        id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
-                                                        aria-expanded="false">
-                                                        Select Table
-                                                    </a>
-                                                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                                                        {stage_choice_html}
-                                                    </div>
-                                                </li>
-                                            </ul>
-                                        </nav>
-                                        <div class="container">
-                                            <small class="text-muted">Source tables may have typos, unclear names, incorrect
-                                                column types, etc. We clean these tables.</small>
-                                        </div>
-                                        <hr>
-                                        <div class="scroll-container overflow-auto">
-                                            <div class="tab-content mt-3">
-                                            {stage_div_html}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="tab-pane fade" id="cocoon_steps_scd">
-                                        <nav class="navbar navbar-light bg-light">
-                                            <span class="navbar-brand mb-0">
-                                                <h5 class="card-title mb-0">Slowly Changing Dimension Model</h5>
-                                            </span>
-                                            <ul class="nav">
-                                                <li class="nav-item dropdown">
-                                                    <a class="nav-link dropdown-toggle active" href="#"
-                                                        id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
-                                                        aria-expanded="false">
-                                                        Select Table
-                                                    </a>
-                                                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                                                        {snapshot_choice_html}
-                                                    </div>
-                                                </li>
-                                            </ul>
-                                        </nav>
-
-                                        <div class="container">
-                                            <small class="text-muted">Some tables log change events, which may be redundant to
-                                                query. Instead, we take a snapshot of the latest.</small>
-                                        </div>
-                                        <hr>
-                                        <div class="scroll-container overflow-auto">
-                                            <div class="tab-content mt-3">
-                                                {snapshot_div_html}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="tab-pane fade" id="cocoon_steps_join">
-                                        <nav class="navbar navbar-light bg-light">
-                                            <span class="navbar-brand mb-0">
-                                                <h5 class="card-title mb-0">Integration</h5>
-                                            </span>
-                                        </nav>
-
-                                        <div class="container">
-                                            <small class="text-muted">We identify the primary key (PK) and foreign key (FK) from
-                                                tables. We build a join graph that connects FK to PK.</small>
-                                        </div>
-                                        <hr>
-                                        {integration_div_html}
-                                    </div>
-
-                                    <div class="tab-pane fade" id="cocoon_steps_er">
-                                        <nav class="navbar navbar-light bg-light">
-                                            <span class="navbar-brand mb-0">
-                                                <h5 class="card-title mb-0">Entity–Relationship model</h5>
-                                            </span>
-                                        </nav>
-                                        <div class="container">
-                                            <small class="text-muted">We identify the entities and relationships behind the
-                                                tables, and tell the story among these relationships.</small>
-                                        </div>
-                                        <hr>
-                                        {er_div_html}
-                                    </div>
+                                    {tab_content_html}
                                 </div>
                             </div>
                         </div>
@@ -28880,6 +29415,8 @@ class DocumentProject(Node):
         contents = [model_html]
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
         save_files_click(save_button) 
+        
+
         
         
 def read_source_file(sources_file_path):
@@ -28942,6 +29479,24 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
             data_project.add_table(table_name, get_table_schema(con, table_name, database=source_database, schema=source_schema))
 
         return data_project
+    
+    
+    partitions = []
+    if os.path.exists(os.path.join(dbt_directory, "partition")):
+        for file_name in os.listdir(os.path.join(dbt_directory, "partition")):
+            if file_name.endswith(".yml"):
+                partitions.append(file_name[:-4])
+                
+    for partition in partitions:
+        with open(os.path.join(dbt_directory, "partition", f"{partition}.yml"), "r") as f:
+            table_object = PartitionTable()
+            yml_data = yaml.safe_load(f)
+            table_object.read_attributes_from_dbt_schema_yml(yml_data)
+            table_name = table_object.table_name
+            data_project.add_table_project(table_object)
+            data_project.add_table(table_name, table_object.columns)
+            updated_partitions = [rename_for_stg(table_name) for table_name in table_object.partitions]
+            data_project.partition_mapping[table_name] = updated_partitions
 
     stage_tables = []
     if os.path.exists(os.path.join(dbt_directory, "stage")):
@@ -28965,7 +29520,15 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
             yml_data = yaml.safe_load(f)
             table_object.read_attributes_from_dbt_schema_yml(yml_data)
             data_project.add_table_project(table_object)
-            data_project.add_table(new_table_name, table_object.columns)
+            
+            skip_table = False
+            for partition, tables in data_project.partition_mapping.items():
+                if new_table_name in tables:
+                    skip_table = True
+                    break
+            
+            if not skip_table:
+                data_project.add_table(new_table_name, table_object.columns)
             
     snapshot_tables = []
     if os.path.exists(os.path.join(dbt_directory, "snapshot")):
@@ -28992,8 +29555,15 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
             
             old_table_name = yml_data.get("cocoon_meta", {}).get("scd_base_table", None)
             data_project.history_table[new_table_name] = old_table_name
-            data_project.add_table(new_table_name, table_object.columns)
             
+            skip_table = False
+            for partition, tables in data_project.partition_mapping.items():
+                if new_table_name in tables:
+                    skip_table = True
+                    break
+            
+            if not skip_table:
+                data_project.add_table(new_table_name, table_object.columns)
 
     join_yml_content = ""
     if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
@@ -29009,11 +29579,13 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
             table_name = item.get('table_name')
             primary_key = item.get('primary_key')
             foreign_keys = item.get('foreign_keys')
+            time_keys = item.get('time_keys')
             
             if table_name:
                 data_project.key[table_name] = {
                     "primary_key": primary_key,
-                    "foreign_keys": foreign_keys
+                    "foreign_keys": foreign_keys,
+                    "time_keys": time_keys
                 }
                 
     er_yml_content = ""
@@ -29137,6 +29709,9 @@ class RefinePK(Node):
     def run(self, extract_output, use_cache=True):
         _, pk_table_description = extract_output
         
+        if not pk_table_description:
+            return self.run_but_fail(extract_output)
+        
         template = f"""You have the following tables with potential primary keys:
 {pk_table_description}
 
@@ -29188,7 +29763,7 @@ pk_mapping:
         query_widget = self.item["query_widget"]
         
         dropdown = create_explore_button(query_widget, 
-                                         table_name=list(data_project.table_pipelines.keys()),
+                                         table_name=list(data_project.tables.keys()),
                                          logical_to_physical=data_project.table_pipelines)
         
         if len(df) == 0:
@@ -29412,6 +29987,10 @@ renamed_relations:
         
         original_df = pd.read_json(self.get_sibling_document('Relation Understand For All'), orient="split")
         
+        if len(original_df) == 0:
+            callback(original_df.to_json(orient="split"))
+            return
+        
         for refinement in run_output:
             for relation in refinement['renamed_relations']:
                 original_df.loc[original_df['Table'] == relation['original_table'], 'Relation Name'] = relation['new_relation_name']
@@ -29496,7 +30075,7 @@ def generate_er_diagram_html(relation_map, relation_details, highlighted_relatio
                                                  highlight_nodes_indices=highlight_nodes_indices,
                                                  highlight_edges_indices=highlight_edges_indices)
 
-    descriptions_html = '<p>Story behind the relationships <small class="text-muted">(only for those connecting >= 2 entities)</small></p><ol class="small">'
+    descriptions_html = '<p>Story behind the relationships <small class="text-muted">(oval for entity, box for relation, octagon for table group))</small></p><ol class="small">'
     for detail in relation_details:
         relation_name = detail['relation_name']
         relation_desc = detail['relation_desc']
@@ -29637,7 +30216,6 @@ class SimpleBusinessQuestionNode(Node):
         display(VBox([question_input]))
         display(submit_button)
         
-        
 class BusinessQuestionEntityRelationNode(Node):
     default_name = 'Business Question Entity and Relation Analysis'
     default_description = 'This node analyzes the entities and relations related to the business questions.'
@@ -29656,26 +30234,26 @@ class BusinessQuestionEntityRelationNode(Node):
     def run(self, extract_output, use_cache=True):
         data_project, business_question = extract_output
         
-        story_desc = "\n".join([f"{i+1}. '{item['relation_name']}': {item['relation_desc']}" 
+        story_desc = "\n".join([f"{i+1}. '{item['Name']}': {item['Description']}" 
                         for i, item in enumerate(data_project.story)])
 
         template = f"""Given the following question:
 '{business_question}'
 
-And the following descriptions of relations in a story-telling fashion:
+And the following descriptions of steps in a story-telling fashion:
 {story_desc}
 
 First reason about how the question fits into the story
-Then provide the relations that contains information to answer the question
+Then provide the step names that contains information to answer the question
 
 Return your analysis in the following format:
 ```yml
 reasoning: >-
     The question means... In the story, it is asking for ...
-related_relations:
-    - relation_name: xx
+related_steps:
+    - name: xx
       explanation: This is related because ...
-    - relation_name: xx
+    - name: xx
       ...
 ```"""
 
@@ -29693,12 +30271,12 @@ related_relations:
         if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
             raise ValueError("Analysis should contain a 'reasoning' key with a string value")
         
-        if 'related_relations' not in analysis or not isinstance(analysis['related_relations'], list):
-            raise ValueError("Analysis should contain a 'related_relations' key with a list value")
+        if 'related_steps' not in analysis or not isinstance(analysis['related_steps'], list):
+            raise ValueError("Analysis should contain a 'related_steps' key with a list value")
         
-        for relation in analysis['related_relations']:
-            if not isinstance(relation, dict) or 'relation_name' not in relation or 'explanation' not in relation:
-                raise ValueError("Each related relation should be a dictionary with 'relation_name' and 'explanation' keys")
+        for relation in analysis['related_steps']:
+            if not isinstance(relation, dict) or 'name' not in relation or 'explanation' not in relation:
+                raise ValueError("Each related relation should be a dictionary with 'name' and 'explanation' keys")
         
         return analysis
 
@@ -29707,7 +30285,7 @@ related_relations:
         
         default_analysis = {
             'reasoning': 'Unable to analyze the business question in relation to the story.',
-            'related_relations': []
+            'related_steps': []
         }
         
         return default_analysis
@@ -29722,11 +30300,11 @@ related_relations:
             'Explanation': [],
         }
         
-        related_relations = {relation['relation_name'] for relation in analysis['related_relations']}
+        related_steps = {relation['name'] for relation in analysis['related_steps']}
         for item in data_project.story:
-            name = item['relation_name']
-            is_related = name in related_relations
-            explanation = next((relation['explanation'] for relation in analysis['related_relations'] if relation['relation_name'] == name), '')
+            name = item['Name']
+            is_related = name in related_steps
+            explanation = next((relation['explanation'] for relation in analysis['related_steps'] if relation['name'] == name), '')
             
             data['Name'].append(name)
             data['Related'].append(is_related)
@@ -29749,16 +30327,16 @@ related_relations:
             if relation_name is not None:
                 relation_to_entities[relation_name] = relation_info['entities']
         
-        highlighted_relations = list(related_relations)
+        highlight_indices = [i for i, item in enumerate(relation_story) if item['Name'] in related_steps]
         
-        html_content = generate_er_diagram_html(relation_to_entities, relation_story, highlighted_relations)
+        html_content = generate_workflow_graph(relation_to_entities, relation_story, highlight_indices)
         display(HTML(html_content))
         
         if "chatui" in self.para:
             
             yml_content = yaml.dump(data_project.story, default_flow_style=False)
             highlighted_yml_content = highlight_yml_only(yml_content)
-            message = f"😎 <b>RAG from Cocoon</b>: Putting the question in context using Cocoon's ER story... nice! {highlighted_yml_content}"
+            message = f"😎 <b>RAG from Cocoon</b>: Putting the question in context using Cocoon's ER story... {highlighted_yml_content}"
             
             if df['Related'].any():
                 related_entities = ", ".join(df[df['Related']]['Name'].tolist())
@@ -29783,7 +30361,7 @@ related_relations:
                 
                 document = {
                     'reasoning': analysis['reasoning'],
-                    'related_relations': df.to_json(orient="split")
+                    'related_steps': df.to_json(orient="split")
                 }
                 callback(document)
                 
@@ -29889,6 +30467,7 @@ sql_feasible: true/false
             
             
             
+
 class BusinessQuestionDataSufficiency(Node):
     default_name = 'Business Question Data Sufficiency Check'
     default_description = 'This node evaluates whether the current tables have enough information to answer the business question.'
@@ -29902,8 +30481,19 @@ class BusinessQuestionDataSufficiency(Node):
         data_project = self.para["data_project"]
         business_question = self.para["business_question"]
 
-        df = pd.read_json(self.get_sibling_document('Business Question Entity and Relation Analysis')['related_relations'], orient="split")
-        related_relations = df[df['Related'] == True]['Name'].tolist()
+        df = pd.read_json(self.get_sibling_document('Business Question Entity and Relation Analysis')['related_steps'], orient="split")
+        related_steps = df[df['Related'] == True]['Name'].tolist()
+        
+        story = data_project.story
+        related_relations = []
+        related_groups = []
+        for element in story:
+            if element['Name'] in related_steps:
+                if element['Type'] == 'Relation':
+                    related_relations.append(element['Name'])
+                elif element['Type'] == 'Group':
+                    related_groups.append(element['Name'])
+        
 
         tables = set()
         for relation_name in related_relations:
@@ -29926,11 +30516,25 @@ class BusinessQuestionDataSufficiency(Node):
                     if entity_data['entity_name'] == entity:
                         tables.add(table)
 
-        schema_description = data_project.describe_project(tables=list(tables), limit=9999)
+        for group_name in related_groups:
+            group_data = data_project.groups[data_project.groups['Group Name'] == group_name]
+            for table in group_data['Tables'].iloc[0]:
+                tables.add(table)
+        
+        schema_description = yaml.dump(data_project.describe_project_yml(tables=list(tables), limit=9999))
         
         for table in tables.copy():
             if table in data_project.history_table:
                 tables.add(data_project.history_table[table])
+                
+        new_tables = set()
+        for table in tables:
+            if table in data_project.partition_mapping:
+                new_tables.update(data_project.partition_mapping[table])
+            else:
+                new_tables.add(table)
+
+        tables = new_tables
         
         return business_question, schema_description, list(tables)
 
@@ -29946,7 +30550,6 @@ And the following schema description of relevant tables:
 
 Please analyze if the available data is sufficient to answer the business question using SQL. 
 If it is sufficient, provide a high-level explanation of what selections, aggregations, and joins might be needed, and over which columns and tables.
-Some tables are snapshot and its historical data is also available. Pick the right one.
 
 Return your analysis in the following format:
 ```yml
@@ -30014,7 +30617,7 @@ related_tables: ['table1', 'table2', ...]
             yml_dict = data_project.describe_project_yml(tables=all_related_tables, limit=9999)
             yml_content = yaml.dump(yml_dict, default_flow_style=False)
             highlighted_yml_content = highlight_yml_only(yml_content)
-            message = f"😎 <b>RAG from Cocoon</b>: Checking out all the related tables Cocoon set up... cool stuff! {highlighted_yml_content}"
+            message = f"😎 <b>RAG from Cocoon</b>: Checking out all the related tables Cocoon set up... {highlighted_yml_content}"
 
             if related_tables and analysis['sufficient']:
 
@@ -30053,6 +30656,8 @@ related_tables: ['table1', 'table2', ...]
             on_button_click(next_button)
             return
         
+        
+        
 class JoinGraphBuilder(Node):
     default_name = 'Join Graph Builder'
     default_description = 'This node builds a join graph based on the SQL approach and related tables.'
@@ -30069,10 +30674,7 @@ class JoinGraphBuilder(Node):
         sql_approach = previous_node_output['sql_approach']
         related_tables = previous_node_output['related_tables']
         
-        key_info = {}
-        for table in related_tables:
-            if table in data_project.key:
-                key_info[table] = data_project.key[table]
+        key_info = data_project.get_key_info(related_tables)
         
         return sql_approach, related_tables, key_info
 
@@ -30142,7 +30744,7 @@ join_summary: >- # Clear and concise
         if "chatui" in self.para:
             yml_content = yaml.dump(key_info, default_flow_style=False)
             highlighted_yml_content = highlight_yml_only(yml_content)
-            message = f"😎 <b>RAG from Cocoon</b>: Looking at how tables connect, thanks to Cocoon's key info... clever! {highlighted_yml_content}"
+            message = f"😎 <b>RAG from Cocoon</b>: Looking at how tables connect, thanks to Cocoon's key info... {highlighted_yml_content}"
             message += f"🤓 <b>We've planned the join:</b> {analysis['join_summary']}"
             self.para["chatui"].add_message("GenAI", message)
 
@@ -30552,6 +31154,11 @@ new_sql_query: |
                 callback(code_clauses)
         
         next_button.on_click(on_button_click)
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
         display(next_button)
 
     def run_but_fail(self, extract_output, use_cache=True):
@@ -30561,6 +31168,7 @@ new_sql_query: |
             "debug_reasoning": "Unable to debug the SQL query due to persistent errors.",
             "error_message": "SQL debugging failed after multiple attempts."
         }
+        
         
         
 def create_cocoon_genai_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
@@ -30594,6 +31202,9 @@ def create_cocoon_genai_workflow(con=None, query_widget=None, viewer=False, para
     main_workflow.add_to_leaf(ColumnSelector(output=output))
     main_workflow.add_to_leaf(SQLQueryConstructor(output=output))
     main_workflow.add_to_leaf(DebugSQLQuery(output=output))
+    main_workflow.add_to_leaf(TableAttributeExtractor(output=output))
+    main_workflow.add_to_leaf(SQLWarningsGenerator(output=output))
+    
     return query_widget, main_workflow
 
 def create_dummy_genai_workflow(con, query_widget=None, viewer=False, para={}, output=None):
@@ -31128,3 +31739,1009 @@ class DummyChatUI:
 
 
 
+
+
+
+
+class TableAttributeExtractor(Node):
+    default_name = 'Table Attribute Extractor'
+    default_description = 'Extracts table names and their referenced attributes from the SQL query using LLM'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+        
+        debug_sql_query_output = self.get_sibling_document('Debug SQL')
+        sql_query = debug_sql_query_output['sql_query']
+        return sql_query
+
+    def run(self, extract_output, use_cache=True):
+        sql_query = extract_output
+        
+        template = f"""Given the following SQL query:
+{sql_query}
+
+Please extract a dictionary where the keys are table names (remove database/schema names) and the values are lists of their attributes referenced in the query.
+
+Your response should be in the following format:
+```yml
+table_attributes:
+    table1:
+        - attribute1
+        - attribute2
+    table2:
+        - attribute3
+        - attribute4
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(summary, dict) or 'table_attributes' not in summary:
+            raise ValueError("Invalid response format from LLM")
+        
+        return summary
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        table_attributes = run_output['table_attributes']
+        
+        display(HTML("<b>Extracted Table Attributes:</b>"))
+        for table, attributes in table_attributes.items():
+            display(HTML(f"<b>{table}:</b> {', '.join(attributes)}"))
+
+        next_button = widgets.Button(description="Proceed", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                callback(run_output)
+        
+        next_button.on_click(on_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+        display(next_button)
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {
+            'reasoning': 'Unable to extract table attributes from the provided SQL query.',
+            'table_attributes': {},
+        }
+        
+        
+class SQLWarningsGenerator(Node):
+    default_name = 'SQL Warnings Generator'
+    default_description = 'Generates warnings based on table attributes, referential integrity, and column-specific alerts'
+
+    def extract(self, input_item):
+        table_attribute_extractor_output = self.get_sibling_document('Table Attribute Extractor')
+        return table_attribute_extractor_output['table_attributes']
+
+    def run(self, extract_output, use_cache=True):
+        return extract_output
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        table_attributes = run_output
+        data_project = self.para["data_project"]
+        
+        clear_output(wait=True)
+        
+        ref_integrity_warnings = data_project.get_referential_integrity_warning(table_attributes)
+        
+        column_warnings = {}
+        for table, columns in table_attributes.items():
+            if table in data_project.table_object:
+                table_warnings = {}
+                for column in columns:
+                    alerts = data_project.table_object[table].get_alerts(column)
+                    if alerts:
+                        table_warnings[column] = alerts
+                if table_warnings:
+                    column_warnings[table] = table_warnings
+        
+        all_warnings = {
+            'referential_integrity': ref_integrity_warnings,
+            'column_specific': column_warnings
+        }
+        
+        html_content = "<h3>SQL Query Warnings</h3>"
+        chat_warning_content = ""
+        
+        if ref_integrity_warnings:
+            html_content += "<h4>Referential Integrity Warnings:</h4>"
+            html_content += "<ul>"
+            for warning in ref_integrity_warnings:
+                html_content += f"<li>{warning}</li>"
+                chat_warning_content += f"<li><b>{warning[0]}</b>: {warning[1]}</li>"
+            html_content += "</ul>"
+        else:
+            html_content += "<p>No referential integrity warnings found.</p>"
+        
+        if column_warnings:
+            html_content += "<h4>Column-specific Warnings:</h4>"
+            for table, warnings in column_warnings.items():
+                html_content += f"<h5>Table: {table}</h5>"
+                html_content += "<ul>"
+                for column, alerts in warnings.items():
+                    html_content += f"<li><strong>{column}:</strong>"
+                    html_content += "<ul>"
+                    for alert in alerts:
+                        html_content += f"<li>{alert}</li>"
+                        chat_warning_content += f"<li><b>{alert[0]}</b>: {alert[1]}</li>"
+                    html_content += "</ul></li>"
+                html_content += "</ul>"
+        else:
+            html_content += "<p>No column-specific warnings found.</p>"
+        
+        display(HTML(html_content))
+        
+        if "chatui" in self.para:
+            if chat_warning_content:
+                message = "🤓 <b>RAG from Cocoon:</b> Beware! The following are unaddressed data quality issues that may compromise the results:"
+                message += f"<ul>{chat_warning_content}</ul>"
+                self.para["chatui"].add_message("GenAI", message)
+        
+        next_button = widgets.Button(description="Acknowledge Warnings", button_style='warning', icon='exclamation-triangle')
+        
+        def on_button_click(b):
+            with self.output_context():
+                callback(all_warnings)
+        
+        next_button.on_click(on_button_click)
+        display(next_button)
+
+class DescribePartitionColumnsList(ListNode):
+    default_name = 'Describe Partition Columns'
+    default_description = 'This node allows users to describe the columns across multiple partition tables.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        con = self.item["con"]
+        partition_tables = self.para["tables"]
+        partition_name = self.para["partition_name"]
+        display(HTML(f"{running_spinner_html} Checking columns for partition <i>{partition_name}</i>..."))
+        
+        create_progress_bar_with_numbers(0, doc_steps)
+        self.progress = show_progress(1)
+
+        self.input_item = item
+
+        table_pipeline = self.para["data_project"].table_pipelines[partition_tables[0]]
+        schema = table_pipeline.get_schema(con)
+        columns = list(schema.keys())
+        sample_size = 5
+        
+        partition_summary = self.get_sibling_document("Create Partition Summary")
+        
+        outputs = []
+        
+        columns = sorted(columns)
+        
+        for i in range(0, len(columns), 30):
+            chunk_columns = columns[i:i + 30]
+            sample_df = table_pipeline.get_samples(con, columns=chunk_columns, sample_size=sample_size)
+            sample_df = sample_df.applymap(truncate_cell)
+            table_desc = sample_df.to_csv(index=False, quoting=1)
+            outputs.append((table_desc, partition_summary, chunk_columns))
+        
+        return outputs
+    
+    def run(self, extract_output, use_cache=True):
+        table_desc, partition_summary, column_names = extract_output
+
+        template = f"""You have the following sample from a table partition:
+{table_desc}
+Partition summary: {partition_summary['partition_summary']}
+
+Tasks: 
+(1) Describe the columns in the partition tables.
+(2) If the original column name is not descriptive, provide a new name. Otherwise, keep the original name.
+Make sure there are no duplicated new column names
+
+Return in the following format:
+```json
+{{
+    "{column_names[0]}": ["Short description in < 10 words", "new_column_name"],
+    ...
+}}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        processed_string = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+    
+        checks = [
+            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
+            (lambda jc: all(key in column_names for key in jc.keys()), "The dictionary contains keys that are not in the column_names list."),
+            (lambda jc: all(isinstance(value, list) and len(value) == 2 for value in jc.values()), "Not all values in the dictionary are lists with exactly 2 elements."),
+            (lambda jc: all(isinstance(value[0], str) for value in jc.values()), "Not all column descriptions are strings."),
+            (lambda jc: all(isinstance(value[1], str) for value in jc.values()), "Not all new column names are strings."),
+            (lambda jc: len(set(value[1] for value in jc.values())) == len(jc), "New column names are not unique."),
+        ]
+
+        for check, error_message in checks:
+            if not check(json_code):
+                raise ValueError(f"Validation failed: {error_message}")
+        
+        return json_code
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        default_response = {column: [column, column] for column in extract_output[2]}
+        return default_response
+    
+    def merge_run_output(self, run_outputs):
+        merged_output = {}
+        for run_output in run_outputs:
+            merged_output.update(run_output)
+        return merged_output
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        json_code = run_output
+        self.progress.value += 1
+
+        partition_tables = self.para["tables"]
+        partition_name = self.para["partition_name"]
+        query_widget = self.item["query_widget"]
+
+        create_explore_button(query_widget, self.para["data_project"].table_pipelines[partition_tables[0]])
+        con = self.item["con"]
+        schema = self.para["data_project"].table_pipelines[partition_tables[0]].get_schema(con)
+
+        rows_list = []
+
+        for col in schema:
+            rows_list.append({
+                "Column": col,
+                "Summary": json_code[col][0],
+                "New Column Name": json_code[col][1],
+                "Renamed?": "✔️ Yes" if json_code[col][1] != col else "❌ No"
+            })
+
+        df = pd.DataFrame(rows_list)
+        
+        editable_columns = [False, True, True, False]
+        grid = create_dataframe_grid(df, editable_columns, reset=True)
+
+        next_button = widgets.Button(
+            description='Accept Rename',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )  
+        
+        reject_button = widgets.Button(
+            description='Reject Rename',
+            disabled=False,
+            button_style='danger',
+            tooltip='Click to submit',
+            icon='close'
+        )
+        
+        def on_button_clicked2(b):
+            with self.output_context():
+                new_df = grid_to_updated_dataframe(grid)
+                new_df["New Column Name"] = new_df["Column"]
+                document = new_df.to_json(orient="split")
+                get_column_desc_from_df(new_df)
+                callback(document)
+                
+        def get_column_desc_from_df(df):
+            table_object = self.para["table_object"]
+            for index, row in df.iterrows():
+                table_object.column_desc[row["New Column Name"]] = row["Summary"]
+        
+        def on_button_clicked(b):
+            with self.output_context():
+                new_df = grid_to_updated_dataframe(grid)
+                new_df["New Column Name"] = new_df["New Column Name"].apply(clean_column_name)
+                document = new_df.to_json(orient="split")
+                get_column_desc_from_df(new_df)
+                callback(document)
+
+        next_button.on_click(on_button_clicked)
+        reject_button.on_click(on_button_clicked2)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(next_button)
+            return
+        
+        display(HTML(f"😎 We have described the columns for partition <i>{partition_name}</i>:"))
+        display(grid)
+        display(HBox([reject_button, next_button]))
+        
+
+class CreatePartitionSummary(Node):
+    default_name = 'Create Partition Summary'
+    default_description = 'This node creates a summary of the partition based on a sample table.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        self.input_item = item
+        
+        con = self.item["con"]
+        partition_tables = self.para["tables"]
+        partition_name = self.para["partition_name"]
+        
+        display(HTML(f"{running_spinner_html} Generating partition summary for <i>{partition_name}</i>..."))
+        create_progress_bar_with_numbers(0, doc_steps)
+        self.progress = show_progress(1)
+        
+        sample_size = 5
+
+        sample_table_name = partition_tables[0]
+        table_pipeline = self.para["data_project"].table_pipelines[sample_table_name]
+        schema = table_pipeline.get_schema(con)
+        columns = list(schema.keys())
+        sample_df = table_pipeline.get_samples(con, columns=columns, sample_size=sample_size)
+        sample_df = sample_df.applymap(truncate_cell)
+        table_desc = sample_df.to_csv(index=False, quoting=1)
+
+        return partition_name, sample_table_name, table_desc, partition_tables
+
+    def run(self, extract_output, use_cache=True):
+        partition_name, sample_table_name, table_desc, partition_tables = extract_output
+
+        template = f"""You have the following partition names: {', '.join(partition_tables)}
+
+A sample from the '{sample_table_name}' partition:
+{table_desc}
+
+Summarize the table based on this sample and the partition names. Explain how the partitions might be related and what they could represent collectively.
+
+Now, provide your summary in short simple SVO sentences and < 500 chars.
+Also, provide a new name for the partition that summarizes all tables.
+Return in the following format:
+```yml
+reasoning: The table contains multiple related paritions for different years
+partition_summary: >-
+    The table_summary is about the order processing system, for years 2019-2021...
+new_partition_name: OrderProcessingSystem
+```
+"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+
+        summary = response['choices'][0]['message']['content']
+        assistant_message = response['choices'][0]['message']
+        messages.append(assistant_message)
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']['content'])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+
+        if not isinstance(summary, dict):
+            raise ValueError("Summary is not a dictionary")
+
+        required_keys = ['partition_summary', 'new_partition_name']
+        for key in required_keys:
+            if key not in summary:
+                raise KeyError(f"'{key}' is missing from the summary")
+
+        return summary
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        partition_name, sample_table_name, table_desc, partition_tables = extract_output
+        return {
+            'partition_summary': 'No summary available',
+            'new_partition_name': 'DefaultPartitionName'
+        }
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        summary = run_output 
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        self.progress.value += 1
+
+        partition_name, _, _, partition_tables = extract_output
+        query_widget = self.item["query_widget"]
+        data_project = self.para["data_project"]
+        
+        create_explore_button(query_widget, 
+                        table_name=partition_tables,
+                        logical_to_physical=data_project.table_pipelines)
+
+        display(HTML(f"📝 Here is the partition summary. Please review and edit if necessary:"))
+        
+        text_area, char_count_label = create_text_area_with_char_count(summary['partition_summary'], max_chars=500)
+        layout = Layout(display='flex', justify_content='space-between', width='100%')
+        display(HBox([text_area, char_count_label], layout=layout))
+
+        display(HTML(f"🏷️ Suggested new partition name: {summary['new_partition_name']}"))
+        new_name_input = widgets.Text(value=summary['new_partition_name'])
+        display(new_name_input)
+
+        def on_button_clicked(b):
+            with self.output_context():
+                clear_output(wait=True)
+                print("Submission received.")
+                
+                final_summary = {
+                    'partition_summary': text_area.value,
+                    'new_partition_name': new_name_input.value
+                }
+                table_object = self.para["table_object"]
+                table_object.table_summary = final_summary['partition_summary']
+                table_object.table_name = final_summary['new_partition_name']
+                table_object.partitions = partition_tables
+                callback(final_summary)
+
+        submit_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+
+        display(submit_button)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_clicked(submit_button)
+            return
+
+
+class WritePartitionYMLCode(Node):
+    default_name = 'Write Partition Code'
+    default_description = 'This node allows users to write the code for the partition.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        border_style = """
+<style>
+.border-class {
+    border: 1px solid black;
+    padding: 10px;
+    margin: 10px;
+}
+</style>
+"""
+
+        tab_data = []
+        labels = []
+        file_names = []
+        contents = []
+  
+        table_object = self.para["table_object"]
+        table_object.columns = list(table_object.column_desc.keys())
+        table_name = table_object.table_name
+        
+        data_project = self.para["data_project"]
+        data_project.table_object[table_name] = table_object
+        data_project.partition_mapping[table_name] = table_object.partitions
+        
+        yml_dict = table_object.create_dbt_schema_dict()
+        yml_content = yaml.dump(yml_dict, default_flow_style=False)
+        
+        formatter = HtmlFormatter(style='default')
+        css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+
+        highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
+
+        bordered_content = f'<div class="border-class">{highlighted_yml}</div>'
+
+        combined_html = css_style + border_style + bordered_content
+
+        tab_data.append(("yml", combined_html))
+        labels.append("YML")
+        file_names.append(f"{table_name}.yml")
+        contents.append(yml_content)
+
+        tabs = create_dropdown_with_content(tab_data) 
+        
+        if "dbt_directory" in self.para:
+            if not os.path.exists(os.path.join(self.para["dbt_directory"], "partition")):
+                os.makedirs(os.path.join(self.para["dbt_directory"], "partition"))
+            file_names = [os.path.join(self.para["dbt_directory"], "partition", file_name) for file_name in file_names]
+       
+        create_progress_bar_with_numbers(4, doc_steps)
+        display(HTML(f"🎉 Congratulations! Below is the stage codes."))
+        display(tabs)
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+        save_files_click(save_button)  
+        
+        def on_button_clicked(b):
+            with self.output_context():
+                clear_output(wait=True)
+                document = {}
+                
+                for i in range(len(labels)):
+                    label = labels[i]
+                    content = contents[i]
+                    document[label] = content
+
+                callback(document)
+
+        submit_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            overwrite_checkbox.value = True
+            save_files_click(save_button)  
+            on_button_clicked(submit_button)
+            return
+        
+        
+        display(submit_button)
+        
+def read_partition_ymls_and_update_project(data_project, dbt_directory):
+    partition_dir = os.path.join(dbt_directory, "partition")
+    
+    if not os.path.exists(partition_dir):
+        print(f"Partition directory not found: {partition_dir}")
+        return
+
+    for filename in os.listdir(partition_dir):
+        if filename.endswith(".yml"):
+            file_path = os.path.join(partition_dir, filename)
+            
+            with open(file_path, 'r') as file:
+                yml_content = yaml.safe_load(file)
+
+            table_object = PartitionTable()
+            table_object.read_attributes_from_dbt_schema_yml(yml_content)
+            table_name = table_object.table_name
+
+            data_project.table_object[table_name] = table_object
+            
+            if hasattr(table_object, 'partitions'):
+                data_project.partition_mapping[table_name] = table_object.partitions
+            else:
+                print(f"Warning: 'partitions' not found for table {table_name}")
+
+    print(f"Processed {len(data_project.table_object)} tables from YML files.")
+    print(f"Updated partition mapping for {len(data_project.partition_mapping)} tables.")
+
+    return data_project
+
+
+class DecidePartition(Node):
+    default_name = 'Decide Partition'
+    default_description = 'This allows users to view and endorse or reject table partitions based on schema similarity.'
+
+    def extract(self, item):
+        data_project = self.para["data_project"]
+        all_tables = data_project.tables
+        
+        partitions = {}
+        for table_name, attributes in all_tables.items():
+            attr_set = frozenset(attributes.keys())
+            if attr_set not in partitions:
+                partitions[attr_set] = []
+            partitions[attr_set].append(table_name)
+        
+        partitions_with_multiple_tables = {attr_set: tables for attr_set, tables in partitions.items() if len(tables) > 1}
+        
+        return partitions_with_multiple_tables
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        query_widget = self.item["query_widget"]
+        data_project = self.para["data_project"]
+        dbt_directory = self.para.get("dbt_directory")
+        
+        create_explore_button(query_widget, 
+                              table_name=list(data_project.table_pipelines.keys()),
+                              logical_to_physical=data_project.table_pipelines)
+        
+
+        
+        if extract_output is None or not extract_output:
+            print("No partitions with multiple tables found.")
+            callback([])
+            return
+
+        partition_data = []
+        for idx, (attr_set, tables) in enumerate(extract_output.items()):
+            partition_data.append({
+                'Partition': f'Partition{idx}',
+                'Tables': ', '.join(tables),
+                'Attributes': ', '.join(attr_set)
+            })
+
+        df = pd.DataFrame(partition_data)
+
+        html_content = """
+        🤓 We've found partitions with the same schema. Here are the partitions:
+        """
+        html_content += df.to_html(index=False, classes='table table-striped', border=0)
+
+        display(HTML(html_content))
+
+        endorse_button = widgets.Button(description="Endorse All Partitions", button_style='success', icon='check')
+        reject_button = widgets.Button(description="Reject All Partitions", button_style='danger', icon='times')
+
+        def on_endorse(b):
+            endorsed_partitions = list(extract_output.values())
+            clear_output(wait=True)
+            callback(endorsed_partitions)
+
+        def on_reject(b):
+            clear_output(wait=True)
+            callback([])
+
+        endorse_button.on_click(on_endorse)
+        reject_button.on_click(on_reject)
+
+        buttons = [reject_button, endorse_button]
+        
+        if dbt_directory and os.path.exists(os.path.join(dbt_directory, "partition")):
+            print("🚀 Found existing partitions. You can express load them.")
+            express_button = widgets.Button(description="Express Load", button_style='info', icon='fast-forward')
+            
+            def on_express(b):
+                clear_output(wait=True)
+                updated_data_project = read_partition_ymls_and_update_project(data_project, dbt_directory)
+                self.para["data_project"] = updated_data_project
+                print("✅ Express load completed. Partitions have been updated.")
+                callback([])
+            
+            express_button.on_click(on_express)
+            buttons.append(express_button)
+            
+            
+        button_box = widgets.HBox(buttons)
+        display(button_box)
+        
+class PrintPartition(Node):
+    default_name = 'Print Partition'
+    default_description = 'This is a dummy node to print partition information.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        print(f"Dummy Print Partition for: {self.para['partition_name']}")
+        print(f"Tables: {self.para['tables']}")
+        callback({})
+
+def create_cocoon_describe_partition_workflow(con, query_widget=None, partition_name=None, tables=None, para={}, output=None):
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+    
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+    
+    workflow_para = {
+        "partition_name": partition_name,
+        "tables": tables,
+        "table_object": PartitionTable()
+    }
+    
+    for key, value in para.items():
+        workflow_para[key] = value
+
+    describe_workflow = Workflow("Describe Partition Workflow", 
+                                 item=item, 
+                                 description="A workflow to describe partition",
+                                 para=workflow_para,
+                                 output=output)
+    
+    describe_workflow.add_to_leaf(CreatePartitionSummary(output=output))
+    describe_workflow.add_to_leaf(DescribePartitionColumnsList(output=output))
+    describe_workflow.add_to_leaf(WritePartitionYMLCode(output=output))
+    
+    
+    return query_widget, describe_workflow
+
+
+class DescribePartitionForAll(MultipleNode):
+    default_name = 'Describe Partition For All'
+    default_description = 'This describes all partitions'
+
+    def construct_node(self, partition_name, tables=None, all_partitions=None, idx=0, total=0):
+        if all_partitions is None:
+            all_partitions = []
+            
+        if self.item is not None:
+            con = self.item.get("con", None)
+            query_widget = self.item.get("query_widget", None)
+        else:
+            con = None
+            query_widget = None
+        
+        para = {
+            "partition_name": partition_name, 
+            "partition_idx": idx,
+            "all_partitions": all_partitions,
+            "partition_total": total
+        }
+        
+        for key in self.para:
+            para[key] = self.para[key]
+        
+        _, workflow = create_cocoon_describe_partition_workflow(con=con, query_widget=query_widget, 
+                                                                partition_name=partition_name, tables=tables,
+                                                                para=para, output=self.output)
+        
+        return workflow
+
+    def extract(self, item):
+        decide_partition_result = self.get_sibling_document('Decide Partition')
+        
+        if not decide_partition_result:
+            self.elements = []
+            self.nodes = {}
+            return
+        
+        self.elements = [f"Partition_{idx}" for idx in range(len(decide_partition_result))]
+        self.nodes = {}
+        
+        for idx, (partition_name, tables) in enumerate(zip(self.elements, decide_partition_result)):
+            self.nodes[partition_name] = self.construct_node(partition_name, tables, self.elements, idx, len(self.elements))
+
+
+class GroupSimilarTables(Node):
+    default_name = 'Group Similar Tables'
+    default_description = 'This node groups similar tables without primary/foreign keys'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        display(HTML(f"🤓 Futher grouping tables ..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        join_graph_dict = data_project.join_graph_dict(add_time_keys=False)
+        join_graph = join_graph_dict['join_graph']
+
+        tables_without_keys = []
+        for table_info in join_graph:
+            table_name = table_info['table_name']
+            primary_key = table_info.get('primary_key')
+            foreign_keys = table_info.get('foreign_keys', [])
+            
+            if not primary_key and not foreign_keys:
+                tables_without_keys.append(table_name)
+
+        yml_dict = data_project.describe_project_yml(limit=9999)
+        
+        return tables_without_keys, yml_dict
+
+    def run(self, extract_output, use_cache=True):
+        tables_without_keys, yml_dict = extract_output
+        
+        if not tables_without_keys:
+            return {}
+
+        template = f"""You are tasked with grouping similar tables. 
+Ideally, for each group of tables, they have common attributes to join.
+Here are the tables and their descriptions:
+
+{yaml.dump(yml_dict)}
+
+Please group these tables based on their similarities and potential join attributes. For each group, provide:
+1. A group name
+2. A brief short summary of group (and its focus that makes it different from other groups)
+3. The table names in the group (each table should belong to exactly one group)
+4. Potential attributes that could be used to join these tables (if any and >1 table)
+
+Return the result in the following YAML format:
+```yml
+groups:
+  - name: Group1Name
+    summary: The group is about ... 
+    tables:
+      - Table1Name
+      - Table2Name
+    join_info: The tables can be joined on ...
+...
+```
+"""
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        result = yaml.safe_load(yml_code)
+        
+        return result
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        tables_without_keys, yml_dict = extract_output
+        
+        if not tables_without_keys:
+            return {"groups": []}
+
+        dummy_group = {
+            "name": "All Other Tables",
+            "summary": "This group contains all other tables.",
+            "tables": tables_without_keys,
+        }
+
+        result = {"groups": [dummy_group]}
+        return result
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        result = run_output
+
+        data = []
+        for group in result['groups']:
+            data.append({
+                'Group Name': group['name'],
+                'Group Summary': group['summary'],
+                'Tables': group['tables'],
+                'Join Info': group.get('join_info', '')
+                
+            })
+        
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, True, True, True]
+        reset = True
+        editable_list = {
+            'Tables': {},
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, editable_list=editable_list)
+        display(grid)
+        
+        next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
+        
+        def on_button_click(b):
+            with self.output_context():
+                df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+                document = df.to_json(orient="split")
+                data_project = self.para["data_project"]
+                data_project.groups = df
+                callback(document)
+            
+        next_button.on_click(on_button_click)
+        display(next_button)
+        
+class ReorderRelationToStory(Node):
+    default_name = 'Reorder Relation To Story'
+    default_description = 'This reorders the relation to story'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML("📖 Telling the story..."))
+        create_progress_bar_with_numbers(3, model_steps)
+
+        self.input_item = item
+        
+        relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
+        relation_df = relation_df[relation_df['Relation Name'] != ""]
+        
+        data_project = self.para["data_project"]
+        group_df = data_project.groups
+
+        desc_list = []
+        
+        for idx, row in relation_df.iterrows():
+            name = row['Relation Name']
+            desc = f"it involves {', '.join(row['Entities'])}, {row['Relation Description']}"
+            desc_list.append(f"{len(desc_list) + 1}. '{name}': {desc}")
+        
+        for idx, row in group_df.iterrows():
+            name = row['Group Name']
+            desc = row['Group Summary']
+            desc_list.append(f"{len(desc_list) + 1}. '{name}': {desc}")
+        
+        combined_desc = "\n".join(desc_list)
+        
+        return relation_df, group_df, combined_desc
+
+    def run(self, extract_output, use_cache=True):
+        relation_df, group_df, combined_desc = extract_output
+
+        template = f"""For a database, you have the following 'Name': 'Description'
+{combined_desc}
+Now, tell a story using these elements. 
+First, reorder them based on the sequence of events or logical flow. E.g., "Customer opens account" should come before "Customer deposits money".
+Then, modify the description for each element:
+(1) Make the story coherent. 
+(2) If involving entities, be clear about how they are related.
+(3) Avoid general terms (e.g., 'relates', 'has', etc)
+
+Return in the following format:
+```yml
+reasoning: >
+    The elements are ... The sequence should be ...
+story:
+    -   Name: Element Name
+        Description: short and simple in < 10 words
+    -   ...
+```"""
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+
+        if not isinstance(summary, dict):
+            raise TypeError("summary must be a dictionary")
+
+        required_keys = ['reasoning', 'story']
+        for key in required_keys:
+            if key not in summary:
+                raise KeyError(f"summary is missing the '{key}' key")
+
+        if not isinstance(summary['reasoning'], str):
+            raise TypeError("summary['reasoning'] must be a string")
+        if not isinstance(summary['story'], list):
+            raise TypeError("summary['story'] must be a list")
+
+        relation_names = set(relation_df['Relation Name'].tolist())
+        group_names = set(group_df['Group Name'].tolist())
+        
+        for i, item in enumerate(summary['story']):
+            if not isinstance(item, dict):
+                raise TypeError(f"Item {i} in summary['story'] must be a dictionary")
+            if 'Name' not in item or 'Description' not in item:
+                raise KeyError(f"Item {i} in summary['story'] is missing 'Name' or 'Description'")
+            if not isinstance(item['Name'], str) or not isinstance(item['Description'], str):
+                raise TypeError(f"'Name' and 'Description' in item {i} of summary['story'] must be strings")
+            
+            if item['Name'] in relation_names:
+                item['Type'] = 'Relation'
+            elif item['Name'] in group_names:
+                item['Type'] = 'Group'
+            else:
+                raise ValueError(f"Name '{item['Name']}' in story does not exist in the original relation or group DataFrames")
+
+        story_names = [item['Name'] for item in summary['story']]
+        all_names = relation_names.union(group_names)
+        
+        if len(story_names) != len(set(story_names)):
+            raise ValueError("Some names appear more than once in the story")
+        
+        if set(story_names) != all_names:
+            missing_names = all_names - set(story_names)
+            raise ValueError(f"The following names are missing from the story: {missing_names}")
+        
+        return summary
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        relation_df, group_df, _ = extract_output
+        story_list = []
+        for idx, row in relation_df.iterrows():
+            story_list.append({
+                "Name": row['Relation Name'], 
+                "Description": row['Relation Description'],
+                "Type": "Relation"
+            })
+        for idx, row in group_df.iterrows():
+            story_list.append({
+                "Name": row['Group Name'], 
+                "Description": row['Group Summary'],
+                "Type": "Group"
+            })
+        return {"reasoning": "Fail to run", "story": story_list}
+                
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output["story"])
