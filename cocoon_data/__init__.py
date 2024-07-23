@@ -30043,59 +30043,6 @@ def get_tags(input_string):
 
 
 
-def generate_er_diagram_html(relation_map, relation_details, highlighted_relations):
-    nodes = []
-    edges = []
-    node_shapes = []
-    highlight_nodes_indices = []
-    highlight_edges_indices = []
-
-    for relation, entities in relation_map.items():
-        if relation not in nodes:
-            nodes.append(relation)
-            node_shapes.append("box")
-        for entity in entities:
-            if entity not in nodes:
-                nodes.append(entity)
-                node_shapes.append("oval")
-
-    for relation, entities in relation_map.items():
-        relation_index = nodes.index(relation)
-        if relation in highlighted_relations:
-            highlight_nodes_indices.append(relation_index)
-        for entity in entities:
-            entity_index = nodes.index(entity)
-            edge = (relation_index, entity_index)
-            edges.append(edge)
-            if relation in highlighted_relations:
-                highlight_edges_indices.append(len(edges) - 1)
-                highlight_nodes_indices.append(entity_index)
-
-    graph_html = generate_workflow_html_multiple(nodes, edges, node_shape=node_shapes, directional=False,
-                                                 highlight_nodes_indices=highlight_nodes_indices,
-                                                 highlight_edges_indices=highlight_edges_indices)
-
-    descriptions_html = '<p>Story behind the relationships <small class="text-muted">(oval for entity, box for relation, octagon for table group))</small></p><ol class="small">'
-    for detail in relation_details:
-        relation_name = detail['relation_name']
-        relation_desc = detail['relation_desc']
-        if relation_name in highlighted_relations:
-            descriptions_html += f"<li><b>[{relation_name}]: {relation_desc}</b></li>"
-        else:
-            descriptions_html += f"<li>[{relation_name}]: {relation_desc}</li>"
-    descriptions_html += "</ol>"
-
-    html_content = f"""
-    {descriptions_html}
-    {graph_html}
-    """
-
-    return html_content
-
-
-
-
-
 class DBTProjectConfigAndRead(Node):
     default_name = 'DBT Project Configuration and Read'
     default_description = 'This step allows you to specify an existing DBT project directory and read the project.'
@@ -30152,6 +30099,8 @@ class DBTProjectConfigAndRead(Node):
         display(dbt_directory_input)
         display(submit_button)
         display(output)
+            
+            
             
             
 class SimpleBusinessQuestionNode(Node):
@@ -30329,7 +30278,7 @@ related_steps:
         
         highlight_indices = [i for i, item in enumerate(relation_story) if item['Name'] in related_steps]
         
-        html_content = generate_workflow_graph(relation_to_entities, relation_story, highlight_indices)
+        html_content = generate_er_diagram_html(relation_to_entities, relation_story, highlight_indices)
         display(HTML(html_content))
         
         if "chatui" in self.para:
@@ -30360,8 +30309,7 @@ related_steps:
                     return
                 
                 document = {
-                    'reasoning': analysis['reasoning'],
-                    'related_steps': df.to_json(orient="split")
+                    'reasoning': analysis['reasoning'],                    'related_steps': df.to_json(orient="split")
                 }
                 callback(document)
                 
@@ -30466,7 +30414,28 @@ sql_feasible: true/false
                 return
             
             
-            
+ 
+def generate_er_diagram_html(relation_map, relation_details, highlight_indices):
+
+    graph_html = generate_workflow_graph(relation_map, relation_details, highlight_indices)
+
+    descriptions_html = '<p>Story behind the relationships <small class="text-muted">(oval for entity, box for relation, octagon for table group))</small></p><ol class="small">'
+    
+    for index, detail in enumerate(relation_details):
+        relation_name = detail['Name']
+        relation_desc = detail['Description']
+        if index in highlight_indices:
+            descriptions_html += f"<li><b>[{relation_name}]: {relation_desc}</b></li>"
+        else:
+            descriptions_html += f"<li>[{relation_name}]: {relation_desc}</li>"
+    descriptions_html += "</ol>"
+
+    html_content = f"""
+    {descriptions_html}
+    {graph_html}
+    """
+
+    return html_content           
 
 class BusinessQuestionDataSufficiency(Node):
     default_name = 'Business Question Data Sufficiency Check'
@@ -30596,7 +30565,7 @@ related_tables: ['table1', 'table2', ...]
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         analysis = run_output
-        business_question, _, all_related_tables = extract_output
+        business_question, schema_description, all_related_tables = extract_output
         data_project = self.para["data_project"]
         
         display(HTML(f"❓ <b>Business Question:</b> {business_question}"))
@@ -30615,8 +30584,7 @@ related_tables: ['table1', 'table2', ...]
         
         if "chatui" in self.para:
             yml_dict = data_project.describe_project_yml(tables=all_related_tables, limit=9999)
-            yml_content = yaml.dump(yml_dict, default_flow_style=False)
-            highlighted_yml_content = highlight_yml_only(yml_content)
+            highlighted_yml_content = highlight_yml_only(schema_description)
             message = f"😎 <b>RAG from Cocoon</b>: Checking out all the related tables Cocoon set up... {highlighted_yml_content}"
 
             if related_tables and analysis['sufficient']:
