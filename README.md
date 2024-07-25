@@ -6,15 +6,10 @@
 
 😎 Cocoon organizes your data warehouse using LLM agents, preparing it for analysis. Specifically, Cocoon helps you with the tedious steps in data cleaning, data integration, and data modeling. As a result, you can focus on the more intellectual and business-critical parts.
 
-
-  <div align="center">
-    <kbd><img src="./images/steps.png" alt="" width="750"></kbd>
-  </div>
-
   
 - 📚 [Learn more about current features](https://cocoon-data-transformation.github.io/page/)
 
-- 👉 Check out the [Youtube demo](https://youtu.be/d9BIEGD7xok). Need support? Email: zh2408@columbia.edu
+- 👉 Check out the [Youtube demo](https://youtu.be/xdmRXs0UnfE)). Need support? Email: zh2408@columbia.edu
 
 
 ## Get Started
