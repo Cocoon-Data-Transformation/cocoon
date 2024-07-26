@@ -89,12 +89,12 @@ def build_lineage_graph(dbt_path, manifest_path=None, catalog_path=None):
     if manifest_path is None:
         manifest_path = os.path.join(dbt_path, 'target', 'manifest.json')
     if catalog_path is None:
-        catalog_path = os.path.join(dbt_path, 'docs', 'catalog.json')
+        catalog_path = os.path.join(dbt_path, 'target', 'catalog.json')
     
     if not os.path.exists(manifest_path):
-        raise FileNotFoundError(f"Manifest file not found at {manifest_path}. Have you run 'dbt docs generate'? You can also specify the path to the manifest file using the 'manifest_path' argument.")
+        raise FileNotFoundError(f"Manifest file not found at {manifest_path}. Please specify the path to the manifest file using the 'manifest_path' argument.")
     if not os.path.exists(catalog_path):
-        raise FileNotFoundError(f"Catalog file not found at {catalog_path}. Have you run 'dbt docs generate'? You can also specify the path to the catalog file using the 'catalog_path' argument.")
+        raise FileNotFoundError(f"Catalog file not found at {catalog_path}. Please specify the path to the catalog file using the 'catalog_path' argument.")
 
     with open(manifest_path, 'r') as f:
         manifest = json.load(f)
