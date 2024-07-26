@@ -138,36 +138,63 @@ def evaluate_jinja(template_string):
     
     template = Template(template_string)
 
+    # Render the template
     rendered_template = template.render()
     rendered_template = escape_single_quotes(rendered_template)
+    # Evaluate the rendered template safely using ast.literal_eval()
     result = ast.literal_eval(rendered_template)
 
     return result
 
+# template_string = """[{% for i in range(1, 10) %}{{ i }}{% if not loop.last %},{% endif %}{% endfor %}]"""
+# evaluate_jinja(template_string)
 
 
 def escape_single_quotes(input_string):
+    # Remove the square brackets and newline characters from the start and end of the string
     input_string = input_string.strip("[\n]")
     
+    # Split the string into individual items using comma as the separator
     items = re.split(r",\s*\n?", input_string)
     
     escaped_items = []
     for item in items:
+        # Remove the single quotes from the start and end of each item
         item = item.strip("' ")
         
+        # Escape single quotes within the item
         escaped_item = item.replace("'", "\\'")
         
+        # Add the escaped item to the list with single quotes
         escaped_items.append(f"'{escaped_item}'")
     
+    # Join the escaped items back into a string with square brackets
     output_string = "[" + ", ".join(escaped_items) + "]"
     
     return output_string
 
+# string = "['acute care hospitals', 'critical access hospitals', 'children's hospitals', 'general medical and surgical hospitals', 'psychiatric hospitals', 'rehabilitation hospitals', 'long-term care hospitals', 'specialty hospitals']"
+# escaped_string = escape_single_quotes(string)
+# print(escaped_string)
 
 
+# input_string = """[
+# 'voluntary non-profit - private',
+# 'proprietary',
+# 'government - hospital district or authority',
+# 'voluntary non-profit - other',
+# 'voluntary non-profit - church',
+# 'government - federal',
+# 'government - state',
+# 'government - local'
+# ]"""
+# output_string = escape_single_quotes(input_string)
+# print(output_string)
 
 def clean_summary(summary):
+    # remove the tailing \n
     summary = summary.strip()
+    # remove the leading and trailing single quote
     summary = summary.strip("'")
     return summary
 

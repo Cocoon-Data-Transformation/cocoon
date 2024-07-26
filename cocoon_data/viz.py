@@ -1266,3 +1266,59 @@ def generate_workflow_image_networkx(nodes, edges, edge_labels=None, highlight_n
     return image
 
 
+
+def create_schema_graph(nodes, edges):
+    dot = Digraph(format='svg')
+    dot.attr(rankdir='LR')
+
+    node_style = {
+        'style': 'filled',
+        'fillcolor': '#ffffff',
+        'color': '#000000',
+        'shape': 'none',
+        'fontname': 'Helvetica',
+        'fontsize': '8',
+        'margin': '0',
+        'fontcolor': '#2E4057',
+    }
+
+    edge_style = {
+        'color': '#000000',
+        'arrowsize': '0.6',
+        'penwidth': '0.6',
+        'fontname': 'Helvetica',
+        'fontsize': '8',
+        'fontcolor': '#2E4057',
+    }
+
+    dot.attr('node', **node_style)
+    dot.attr('edge', **edge_style)
+
+    table_style = 'BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"'
+    cell_style = 'ALIGN="LEFT" VALIGN="MIDDLE"'
+    header_style = 'ALIGN="CENTER" VALIGN="MIDDLE" BGCOLOR="#E0E0E0"'
+
+    for table_name, columns in nodes.items():
+        node_html = f'''<<TABLE {table_style}>
+                        <TR><TD PORT="header" {header_style}><FONT COLOR="#000000"><B>{table_name}</B></FONT></TD></TR>'''
+        for i, column in enumerate(columns):
+            node_html += f'<TR><TD PORT="f{i}" {cell_style}>{column}</TD></TR>'
+        node_html += '</TABLE>>'
+        dot.node(table_name, node_html)
+
+    for parent_table, parent_column, child_table, child_column in edges:
+        parent_port = f"{parent_table}:f{nodes[parent_table].index(parent_column)}"
+        if child_column is None:
+            child_port = f"{child_table}:header"
+        else:
+            child_port = f"{child_table}:f{nodes[child_table].index(child_column)}"
+        dot.edge(parent_port, child_port)
+
+    image = dot.pipe()
+    return image
+
+def generate_schema_graph_graphviz(nodes, edges, height=None, format="svg"):
+    image_data = create_schema_graph(nodes, edges)
+    return wrap_image_in_html(image_data, height=height, format=format)
+
+
