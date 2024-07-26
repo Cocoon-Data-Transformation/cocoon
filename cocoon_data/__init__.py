@@ -22310,20 +22310,9 @@ def create_cocoon_profile_workflow(con, query_widget=None, viewer=False, output=
     
     return query_widget, main_workflow
 
-def create_cocoon_dbt_explore_workflow(output=None):
         
-    main_workflow = Workflow("DBT Project Explore Workflow", 
-                         item = {},
-                        description="A workflow to explore a DBT project",
-                        output=output)
 
-    main_workflow.add_to_leaf(SpecifyDirectory(output=output))
-    main_workflow.add_to_leaf(ProcessDirectory(output=output))
-    main_workflow.add_to_leaf(TagTableForAll(output=output))
-    main_workflow.add_to_leaf(InputRelationshipForAll(output=output))
-    main_workflow.add_to_leaf(BuildFinalLineage(output=output))
     
-    return main_workflow
 
 
 class CocoonBranchStep(Node):
@@ -33224,14 +33213,29 @@ column_name:
             return
             
     
+def create_cocoon_dbt_explore_workflow(output=None, para={}, dbt_directory=None, nodes=None, edges=None, sql_mapping=None, column_mapping=None, viewer=False):
 
+    workflow_para = {"viewer": viewer, 
+                     "dbt_directory": dbt_directory}
     
+    for key, value in para.items():
+        workflow_para[key] = value
     
+    if all(param is not None for param in [nodes, edges, sql_mapping, column_mapping]):
+        dbt_lineage = DbtLineage(nodes=nodes, edges=edges, sql_mapping=sql_mapping, column_mapping=column_mapping)
+        workflow_para['dbt_lineage'] = dbt_lineage
         
+    main_workflow = Workflow("DBT Project Explore Workflow", 
+                         item = {},
+                        description="A workflow to explore a DBT project",
+                        output=output,
+                        para=workflow_para)
 
+    main_workflow.add_to_leaf(DBTLineageConfig(output=output))
+    main_workflow.add_to_leaf(DescribeSQLList(output=output))
+    main_workflow.add_to_leaf(BuildColumnLineageForAll(output=output))
     
-    
-    
+    return main_workflow
 
 class DbtLineage:
     def __init__(self, db_name=None, nodes=None, edges=None, sql_mapping=None, column_mapping=None):
