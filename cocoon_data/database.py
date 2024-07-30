@@ -9,19 +9,31 @@ try:
 except ImportError:
     pass
 
+try:
+    import pyodbc
+except ImportError:
+    pass
+
 import pandas as pd
 import json
-
+import sqlglot
+import re
 
 def get_database_name(con):
     if isinstance(con, duckdb.DuckDBPyConnection):
         return "DuckDB"
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         return "Snowflake"
+    elif isinstance(con, pyodbc.Connection):
+        return "SQL Server"
     else:
         return "Unknown"
-    
-def run_sql_return_df(con, sql_query, database=None, schema=None):
+
+cocoon_query_logs = []
+
+def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True, log=False):
+    if log:
+        cocoon_query_logs.append(sql_query)
     if isinstance(con, duckdb.DuckDBPyConnection):
         context_queries = []
         if database:
@@ -55,7 +67,34 @@ def run_sql_return_df(con, sql_query, database=None, schema=None):
                 raise type(e)(f"Error executing query:\n{sql_query}\n\nOriginal error: {str(e)}") from e
         finally:
             cursor.close()
-
+            
+    elif isinstance(con, pyodbc.Connection):
+        cursor = con.cursor()
+        try:
+            if database:
+                cursor.execute(f'USE {database}')
+            if schema:
+                cursor.execute(f'SET SCHEMA {schema}')
+            
+            if transpile:
+                try:
+                    sql_query = sqlglot.transpile(sql_query, read="tsql", write="tsql", comments=False)[0]
+                except Exception as e:
+                    print(f"Error transpiling query:\n{sql_query}\n\nOriginal error: {str(e)}") 
+            try:
+                cursor.execute(sql_query)
+                if cursor.description:
+                    columns = [column[0] for column in cursor.description]
+                    data = cursor.fetchall()
+                    return pd.DataFrame.from_records(data, columns=columns)
+                else:
+                    con.commit()
+                    return pd.DataFrame()
+            except Exception as e:
+                con.rollback()
+                raise type(e)(f"Error executing query:\n{sql_query}\n\nOriginal error: {str(e)}") from e
+        finally:
+            cursor.close()
     else:
         raise ValueError(f"Connection type {type(con)} not supported")
 
@@ -67,6 +106,38 @@ def enclose_table_name(table_name):
         table_name = table_name + '"'
     return table_name
 
+def get_schema_sqlserver(con):
+    cursor = con.cursor()
+    schema_tables = {}
+    
+    try:
+        cursor.execute("SELECT DB_NAME()")
+        db_name = cursor.fetchone()[0]
+        
+        cursor.execute(f"""
+            SELECT TABLE_NAME
+            FROM {db_name}.INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE = 'BASE TABLE'
+        """)
+        tables = cursor.fetchall()
+        
+        for table_info in tables:
+            table_name = table_info[0]
+            cursor.execute(f"""
+                SELECT COLUMN_NAME
+                FROM {db_name}.INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = ?
+                ORDER BY ORDINAL_POSITION
+            """, table_name)
+            columns = cursor.fetchall()
+            
+            schema_tables[table_name] = [col[0] for col in columns]
+            
+    finally:
+        cursor.close()
+        
+    return schema_tables
+    
 def get_schema_snowflake(con):
     cursor = con.cursor()
     schema_tables = {}
@@ -102,11 +173,16 @@ def get_schema(con):
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         tables = get_schema_snowflake(con)
         return tables
-        
+
+    elif isinstance(con, pyodbc.Connection):
+        tables = get_schema_sqlserver(con)
+        return tables
+    
     else:
         return {}
     
-def get_query_schema(con, query):
+def get_query_schema(con, query, transpile=True):
+
     if isinstance(con, duckdb.DuckDBPyConnection):
         describe_query = f"DESCRIBE ({query})"
         schema_df = run_sql_return_df(con, describe_query)
@@ -128,11 +204,32 @@ def get_query_schema(con, query):
 
         return dict(zip(df['name'], df['type']))
     
+    elif isinstance(con, pyodbc.Connection):
+        if transpile:
+            try:
+                query = sqlglot.transpile(query, read="tsql", write="tsql", comments=False)[0]
+            except Exception as e:
+                print(f"Error transpiling query:\n{query}\n\nOriginal error: {str(e)}") 
+
+        escaped_query = query.replace("'", "''")
+
+        describe_query = f"EXEC sp_describe_first_result_set N'{escaped_query}'"
+
+        try:
+            df = pd.read_sql(describe_query, con)
+            df = df[df['is_hidden'] == False][['name', 'system_type_name']]
+
+            return dict(zip(df['name'], df['system_type_name']))
+        
+        except pyodbc.Error as e:
+            raise ValueError(f"Error executing query:\n{query}\n\nOriginal error: {str(e)}")
+    
     else:
         return {}
 
 
 def get_table_schema(conn, table_name, schema=None, database=None):
+    raw_table_name = table_name
     if schema and database:
         table_name = f'{enclose_table_name(database)}.{enclose_table_name(schema)}.{enclose_table_name(table_name)}'
     else:
@@ -162,6 +259,30 @@ def get_table_schema(conn, table_name, schema=None, database=None):
 
         return schema
 
+    elif isinstance(conn, pyodbc.Connection):
+        query = f"""
+        SELECT COLUMN_NAME, DATA_TYPE
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = '{raw_table_name.replace("'", "''")}'
+        """
+        
+        if schema:
+            query += f" AND TABLE_SCHEMA = '{schema.replace("'", "''")}'"
+        
+        if database:
+            query += f" AND TABLE_CATALOG = '{database.replace("'", "''")}'"
+
+        cursor = conn.cursor()
+        cursor.execute(query)
+        
+        schema = {}
+        for row in cursor.fetchall():
+            column_name, data_type = row
+            schema[column_name] = data_type
+
+        cursor.close()
+        return schema
+
 def get_table_names(conn):
     if isinstance(conn, duckdb.DuckDBPyConnection):
         query = "SHOW TABLES"
@@ -177,7 +298,23 @@ def get_table_names(conn):
         table_names = df['name'].tolist()
         
         return table_names
-
+    
+    elif isinstance(conn, pyodbc.Connection):
+        query = """
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_TYPE = 'BASE TABLE'
+        """
+        cursor = conn.cursor()
+        cursor.execute(query)
+        
+        results = cursor.fetchall()
+        
+        table_names = [row.TABLE_NAME for row in results]
+        
+        cursor.close()
+        return table_names
+        
     else:
         return []
     
@@ -337,20 +474,52 @@ def create_regex_match_clause(con, column_name, regex):
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         regex = regex.replace('\\', '\\\\')
         return f'REGEXP_LIKE("{column_name}", \'{regex}\')'
+    elif isinstance(con, pyodbc.Connection):
+        like_pattern = regex_to_like_pattern(regex)
+        return f'"{column_name}" LIKE \'{like_pattern}\''
     else:
         raise ValueError(f"Connection type {type(con)} not supported")
 
-def find_duplicate_rows_result(con, table_name, sample_size=0, with_context = ""):
+def regex_to_like_pattern(regex):
+    pattern = regex.replace('%', '[%]').replace('_', '[_]')
+    
+    pattern = pattern.replace('.*', '%')
+    pattern = pattern.replace('.', '_')
+    pattern = pattern.replace('?', '_')
+    pattern = pattern.replace('+', '%')
+    pattern = pattern.replace('^', '')
+    pattern = pattern.replace('$', '')
+    
+    pattern = re.sub(r'\\d', '_', pattern)
+    pattern = re.sub(r'\\w', '_', pattern)
+    pattern = re.sub(r'\\s', '_', pattern)
+    
+    pattern = re.sub(r'\{(\d+)\}', lambda m: '_' * int(m.group(1)), pattern)
+    pattern = re.sub(r'\{(\d+),\}', r'%', pattern)
+    pattern = re.sub(r'\{(\d+),(\d+)\}', r'%', pattern)
+    
+    pattern = re.sub(r'\\[bB]', '', pattern)
+    pattern = re.sub(r'\(\?[=!:].*?\)', '', pattern)
+    pattern = re.sub(r'\(\?<[=!].*?\)', '', pattern)
+    
+    return pattern
+
+
+def find_duplicate_rows_result(con, table_name, sample_size=0, with_context = "", columns=None):
     
     table_name = enclose_table_name(table_name)
+
+    group_by_clause = "ALL"
+    if columns is not None:
+        group_by_clause = ", ".join(f'{enclose_table_name(column)}' for column in columns)
     
     sql_query = f'''
 SELECT *, COUNT(*) as cocoon_count
 FROM {table_name}
-GROUP BY ALL
+GROUP BY {group_by_clause}
 HAVING COUNT(*) > 1'''
         
-    duplicate_count_sql = f'SELECT COUNT(*) from ({sql_query});'
+    duplicate_count_sql = f'SELECT COUNT(*) FROM ({sql_query}) AS DUPLICATES'
     duplicate_count_sql = with_context + "\n" + duplicate_count_sql
         
     duplicate_count = run_sql_return_df(con, duplicate_count_sql).iloc[0, 0]
@@ -478,11 +647,56 @@ def get_default_snowflake_database_and_schema(con):
     
     return default_database, default_schema
 
+def list_sqlserver_databases(con):
+    query = "SELECT name FROM sys.databases"
+    df = run_sql_return_df(con, query)
+    return df['name'].tolist()
+
+def list_sqlserver_schemas(con, database):
+    con.execute(f"USE {database}")
+    query = "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA"
+    df = run_sql_return_df(con, query)
+    return df['SCHEMA_NAME'].tolist()
+
+def list_sqlserver_objects(con, schema, database, object_type='BASE TABLE'):
+    con.execute(f"USE {database}")
+    query = f"""
+    SELECT TABLE_NAME 
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_SCHEMA = '{schema}' 
+    AND TABLE_TYPE = '{object_type}'
+    """
+    df = run_sql_return_df(con, query)
+    return df['TABLE_NAME'].tolist()
+
+def list_sqlserver_tables(con, schema, database):
+    return list_sqlserver_objects(con, schema, database, 'BASE TABLE')
+
+def list_sqlserver_views(con, schema, database):
+    return list_sqlserver_objects(con, schema, database, 'VIEW')
+
+def get_default_sqlserver_database_and_schema(con):
+    database_query = "SELECT DB_NAME()"
+    schema_query = "SELECT SCHEMA_NAME()"
+    
+    database_df = run_sql_return_df(con, database_query)
+    schema_df = run_sql_return_df(con, schema_query)
+    
+    if database_df.empty or schema_df.empty:
+        return None, None
+    
+    default_database = database_df.iloc[0, 0]
+    default_schema = schema_df.iloc[0, 0]
+    
+    return default_database, default_schema
+    
 def list_databases(con):
     if isinstance(con, duckdb.DuckDBPyConnection):
         return list_duckdb_databases(con)
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         return list_snowflake_databases(con)
+    elif isinstance(con, pyodbc.Connection):
+        return list_sqlserver_databases(con)
     else:
         return []
 
@@ -491,6 +705,8 @@ def list_schemas(con, database):
         return list_duckdb_schemas(con, database)
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         return list_snowflake_schemas(con, database)
+    elif isinstance(con, pyodbc.Connection):
+        return list_sqlserver_schemas(con, database)
     else:
         return []
 
@@ -499,6 +715,8 @@ def list_tables(con, schema, database):
         return list_duckdb_tables(con, schema, database)
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         return list_snowflake_tables(con, database, schema)
+    elif isinstance(con, pyodbc.Connection):
+        return list_sqlserver_tables(con, schema, database)
     else:
         return []
         
@@ -507,6 +725,8 @@ def list_views(con, schema, database):
         return list_duckdb_views(con, schema, database)
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         return list_snowflake_views(con, database, schema)
+    elif isinstance(con, pyodbc.Connection):
+        return list_sqlserver_views(con, schema, database)
     else:
         return []
 
@@ -515,6 +735,8 @@ def get_default_database_and_schema(con):
         return get_default_duckdb_database_and_schema(con)
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         return get_default_snowflake_database_and_schema(con)
+    elif isinstance(con, pyodbc.Connection):
+        return get_default_sqlserver_database_and_schema(con)
     else:
         return None, None
         
@@ -524,12 +746,24 @@ def create_database(con, database_name):
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         query = f'CREATE DATABASE IF NOT EXISTS "{database_name}"'
         run_sql_return_df(con, query)
+    elif isinstance(con, pyodbc.Connection):
+        query = f"IF NOT EXISTS (SELECT name FROM master.dbo.sysdatabases WHERE name = N'{database_name}') CREATE DATABASE [{database_name}]"
+        run_sql_return_df(con, query)
 
 def remove_database(con, database_name):
     if isinstance(con, duckdb.DuckDBPyConnection):
         raise NotImplementedError("DuckDB does not support removing separate databases")
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         query = f'DROP DATABASE IF EXISTS "{database_name}"'
+        run_sql_return_df(con, query)
+    elif isinstance(con, pyodbc.Connection):
+        query = f"""
+        IF EXISTS (SELECT name FROM master.dbo.sysdatabases WHERE name = N'{database_name}')
+        BEGIN
+            ALTER DATABASE [{database_name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+            DROP DATABASE [{database_name}];
+        END
+        """
         run_sql_return_df(con, query)
 
 def create_schema(con, schema_name, database_name=None):
@@ -542,6 +776,12 @@ def create_schema(con, schema_name, database_name=None):
         else:
             query = f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"'
         run_sql_return_df(con, query)
+    elif isinstance(con, pyodbc.Connection):
+        if database_name:
+            query = f"USE {database_name}; IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') EXEC('CREATE SCHEMA {schema_name}')"
+        else:
+            query = f"IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') EXEC('CREATE SCHEMA {schema_name}')"
+        run_sql_return_df(con, query, transpile=False)
 
 def remove_schema(con, schema_name, database_name=None):
     if isinstance(con, duckdb.DuckDBPyConnection):
@@ -552,6 +792,12 @@ def remove_schema(con, schema_name, database_name=None):
             query = f'DROP SCHEMA IF EXISTS "{database_name}"."{schema_name}"'
         else:
             query = f'DROP SCHEMA IF EXISTS "{schema_name}"'
+        run_sql_return_df(con, query)
+    elif isinstance(con, pyodbc.Connection):
+        if database_name:
+            query = f"USE [{database_name}]; IF EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') DROP SCHEMA [{schema_name}]"
+        else:
+            query = f"IF EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') DROP SCHEMA [{schema_name}]"
         run_sql_return_df(con, query)
 
 def remove_table(con, table_name, schema_name=None, database_name=None):
@@ -569,6 +815,14 @@ def remove_table(con, table_name, schema_name=None, database_name=None):
         else:
             query = f'DROP TABLE IF EXISTS "{table_name}"'
         run_sql_return_df(con, query)
+    elif isinstance(con, pyodbc.Connection):
+        if database_name and schema_name:
+            query = f"USE [{database_name}]; IF OBJECT_ID('{schema_name}.{table_name}', 'U') IS NOT NULL DROP TABLE [{schema_name}].[{table_name}]"
+        elif schema_name:
+            query = f"IF OBJECT_ID('{schema_name}.{table_name}', 'U') IS NOT NULL DROP TABLE [{schema_name}].[{table_name}]"
+        else:
+            query = f"IF OBJECT_ID('{table_name}', 'U') IS NOT NULL DROP TABLE [{table_name}]"
+        run_sql_return_df(con, query, transpile=False)
 
 def remove_view(con, view_name, schema_name=None, database_name=None):
     if isinstance(con, duckdb.DuckDBPyConnection):
@@ -585,7 +839,62 @@ def remove_view(con, view_name, schema_name=None, database_name=None):
         else:
             query = f'DROP VIEW IF EXISTS "{view_name}"'
         run_sql_return_df(con, query)
-    
+    elif isinstance(con, pyodbc.Connection):
+        if database_name and schema_name:
+            query = f"USE [{database_name}]; IF OBJECT_ID('{schema_name}.{view_name}', 'V') IS NOT NULL DROP VIEW [{schema_name}].[{view_name}]"
+        elif schema_name:
+            query = f"IF OBJECT_ID('{schema_name}.{view_name}', 'V') IS NOT NULL DROP VIEW [{schema_name}].[{view_name}]"
+        else:
+            query = f"IF OBJECT_ID('{view_name}', 'V') IS NOT NULL DROP VIEW [{view_name}]"
+        run_sql_return_df(con, query, transpile=False)
+
+
+def create_table(con, table_name, columns, schema_name=None, database_name=None):
+    if isinstance(con, duckdb.DuckDBPyConnection):
+        columns_str = ", ".join([f"{col['name']} {col['type']}" for col in columns])
+        query = f'CREATE TABLE IF NOT EXISTS {schema_name+"." if schema_name else ""}{table_name} ({columns_str})'
+        run_sql_return_df(con, query)
+    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+        columns_str = ", ".join([f'"{col["name"]}" {col["type"]}' for col in columns])
+        full_name = f'{"\""+database_name+"\"." if database_name else ""}{"\""+schema_name+"\"." if schema_name else ""}"{table_name}"'
+        query = f'CREATE TABLE IF NOT EXISTS {full_name} ({columns_str})'
+        run_sql_return_df(con, query)
+    elif isinstance(con, pyodbc.Connection):
+        columns_str = ", ".join([f"[{col['name']}] {col['type']}" for col in columns])
+        full_name = f"{database_name+'.' if database_name else ''}{schema_name+'.' if schema_name else ''}{table_name}"
+        query = f"IF OBJECT_ID('{full_name}', 'U') IS NULL CREATE TABLE {full_name} ({columns_str})"
+        run_sql_return_df(con, query, transpile=False)
+
+
+def create_view(con, view_name, select_statement, schema_name=None, database_name=None):
+    if isinstance(con, duckdb.DuckDBPyConnection):
+        query = f'CREATE OR REPLACE VIEW {schema_name+"." if schema_name else ""}{view_name} AS {select_statement}'
+        run_sql_return_df(con, query)
+    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+        full_name = f'{"\""+database_name+"\"." if database_name else ""}{"\""+schema_name+"\"." if schema_name else ""}"{view_name}"'
+        query = f'CREATE OR REPLACE VIEW {full_name} AS {select_statement}'
+        run_sql_return_df(con, query)
+    elif isinstance(con, pyodbc.Connection):
+        full_name = f"{schema_name+'.' if schema_name else ''}{view_name}"
+        
+        use_stmt = f"USE {database_name};" if database_name else ""
+        
+        create_stmt = f"CREATE VIEW {full_name} AS {select_statement}"
+        
+        query = f"""
+        {use_stmt}
+        GO
+        {create_stmt}
+        """
+        with con.cursor() as cursor:
+            if use_stmt:
+                cursor.execute(use_stmt)
+            
+            cursor.execute(create_stmt)
+        
+        con.commit()
+
+
 
 def create_schema_and_objects(con, database_name, schema_name):
     try:
@@ -596,36 +905,69 @@ def create_schema_and_objects(con, database_name, schema_name):
         return f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>USAGE</code> privilege on this database?</div>"
 
     if not schema_exists:
-        create_schema_query = f'CREATE SCHEMA "{database_name}"."{schema_name}"'
         try:
-            run_sql_return_df(con, create_schema_query)
+            create_schema(con, schema_name, database_name)
         except Exception as e:
             error_message = f"Failed to create schema {schema_name}. Error: {str(e)}"
             return f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE SCHEMA</code> privilege in this database?</div>"
 
-    create_table_query = f"""
-    CREATE OR REPLACE TABLE "{database_name}"."{schema_name}"."cocoon_test_new_table" (
-        id INT
-    )
-    """
     try:
-        run_sql_return_df(con, create_table_query)
+        remove_table(con, table_name="cocoon_test_new_table", schema_name=schema_name, database_name=database_name)
+        columns = [
+            {"name": "dummy_column", "type": "INTEGER"}
+        ]
+        create_table(con, "cocoon_test_new_table", columns, schema_name=schema_name, database_name=database_name)
+        
     except Exception as e:
         error_message = f"Failed to create or replace table cocoon_test_new_table. Error: {str(e)}"
         return f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE TABLE</code> privilege in this schema?</div>"
 
-    create_view_query = f"""
-    CREATE OR REPLACE VIEW "{database_name}"."{schema_name}"."cocoon_test_new_view" AS
-    SELECT * FROM "{database_name}"."{schema_name}"."cocoon_test_new_table"
-    """
+
     try:
-        run_sql_return_df(con, create_view_query)
+        remove_view(con, view_name="cocoon_test_new_view", schema_name=schema_name, database_name=database_name)
+        view_query = "SELECT 1 AS test"
+        create_view(con, "cocoon_test_new_view", view_query, schema_name=schema_name, database_name=database_name)
     except Exception as e:
         error_message = f"Failed to create or replace view cocoon_test_new_view. Error: {str(e)}"
         return f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE VIEW</code> privilege in this schema?</div>"
 
     return "<div style='color: green;'>🎉 Cocoon have the right access to this schema!</div>"
 
+
+def get_sql_type(dtype):
+    if pd.api.types.is_integer_dtype(dtype):
+        return 'BIGINT'
+    elif pd.api.types.is_float_dtype(dtype):
+        return 'FLOAT'
+    elif pd.api.types.is_datetime64_any_dtype(dtype):
+        return 'DATETIME'
+    else:
+        return 'NVARCHAR(MAX)'
+
+def create_table_from_df_sql_server(con, table_name, df):
+    cursor = con.cursor()
+    columns = []
+    for column, dtype in df.dtypes.items():
+        sql_type = get_sql_type(dtype)
+        columns.append(f"[{column}] {sql_type}")
+    
+    create_table_sql = f"CREATE TABLE {table_name} ({', '.join(columns)})"
+    cursor.execute(create_table_sql)
+    con.commit()
+
+
+    
+def insert_df_to_table(con, table_name, df):
+    cursor = con.cursor()
+    for _, row in df.iterrows():
+        placeholders = ', '.join(['?' for _ in row])
+
+
+        row = row.where(pd.notnull(row), None)
+        placeholders = ', '.join(['?' for _ in row])
+        insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+        cursor.execute(insert_sql, tuple(row))
+    con.commit()
 
 def create_table_from_df(df: pd.DataFrame, con, table_name: str, database: str = None, schema: str = None):
 
@@ -638,6 +980,39 @@ def create_table_from_df(df: pd.DataFrame, con, table_name: str, database: str =
     
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         write_pandas(con, df, table_name, auto_create_table=True, overwrite=True, database=database, schema=schema)
+    
+    elif isinstance(con, pyodbc.Connection):
+
+        remove_table(con, table_name, schema_name=schema, database_name=database)
+
         
+        
+
+        full_table_name = ""
+        if database:
+            full_table_name += enclose_table_name(database) + "."
+        if schema:
+            full_table_name += enclose_table_name(schema) + "."
+        full_table_name += enclose_table_name(table_name)
+        
+
+        create_table_from_df_sql_server(con, full_table_name, df)
+        
+        insert_df_to_table(con, full_table_name, df)
+
     else:
         raise ValueError("Unsupported connection type. Use either DuckDB or Snowflake connection.")
+    
+
+def sample_query(con, query, sample_size):
+    sampled_query = f"SELECT * FROM ({query})  AS subquery LIMIT {sample_size}"
+    return sampled_query
+
+
+def format_value(value):
+    if pd.isna(value):
+        return 'NULL'
+    elif isinstance(value, (int, float)):
+        return str(value)
+    else:
+        return f"N'{value.replace("'", "''")}'"

@@ -219,11 +219,12 @@ class QueryWidget:
     def run_query(self, sql_query):
         sample_size = 100
         self.sql_input.value = sql_query
+        con = self.con
         with_context = self.with_context.value
-        
         sql_query = sql_query.strip().rstrip(';')
+        sample_sql_query = sample_query(con, sql_query, sample_size)
         
-        modified_query = f"{with_context} \n SELECT * FROM ({sql_query}) LIMIT {sample_size}"
+        modified_query = f"{with_context} \n {sample_sql_query}"
         try:
             result = run_sql_return_df(self.con, modified_query)
             self.error_msg.value = f"<div style='color: green;'>The query was successful. We only show the first {sample_size} rows.</div>"
@@ -11846,11 +11847,11 @@ class Workflow(Node):
 
         
     def write_document_to_disk(self, filepath: str):
-        with open(filepath, 'w') as file:
+        with open(filepath, 'w', encoding="utf-8") as file:
             json.dump(self.global_document, file)
 
     def read_document_from_disk(self, filepath: str, viewer=True):
-        with open(filepath, 'r') as file:
+        with open(filepath, 'r', encoding="utf-8") as file:
             self.global_document = json.load(file)
 
     def update_node(self, new_node):
@@ -15238,11 +15239,11 @@ class SQLStep(TransformationStep):
     def generate_codes(self):
         pass
 
-    def get_schema(self):
-        if self.schema is None:
-            schema = get_table_schema(self.con, self.name)
-            self.schema = schema
-        return self.schema
+    def get_schema(self, con=None):
+        if con is None:
+            con = self.con
+
+        return get_table_schema(con, table_name=self.name, schema=self.schema, database=self.database)
 
     def get_distinct_count(self):
         if self.distinct_count is None:
@@ -15252,6 +15253,13 @@ class SQLStep(TransformationStep):
                 distinct_count[col] = count_total_distinct(self.con, self.name, col)
             self.distinct_count = distinct_count
         return self.distinct_count
+
+    def remove_from_database(self, con=None):
+        if con is None:
+            con = self.con
+
+        remove_table(con, table_name=self.name, schema_name=self.schema, database_name=self.database)
+        remove_view(con, view_name=self.name, schema_name=self.schema, database_name=self.database)
 
     def run_codes(self, mode="VIEW"):
         sql_code = self.get_codes(mode=mode)
@@ -15333,7 +15341,7 @@ class TransformationSQLPipeline(TransformationPipeline):
         source_steps = [self.steps[source_idx] for source_idx in source_step_indicies]
         return self.steps[step_idx].get_codes(mode=mode, source_steps=source_steps, full=full)
 
-    def get_codes(self, mode="dbt"):
+    def get_codes(self, mode="dbt", con=None):
         sorted_step_idx = topological_sort(self.steps, self.edges)
         
         if mode == "dbt":
@@ -15397,24 +15405,32 @@ class TransformationSQLPipeline(TransformationPipeline):
             return codes
 
         if mode == "WITH_TABLE":
-            select_all_codes = self.get_codes(mode="WITH_SELECT_ALL")
+            select_all_codes = self.get_codes(mode="WITH_SELECT_ALL", con=con)
             last_step = self.steps[sorted_step_idx[-1]]
             final_codes = f"CREATE OR REPLACE TABLE {last_step} AS\n{indent_paragraph(select_all_codes)}"
             
             return final_codes
 
         if mode == "WITH_VIEW":
-            select_all_codes = self.get_codes(mode="WITH_SELECT_ALL")
+            select_all_codes = self.get_codes(mode="WITH_SELECT_ALL", con=con)
             last_step = self.steps[sorted_step_idx[-1]]
             final_codes = f"CREATE OR REPLACE VIEW {last_step} AS\n{indent_paragraph(select_all_codes)}"
             return final_codes
         
         if mode == "WITH_SELECT_ALL":
-            with_clauses = self.get_codes(mode="WITH")
+            with_clauses = self.get_codes(mode="WITH", con=con)
             full= False if len(with_clauses) > 0 else True
             last_step = self.steps[sorted_step_idx[-1]]
             last_step_name = enclose_table_name(last_step.__repr__(full=full))
             select_all_codes = with_clauses + "\n" + f"SELECT * FROM {last_step_name}"
+            
+            if con is not None:
+                database_name = get_database_name(con)
+                if database_name == "SQL Server":
+                    try:
+                        select_all_codes = sqlglot.transpile(select_all_codes, read="tsql", write="tsql", comments=False)[0]
+                    except:
+                        pass
             return select_all_codes
         
         if mode == "TABLE":
@@ -15432,11 +15448,11 @@ class TransformationSQLPipeline(TransformationPipeline):
         return sorted(incoming)
 
     def get_samples(self, con, columns=None, sample_size=None):
-        query = self.get_samples_query(columns, sample_size)
+        query = self.get_samples_query(con, columns, sample_size)
         result = run_sql_return_df(con, query)
         return result
     
-    def get_samples_query(self, columns=None, sample_size=None):
+    def get_samples_query(self, con, columns=None, sample_size=None):
         if columns is None:
             selection_clause = "*"
         else:
@@ -15445,21 +15461,27 @@ class TransformationSQLPipeline(TransformationPipeline):
         with_context_clause = self.get_codes(mode="WITH")
         
         if with_context_clause:
-            query = f'{with_context_clause}\nSELECT {selection_clause}\nFROM "{self.__repr__(full=False)}"'
+            query = f'SELECT {selection_clause}\nFROM "{self.__repr__(full=False)}"'
         else:
             query = f'SELECT {selection_clause}\nFROM {self}'
         
         if sample_size is not None:
-            query += f'\n LIMIT {sample_size}'
+            query = sample_query(con, query, sample_size)
+
+        query = f"{with_context_clause}\n{query}"
         
         return query
     
     def get_schema(self, con):
-        query = self.get_samples_query(sample_size=0)
+        query = self.get_samples_query(con, sample_size=0)
         return get_query_schema(con, query)
     
+    def get_schema_dict(self, con):
+        final_step = self.get_final_step()
+        return final_step.get_schema(con)
+
     def run_codes(self, con, mode="dbt"):
-        sql_code = self.get_codes(mode=mode)
+        sql_code = self.get_codes(mode=mode, con=con)
         run_sql_return_df(con, sql_code)
     
     def materialize(self, con, mode="WITH_TABLE", database=None, schema=None):
@@ -15471,7 +15493,8 @@ class TransformationSQLPipeline(TransformationPipeline):
             final_step.database = database
         if schema is not None:
             final_step.schema = schema
-        
+
+        final_step.remove_from_database(con)
         self.run_codes(con=con, mode=mode)
         final_step.set_materialized()
     
@@ -15497,6 +15520,7 @@ class DataProject:
         self.links = {}
 
         self.history_table = {}
+        self.scd_columns = {}
         
         self.primary_key = {}
         
@@ -15877,7 +15901,7 @@ class DataProject:
             if table in self.history_table:
                 history_table = self.history_table[table]
                 
-                history_table_attributes = self.tables[history_table]
+                history_table_attributes = self.scd_columns.get(history_table, [])
                 
                 if isinstance(history_table_attributes, dict):
                     history_table_attributes = list(history_table_attributes.keys())
@@ -15922,7 +15946,7 @@ class DataProject:
             
             if table in self.history_table:
                 history_table = self.history_table[table]
-                history_table_attributes = self.tables[history_table]
+                history_table_attributes = self.scd_columns.get(history_table, [])
                 
                 if isinstance(history_table_attributes, dict):
                     history_table_attributes = list(history_table_attributes.keys())
@@ -15934,43 +15958,12 @@ class DataProject:
                 table_info['history_table'] = {
                     'table_name': history_table,
                     'table_desc': "This is the full history table of the snapshot " + table,
-                    'attributes': history_attribute_list
+                    'version_attributes': history_attribute_list
                 }
             
             result.append(table_info)
         
         return result
-
-    def describe_project_html(self, tables=None, limit=10):
-        html = "<ol>"
-        for table, attributes in self.tables.items():
-            if tables is not None and table not in tables:
-                continue
-            
-            if isinstance(attributes, dict):
-                attributes = list(attributes.keys())
-            
-            attribute_list = attributes[:limit]
-            if len(attributes) > limit:
-                attribute_list.append('...')
-            
-            html += f"<li><strong>{table}</strong>: {attribute_list}</li>"
-            
-            if table in self.history_table:
-                history_table = self.history_table[table]
-                history_table_attributes = self.tables[history_table]
-                
-                if isinstance(history_table_attributes, dict):
-                    history_table_attributes = list(history_table_attributes.keys())
-                
-                history_attribute_list = history_table_attributes[:limit]
-                if len(history_table_attributes) > limit:
-                    history_attribute_list.append('...')
-                
-                html += f"<ul><li>History &rarr; <strong>{history_table}</strong>: {history_attribute_list}</li></ul>"
-        
-        html += "</ol>"
-        return html
     
     def display_graph(self):
         tables = self.list_tables()
@@ -16001,6 +15994,7 @@ class DataProject:
 
     def generate_nodes_edges(self):
         nodes, edges = generate_nodes_edges(self.foreign_key)
+        
         for table in self.tables.keys():
             if table not in nodes:
                 nodes.append(table)
@@ -16023,6 +16017,8 @@ class DataProject:
         highlight_nodes_indices = set()
         if highlight_nodes is not None:
             highlight_nodes_indices = {nodes.index(node) for node in highlight_nodes if node in nodes}
+        else:
+            highlight_nodes = []
         
         highlight_edges_indices = set()
         
@@ -16365,7 +16361,7 @@ class DecideProjection(Node):
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         table_name = table_pipeline.__repr__(full=False)
-        schema = get_table_schema(con, table_pipeline)
+        schema = table_pipeline.get_schema_dict(con)
 
         display(HTML(f"{running_spinner_html} Exploring table <i>{table_name}</i>..."))
         query_widget = self.item["query_widget"]
@@ -16442,7 +16438,7 @@ class CreateColumnGrouping(Node):
         sample_size = 5
 
         table_summary = self.get_sibling_document("Create Table Summary")
-        schema = get_table_schema(con, table_pipeline)
+        schema = table_pipeline.get_schema_dict(con)
         columns = list(schema.keys())
 
         sample_df = table_pipeline.get_samples(con, columns=columns, sample_size=sample_size)
@@ -16741,12 +16737,12 @@ Now, your summary:
             on_button_clicked(submit_button)
             return
 
-def find_duplicate_rows(con, table_name, sample_size=0, with_context = ""):
+def find_duplicate_rows(con, table_name, columns=None, sample_size=0, with_context = ""):
     if isinstance(table_name, TransformationSQLPipeline):
         with_context = table_name.get_codes(mode="WITH")
-        return find_duplicate_rows_result(con, table_name, sample_size=sample_size, with_context=with_context)
+        return find_duplicate_rows_result(con, table_name, sample_size=sample_size, with_context=with_context, columns=columns)
     else:
-        return find_duplicate_rows_result(con, table_name, sample_size=sample_size)
+        return find_duplicate_rows_result(con, table_name, sample_size=sample_size, columns=columns)
         
 class DecideDuplicate(Node):
     default_name = 'Decide Duplicate'
@@ -16764,8 +16760,10 @@ class DecideDuplicate(Node):
 
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
+        schema = table_pipeline.get_schema(con)
+        columns = list(schema.keys())
 
-        duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, table_pipeline)
+        duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, table_pipeline, columns=columns)
 
         document = {"duplicate_count": duplicate_count, 
                     "duplicate_removed": False}
@@ -17012,6 +17010,9 @@ class DecideRegexForAll(MultipleNode):
         
         self.elements = []
         self.nodes = {}
+
+        if database_name not in ["Snowflake", "DuckDB"]:
+            return
         
         with_context = table_pipeline.get_codes(mode="WITH")
         
@@ -17197,7 +17198,9 @@ class DecideLongitudeLatitude(Node):
         sample_size = 5
         con = self.item["con"]
         all_columns = [f'"{col}"' for col in schema if schema[col] in data_types['INT'] or schema[col] in data_types['DECIMAL']]
-        sample_df = run_sql_return_df(con, f'SELECT {", ".join(all_columns)} FROM {table_pipeline} LIMIT {sample_size}')
+        query = f'SELECT {", ".join(all_columns)} FROM {table_pipeline}'
+        sample_sql_query = sample_query(con, query, sample_size)
+        sample_df = run_sql_return_df(con, sample_sql_query)
         sample_df = sample_df.applymap(truncate_cell)
         table_desc = sample_df.to_csv(index=False, quoting=1)
         
@@ -17456,10 +17459,12 @@ Return in the following format:
         if not isinstance(json_code, dict) or "reasoning" not in json_code or "columns_obvious_not_applicable" not in json_code:
             raise ValueError("The returned JSON code does not adhere to the required format.")
         
-        for col_name in json_code["columns_obvious_not_applicable"]:
-            if col_name not in missing_columns:
-                raise ValueError(f"The column '{col_name}' specified in 'columns_obvious_not_applicable' is not present in the missing columns.")
-            
+        
+        json_code["columns_obvious_not_applicable"] = [
+            col_name for col_name in json_code["columns_obvious_not_applicable"]
+            if col_name in missing_columns
+        ]
+
         return json_code
     
     def run_but_fail(self, extract_output, use_cache=True):
@@ -19978,7 +19983,7 @@ class TransformType(ListNode):
         
     def run(self, extract_output, use_cache=True):
         column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint, regex, except_regex, with_context= extract_output
-        max_iterations = 10
+        max_iterations = 5
         
         value_list = sample_values[column_name].tolist()
         truncated_list = [truncate_value(val) for val in value_list]
@@ -20027,14 +20032,22 @@ cast_clause: |
         summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
         
         for i in range(max_iterations):
+            sql = f'SELECT {summary["cast_clause"]} AS "{column_name}"'
+            sql += f'\nFROM {table_pipeline}'
+            if regex:
+                sql += f'\nWHERE {create_regex_match_clause(con, column_name, regex)}'
+            for each_except_regex in except_regex:
+                sql += f'\nAND NOT {create_regex_match_clause(con, column_name, each_except_regex)}'
+            sql = with_context + "\n" + sql
+            
+            if database_name == "SQL Server":
+                try:
+                    sqlglot.transpile(sql, read="tsql", write="tsql", comments=False)
+                except:
+                    return self.run_but_fail(extract_output, use_cache)
+
+
             try:
-                sql = f'SELECT {summary["cast_clause"]} AS "{column_name}"'
-                sql += f'\nFROM {table_pipeline}'
-                if regex:
-                    sql += f'\nWHERE {create_regex_match_clause(con, column_name, regex)}'
-                for each_except_regex in except_regex:
-                    sql += f'\nAND NOT {create_regex_match_clause(con, column_name, each_except_regex)}'
-                sql = with_context + "\n" + sql
                 df = run_sql_return_df(con, sql)
                 break
             except Exception: 
@@ -20779,12 +20792,12 @@ class WriteStageYMLCode(Node):
             file_names.append(f"{new_table_name}.sql")
             contents.append(sql_query)
 
+        if "include_html" in self.class_para and self.class_para["include_html"]:
             table_pipeline = self.para["table_pipeline"]
             table_object = self.para["table_object"]
             before_table_name = table_pipeline.get_source_step()
             after_table_name = table_pipeline.get_final_step().name
-
-
+        
             bottom_html = "<h1>Cocoon Cleaning Summary 🤗</h1><hr><br>"
             bottom_idx = 1
 
@@ -20811,11 +20824,16 @@ class WriteStageYMLCode(Node):
                     after_columns = [col for col in final_columns]
                     after_df = table_pipeline.get_samples(con, columns=after_columns, sample_size=sample_size)
                     before_selection = ", ".join([f'"{column_mapping[col]}"' for col in final_columns])
-                    before_df = run_sql_return_df(con, f'SELECT {before_selection} FROM {before_table_name} LIMIT  100')
+                    before_query = f'SELECT {before_selection} FROM {before_table_name}'
+                    before_sample_query = sample_query(con, before_query, sample_size)
+                    before_df = run_sql_return_df(con, before_sample_query)
                 else:
-                    before_df = run_sql_return_df(con, f'SELECT * FROM "{before_table_name}" LIMIT  100')
+                    before_query = f'SELECT * FROM "{before_table_name}"'
+                    before_sample_query = sample_query(con, before_query, sample_size)
+                    before_df = run_sql_return_df(con, before_sample_query)
                     after_df =table_pipeline.get_samples(con, sample_size=sample_size)
-                            
+
+                
             duplication_document = self.get_sibling_document('Decide Duplicate')
             if duplication_document:
                 duplication_count = duplication_document['duplicate_count']
@@ -21436,21 +21454,36 @@ class SelectTable(Node):
         def get_tables(database, schema):
             return list_tables(con, schema, database)
 
+        all_databases = get_databases()
+        all_schemas = None
+
         default_database = self.para.get("default_database")
         default_schema = self.para.get("default_schema")
+
+        if default_database not in all_databases:
+            default_database = None
+            default_schema = None
+        else:
+            all_schemas = get_schemas(default_database)
+            if default_schema not in all_schemas:
+                default_schema = None
+        
         if not default_database or not default_schema:
             default_database, default_schema = get_default_database_and_schema(con)
 
         database_label = widgets.HTML(value="<b>Database</b>:")
         database_dropdown = widgets.Dropdown(
-            options=get_databases(),
+            options=all_databases,
             value=default_database,
             layout=widgets.Layout(width='150px')
         )
         
+        if not all_schemas:
+            all_schemas = get_schemas(default_database)
+
         schema_label = widgets.HTML(value="<b>Schema</b>:")
         schema_dropdown = widgets.Dropdown(
-            options=get_schemas(default_database),
+            options=all_schemas,
             value=default_schema,
             layout=widgets.Layout(width='150px')
         )
@@ -22140,7 +22173,7 @@ Return in the following format:
 
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
-            (lambda jc: all(col_type in all_data_types for col_type in jc.values()), "The column types are not all strings."),
+            (lambda jc: all(col_type in all_data_types for col_type in jc.values()), f"The column types are not all in {all_data_types}."),
             (lambda jc: all(col_name in schema for col_name in jc), "One or more column names specified in 'column_type' are not present in the sample DataFrame."),
         ]
 
@@ -23091,7 +23124,9 @@ class CreateShortSourceTableSummary(CreateShortTableSummary):
         source_table = self.get_sibling_document('Select Source and Target Table')["source_table"]
         sample_size = 5
 
-        sample_df = run_sql_return_df(con, f'SELECT * FROM "{source_table}" LIMIT {sample_size}')
+        sample_query_str = f'SELECT * FROM "{source_table}"'
+        sample_df_query = sample_query(con, sample_query_str, sample_size)
+        sample_df = run_sql_return_df(con, sample_df_query)
         sample_df = sample_df.applymap(truncate_cell)
         
         table_desc = sample_df.to_csv(index=False, quoting=1)
@@ -23835,7 +23870,7 @@ well_known: true/false # are the values well known?
 current_full: true/false # if both above are true, is the current domain full
 full_domain: # only if limited_size, well_known, and not current_full
     - '%'
-    - "O'Neil"
+    - "O'Neil" # escape single quote
     - ...
 ```"""
 
@@ -23909,6 +23944,15 @@ class SelectTables(Node):
         
         create_progress_bar_with_numbers(0, model_steps)
 
+        def get_databases():
+            return list_databases(con)
+        
+        def get_schemas(database):
+            return list_schemas(con, database)
+        
+        def get_tables(database, schema):
+            return list_tables(con, schema, database)
+        
         def read_from_sources_yml():
             if "dbt_directory" in self.para:
                 try:
@@ -23922,31 +23966,42 @@ class SelectTables(Node):
 
         default_database, default_schema, selected_tables = read_from_sources_yml()
 
+        all_databases = get_databases()
+
+        if default_database not in all_databases:
+            default_database = None
+
+        if default_database:
+            all_schemas = get_schemas(default_database)
+            if default_schema not in all_schemas:
+                default_schema = None
+        else:
+            all_schemas = []
+
         if not default_database or not default_schema:
             default_database = self.para.get("default_database")
             default_schema = self.para.get("default_schema")
+
+            if default_database not in all_databases:
+                default_database = None
+            if default_database and default_schema not in get_schemas(default_database):
+                default_schema = None
+
             if not default_database or not default_schema:
                 default_database, default_schema = get_default_database_and_schema(con)
 
-        def get_databases():
-            return list_databases(con)
-        
-        def get_schemas(database):
-            return list_schemas(con, database)
-        
-        def get_tables(database, schema):
-            return list_tables(con, schema, database)
+        all_schemas = get_schemas(default_database)
 
         database_label = widgets.HTML(value="<b>Database</b>:")
         database_dropdown = widgets.Dropdown(
-            options=get_databases(),
+            options=all_databases,
             value=default_database,
             layout=widgets.Layout(width='150px')
         )
         
         schema_label = widgets.HTML(value="<b>Schema</b>:")
         schema_dropdown = widgets.Dropdown(
-            options=get_schemas(default_database),
+            options=all_schemas,
             value=default_schema,
             layout=widgets.Layout(width='150px')
         )
@@ -26177,7 +26232,7 @@ class StageProgress(Node):
                 file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
             
             if all([os.path.exists(file_name) for file_name in file_names]):
-                with open(file_names[0], "r") as f:
+                with open(file_names[0], "r", encoding="utf-8") as f:
                     sql_query = f.read()
                     con = self.item["con"]
                     source_step = SQLStep(table_name=table_name, con=con)
@@ -26189,7 +26244,7 @@ class StageProgress(Node):
                     self.para["table_pipeline"] = table_pipeline
                     
                 
-                with open(file_names[1], "r") as f:
+                with open(file_names[1], "r", encoding="utf-8") as f:
                     yml_data = f.read()
                     table_object = self.para["table_object"]
                     table_object.read_attributes_from_dbt_schema_yml(yml_data)
@@ -26296,7 +26351,7 @@ class StageSourceTargetProgress(Node):
                 file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
             
             if all([os.path.exists(file_name) for file_name in file_names]):
-                with open(file_names[0], "r") as f:
+                with open(file_names[0], "r", encoding="utf-8") as f:
                     sql_query = f.read()
                     con = self.item["con"]
                     sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
@@ -26304,7 +26359,7 @@ class StageSourceTargetProgress(Node):
                     self.para["table_pipeline"] = table_pipeline
                     
                 
-                with open(file_names[1], "r") as f:
+                with open(file_names[1], "r", encoding="utf-8") as f:
                     yml_data = f.read()
                     table_object = self.para["table_object"]
                     table_object.read_attributes_from_dbt_schema_yml(yml_data)
@@ -26490,24 +26545,24 @@ class StageForAll(MultipleNode):
                             
                             if partition_name not in data_project.tables or partition_name not in data_project.table_pipelines:
                                 try:
-                                    table_schema = get_table_schema(con, table_pipeline)
+                                    table_schema = table_pipeline.get_schema_dict(con)
                                     
                                     if not table_schema:
                                         print(f"⚠️ Can't read {partition_name}; Is it materialized?")
-                                        retrun
+                                        return
                                     
                                     data_project.add_table(partition_name, table_schema)
                                     data_project.table_pipelines[partition_name] = table_pipeline
                                     
                                 except Exception as e:
                                     print(f"⚠️ Error reading {partition_name}; Is it materialized?\n {str(e)}")
-                                    retrun
+                                    return
                             
                             break
                     
                     if not old_table_found:
                         try:
-                            table_schema = get_table_schema(con, table_pipeline)
+                            table_schema = table_pipeline.get_schema_dict(con)
                             
                             if not table_schema:
                                 print(f"⚠️ Can't read {new_table_name}; Is it materialized?")
@@ -27906,7 +27961,7 @@ QUALIFY ROW_NUMBER() OVER (
             table_object.uniqueness[id_column]["current_unique"] = True
             table_object.uniqueness[id_column]["unique_reason"] = "Unique dimension key, derived from the slowly changing dimension"
         
-        yml_dict = table_object.create_dbt_schema_dict(table_cocoon_meta={"scd_base_table": table_name})
+        yml_dict = table_object.create_dbt_schema_dict(table_cocoon_meta={"scd_base_table": table_name, "scd_columns": version_columns})
         yml_content = yaml.dump(yml_dict, default_flow_style=False)
         labels.append("YML")
         file_names.append(f"{new_table_name}.yml")
@@ -28001,12 +28056,6 @@ QUALIFY ROW_NUMBER() OVER (
         {{order_by_clause}}
 ) = 1
 
-Example order by:
-    "update time" DESC,
-    "is_deleted",
-    "valid_until" IS NULL DESC,
-    ...
-
 Note that we use {database_name} syntax.
 
 Return the result in yml
@@ -28015,9 +28064,9 @@ reasoning: >
     To create the ORDER BY clause for the SCD query, we need to ...
 
 order_by_clause: |
-    "update time",
+    "update time" DESC,
     CASE WHEN "is_deleted" = true THEN 0 ELSE 1 END,
-    "valid_until" IS NULL
+    "valid_until" IS NULL DESC
 ```"""
         messages = [{"role": "user", "content": initial_template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
@@ -28060,7 +28109,7 @@ reasoning: >
     The error is caused by ...
 
 order_by_clause: |
-    
+    "col_name" DESC
 ```"""
                 messages = [{"role": "user", "content": debug_template}]
                 response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=(i == 0))
@@ -28345,8 +28394,10 @@ class DecideKeysForAll(MultipleNode):
 
         next_button.on_click(on_button_click)
         
-        on_button_click(next_button)
         
+        display(HTML("🤓 We have identified keys for the tables"))
+        display(grid)
+        display(next_button)
 
         
 class DecideKeysTable(Node):
@@ -28433,6 +28484,7 @@ pk: col1 # Leave empty if no primary key
         if 'pk' in summary and not isinstance(summary['pk'], str) and summary['pk'] is not None:
             raise TypeError("summary['pk'] must be a string or None")
 
+        summary["keys"] = [key for key in summary["keys"] if key]
         for key in summary['keys']:
             if key not in sample_df.columns:
                 raise ValueError(f"Key '{key}' is not a column in the provided DataFrame")
@@ -28840,7 +28892,7 @@ class DocumentProject(Node):
         
         source_tables = []
         if os.path.exists(os.path.join(dbt_directory, "sources.yml")):
-            with open(os.path.join(dbt_directory, "sources.yml"), "r") as file:
+            with open(os.path.join(dbt_directory, "sources.yml"), "r", encoding="utf-8") as file:
                 sources_yml = yaml.load(file, Loader=yaml.FullLoader)
             
             sources = sources_yml["sources"]
@@ -28937,7 +28989,7 @@ class DocumentProject(Node):
         if len(partition_tables) > 0:
             for table in partition_tables:
                 try:
-                    with open(os.path.join(dbt_directory, "partition", f"{table}.yml"), "r") as file:
+                    with open(os.path.join(dbt_directory, "partition", f"{table}.yml"), "r", encoding="utf-8") as file:
                         yml_content = file.read()
                     
                     partition_yml_dict = yaml.safe_load(yml_content)
@@ -29017,10 +29069,10 @@ class DocumentProject(Node):
         if len(stage_tables) > 0:
             for table in stage_tables:
                 try:
-                    with open(os.path.join(dbt_directory, "stage", f"{table}.yml"), "r") as file:
+                    with open(os.path.join(dbt_directory, "stage", f"{table}.yml"), "r", encoding="utf-8") as file:
                         yml_content = file.read()
                     
-                    with open(os.path.join(dbt_directory, "stage", f"{table}.sql"), "r") as file:
+                    with open(os.path.join(dbt_directory, "stage", f"{table}.sql"), "r", encoding="utf-8") as file:
                         sql_content = file.read()
                     
                     table_pipeline = data_project.table_pipelines[table]
@@ -29101,10 +29153,10 @@ class DocumentProject(Node):
         if len(snapshot_tables) > 0:
             for table in snapshot_tables:
                 try:
-                    with open(os.path.join(dbt_directory, "snapshot", f"{table}.yml"), "r") as file:
+                    with open(os.path.join(dbt_directory, "snapshot", f"{table}.yml"), "r", encoding="utf-8") as file:
                         yml_content = file.read()
                     
-                    with open(os.path.join(dbt_directory, "snapshot", f"{table}.sql"), "r") as file:
+                    with open(os.path.join(dbt_directory, "snapshot", f"{table}.sql"), "r", encoding="utf-8") as file:
                         sql_content = file.read()
                     
                     table_pipeline = data_project.table_pipelines[table]
@@ -29177,7 +29229,7 @@ class DocumentProject(Node):
         join_yml_content = ""
         integration_div_html = ""
         if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
-            with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r") as file:
+            with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r", encoding="utf-8") as file:
                 join_yml_content = file.read()
 
             join_yml_dict = yaml.load(join_yml_content, Loader=yaml.FullLoader)
@@ -29226,7 +29278,7 @@ class DocumentProject(Node):
         er_yml_content = ""
         er_div_html = ""
         if os.path.exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
-            with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r") as file:
+            with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r", encoding="utf-8") as file:
                 er_yml_content = file.read()
 
             er_yml_dict = yaml.load(er_yml_content, Loader=yaml.FullLoader)
@@ -29425,7 +29477,7 @@ def read_source_file(sources_file_path):
         return None, None, None
     
     try:
-        with open(sources_file_path, 'r') as file:
+        with open(sources_file_path, 'r', encoding="utf-8") as file:
             yml_content = yaml.safe_load(file)
         
         if not yml_content or 'sources' not in yml_content:
@@ -29488,7 +29540,7 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
                 partitions.append(file_name[:-4])
                 
     for partition in partitions:
-        with open(os.path.join(dbt_directory, "partition", f"{partition}.yml"), "r") as f:
+        with open(os.path.join(dbt_directory, "partition", f"{partition}.yml"), "r", encoding="utf-8") as f:
             table_object = PartitionTable()
             yml_data = yaml.safe_load(f)
             table_object.read_attributes_from_dbt_schema_yml(yml_data)
@@ -29506,7 +29558,7 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
                 
     for stage_table in stage_tables:
         new_table_name = stage_table
-        with open(os.path.join(dbt_directory, "stage", f"{stage_table}.sql"), "r") as f:
+        with open(os.path.join(dbt_directory, "stage", f"{stage_table}.sql"), "r", encoding="utf-8") as f:
             sql_query = f.read()
             sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
             table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
@@ -29515,7 +29567,7 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
                 table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
             data_project.table_pipelines[new_table_name] = table_pipeline
                     
-        with open(os.path.join(dbt_directory, "stage", f"{stage_table}.yml"), "r") as f:
+        with open(os.path.join(dbt_directory, "stage", f"{stage_table}.yml"), "r", encoding="utf-8") as f:
             table_object = Table()
             yml_data = yaml.safe_load(f)
             table_object.read_attributes_from_dbt_schema_yml(yml_data)
@@ -29538,7 +29590,7 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
                 
     for snapshot_table in snapshot_tables:
         new_table_name = snapshot_table
-        with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.sql"), "r") as f:
+        with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.sql"), "r", encoding="utf-8") as f:
             sql_query = f.read()
             sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
             table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
@@ -29547,7 +29599,7 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
                 table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
             data_project.table_pipelines[new_table_name] = table_pipeline
         
-        with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.yml"), "r") as f:
+        with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.yml"), "r", encoding="utf-8") as f:
             table_object = Table()
             yml_data = yaml.safe_load(f)
             table_object.read_attributes_from_dbt_schema_yml(yml_data)
@@ -29555,6 +29607,11 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
             
             old_table_name = yml_data.get("cocoon_meta", {}).get("scd_base_table", None)
             data_project.history_table[new_table_name] = old_table_name
+            scd_columns = yml_data.get("cocoon_meta", {}).get("scd_columns", [])
+            data_project.scd_columns[old_table_name] = scd_columns
+            
+            if old_table_name:
+                del data_project.tables[old_table_name]
             
             skip_table = False
             for partition, tables in data_project.partition_mapping.items():
@@ -29567,7 +29624,7 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
 
     join_yml_content = ""
     if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
-        with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r") as file:
+        with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r", encoding="utf-8") as file:
             join_yml_content = file.read()
             
     data_project.build_foreign_key_from_join_graph_yml(join_yml_content)
@@ -29590,7 +29647,7 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
                 
     er_yml_content = ""
     if os.path.exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
-        with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r") as file:
+        with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r", encoding="utf-8") as file:
             er_yml_content = file.read()
     
     data_project.build_er_story_from_yml(er_yml_content)
@@ -29681,13 +29738,13 @@ def rename_for_stg(old_table_name):
 
 class RefinePK(Node):
     default_name = 'Refine Primary Key'
-    default_description = 'This node refines the primary key for the given table'
+    default_description = 'This node refines the primary key for the given table and clusters related tables'
     
     def extract(self, item):
         clear_output(wait=True)
 
         create_progress_bar_with_numbers(2, model_steps)
-        display(HTML(f'{running_spinner_html} Identifying Keys ...'))
+        display(HTML(f'{running_spinner_html} Clustering Keys ...'))
         
         key_df = pd.read_json(self.get_sibling_document('Decide Keys For All'), orient="split")
         
@@ -29707,96 +29764,115 @@ class RefinePK(Node):
         return pk_df, pk_table_description
     
     def run(self, extract_output, use_cache=True):
-        _, pk_table_description = extract_output
+        pk_df, pk_table_description = extract_output
         
-        if not pk_table_description:
+        if pk_df.empty:
             return self.run_but_fail(extract_output)
         
         template = f"""You have the following tables with potential primary keys:
 {pk_table_description}
 
-Now, identify duplicated primary keys between tables.
-Duplicated primary keys are those with similar names.
-E.g., 'UserInformation' and 'UserAddress' can both have 'UserID' as primary key.
-In such cases, choose only the most important table to be the primary key table (e.g., 'UserInformation').
-And make the rest keys in other tables foreign key to the primary key.
+Your task is to cluster tables that share similar primary keys and choose one representative table for each cluster.
+For example, 'UserInformation' and 'UserAddress' might both have 'UserID' as a primary key. 'UserInformation' is more representative.
 
-Return in the following format:
+Please analyze the tables and their primary keys, then provide the following output:
+1. Identify clusters of tables that share the primary key.
+2. Choose a representative table for each cluster.
+3. Provide a brief explanation for each cluster.
+
+Return your analysis in the following YAML format:
+
 ```yml
 reasoning: >-
-    The primary keys of X are duplicated... Only the 
+    Explanation of your clustering process and decisions...
 
-pk_mapping:
-    table_name: primary_key # leave empty if not primary key
+# only for clusters with > 1 table
+clusters:
+  - cluster_name: name_of_cluster
+    explanation: Brief explanation of this cluster's primary keys and why these tables are grouped
+    tables: 
+      - table1
+      - table2
+    representative_table: most_important_table
+  - cluster_name: another_cluster
     ...
 ```"""
+
         messages = [{"role": "user", "content": template}]
-        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
         self.messages.append(messages)
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
-        summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        summary = yaml.safe_load(yml_code)
         
         return summary
     
-    def run_but_fail(self, extract_output, use_cache=True):
-        pk_df, pk_table_description = extract_output
-        
-        mapping = {}
-        for idx, row in pk_df.iterrows():
-            table = row['Table']
-            pk = row['Primary Key']
-            mapping[table] = pk
-        
-        return {"reasoning": "Fail to run.",
-                "pk_mapping": mapping}
-
+    def run_but_fail(self, extract_output):
+        return {
+            "reasoning": "Failed to cluster tables.",
+            "clusters": []
+        }
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        
-        df = pd.read_json(self.get_sibling_document('Decide Keys For All'), orient="split")
         summary = run_output
-              
-        data_project = self.para["data_project"]
         
-        query_widget = self.item["query_widget"]
+        original_df = pd.read_json(self.get_sibling_document('Decide Keys For All'), orient="split")
         
-        dropdown = create_explore_button(query_widget, 
-                                         table_name=list(data_project.tables.keys()),
-                                         logical_to_physical=data_project.table_pipelines)
+        cluster_data = []
+        for cluster in summary.get("clusters", []):
+            cluster_name = cluster['cluster_name']
+            tables = cluster['tables']
+            representative_table = cluster['representative_table']
+            explanation = cluster['explanation']
+            
+            tables.remove(representative_table)
+            tables.insert(0, representative_table)
+            
+            cluster_data.append({
+                'Cluster Name': cluster_name,
+                'Tables': tables,
+                'Explanation': explanation
+            })
+        
+        df = pd.DataFrame(cluster_data)
         
         if len(df) == 0:
-            callback(df.to_json(orient="split"))
+            callback(original_df.to_json(orient="split"))
             return
         
-        df['Primary Key'] = ""
-        for table, pk in summary['pk_mapping'].items():
-            if pk != "" and pk is not None:
-                df.loc[df['Table'] == table, 'Primary Key'] = pk
-        
-        editable_columns = [False, True, True]
+        editable_columns = [True, False, True]
         reset = True
         editable_list = {
-            'Keys': {}
+            'Tables': {}
         }
         
-        grid = create_dataframe_grid(df, editable_columns, reset=reset,  editable_list=editable_list)
-        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, editable_list=editable_list)
         
         next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
-                df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
-                document = df.to_json(orient="split")
+                updated_df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
                 
+                table_positions = {}
+                for _, row in updated_df.iterrows():
+                    tables = row['Tables']
+                    for i, table in enumerate(tables):
+                        table_positions[table] = i
+                
+                for idx, row in original_df.iterrows():
+                    table_name = row['Table']
+                    if table_name in table_positions:
+                        if table_positions[table_name] > 0:
+                            original_df.at[idx, 'Primary Key'] = ""
+                
+                document = original_df.to_json(orient="split")
                 callback(document)
 
         next_button.on_click(on_button_click)
         
-        
-        display(HTML("🤓 We have identified keys for the tables, please refine it:"))
+        display(HTML("🤓 We have clustered tables based on shared primary keys. Please review and refine the clusters:"))
         display(grid)
         display(next_button)
         
@@ -29886,7 +29962,7 @@ class SelectSchema(Node):
             <p>Please specify the schema for Cocoon to write:</p>
         """))
         
-        display(VBox([database_input, schema_input]), test_button, output)
+        display(VBox([database_input, schema_input]), VBox([test_button, output]))
         display(next_button)
         
 
@@ -30309,7 +30385,8 @@ related_steps:
                     return
                 
                 document = {
-                    'reasoning': analysis['reasoning'],                    'related_steps': df.to_json(orient="split")
+                    'reasoning': analysis['reasoning'],                    
+                    'related_steps': df.to_json(orient="split")
                 }
                 callback(document)
                 
@@ -30817,9 +30894,7 @@ selected_columns:
         for table, columns in analysis['selected_columns'].items():
             if not isinstance(columns, list):
                 raise ValueError(f"Columns for table '{table}' should be a list")
-            if not set(columns).issubset(set(table_columns[table])):
-                invalid_columns = set(columns) - set(table_columns[table])
-                raise ValueError(f"Invalid columns selected for table '{table}': {invalid_columns}")
+            analysis['selected_columns'][table] = list(set(columns) & set(table_columns[table]))
         
         return analysis
 
@@ -32270,7 +32345,7 @@ def read_partition_ymls_and_update_project(data_project, dbt_directory):
         if filename.endswith(".yml"):
             file_path = os.path.join(partition_dir, filename)
             
-            with open(file_path, 'r') as file:
+            with open(file_path, 'r', encoding="utf-8") as file:
                 yml_content = yaml.safe_load(file)
 
             table_object = PartitionTable()
@@ -32488,7 +32563,7 @@ class GroupSimilarTables(Node):
             if not primary_key and not foreign_keys:
                 tables_without_keys.append(table_name)
 
-        yml_dict = data_project.describe_project_yml(limit=9999)
+        yml_dict = data_project.describe_project_yml(tables=tables_without_keys, limit=9999)
         
         return tables_without_keys, yml_dict
 

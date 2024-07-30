@@ -44,6 +44,24 @@ data_types_database = {
         "JSON": ["JSON"],
         "INTERVAL": ["INTERVAL"],
         "UUID": ["UUID"],
+    },
+    "SQL Server": {
+        "INT": ["BIGINT", "INT", "SMALLINT", "TINYINT"],
+        "DECIMAL": ["DECIMAL", "NUMERIC", "MONEY", "SMALLMONEY"],
+        "FLOAT": ["FLOAT", "REAL"],
+        "BOOLEAN": ["BIT", "BOOLEAN"],
+        "VARCHAR": ["CHAR", "VARCHAR", "TEXT", "NCHAR", "NVARCHAR", "NTEXT"],
+        "BINARY": ["BINARY", "VARBINARY", "IMAGE"],
+        "TIME": ["TIME"],
+        "DATE": ["DATE"],
+        "DATETIME": ["DATETIME", "DATETIME2", "SMALLDATETIME", "DATETIMEOFFSET", "TIMESTAMP", "ROWVERSION"],
+        "UNIQUEIDENTIFIER": ["UNIQUEIDENTIFIER"],
+        "XML": ["XML"],
+        "GEOGRAPHY": ["GEOGRAPHY"],
+        "GEOMETRY": ["GEOMETRY"],
+        "JSON": ["JSON", "TABLE"],
+        "HIERARCHYID": ["HIERARCHYID"],
+        "SQL_VARIANT": ["SQL_VARIANT"]
     }
 }
 
@@ -53,7 +71,7 @@ database_general_hint = {
 }
 
 def is_type_time(data_type):
-    return data_type in ["TIME", "DATE", "TIMESTAMP"]
+    return data_type in ["TIME", "DATE", "TIMESTAMP", "DATETIME"]
 
 transform_hints = {
     'VARCHAR':{
@@ -64,6 +82,9 @@ CAST(strptime(replace('Mon, 2 March 1992', 'Mon', 'Monday'), '%A, %-d %B %Y') AS
             "Snowflake": """Example Clause: 
 TO_DATE('02/03/1992', 'DD/MM/YYYY')
 TO_DATE('Mon, 2 March 1992', 'DY, DD MON YYYY')""",
+            "SQL Server": """Example Clause:
+CAST('02/03/1992' AS DATE)
+CONVERT(DATE, '2 March 1992', 106)""",
         },
         'TIME': {
             "DuckDB": """Example Clause: 
@@ -72,6 +93,9 @@ CAST(strptime(REPLACE(REPLACE('08:32:45 p.m.', 'a.m.', 'AM'), 'p.m.', 'PM'), '%I
             "Snowflake": """Example Clause: 
 TO_TIME('14:30:45', 'HH24:MI:SS')
 TO_TIME(REPLACE(REPLACE('08:32:45 p.m.', 'a.m.', 'AM'), 'p.m.', 'PM'), 'HH12:MI:SS AM')""",
+            "SQL Server": """Example Clause:
+CAST('14:30:45' AS TIME)
+CONVERT(TIME, '20:32:45', 108)""",
         },
         'TIMESTAMP': {
             "DuckDB": """Example Clause: 
@@ -81,11 +105,18 @@ strptime('Monday, 2 March 1992 - 08:32:45 PM', '%A, %-d %B %Y - %I:%M:%S %p')"""
 TO_DATE('02/03/1992', 'DD/MM/YYYY')
 TO_TIMESTAMP('Monday, 2 March 1992 - 08:32:45 PM', 'DY, D MONTH YYYY - HH12:MI:SS AM')""",
         },
-        'BOOL': {
+        'DATETIME': {
+            "SQL Server": """Example Clause:
+CAST('02/03/1992' AS DATETIME)
+CONVERT(DATETIME, 'Mar 2 1992 08:32:45:123PM', 109)""",
+        },
+        'BOOLEAN': {
             "DuckDB": """Example Clause:
 CASE WHEN col = 'no' THEN false ELSE true END""",
             "Snowflake": """Example Clause:
 CASE WHEN col = 'no' THEN false ELSE true END""",
+            "SQL Server": """Example Clause:
+CASE WHEN col = 'no' THEN 0 ELSE 1 END""",
         },
         'VARIANT': {
             "Snowflake": """Example Clause:
@@ -104,6 +135,8 @@ SPLIT('127.0.0.1', '.')""",
             "DuckDB": """Example Clause:
 from_json(json('[1,2,3]'),'["INT"]')
 SPLIT('127.0.0.1', '.')""",
+            "SQL Server": """Example Clause:
+JSON_QUERY('["Apple", "Pear","Chicken"]')""",
         },
         'MAP': {
             "Snowflake": """Example Clause:
@@ -115,12 +148,16 @@ SPLIT('127.0.0.1', '.')""",
 CAST(REGEXP_EXTRACT('35 KG', '(\d+(\.\d+)?)') AS INT)""",
             "Snowflake": """Example Clause:
 CAST(REGEXP_SUBSTR('35 KG', '\\\\d+(\\\\.\\\\d+)?') AS INT)""",
+            "SQL Server": """Example Clause:
+CAST(LEFT('35 KG', PATINDEX('%[^0-9]%', '35 KG' + 'a') - 1) AS INT)"""   
         },
         "DECIMAL": {
             "DuckDB": """Example Clause:
 CAST(REGEXP_EXTRACT('35.2 KG', '(\d+(\.\d+)?)') AS DECIMAL)""",
             "Snowflake": """Example Clause:
 CAST(REGEXP_SUBSTR('35.2 KG', '\\\\d+(\\\\.\\\\d+)?') AS FLOAT)""",
+            "SQL Server": """Example Clause:
+CAST(LEFT('35.2 KG', CHARINDEX(' ', '35.2 KG' + ' ') - 1) AS DECIMAL(10,2))"""
         },
     },
     
@@ -130,18 +167,26 @@ CAST(REGEXP_SUBSTR('35.2 KG', '\\\\d+(\\\\.\\\\d+)?') AS FLOAT)""",
 strptime(CAST(19920302 AS VARCHAR), '%Y%m%d')""",
             "Snowflake": """Example Clause:
 TO_DATE(TO_CHAR(19920302), 'YYYYMMDD')""",
+            "SQL Server": """Example Clause:
+CONVERT(DATE, CAST(19920302 AS VARCHAR(8)), 112)"""
         },
         'TIME': {
             "DuckDB": """Example Clause:
 strptime(CAST(13245 AS VARCHAR), '%H%M%S')""",
             "Snowflake": """Example Clause:
 TO_TIME(TO_CHAR(13245), 'HHMISS')""",
+            "SQL Server": """Example Clause:
+CONVERT(TIME, STUFF(STUFF(RIGHT('000000' + CAST(132445 AS VARCHAR(6)), 6), 3, 0, ':'), 6, 0, ':'),108)""",
         },
         'TIMESTAMP': {
             "DuckDB": """Example Clause:
 strptime(CAST(199203020832 AS VARCHAR), '%Y%m%d%H%M')""",
             "Snowflake": """Example Clause:
 TO_TIMESTAMP(TO_CHAR(19920302083200), 'YYYYMMDDHH24MISS')""",
+        },
+        'DATETIME': {
+            "SQL Server": """Example Clause:
+CONVERT(DATETIME, STUFF(STUFF(CAST(199203020832 AS VARCHAR(12)), 9, 0, ' '), 12, 0, ':') + ':00', 120)""",
         },
     },
     'DECIMAL':{
@@ -150,18 +195,26 @@ TO_TIMESTAMP(TO_CHAR(19920302083200), 'YYYYMMDDHH24MISS')""",
 strptime(CAST(19920302 AS VARCHAR), '%Y%m%d')""",
             "Snowflake": """Example Clause:
 TO_DATE(TO_CHAR(19920302), 'YYYYMMDD')""",
+            "SQL Server": """Example Clause:
+CONVERT(DATE, CAST(19920302 AS VARCHAR(8)), 112)"""
         },
         'TIME': {
             "DuckDB": """Example Clause:
 strptime(CAST(13245 AS VARCHAR), '%H%M%S')""",
             "Snowflake": """Example Clause:
 TO_TIME(TO_CHAR(13245), 'HHMISS')""",
+"SQL Server": """Example Clause:
+CONVERT(TIME, STUFF(STUFF(RIGHT('000000' + CAST(132445 AS VARCHAR(6)), 6), 3, 0, ':'), 6, 0, ':'),108)""",
         },
         'TIMESTAMP': {
             "DuckDB": """Example Clause:
 strptime(CAST(199203020832 AS VARCHAR), '%Y%m%d%H%M')""",
             "Snowflake": """Example Clause:
 TO_TIMESTAMP(TO_CHAR(19920302083200), 'YYYYMMDDHH24MISS')""",
+        },
+        'DATETIME': {
+            "SQL Server": """Example Clause:
+CONVERT(DATETIME, STUFF(STUFF(CAST(199203020832 AS VARCHAR(12)), 9, 0, ' '), 12, 0, ':') + ':00', 120)""",
         },
     },
 }
