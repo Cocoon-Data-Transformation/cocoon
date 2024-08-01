@@ -912,14 +912,14 @@ def create_schema_and_objects(con, database_name, schema_name):
         schema_exists = schema_name in schemas
     except Exception as e:
         error_message = f"Failed to list schemas in database {database_name}. Error: {str(e)}"
-        return f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>USAGE</code> privilege on this database?</div>"
+        return False, f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>USAGE</code> privilege on this database?</div>"
 
     if not schema_exists:
         try:
             create_schema(con, schema_name, database_name)
         except Exception as e:
             error_message = f"Failed to create schema {schema_name}. Error: {str(e)}"
-            return f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE SCHEMA</code> privilege in this database?</div>"
+            return False, f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE SCHEMA</code> privilege in this database?</div>"
 
     try:
         remove_table(con, table_name="cocoon_test_new_table", schema_name=schema_name, database_name=database_name)
@@ -930,7 +930,7 @@ def create_schema_and_objects(con, database_name, schema_name):
         
     except Exception as e:
         error_message = f"Failed to create or replace table cocoon_test_new_table. Error: {str(e)}"
-        return f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE TABLE</code> privilege in this schema?</div>"
+        return False,  f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE TABLE</code> privilege in this schema?</div>"
 
 
     try:
@@ -939,9 +939,9 @@ def create_schema_and_objects(con, database_name, schema_name):
         create_view(con, "cocoon_test_new_view", view_query, schema_name=schema_name, database_name=database_name)
     except Exception as e:
         error_message = f"Failed to create or replace view cocoon_test_new_view. Error: {str(e)}"
-        return f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE VIEW</code> privilege in this schema?</div>"
+        return False, f"<div style='color: red;'>{error_message}<br>⚠️ Do you have <code>CREATE VIEW</code> privilege in this schema?</div>"
 
-    return "<div style='color: green;'>🎉 Cocoon have the right access to this schema!</div>"
+    return True, "<div style='color: green;'>🎉 Cocoon have the right access to this schema!</div>"
 
 
 def get_sql_type(dtype):
