@@ -224,6 +224,11 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
             response = convert_new_to_old_openai(response)
             
         except ImportError:
+            openai.api_type = "azure"
+            openai.api_key = cocoon_llm_setting['api_key'] or os.getenv('OPENAI_API_KEY')
+            openai.api_base = cocoon_llm_setting['api_base'] or os.getenv('OPENAI_API_BASE')
+            openai.api_version = cocoon_llm_setting['api_version'] or os.getenv('OPENAI_API_VERSION')
+                                                                                
             response = openai.ChatCompletion.create(
                 engine=engine_name,
                 temperature=temperature,
@@ -248,6 +253,9 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
             
         except ImportError:
             import openai
+            if not openai.api_key:
+                openai.api_key = cocoon_llm_setting['api_key'] or os.getenv('OPENAI_API_KEY')
+            
             response = openai.ChatCompletion.create(
                 model=cocoon_llm_setting['openai_model'] or os.environ.get("OPENAI_MODEL") or 'gpt-4-turbo',
                 temperature=temperature,

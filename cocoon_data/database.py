@@ -995,9 +995,6 @@ def create_table_from_df(df: pd.DataFrame, con, table_name: str, database: str =
 
         remove_table(con, table_name, schema_name=schema, database_name=database)
 
-        
-        
-
         full_table_name = ""
         if database:
             full_table_name += enclose_table_name(database) + "."

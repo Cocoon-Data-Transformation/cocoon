@@ -16170,6 +16170,9 @@ def create_explore_button(query_widget, table_name=None, query="", list_descript
     if logical_to_physical is None:
         logical_to_physical = {}
         
+    if isinstance(table_name, tuple):
+        table_name = list(table_name)
+        
     if isinstance(table_name, list):
         dropdown = widgets.Dropdown(
             description=list_description,
@@ -16686,6 +16689,7 @@ Now, your summary:
         
 
         return summary
+
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         summary = run_output 
@@ -21606,18 +21610,13 @@ class SelectTable(Node):
         database_dropdown.observe(on_database_change, names='value')
         schema_dropdown.observe(on_schema_change, names='value')
 
+        display(HTML(f"🤓 Please select the table:"))
         display(widgets.HBox([database_label, database_dropdown, schema_label, schema_dropdown, table_label, table_dropdown]))
 
-        display(HTML(f"🧐 There are {len(table_dropdown.options)} tables."))
         
-        logical_to_physical = {
-            table_name: f'{enclose_table_name(default_database)}.{enclose_table_name(default_schema)}.{enclose_table_name(table_name)}'
-            for table_name in table_dropdown.options
-        }
         
-        dropdown = create_explore_button(query_widget, table_name=table_dropdown.options, logical_to_physical=logical_to_physical)
         
-        display(dropdown)
+        
 
         mode_selector = widgets.RadioButtons(
             options=[
@@ -21655,6 +21654,7 @@ class SelectTable(Node):
         display(mode_selector)
         display(next_button)
         
+        
 def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, table_name = None, para={}, output=None):
     if query_widget is None:
         query_widget = QueryWidget(con)
@@ -21672,9 +21672,9 @@ def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, t
     for key, value in para.items():
         workflow_para[key] = value
 
-    main_workflow = Workflow("Data Stage Workflow", 
+    main_workflow = Workflow("Data Profiling Workflow", 
                             item = item, 
-                            description="A workflow to stage table",
+                            description="A workflow to profile dataset",
                             para = workflow_para,
                             output=output)
     
@@ -21686,7 +21686,7 @@ def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, t
     main_workflow.add_to_leaf(DecideMissingList(output=output))
     main_workflow.add_to_leaf(DecideUnique(output=output))
     main_workflow.add_to_leaf(DecideStringCategoricalForAll(output=output))
-    main_workflow.add_to_leaf(WriteStageYMLCode(output=output))
+    main_workflow.add_to_leaf(WriteStageYMLCode(class_para={"include_html": True}, output=output))
     return query_widget, main_workflow
 
 
@@ -22550,7 +22550,7 @@ def create_cocoon_workflow(con, para = {}, output=None):
     
 
     _, stage_workflow = create_cocoon_data_format_workflow(con=con, query_widget=query_widget, para=para, output=output)
-    _, profile_workflow = create_cocoon_profile_workflow(con=con, query_widget=query_widget, output=output)
+    _, profile_workflow = create_cocoon_documentation_workflow(con=con, query_widget=query_widget, output=output)
     _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget, output=output)    
     dbt_explore_workflow = create_cocoon_dbt_explore_workflow()
     _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget, output=output)
