@@ -16763,6 +16763,15 @@ class DecideDuplicate(Node):
         schema = table_pipeline.get_schema(con)
         columns = list(schema.keys())
 
+        database_name = get_database_name(con)
+        if database_name == "SQL Server":
+            for column_name, column_type in schema.items():
+                if column_type.lower() in ['text', 'ntext', 'image']:
+                    print(f"⚠️ The column {column_name} has type {column_type} that cannot be compared or sorted in SQL Server. Skipping this node.")
+                    document = {"duplicate_count": 0, "duplicate_removed": False}
+                    callback(document)
+                    return
+                
         duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, table_pipeline, columns=columns)
 
         document = {"duplicate_count": duplicate_count, 
@@ -16787,8 +16796,21 @@ class DecideDuplicate(Node):
                         self.para["table_pipeline"].add_step_to_final(step)
                         database = self.para.get("database", None)
                         schema = self.para.get("schema", None)
-                        self.para["table_pipeline"].materialize(con, database=database, schema=schema)
-                        document["duplicate_removed"] = True
+                        
+                        
+                        try:
+                            self.para["table_pipeline"].materialize(con, database=database, schema=schema)
+                            document["duplicate_removed"] = True
+                        except Exception as e:
+                            if cocoon_main_setting['DEBUG_MODE']:
+                                raise e
+                            write_log(f"""
+The node is {self.name}
+Error in materialization!!
+The error is: {e}
+""")  
+                            self.para["table_pipeline"].remove_final_node()
+                    
                     callback(document)
 
             yes_button = widgets.Button(
@@ -17643,8 +17665,17 @@ class DecideDMVforAll(MultipleNode):
         database_name = get_database_name(con)
         
         schema = table_pipeline.get_schema(con)
-        columns = [col for col in schema if get_reverse_type(schema[col], database_name) =='VARCHAR']
         
+        columns = []
+        for col, col_type in schema.items():
+            reverse_type = get_reverse_type(col_type, database_name)
+            if reverse_type == 'VARCHAR':
+                if database_name == "SQL Server":
+                    if col_type.lower() not in ['text', 'ntext', 'image']:
+                        columns.append(col)
+                else:
+                    columns.append(col)
+
         self.elements = []
         self.nodes = {}
         
@@ -17750,8 +17781,18 @@ class DecideDMVforAll(MultipleNode):
                     table_pipeline.add_step_to_final(step)
                     database = self.para.get("database", None)
                     schema = self.para.get("schema", None)
-                    table_pipeline.materialize(con=con, database=database, schema=schema)
-                
+                    try:
+                        self.para["table_pipeline"].materialize(con, database=database, schema=schema)
+                    except Exception as e:
+                        if cocoon_main_setting['DEBUG_MODE']:
+                            raise e
+                        write_log(f"""
+The node is {self.name}
+Error in materialization!!
+The error is: {e}
+""")  
+                        self.para["table_pipeline"].remove_final_node()
+                        
                 document = new_df.to_json(orient="split")
                 callback(document)
         
@@ -17797,7 +17838,14 @@ class DecideUnique(ListNode):
         con = self.item["con"]
 
         schema = table_pipeline.get_schema(con)
-        columns = list(schema.keys())
+        columns = []
+        database_name = get_database_name(con)
+        for col, col_type in schema.items():
+            if database_name == "SQL Server":
+                if col_type.lower() not in ['text', 'ntext', 'image']:
+                    columns.append(col)
+            else:
+                columns.append(col)
         
         sample_size = 5
 
@@ -19663,8 +19711,18 @@ class CleanUnusualForAll(MultipleNode):
         table_pipeline.add_step_to_final(step)
         database = self.para.get("database", None)
         schema = self.para.get("schema", None)
-        table_pipeline.materialize(con=con, database=database, schema=schema)
-
+        try:
+            self.para["table_pipeline"].materialize(con, database=database, schema=schema)
+        except Exception as e:
+            if cocoon_main_setting['DEBUG_MODE']:
+                raise e
+            write_log(f"""
+The node is {self.name}
+Error in materialization!!
+The error is: {e}
+""")  
+            self.para["table_pipeline"].remove_final_node()
+            
         callback(document)
             
 class HandleMissing(Node):
@@ -20271,23 +20329,34 @@ class TransformTypeForAll(MultipleNode):
                 table_pipeline.add_step_to_final(step)
                 database = self.para.get("database", None)
                 schema = self.para.get("schema", None)
-                table_pipeline.materialize(con=con, database=database, schema=schema)
-                
-                schema = table_pipeline.get_schema(con)
-                database_name = get_database_name(con)
-                
-                table_object = self.para["table_object"]
-                for idx, row in new_df.iterrows():
-                    column = row['Column Name']
+                try:
+                    self.para["table_pipeline"].materialize(con, database=database, schema=schema)
+                    schema = table_pipeline.get_schema(con)
+                    database_name = get_database_name(con)
                     
-                    if column in table_object.data_type:
-                        current_type = get_reverse_type(schema[column], database_name)
-                        table_object.data_type[column]["current_data_type"] = current_type
+                    table_object = self.para["table_object"]
+                    for idx, row in new_df.iterrows():
+                        column = row['Column Name']
                         
-                        if "expected_data_type" in table_object.data_type[column]:
-                            if table_object.data_type[column]["expected_data_type"] == current_type:
-                                del table_object.data_type[column]["expected_data_type"]
+                        if column in table_object.data_type:
+                            current_type = get_reverse_type(schema[column], database_name)
+                            table_object.data_type[column]["current_data_type"] = current_type
+                            
+                            if "expected_data_type" in table_object.data_type[column]:
+                                if table_object.data_type[column]["expected_data_type"] == current_type:
+                                    del table_object.data_type[column]["expected_data_type"]
 
+                except Exception as e:
+                    if cocoon_main_setting['DEBUG_MODE']:
+                        raise e
+                    write_log(f"""
+The node is {self.name}
+Error in materialization!!
+The error is: {e}
+""")  
+                    self.para["table_pipeline"].remove_final_node()
+                    
+                
                 callback(document)
         
         next_button.on_click(on_button_clicked)
@@ -20326,6 +20395,12 @@ class DecideTrim(Node):
         
         for column in schema:
             current_type = get_reverse_type(schema[column], database_name)
+
+            if database_name == "SQL Server":
+                if schema[column].lower() in ['text', 'ntext', 'image']:
+                    print(f"⚠️ The column {column} has type {schema[column]} that cannot be compared or sorted in SQL Server. Skipping this node.")
+                    continue
+
             if current_type == "VARCHAR":
                 where_clause = where_clause_for_space(column)
                 count = run_sql_return_df(con, f'{with_context} \n SELECT COUNT(*) FROM {table_pipeline} WHERE {where_clause}').iloc[0, 0]
@@ -20406,6 +20481,7 @@ Return in the following format:
         query_widget = self.item["query_widget"]
         table_pipeline = self.para["table_pipeline"]
 
+        columns = [enclose_table_name(column) for column in columns]
         columns_str = ", ".join(columns)
 
         explore_button = widgets.Button(
@@ -20416,18 +20492,15 @@ Return in the following format:
             icon='search'
         )
 
+        with_context_clause = table_pipeline.get_codes(mode="WITH")
+                
         def on_button_clicked(b):
             with self.output_context():
                 print("😎 Query submitted. Check out the data widget!")
+                query_widget.update_context_value(with_context_clause)
                 query_widget.run_query(f"SELECT DISTINCT {columns_str} FROM {table_pipeline}")
 
         explore_button.on_click(on_button_clicked)
-
-
-        display(explore_button)
-
-        
-        display(explore_button)
 
         next_button = widgets.Button(
             description='Accept Trim',
@@ -20492,8 +20565,18 @@ Return in the following format:
                     sql_pipeline.add_step_to_final(step)
                     database = self.para.get("database", None)
                     schema = self.para.get("schema", None)
-                    sql_pipeline.materialize(con=con, database=database, schema=schema)
-
+                    try:
+                        self.para["table_pipeline"].materialize(con, database=database, schema=schema)
+                    except Exception as e:
+                        if cocoon_main_setting['DEBUG_MODE']:
+                            raise e
+                        write_log(f"""
+The node is {self.name}
+Error in materialization!!
+The error is: {e}
+""")  
+                        self.para["table_pipeline"].remove_final_node()
+                        
                 callback(new_df.to_json(orient="split"))
 
         next_button.on_click(on_button_clicked)
@@ -20504,8 +20587,8 @@ Return in the following format:
             return
         
         display(HTML(f"😎 We have found the following columns with leading or trailing spaces, and recommend to <b>trim</b> them:"))
-        display(grid)
         display(explore_button)
+        display(grid)
         display(HBox([reject_button, next_button]))
         
 class DecideStringUnusual(Node):
@@ -20615,8 +20698,16 @@ class DecideStringUnusualForAll(MultipleNode):
         
         schema = table_pipeline.get_schema(con)
 
+        columns = []
+        for col, col_type in schema.items():
+            reverse_type = get_reverse_type(col_type, database_name)
+            if reverse_type == 'VARCHAR':
+                if database_name == "SQL Server":
+                    if col_type.lower() not in ['text', 'ntext', 'image']:
+                        columns.append(col)
+                else:
+                    columns.append(col)
 
-        columns = [col for col in schema if get_reverse_type(schema[col], database_name) =='VARCHAR']
         self.elements = []
         self.nodes = {}
 
@@ -21941,7 +22032,15 @@ class DecideMissingList(ListNode):
         self.progress = show_progress(1)
 
         schema = table_pipeline.get_schema(con)
-        columns = list(schema.keys())
+        columns = []
+        database_name = get_database_name(con)
+        for col, col_type in schema.items():
+            if database_name == "SQL Server":
+                if col_type.lower() not in ['text', 'ntext', 'image']:
+                    columns.append(col)
+            else:
+                columns.append(col)
+
         columns = sorted(columns)
         sample_size = 5
         
@@ -22170,16 +22269,22 @@ Return in the following format:
         self.messages.append(messages)
         processed_string  = extract_json_code_safe(response['choices'][0]['message']['content'])
         json_code = json.loads(processed_string)
+        
+        if not isinstance(json_code, dict):
+            raise ValueError("Validation failed: The returned JSON code is not a dictionary.")
 
-        checks = [
-            (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
-            (lambda jc: all(col_type in all_data_types for col_type in jc.values()), f"The column types are not all in {all_data_types}."),
-            (lambda jc: all(col_name in schema for col_name in jc), "One or more column names specified in 'column_type' are not present in the sample DataFrame."),
-        ]
+        invalid_types = set(json_code.values()) - set(all_data_types)
+        if invalid_types:
+            raise ValueError(f"Validation failed: Invalid column type(s) found. "
+                            f"Expected types: {all_data_types}. "
+                            f"Found types: {set(json_code.values())}. "
+                            f"Invalid types: {invalid_types}")
 
-        for check, error_message in checks:
-            if not check(json_code):
-                raise ValueError(f"Validation failed: {error_message}")
+        missing_columns = set(json_code.keys()) - set(schema)
+        if missing_columns:
+            raise ValueError(f"Validation failed: One or more column names in 'column_type' "
+                            f"are not present in the sample DataFrame. "
+                            f"Missing columns: {missing_columns}")
             
         return json_code
     
@@ -23574,9 +23679,17 @@ class DecideStringCategoricalForAll(MultipleNode):
         database_name = get_database_name(con)
         
         schema = table_pipeline.get_schema(con)
-
-
-        columns = [col for col in schema if get_reverse_type(schema[col], database_name) =='VARCHAR']
+        
+        columns = []
+        for col, col_type in schema.items():
+            reverse_type = get_reverse_type(col_type, database_name)
+            if reverse_type == 'VARCHAR':
+                if database_name == "SQL Server":
+                    if col_type.lower() not in ['text', 'ntext', 'image']:
+                        columns.append(col)
+                else:
+                    columns.append(col)
+        
         self.elements = []
         self.nodes = {}
 
@@ -26278,6 +26391,10 @@ class StageProgress(Node):
             skip_this_workflow()
             return
         
+        if self.para["viewer"]:
+            skip_this_workflow()
+            return
+        
         display(HTML(f"🧐 We will clean all the tables ... The next table is <b>{table_name}</b> ..."))
         display(df)
         display(HTML(html_mode_content))
@@ -27359,10 +27476,15 @@ def generate_workflow_graph(relation_map, relation_details, highlight_indices=No
             if item['Name'] not in nodes:
                 nodes.append(item['Name'])
                 node_shapes.append("box")
-        else:
+        elif item['Type'] == 'Entity':
+            if item['Name'] not in nodes:
+                nodes.append(item['Name'])
+                node_shapes.append("oval")
+        elif item['Type'] == 'Group':
             if item['Name'] not in nodes:
                 nodes.append(item['Name'])
                 node_shapes.append("octagon")
+            
     
     for relation, entities in relation_map.items():
         if relation in nodes:
@@ -29759,7 +29881,7 @@ class RefinePK(Node):
             pk = row['Primary Key']
             table_object = data_project.table_object[table]
             table_summary = table_object.table_summary
-            pk_table_description += f"{table}: {table_summary}\n   Potential primary key: '{pk}'\n"
+            pk_table_description += f"{table}: {table_summary}\n   Primary key: '{pk}'\n"
         
         return pk_df, pk_table_description
     
@@ -29769,14 +29891,14 @@ class RefinePK(Node):
         if pk_df.empty:
             return self.run_but_fail(extract_output)
         
-        template = f"""You have the following tables with potential primary keys:
+        template = f"""You have the following tables with primary keys:
 {pk_table_description}
 
-Your task is to cluster tables that share similar primary keys and choose one representative table for each cluster.
-For example, 'UserInformation' and 'UserAddress' might both have 'UserID' as a primary key. 'UserInformation' is more representative.
+Your task is to cluster tables that share the same primary key (but maybe with different names/representations) and choose one representative table for each cluster.
+For example, 'UserInformation' has pk 'userid' and 'UserAddress' has pk 'UserIdentifier'. They are the same and 'UserInformation' is more representative.
 
-Please analyze the tables and their primary keys, then provide the following output:
-1. Identify clusters of tables that share the primary key.
+Please analyze the tables's primary keys, then provide the following output:
+1. Identify clusters of primary key shared by tables.
 2. Choose a representative table for each cluster.
 3. Provide a brief explanation for each cluster.
 
@@ -29789,7 +29911,7 @@ reasoning: >-
 # only for clusters with > 1 table
 clusters:
   - cluster_name: name_of_cluster
-    explanation: Brief explanation of this cluster's primary keys and why these tables are grouped
+    explanation: Brief explanation of what the primary key is for
     tables: 
       - table1
       - table2
@@ -29919,13 +30041,17 @@ class SelectSchema(Node):
             schema = schema_input.value
             if not database or not schema:
                 output.value = "<div style='color: red;'>Both database and schema must be specified.</div>"
+                return
             else:
-                result = create_schema_and_objects(con, database, schema)
+                success, result = create_schema_and_objects(con, database, schema)
                 output.value = result
+                if success:
+                    self.para["database"] = database
+                    self.para["schema"] = schema
+                    callback({"database": database, "schema": schema})
 
         test_button.on_click(on_test_button_click)
 
-        next_button = widgets.Button(description="Next", button_style='success')
 
         def on_next_button_click(b):
             with self.output_context():
@@ -29941,19 +30067,17 @@ class SelectSchema(Node):
                 
                 callback({"database": database, "schema": schema})
 
-        next_button.on_click(on_next_button_click)
 
         if "database" in self.para and "schema" in self.para and self.para["database"] and self.para["schema"]:
             database_input.value = self.para["database"]
             schema_input.value = self.para["schema"]
-            on_next_button_click(next_button)
+            on_test_button_click(test_button)
             return
 
         create_progress_bar_with_numbers(0, model_steps)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_test_button_click(test_button)
-            on_next_button_click(next_button)
             return 
         
         display(HTML("""
@@ -29963,7 +30087,6 @@ class SelectSchema(Node):
         """))
         
         display(VBox([database_input, schema_input]), VBox([test_button, output]))
-        display(next_button)
         
 
 class RefineRelations(ListNode):
@@ -30533,33 +30656,36 @@ class BusinessQuestionDataSufficiency(Node):
         story = data_project.story
         related_relations = []
         related_groups = []
+        related_entities = []
+
         for element in story:
             if element['Name'] in related_steps:
                 if element['Type'] == 'Relation':
                     related_relations.append(element['Name'])
                 elif element['Type'] == 'Group':
                     related_groups.append(element['Name'])
-        
+                elif element['Type'] == 'Entity':
+                    related_entities.append(element['Name'])
 
         tables = set()
+
         for relation_name in related_relations:
             for table, relation_data in data_project.relations.items():
                 if relation_data['relation_name'] == relation_name:
-                    entities = relation_data['entities']
-                    for entity in entities:
-                        for table, entity_data in data_project.entities.items():
+                    tables.add(table)
+                    for entity in relation_data['entities']:
+                        for entity_table, entity_data in data_project.entities.items():
                             if entity_data['entity_name'] == entity:
-                                tables.add(table)
+                                tables.add(entity_table)
+
+        for entity in related_entities:
+            for entity_table, entity_data in data_project.entities.items():
+                if entity_data['entity_name'] == entity:
+                    tables.add(entity_table)
             
             for table, relation_data in data_project.relations.items():
-                if relation_data['relation_name'] == relation_name:
-                    tables.add(table)
-
-        for table, relation_data in data_project.relations.items():
-            if relation_data['relation_name'] is None and len(relation_data['entities']) == 1:
-                entity = relation_data['entities'][0]
-                for _, entity_data in data_project.entities.items():
-                    if entity_data['entity_name'] == entity:
+                if relation_data['relation_name'] is None and len(relation_data['entities']) == 1:
+                    if relation_data['entities'][0] == entity:
                         tables.add(table)
 
         for group_name in related_groups:
@@ -32676,18 +32802,40 @@ class ReorderRelationToStory(Node):
         self.input_item = item
         
         relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
-        relation_df = relation_df[relation_df['Relation Name'] != ""]
         
+        
+        entity_df = pd.read_json(self.get_sibling_document('Entity Understand'), orient="split")
+        
+        
+        single_entity_relations = relation_df[relation_df['Entities'].apply(len) == 1]
+
+        unique_entities = set(entity for entities in single_entity_relations['Entities'] for entity in entities)
+
+        exclusive_entities = []
+        for entity in unique_entities:
+            entity_relations = relation_df[relation_df['Entities'].apply(lambda x: entity in x)]
+            if all(entity_relations['Entities'].apply(len) == 1):
+                exclusive_entities.append(entity)
+
+        single_entity_result = entity_df[entity_df['Entity Name'].isin(exclusive_entities)][['Entity Name', 'Entity Description']]
+
         data_project = self.para["data_project"]
         group_df = data_project.groups
 
         desc_list = []
         
+        
+        relation_df = relation_df[relation_df['Relation Name'] != ""]
         for idx, row in relation_df.iterrows():
             name = row['Relation Name']
             desc = f"it involves {', '.join(row['Entities'])}, {row['Relation Description']}"
             desc_list.append(f"{len(desc_list) + 1}. '{name}': {desc}")
         
+        for idx, row in single_entity_result.iterrows():
+            name = row['Entity Name']
+            desc = row['Entity Description']
+            desc_list.append(f"{len(desc_list) + 1}. '{name}': this entity is only involved in single-entity relations, {desc}")
+                
         for idx, row in group_df.iterrows():
             name = row['Group Name']
             desc = row['Group Summary']
@@ -32695,10 +32843,13 @@ class ReorderRelationToStory(Node):
         
         combined_desc = "\n".join(desc_list)
         
-        return relation_df, group_df, combined_desc
+        return relation_df, group_df, single_entity_result, combined_desc
 
     def run(self, extract_output, use_cache=True):
-        relation_df, group_df, combined_desc = extract_output
+        relation_df, group_df, single_entity_result, combined_desc = extract_output
+        
+        if len(relation_df) + len(group_df) + len(single_entity_result) == 1:
+            return self.run_but_fail(extract_output, use_cache) 
 
         template = f"""For a database, you have the following 'Name': 'Description'
 {combined_desc}
@@ -32741,6 +32892,7 @@ story:
 
         relation_names = set(relation_df['Relation Name'].tolist())
         group_names = set(group_df['Group Name'].tolist())
+        single_entity_names = set(single_entity_result['Entity Name'].tolist())
         
         for i, item in enumerate(summary['story']):
             if not isinstance(item, dict):
@@ -32754,11 +32906,13 @@ story:
                 item['Type'] = 'Relation'
             elif item['Name'] in group_names:
                 item['Type'] = 'Group'
+            elif item['Name'] in single_entity_names:
+                item['Type'] = 'Entity'
             else:
-                raise ValueError(f"Name '{item['Name']}' in story does not exist in the original relation or group DataFrames")
+                raise ValueError(f"Name '{item['Name']}' in story does not exist in the original relation, group, or single entity DataFrames")
 
         story_names = [item['Name'] for item in summary['story']]
-        all_names = relation_names.union(group_names)
+        all_names = relation_names.union(group_names).union(single_entity_names)
         
         if len(story_names) != len(set(story_names)):
             raise ValueError("Some names appear more than once in the story")
@@ -32770,7 +32924,7 @@ story:
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        relation_df, group_df, _ = extract_output
+        relation_df, group_df, single_entity_result, _ = extract_output
         story_list = []
         for idx, row in relation_df.iterrows():
             story_list.append({
@@ -32783,6 +32937,12 @@ story:
                 "Name": row['Group Name'], 
                 "Description": row['Group Summary'],
                 "Type": "Group"
+            })
+        for idx, row in single_entity_result.iterrows():
+            story_list.append({
+                "Name": row['Entity Name'], 
+                "Description": row['Entity Description'],
+                "Type": "Entity"
             })
         return {"reasoning": "Fail to run", "story": story_list}
                 

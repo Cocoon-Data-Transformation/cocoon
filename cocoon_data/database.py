@@ -267,10 +267,10 @@ def get_table_schema(conn, table_name, schema=None, database=None):
         """
         
         if schema:
-            query += f" AND TABLE_SCHEMA = '{schema.replace("'", "''")}'"
+            query += f""" AND TABLE_SCHEMA = '{schema.replace("'", "''")}'"""
         
         if database:
-            query += f" AND TABLE_CATALOG = '{database.replace("'", "''")}'"
+            query += f""" AND TABLE_CATALOG = '{database.replace("'", "''")}'"""
 
         cursor = conn.cursor()
         cursor.execute(query)
@@ -856,7 +856,12 @@ def create_table(con, table_name, columns, schema_name=None, database_name=None)
         run_sql_return_df(con, query)
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
         columns_str = ", ".join([f'"{col["name"]}" {col["type"]}' for col in columns])
-        full_name = f'{"\""+database_name+"\"." if database_name else ""}{"\""+schema_name+"\"." if schema_name else ""}"{table_name}"'
+        full_name = ''
+        if database_name:
+            full_name += f'"{database_name}".'
+        if schema_name:
+            full_name += f'"{schema_name}".'
+        full_name += f'"{table_name}"'
         query = f'CREATE TABLE IF NOT EXISTS {full_name} ({columns_str})'
         run_sql_return_df(con, query)
     elif isinstance(con, pyodbc.Connection):
@@ -871,7 +876,12 @@ def create_view(con, view_name, select_statement, schema_name=None, database_nam
         query = f'CREATE OR REPLACE VIEW {schema_name+"." if schema_name else ""}{view_name} AS {select_statement}'
         run_sql_return_df(con, query)
     elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
-        full_name = f'{"\""+database_name+"\"." if database_name else ""}{"\""+schema_name+"\"." if schema_name else ""}"{view_name}"'
+        full_name = ''
+        if database_name:
+            full_name += f'"{database_name}".'
+        if schema_name:
+            full_name += f'"{schema_name}".'
+        full_name += f'"{view_name}"'
         query = f'CREATE OR REPLACE VIEW {full_name} AS {select_statement}'
         run_sql_return_df(con, query)
     elif isinstance(con, pyodbc.Connection):
@@ -1015,4 +1025,4 @@ def format_value(value):
     elif isinstance(value, (int, float)):
         return str(value)
     else:
-        return f"N'{value.replace("'", "''")}'"
+        return f"""N'{value.replace("'", "''")}'"""
