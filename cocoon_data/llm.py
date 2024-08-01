@@ -46,6 +46,10 @@ if 'OPENAI_EMBED_ENGINE' in os.environ:
     openai.embed_engine = os.environ['OPENAI_EMBED_ENGINE']
     
 cocoon_llm_setting = {
+    'api_type': getattr(openai, 'api_type', os.getenv('OPENAI_API_TYPE', 'openai')),
+    'api_base': getattr(openai, 'api_base', os.getenv('OPENAI_API_BASE')),
+    'api_version': getattr(openai, 'api_version', os.getenv('OPENAI_API_VERSION')),
+    'api_key': getattr(openai, 'api_key', os.getenv('OPENAI_API_KEY')),
     'aws_access_key': os.environ.get("AWS_ACCESS_KEY_ID", None),
     'aws_secret_key': os.environ.get("AWS_SECRET_ACCESS_KEY", None),
     'aws_region': os.environ.get("AWS_REGION", None),
@@ -55,6 +59,7 @@ cocoon_llm_setting = {
     'vertex_region': os.environ.get("AnthropicVertex_region", None),
     'vertex_project_id': os.environ.get("AnthropicVertex_project_id", None),
     'openai_model': os.environ.get("OPENAI_MODEL", "gpt-4-turbo"),
+    'azure_engine': os.environ.get("AZURE_ENGINE", None),
 }
     
 
@@ -120,7 +125,7 @@ if os.path.exists("./cached_messages.json"):
     lru_cache.load_from_disk("./cached_messages.json")
 
 def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
-
+    global openai
     message_hash = hash_messages(messages)
 
     if use_cache:
@@ -128,8 +133,10 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
         if response is not None:
             lru_cache.save_to_disk()
             return response
-
-    if openai.api_type == 'Anthropic':
+        
+    api_type = cocoon_llm_setting.get('api_type', openai.api_type)
+    
+    if api_type == 'Anthropic':
         messages = convert_openai_to_claude(messages)
 
         client = anthropic.Anthropic()
@@ -141,7 +148,7 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
 
         response = convert_claude_to_openai(responses)
         
-    elif openai.api_type == 'AnthropicBedrock':
+    elif api_type == 'AnthropicBedrock':
         messages = convert_openai_to_claude(messages)
 
         client = AnthropicBedrock(
@@ -158,7 +165,7 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
 
         response = convert_anthropicvertex_to_openai(message)
         
-    elif openai.api_type == 'AnthropicVertex':
+    elif api_type == 'AnthropicVertex':
         messages = convert_openai_to_claude(messages)
 
         client = AnthropicVertex(region=cocoon_llm_setting['vertex_region'] or os.environ.get("AnthropicVertex_region"),
@@ -172,7 +179,7 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
 
         response = convert_anthropicvertex_to_openai(responses)
         
-    elif openai.api_type == 'gemini':
+    elif api_type == 'gemini':
         messages = convert_openai_to_gemini(messages)
 
         model = GenerativeModel("gemini-pro-vision")
@@ -197,32 +204,77 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
 
         response = convert_gemini_to_openai(responses)
 
-    elif openai.api_type == 'azure':
-        response = openai.ChatCompletion.create(
-            engine = openai.gpt4_engine,
-            temperature=temperature,
-            top_p=top_p,
-            messages=messages
-        )
+    elif api_type == 'azure':
+        engine_name = cocoon_llm_setting['azure_engine'] or os.environ.get("AZURE_ENGINE") or openai.gpt4_engine
+        if engine_name is None:
+            raise ValueError("Please provide the deployment name of your GPT-4 model: cocoon_llm_setting['azure_engine'] = 'your_deployment_name'")
+        try:
+            from openai import AzureOpenAI
+            client = AzureOpenAI(
+                api_key=cocoon_llm_setting['api_key'] or getattr(openai, 'api_key', os.environ.get("OPENAI_API_KEY")),
+                azure_endpoint=cocoon_llm_setting['api_base'] or getattr(openai, 'api_base', os.environ.get("OPENAI_API_BASE")),
+                api_version=cocoon_llm_setting['api_version'] or getattr(openai, 'api_version', os.environ.get("OPENAI_API_VERSION")),
+            )
+            response = client.chat.completions.create(
+                model=engine_name,
+                temperature=temperature,
+                top_p=top_p,
+                messages=messages
+            )
+            response = convert_new_to_old_openai(response)
+            
+        except ImportError:
+            response = openai.ChatCompletion.create(
+                engine=engine_name,
+                temperature=temperature,
+                top_p=top_p,
+                messages=messages
+            )
         
-    elif openai.api_type == 'open_ai':
-        
-        response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",
-            temperature=temperature,
-            top_p=top_p,
-            messages=messages
-        )
-        
+    elif api_type == 'openai':
+        try:
+            from openai import OpenAI
+            client = OpenAI(
+                api_key=cocoon_llm_setting['api_key'] or getattr(openai, 'api_key', os.getenv('OPENAI_API_KEY'))
+            )
+            
+            response = client.chat.completions.create(
+                model=cocoon_llm_setting['openai_model'] or os.environ.get("OPENAI_MODEL") or 'gpt-4-turbo',
+                temperature=temperature,
+                top_p=top_p,
+                messages=messages
+            )
+            response = convert_new_to_old_openai(response)
+            
+        except ImportError:
+            import openai
+            response = openai.ChatCompletion.create(
+                model=cocoon_llm_setting['openai_model'] or os.environ.get("OPENAI_MODEL") or 'gpt-4-turbo',
+                temperature=temperature,
+                top_p=top_p,
+                messages=messages
+            )
     
     else:
-        raise ValueError(f"openai.api_type is {openai.api_type}, but it should be 'azure' or 'openai'.")
+        raise ValueError(f"openai.api_type is {api_type}, but it should be 'azure' or 'openai'.")
 
     lru_cache.put(message_hash, response)
     lru_cache.save_to_disk()
     return response
 
 
+
+
+def convert_new_to_old_openai(new_response):
+    
+    return {
+        'choices': [{
+            'message': {
+                'role': new_response.choices[0].message.role,
+                'content': new_response.choices[0].message.content
+            }
+        }]
+    }
 
 
 

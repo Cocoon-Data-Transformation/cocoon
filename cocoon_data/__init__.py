@@ -19619,6 +19619,7 @@ class CleanUnusualForAll(MultipleNode):
     def extract(self, item):
         clear_output(wait=True)
         document = self.get_sibling_document("Decide Unusual String For All").get("Decide String Unusual", {})
+        table_object = self.para["table_object"]
 
         columns = list(document.keys())
         self.elements = []
@@ -19629,19 +19630,22 @@ class CleanUnusualForAll(MultipleNode):
             if col in document:
                 if document[col]["Unusualness"]:
                     unusual_reason = document[col]["Examples"]
+                    table_object.unusualness[col] = unusual_reason
                     self.elements.append(col)
                     self.nodes[col] = self.construct_node(col, idx, len(columns), unusual_reason)
                     idx += 1
 
     def display_after_finish_workflow(self, callback, document):
+        
         clean_unusual = document.get("Clean Unusual", {})
+        table_object = self.para["table_object"]
 
         all_no_clean = True
 
         for col in clean_unusual:
             if clean_unusual[col]["could_clean"]:
                 all_no_clean = False
-                break
+                del table_object.unusualness[col]
 
         if all_no_clean:
             callback(document)
@@ -24145,6 +24149,17 @@ class SelectTables(Node):
         
         display(HTML(f"🤓 Please select the tables:"))
         multi_select = create_column_selector_(columns=tables, default=True, selected=selected_tables)
+        
+        hint_html = widgets.HTML(
+                value='''
+    <p style="margin-top: 10px; font-style: italic; color: #666;">
+        Unable to find your tables? They might be defined as views.<br>
+        Cocoon uses SQL for data exploration, but querying views can be expensive.<br>
+        We recommend materializing them to tables for better performance.
+    </p>
+    '''
+        )
+        display(hint_html)
         
         def update_tables():
             nonlocal tables
