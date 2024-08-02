@@ -1,86 +1,79 @@
 version: 2
 models:
 - name: stg_claims_transactions
-  description: The table is about medical claims transactions. It includes details
-    of charges, payments, and adjustments for patient visits. Each row represents
-    a transaction linked to a claim, patient, and appointment. The table contains
-    financial information, procedure codes, diagnosis references, and provider details
-    for each transaction.
+  description: The table represents medical claims transactions. It includes details
+    of charges and payments for medical services. Each row contains information about
+    a specific transaction, including patient ID, claim ID, transaction type, amount,
+    date, procedure code, and provider details. Charges and payments are linked by
+    the same claim ID. The table tracks financial aspects of medical services provided
+    to patients.
   columns:
-  - name: original_charge
-    description: Original charge amount for the service
+  - name: charge_id
+    description: Identifier for the specific charge
     tests:
     - not_null
-  - name: fee_schedule_id
-    description: Identifier for the fee schedule used
-    tests:
-    - not_null
+    - unique
+    cocoon_meta:
+      unique_reason: This column appears to be an identifier for each charge transaction.
+        For this table, each row represents a medical claim transaction, either a
+        charge or a payment. The charge_id seems to be unique across rows, as it increments
+        for each new entry.
+      data_type:
+        current_data_type: INT
   - name: transfer_type
-    description: Type of transfer transaction
+    description: Type of transfer
     tests:
     - accepted_values:
         values:
         - '1'
         - '2'
-        - '3'
-        - '4'
-        - '5'
     cocoon_meta:
-      missing_acceptable: Only applicable for transfer transactions.
-  - name: outstanding_balance
-    description: Remaining balance to be paid
+      missing_reason: Not applicable for non-transfer transactions
+      future_accepted_values:
+      - '3'
+      - '4'
+      - '5'
+      - Internal
+      - External
+      - Domestic
+      - International
+      - Wire
+      - ACH
+      - Check
+      - Cash
+      - Electronic
+      data_type:
+        current_data_type: VARCHAR
+  - name: service_description
+    description: Description of the procedure or service
     tests:
     - not_null
-  - name: unit_count
-    description: Number of units in the transaction
-    tests:
-    - not_null
-  - name: payment_amount
-    description: Amount paid for the service
-    tests:
-    - not_null
-  - name: charge_id
-    description: Unique identifier for the charge
-    tests:
-    - not_null
-  - name: payment_method
-    description: Payment method used
-    tests:
-    - accepted_values:
-        values:
-        - ECHECK
-        - COPAY
-        - CASH
-        - CC
-        - CHECK
-        - DEBIT
-        - WIRE TRANSFER
-        - MONEY ORDER
-        - PAYPAL
-        - VENMO
-        - APPLE PAY
-        - GOOGLE PAY
-        - CRYPTOCURRENCY
-        - GIFT CARD
-        - STORE CREDIT
-        - BANK TRANSFER
-        - MOBILE PAYMENT
     cocoon_meta:
-      missing_acceptable: Not applicable for CHARGE transactions.
+      unusal_values: '''Encounter for problem'' and ''Encounter for problem (procedure)''
+        are redundant. Inconsistent use of ''(procedure)'' suffix across similar concepts.'
+      data_type:
+        current_data_type: VARCHAR
+  - name: amount
+    description: Monetary value of the transaction
+    cocoon_meta:
+      missing_reason: Not applicable for PAYMENT transactions
+      data_type:
+        current_data_type: DECIMAL
   - name: adjustment_amount
-    description: Amount adjusted from original charge
+    description: Adjustments made to the charge
     tests:
     - not_null
-  - name: transaction_notes
-    description: General notes about the transaction
-    tests:
-    - not_null
-  - name: department_id
-    description: Identifier for the medical department
-    tests:
-    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: patient_insurance_id
+    description: Identifier for patient's insurance
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
   - name: transaction_type
-    description: Transaction type (charge, payment, or adjustment)
+    description: Type of transaction (e.g., CHARGE, PAYMENT)
     tests:
     - not_null
     - accepted_values:
@@ -89,97 +82,212 @@ models:
         - CHARGE
         - TRANSFERIN
         - TRANSFEROUT
-        - ADJUSTMENT
-        - REFUND
-        - REVERSAL
-        - FEE
-  - name: patient_insurance_id
-    description: Identifier for patient's insurance
-    tests:
-    - not_null
-  - name: amount_per_unit
-    description: Amount per unit in the transaction
-    tests:
-    - not_null
-  - name: appointment_id
-    description: Unique identifier for the appointment
-    tests:
-    - not_null
-  - name: claim_id
-    description: Unique identifier for the insurance claim
-    tests:
-    - not_null
-  - name: line_note
-    description: Additional notes for the transaction line
     cocoon_meta:
-      missing_acceptable: Optional additional information, not always needed.
+      future_accepted_values:
+      - DEPOSIT
+      - WITHDRAWAL
+      - REFUND
+      - ADJUSTMENT
+      - FEE
+      - INTEREST
+      - DIVIDEND
+      - PURCHASE
+      - SALE
+      - EXCHANGE
+      data_type:
+        current_data_type: VARCHAR
+  - name: payment_amount
+    description: Amount paid for the service
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: unit_cost
+    description: Cost per unit of service
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: fee_schedule_id
+    description: Identifier for the fee schedule
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
+  - name: outstanding_balance
+    description: Remaining balance to be paid
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: service_units
+    description: Number of units of service provided
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
+  - name: department_id
+    description: Identifier for the department providing service
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
+  - name: payment_method
+    description: Payment method (e.g., CHECK, CASH)
+    tests:
+    - accepted_values:
+        values:
+        - ECHECK
+        - COPAY
+        - CASH
+        - CC
+        - CHECK
+    cocoon_meta:
+      missing_reason: Not applicable for CHARGE transactions
+      future_accepted_values:
+      - DEBIT
+      - WIRE
+      - ACH
+      - PAYPAL
+      - VENMO
+      - APPLE PAY
+      - GOOGLE PAY
+      - CRYPTOCURRENCY
+      - MONEY ORDER
+      - BANK TRANSFER
+      data_type:
+        current_data_type: VARCHAR
+  - name: transfer_amount
+    description: Amount transferred
+    cocoon_meta:
+      missing_reason: Not applicable for non-transfer transactions
+      data_type:
+        current_data_type: DECIMAL
+  - name: appointment_id
+    description: Identifier for the related appointment
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
+  - name: claim_id
+    description: Identifier for the medical claim
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
+  - name: modifier_1
+    description: First modifier for the procedure code
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
+  - name: modifier_2
+    description: Second modifier for the procedure code
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
   - name: patient_id
     description: Unique identifier for the patient
     tests:
     - not_null
-  - name: place_of_service_id
-    description: Identifier for the service location
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
+  - name: primary_diagnosis_ref
+    description: Primary diagnosis reference
     tests:
     - not_null
-  - name: primary_diagnosis_code
-    description: Primary diagnosis reference code
-    tests:
-    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
   - name: procedure_code
     description: Code identifying the medical procedure
     tests:
     - not_null
-  - name: procedure_modifier_1
-    description: First procedure code modifier
     cocoon_meta:
-      missing_acceptable: Not all procedures require modifiers.
-  - name: procedure_modifier_2
-    description: Second procedure code modifier
-    cocoon_meta:
-      missing_acceptable: Not all procedures require multiple modifiers.
+      data_type:
+        current_data_type: VARCHAR
   - name: provider_id
-    description: Identifier for the healthcare provider
+    description: Unique identifier for the healthcare provider
     tests:
     - not_null
-  - name: quaternary_diagnosis_code
-    description: Quaternary diagnosis reference code
     cocoon_meta:
-      missing_acceptable: Not all patients have four diagnoses.
-  - name: secondary_diagnosis_code
-    description: Secondary diagnosis reference code
+      data_type:
+        current_data_type: UUID
+  - name: quaternary_diagnosis_ref
+    description: Quaternary diagnosis reference
     cocoon_meta:
-      missing_acceptable: Not all patients have multiple diagnoses.
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
+  - name: secondary_diagnosis_ref
+    description: Secondary diagnosis reference
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
   - name: service_end_datetime
     description: End date and time of the service
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: TIMESTAMP
+  - name: service_location_id
+    description: Identifier for the location of service
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
   - name: service_start_datetime
     description: Start date and time of the service
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: TIMESTAMP
   - name: supervising_provider_id
-    description: Identifier for the supervising provider
+    description: ID of supervising provider for the service
     tests:
     - not_null
-  - name: tertiary_diagnosis_code
-    description: Tertiary diagnosis reference code
     cocoon_meta:
-      missing_acceptable: Not all patients have three diagnoses.
+      data_type:
+        current_data_type: UUID
+  - name: tertiary_diagnosis_ref
+    description: Tertiary diagnosis reference
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
   - name: transaction_id
-    description: Unique identifier for the transaction
+    description: Unique identifier for each transaction
     tests:
     - not_null
     - unique
     cocoon_meta:
-      uniqueness: This column represents a unique identifier for each transaction.
-        For this table, each row is a distinct transaction (either a charge or a payment).
-        The transaction_id appears to be unique across all rows, making it a suitable
-        candidate key.
-  - name: transfer_amount
-    description: Amount transferred between accounts
+      unique_reason: This column contains a unique identifier for each transaction.
+        Each row in the table represents a distinct transaction, and the transaction_id
+        appears to be a UUID, which is designed to be unique.
+      data_type:
+        current_data_type: UUID
+  - name: transaction_notes
+    description: Additional notes for the transaction
     cocoon_meta:
-      missing_acceptable: Only applicable for transfer transactions.
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
   - name: transfer_out_id
-    description: Identifier for transfer out transaction
+    description: Identifier for transfer out transactions
     cocoon_meta:
-      missing_acceptable: Only applicable for transfer transactions.
+      missing_reason: Not applicable for non-transfer transactions
+      data_type:
+        current_data_type: VARCHAR

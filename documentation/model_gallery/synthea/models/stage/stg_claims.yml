@@ -1,15 +1,26 @@
 version: 2
 models:
 - name: stg_claims
-  description: The table is about medical claims. Each claim has a unique ID and includes
-    details like patient ID, provider ID, diagnoses, appointment ID, service date,
-    claim status, and billing information. It tracks the lifecycle of a medical claim
-    from initial service to final billing and payment status.
+  description: The table is about medical claims. It includes patient IDs, provider
+    IDs, diagnoses, appointment details, and claim statuses. Each row represents a
+    single claim with its unique ID. The table tracks service dates, billing dates,
+    and outstanding amounts. It also includes information on insurance, departments,
+    and healthcare claim types. The status fields indicate whether claims are closed
+    or open.
   columns:
   - name: secondary_insurance_id
-    description: ID of patient's secondary insurance
+    description: Secondary insurance identifier for the patient
     cocoon_meta:
-      missing_acceptable: Not applicable if patient has no secondary insurance
+      missing_reason: Not all patients have secondary insurance
+      data_type:
+        current_data_type: VARCHAR
+  - name: patient_outstanding_amount
+    description: Outstanding amount for patient
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
   - name: primary_claim_status
     description: Status of the primary claim
     tests:
@@ -18,18 +29,73 @@ models:
         values:
         - CLOSED
         - BILLED
-        - OPEN
-        - PENDING
-        - DENIED
-        - PARTIAL
-        - APPROVED
-        - APPEALED
-        - SETTLED
-        - CANCELLED
-  - name: patient_department_id
-    description: Department ID associated with the patient
+    cocoon_meta:
+      future_accepted_values:
+      - OPEN
+      - PENDING
+      - DENIED
+      - APPROVED
+      - SUBMITTED
+      - UNDER REVIEW
+      - APPEALED
+      - CANCELLED
+      data_type:
+        current_data_type: VARCHAR
+  - name: claim_type_id
+    description: Identifier for the type of healthcare claim
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
+  - name: secondary_outstanding_amount
+    description: Outstanding amount for secondary claim
+    cocoon_meta:
+      missing_reason: Not all patients have secondary insurance claims
+      data_type:
+        current_data_type: DECIMAL
+  - name: healthcare_claim_type_id
+    description: Identifier for healthcare claim type
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
+  - name: patient_claim_status
+    description: Status of the patient's claim
+    tests:
+    - not_null
+    - accepted_values:
+        values:
+        - CLOSED
+        - BILLED
+    cocoon_meta:
+      future_accepted_values:
+      - PENDING
+      - APPROVED
+      - DENIED
+      - APPEALED
+      - UNDER REVIEW
+      - PARTIAL PAYMENT
+      - PAID
+      - REOPENED
+      - CANCELLED
+      data_type:
+        current_data_type: VARCHAR
+  - name: primary_outstanding_amount
+    description: Outstanding amount for primary claim
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: department_id
+    description: Identifier for the department
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
   - name: secondary_claim_status
     description: Status of the secondary claim
     tests:
@@ -37,127 +103,159 @@ models:
         values:
         - CLOSED
         - BILLED
-        - OPEN
-        - PENDING
-        - DENIED
-        - PAID
-        - PARTIAL
-        - APPEALED
-        - CANCELLED
-        - ADJUSTED
     cocoon_meta:
-      missing_acceptable: Not applicable if patient has no secondary insurance
-  - name: patient_outstanding_amount
-    description: Outstanding amount for patient
+      missing_reason: Not all patients have secondary insurance claims
+      future_accepted_values:
+      - OPEN
+      - PENDING
+      - DENIED
+      - APPROVED
+      - PAID
+      - PARTIALLY PAID
+      - APPEALED
+      - REJECTED
+      - CANCELLED
+      - UNDER REVIEW
+      data_type:
+        current_data_type: VARCHAR
+  - name: patient_department_id
+    description: Patient's department identifier
     tests:
     - not_null
-  - name: patient_claim_status
-    description: Status of the patient's portion of the claim
-    tests:
-    - not_null
-    - accepted_values:
-        values:
-        - CLOSED
-        - BILLED
-        - OPEN
-        - PENDING
-        - DENIED
-        - PARTIALLY PAID
-        - APPEALED
-  - name: primary_outstanding_amount
-    description: Outstanding amount for primary claim
-    tests:
-    - not_null
-  - name: department_id
-    description: Identifier for the medical department
-    tests:
-    - not_null
-  - name: primary_claim_type
-    description: Identifier for primary healthcare claim type
-    tests:
-    - not_null
-  - name: secondary_outstanding_amount
-    description: Outstanding amount for secondary claim
     cocoon_meta:
-      missing_acceptable: Not applicable if patient has no secondary insurance
-  - name: secondary_claim_type
-    description: Identifier for secondary healthcare claim type
-    tests:
-    - not_null
+      data_type:
+        current_data_type: INT
   - name: appointment_id
-    description: Unique identifier for the medical appointment
+    description: Unique identifier for the appointment
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
   - name: claim_id
-    description: Unique identifier for the claim record
+    description: Unique identifier for the claim
     tests:
     - not_null
     - unique
     cocoon_meta:
-      uniqueness: This column represents a unique identifier for each claim record.
-        For this table, each row represents a distinct medical claim, and the claim_id
-        is unique across rows.
-  - name: illness_onset_date
-    description: Date when the current illness began
-    tests:
-    - not_null
-  - name: octonary_diagnosis
+      unique_reason: This column represents a unique identifier for each claim. For
+        this table, each row represents a single claim, and the claim_id appears to
+        be unique across rows.
+      data_type:
+        current_data_type: UUID
+  - name: diagnosis_4
+    description: Fourth diagnosis code
+    cocoon_meta:
+      missing_reason: Not all patients have more than three diagnoses
+      data_type:
+        current_data_type: VARCHAR
+  - name: diagnosis_5
+    description: Fifth diagnosis code
+    cocoon_meta:
+      missing_reason: Not all patients have more than four diagnoses
+      data_type:
+        current_data_type: VARCHAR
+  - name: diagnosis_6
+    description: Sixth diagnosis code
+    cocoon_meta:
+      missing_reason: Not all patients have more than five diagnoses
+      data_type:
+        current_data_type: VARCHAR
+  - name: diagnosis_7
+    description: Seventh diagnosis code
+    cocoon_meta:
+      missing_reason: Not all patients have more than six diagnoses
+      data_type:
+        current_data_type: VARCHAR
+  - name: diagnosis_8
     description: Eighth diagnosis code
     cocoon_meta:
-      missing_acceptable: Not applicable if patient has fewer than eight diagnoses
+      missing_reason: Not all patients have more than seven diagnoses
+      data_type:
+        current_data_type: VARCHAR
+  - name: illness_onset_date
+    description: Date of current illness onset
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: TIMESTAMP
   - name: patient_id
     description: Unique identifier for the patient
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
   - name: patient_last_billed_date
-    description: Date of last billing for patient
+    description: Last billed date for patient
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: TIMESTAMP
   - name: primary_diagnosis
     description: Primary diagnosis code
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
   - name: primary_insurance_id
-    description: ID of patient's primary insurance
-    tests:
-    - not_null
+    description: Primary insurance identifier for the patient
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: UUID
   - name: primary_last_billed_date
-    description: Date of last billing for primary claim
+    description: Last billed date for primary claim
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: TIMESTAMP
   - name: provider_id
     description: Unique identifier for the healthcare provider
     tests:
     - not_null
-  - name: quaternary_diagnosis
-    description: Fourth diagnosis code
     cocoon_meta:
-      missing_acceptable: Not applicable if patient has fewer than four diagnoses
-  - name: quinary_diagnosis
-    description: Fifth diagnosis code
+      data_type:
+        current_data_type: UUID
+  - name: referring_provider_id
+    description: Identifier for the referring provider
     cocoon_meta:
-      missing_acceptable: Not applicable if patient has fewer than five diagnoses
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
   - name: secondary_diagnosis
     description: Secondary diagnosis code
     cocoon_meta:
-      missing_acceptable: Not applicable if patient has only one diagnosis
+      missing_reason: Not all patients have secondary diagnoses
+      data_type:
+        current_data_type: VARCHAR
   - name: secondary_last_billed_date
-    description: Date of last billing for secondary claim
+    description: Last billed date for secondary claim
     cocoon_meta:
-      missing_acceptable: Not applicable if patient has no secondary insurance
-  - name: senary_diagnosis
-    description: Sixth diagnosis code
-    cocoon_meta:
-      missing_acceptable: Not applicable if patient has fewer than six diagnoses
-  - name: septenary_diagnosis
-    description: Seventh diagnosis code
-    cocoon_meta:
-      missing_acceptable: Not applicable if patient has fewer than seven diagnoses
+      missing_reason: Not all patients have secondary insurance claims
+      data_type:
+        current_data_type: TIMESTAMP
   - name: service_date
-    description: Date when the medical service was provided
+    description: Date when the service was provided
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: TIMESTAMP
   - name: supervising_provider_id
-    description: Unique identifier for the supervising healthcare provider
+    description: Identifier for the supervising provider
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
+  - name: tertiary_diagnosis
+    description: Third diagnosis code
+    cocoon_meta:
+      missing_reason: Not all patients have tertiary diagnoses
+      data_type:
+        current_data_type: VARCHAR

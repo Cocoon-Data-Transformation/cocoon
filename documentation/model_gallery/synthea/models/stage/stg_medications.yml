@@ -1,78 +1,128 @@
 version: 2
 models:
 - name: stg_medications
-  description: The table is about medication orders for patients. It includes details
-    like start/stop dates, patient and payer IDs, encounter ID, medication codes and
-    descriptions, costs, coverage, number of dispenses, total cost, and reason codes.
-    Each row represents a medication prescribed to a patient, with associated billing
-    and administration information.
+  description: The table is about medications prescribed to patients. It includes
+    details such as start date, patient ID, payer ID, encounter ID, medication code
+    and description, base cost, payer coverage, number of dispenses, total cost, and
+    reason for prescription. Each row represents a specific medication prescribed
+    to a patient, with associated costs and coverage information.
   columns:
   - name: medication_description
-    description: Name and details of the medication
+    description: Brief description of the medication
     tests:
     - not_null
     cocoon_meta:
       patterns:
-      - regex: ^[A-Za-z\s-]+\s\d+(\.\d+)?\s(MG|MG/ML|UNT/ML)\s(Oral Tablet|Oral Capsule|Injection|Injectable
-          Solution|Inhalation Solution)
-        summary: Medication name followed by strength (in MG, MG/ML, etc.) and dosage
-          form (Oral Tablet, Injection, etc.)
-      - regex: ^\d+\sACTUAT\s[A-Za-z\s-]+\s\d+(\.\d+)?\s(MG|MG/ACTUAT)\s.*
-        summary: Medication with ACTUAT (actuations) followed by drug name, strength,
-          and type
-      - regex: ^\d+\sHR\s[A-Za-z\s-]+\s\d+(\.\d+)?\sMG.*
-        summary: Medication with time duration (HR) followed by drug name and details
-      - regex: ^[A-Za-z]+\s\d+\sDay\sPack$
-        summary: Brand name followed by day pack (e.g., "28 Day Pack")
-      - regex: ^[A-Za-z0-9\s-]+(\s\d+(\.\d+)?\s(MG|MG/ML|UNT/ML|MG/ACTUAT))*\s[A-Za-z\s-]+(\[.+\])?$
-        summary: Generic pattern capturing most entries (less strict)
-      - regex: .*\d+(?:\.\d+)?\s*(?:MG|ML|UNT)(?:/(?:ML|HR))?.*
-        summary: General pattern for medication descriptions
-  - name: unit_cost
-    description: Base cost of the medication per unit
+      - regex: ^[A-Za-z\s-]+\s\d+(\.\d+)?\s[A-Z]+(/[A-Z]+)?\s[A-Za-z\s]+$
+        summary: 'Basic medication pattern: Name, Strength, Form'
+      - regex: ^\d+\s(HR|ACTUAT)\s[A-Za-z\s-]+\s\d+(\.\d+)?\s[A-Z]+(/[A-Z]+)?\s(Extended
+          Release\s)?[A-Za-z\s]+$
+        summary: Medication with duration and extended release
+      - regex: ^.*\s\[.*\]$
+        summary: Medication with brand name in brackets
+      - regex: ^[A-Za-z\s-]+\s\d+(\.\d+)?\s[A-Z]+(/[A-Z]+)?\s/\s[A-Za-z\s-]+\s\d+(\.\d+)?\s[A-Z]+(/[A-Z]+)?\s[A-Za-z\s]+$
+        summary: Medication with multiple ingredients
+      - regex: ^.*\s(Injection|Inhalation Solution|Transdermal System|Metered Dose
+          Inhaler|Auto-Injector|Vaginal Ring|Drug Implant).*$
+        summary: Medication with specific delivery method
+      - regex: ^.*\s\d+\sDay\sPack$
+        summary: Birth control pack
+      - regex: ^(\d+\s+)?[\w\s-]+\s+\d+(\.\d+)?\s+[A-Z]+(/[A-Z]+)?(/\w+)?\s+(Oral|Injectable|Dry
+          Powder)\s+\w+$
+        summary: Medication descriptions with quantity, drug name, dosage, and form
+      - regex: ^[\w\s-]+\s+\d+(\.\d+)?\s+[A-Z]+(/[A-Z]+)?$
+        summary: Medication descriptions with drug name and dosage
+      - regex: ^[\w\s/-]+$
+        summary: Generic medication names
+      - regex: \d+(\.\d+)?\s+[A-Z]+\s+[A-Za-z\s]+\s+\d+(\.\d+)?\s+[A-Z]+/[A-Z]+\s+[A-Za-z\s]+
+        summary: Medication descriptions with volume, active ingredients, concentration,
+          and form
+      - regex: ^\d+\s+(?:ACTUAT\s+)?[\w\s]+\s+[\d\.]+\s+MG(?:/ACTUAT)?\s+(?:/\s+[\w\s]+\s+[\d\.]+\s+MG(?:/ACTUAT)?)*\s+[\w\s]+$
+        summary: Medication description with quantity, active ingredients, strengths,
+          and dosage form
+      - regex: ([A-Za-z]+\s?)+\s\d+(\.\d+)?\sMG\/ML(\s\/\s([A-Za-z]+\s?)+\s\d+(\.\d+)?\sMG\/ML)*\s([A-Za-z]+\s?)+
+        summary: Medication description with multiple drug names, concentrations in
+          MG/ML, and dosage form
+      data_type:
+        current_data_type: VARCHAR
+  - name: base_cost
+    description: Base cost of the medication
     tests:
     - not_null
-  - name: payer_coverage_amount
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: payer_coverage
     description: Amount covered by the payer
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
   - name: dispense_count
     description: Number of times the medication was dispensed
     tests:
     - not_null
-  - name: total_cost
-    description: Total cost of the medication order
-    tests:
-    - not_null
-  - name: reason_description
-    description: Description of the reason for medication prescription
-    tests:
-    - not_null
-  - name: encounter_id
-    description: Unique identifier for the healthcare encounter
-    tests:
-    - not_null
-  - name: medication_code
-    description: Unique identifier for the medication
-    tests:
-    - not_null
-  - name: order_start_datetime
-    description: Start date and time of medication order
-    tests:
-    - not_null
-  - name: order_stop_datetime
-    description: Stop date and time of medication order
     cocoon_meta:
-      missing_acceptable: Ongoing medications don't have a stop date.
+      data_type:
+        current_data_type: INT
+  - name: total_cost
+    description: Total cost of the medication
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: reason_description
+    description: Description of the reason for prescription
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR
+  - name: encounter_id
+    description: Unique identifier for the medical encounter
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
+  - name: medication_code
+    description: Medication code
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
   - name: patient_id
     description: Unique identifier for the patient
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
   - name: payer_id
     description: Unique identifier for the insurance payer
     tests:
     - not_null
-  - name: reason_code
-    description: Code for the reason of medication prescription
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
+  - name: prescription_end
+    description: End date and time of medication prescription
+    cocoon_meta:
+      missing_reason: Ongoing prescriptions don't have an end date.
+      data_type:
+        current_data_type: TIMESTAMP
+  - name: prescription_start
+    description: Start date and time of medication prescription
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: TIMESTAMP
+  - name: reason_code
+    description: Code for the reason of prescription
+    cocoon_meta:
+      missing_reason: Unknown
+      data_type:
+        current_data_type: VARCHAR

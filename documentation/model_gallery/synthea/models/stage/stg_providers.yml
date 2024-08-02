@@ -1,11 +1,11 @@
 version: 2
 models:
 - name: stg_providers
-  description: The table is about healthcare providers. It includes details such as
-    their unique ID, organization, name, gender, specialty, address, location coordinates,
-    and practice statistics. Each row represents a single provider with their personal
-    and professional information. The table focuses on general practitioners in Massachusetts,
-    showing their contact details and basic practice metrics.
+  description: The table is about healthcare providers. It contains details such as
+    provider ID, organization, name, gender, specialty, address, city, state, ZIP
+    code, latitude, longitude, number of encounters, and procedures performed. All
+    providers listed are general practitioners located in Massachusetts. The table
+    includes both male and female providers from different cities within the state.
   columns:
   - name: provider_name
     description: Full name of the healthcare provider
@@ -13,22 +13,17 @@ models:
     - not_null
     cocoon_meta:
       patterns:
-      - regex: "[A-Z\xC0-\xD6][a-z\xF8-\xFF]+\\d{2,3}\\s[A-Z\xC0-\xD6][a-z\xF8-\xFF\
-          ]+\\d{2,3}"
-        summary: Provider names in the format of FirstName123 LastName456, including
-          some Spanish names with accents
-      - regex: "[A-Z\xC0-\xD6\xD8-\xDD][a-z\xE0-\xF6\xF8-\xFF]+\\d{3}\\s[A-Z\xC0-\xD6\
-          \xD8-\xDD][a-z\xE0-\xF6\xF8-\xFF]+''?[a-z\xE0-\xF6\xF8-\xFF]*\\d{3}"
-        summary: 'Spanish/Latin name with numbers in the format: FirstName[Number]
-          Surname[Number]'
-      - regex: \w+\d{3}\s\w+\d{3}
-        summary: 'More general pattern: Any word characters with numbers'
-      - regex: "([A-Z\xC0-\xD6\xD8-\xDD][a-z\xE0-\xF6\xF8-\xFF]+\\d+) ([A-Z\xC0-\xD6\
+      - regex: "([A-Z\xC0-\xD6\xD8-\xDD][a-z\xE0-\xF6\xF8-\xFF]+\\d{2,3}\\s[A-Z\xC0\
+          -\xD6\xD8-\xDD][a-z\xE0-\xF6\xF8-\xFF]+\\d{2,3})"
+        summary: Name pattern with given name, number, space, surname, and number
+      - regex: "([A-Z\xC0-\xD6\xD8-\xDD][a-z\xE0-\xF6\xF8-\xFF]+\\d+\\s[A-Z\xC0-\xD6\
           \xD8-\xDD][a-z\xE0-\xF6\xF8-\xFF]+\\d+)"
-        summary: First name (with possible non-English characters) followed by a number,
-          a space, and then a last name (with possible non-English characters) followed
-          by another number
-  - name: provider_gender
+        summary: More general pattern allowing for variations in name structure
+      - regex: '[A-Z][a-z]+\d+ [A-Z][a-zA-Z'''']+\d+'
+        summary: First name with number, followed by last name with number
+      data_type:
+        current_data_type: VARCHAR
+  - name: gender
     description: Gender of the healthcare provider
     tests:
     - not_null
@@ -36,120 +31,160 @@ models:
         values:
         - F
         - M
-        - O
-  - name: medical_specialty
-    description: Medical specialty of the healthcare provider
+    cocoon_meta:
+      future_accepted_values:
+      - O
+      - U
+      data_type:
+        current_data_type: VARCHAR
+  - name: specialty
+    description: Medical specialty of the provider
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
   - name: street_address
-    description: Street address of the healthcare provider
+    description: Street address of the provider's practice
     tests:
     - not_null
     cocoon_meta:
       patterns:
-      - regex: \d+\s+[A-Z\s]+(?:\s+(?:ST|STREET|AVE|AVENUE|RD|ROAD|DRIVE|DR|BLVD|BOULEVARD))?\b
+      - regex: \d+\s+[A-Z]+(\s+[A-Z]+)*((\s+(ST|STREET|AVE|AVENUE|RD|ROAD|DR|DRIVE|BLVD|BOULEVARD|LN|LANE|WAY|PLACE|PL|CT|COURT))?)
         summary: Street number followed by street name and optional street type
-      - regex: \d+\s+[\w\s]+\s+(?:SUITE|STE)\s+[\w-]+
-        summary: Addresses with suite numbers
-      - regex: \d+\s+(?:ROUTE|RTE)\s+[\w-]+
-        summary: Addresses with route numbers
-      - regex: \d+\s+[\w\s]+\s+\d+(?:ST|ND|RD|TH)\s+FLOOR
-        summary: Addresses with ordinal indicators (e.g., 1ST FLOOR)
-      - regex: \d+\s+[\w\s]+
-        summary: General address pattern (number followed by street name)
-      - regex: ^\d+(?:\s&\s\d+)?\s[A-Z''.\s]+(?:#\s[A-Z]-\d+)?$
-        summary: Street addresses with number, street name, and optional unit or intersection
+      - regex: \d+\s+[A-Z]+(\s+[A-Z]+)*\s+(SUITE|STE)\s+\d+
+        summary: Street addresses with suite or unit numbers
+      - regex: ^\d+\s+[A-Za-z\s\.'']+(\s+(\d+[A-Za-z]{2}\s+FLOOR|STE\s+\w+|#\s*\w+(-\d+)?))?$
+        summary: Street address with optional unit/floor information
+      - regex: ^\d+\s+(ROUTE|RTE)\s*\d+[A-Z]?(\s+\d+)?$
+        summary: Route or highway addresses
+      - regex: ^[\d\w\s\.''&,-]+$
+        summary: Generic street address (loose pattern)
+      data_type:
+        current_data_type: VARCHAR
   - name: city
-    description: City where the provider is located
+    description: City where the provider's practice is located
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
   - name: state
-    description: State abbreviation where the provider is located
+    description: State abbreviation of the provider's practice location
     tests:
     - not_null
     - accepted_values:
         values:
-        - AL
-        - AK
-        - AZ
-        - AR
-        - CA
-        - CO
-        - CT
-        - DE
-        - FL
-        - GA
-        - HI
-        - ID
-        - IL
-        - IN
-        - IA
-        - KS
-        - KY
-        - LA
-        - ME
-        - MD
         - MA
-        - MI
-        - MN
-        - MS
-        - MO
-        - MT
-        - NE
-        - NV
-        - NH
-        - NJ
-        - NM
-        - NY
-        - NC
-        - ND
-        - OH
-        - OK
-        - OR
-        - PA
-        - RI
-        - SC
-        - SD
-        - TN
-        - TX
-        - UT
-        - VT
-        - VA
-        - WA
-        - WV
-        - WI
-        - WY
-        - DC
+    cocoon_meta:
+      future_accepted_values:
+      - AL
+      - AK
+      - AZ
+      - AR
+      - CA
+      - CO
+      - CT
+      - DE
+      - FL
+      - GA
+      - HI
+      - ID
+      - IL
+      - IN
+      - IA
+      - KS
+      - KY
+      - LA
+      - ME
+      - MD
+      - MI
+      - MN
+      - MS
+      - MO
+      - MT
+      - NE
+      - NV
+      - NH
+      - NJ
+      - NM
+      - NY
+      - NC
+      - ND
+      - OH
+      - OK
+      - OR
+      - PA
+      - RI
+      - SC
+      - SD
+      - TN
+      - TX
+      - UT
+      - VT
+      - VA
+      - WA
+      - WV
+      - WI
+      - WY
+      - DC
+      - AS
+      - GU
+      - MP
+      - PR
+      - VI
+      data_type:
+        current_data_type: VARCHAR
   - name: latitude
     description: Latitude coordinate of the provider's location
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
   - name: longitude
     description: Longitude coordinate of the provider's location
     tests:
     - not_null
-  - name: patient_encounters
-    description: Number of patient encounters
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: encounter_count
+    description: Number of patient encounters by the provider
     tests:
     - not_null
-  - name: procedures_performed
-    description: Number of procedures performed
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
+  - name: procedure_count
+    description: Number of procedures performed by the provider
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
   - name: organization_id
-    description: Unique identifier for the provider's organization
+    description: Identifier for the organization the provider belongs to
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: UUID
   - name: provider_id
     description: Unique identifier for the healthcare provider
     tests:
     - not_null
     - unique
     cocoon_meta:
-      uniqueness: This column represents a unique identifier for the healthcare provider.
-        For this table, each row is for a unique provider. The provider_id is designed
-        to be unique for each provider, ensuring no two providers have the same ID.
+      unique_reason: This column is a unique identifier for each healthcare provider.
+        For this table, each row represents a unique provider, and the provider_id
+        is designed to be unique across all providers.
+      data_type:
+        current_data_type: UUID
   - name: zip_code
-    description: ZIP code of the provider's location
+    description: ZIP code of the provider's practice location
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR

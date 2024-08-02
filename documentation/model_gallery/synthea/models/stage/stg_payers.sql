@@ -1,112 +1,96 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
+-- Generated at 2024-08-01 16:32:04.971669+00:00
 WITH 
 "payers_renamed" AS (
     -- Rename: Renaming columns
     -- Id -> payer_id
     -- NAME -> payer_name
-    -- ADDRESS -> payer_address
-    -- CITY -> payer_city
-    -- STATE_HEADQUARTERED -> headquarters_state
-    -- ZIP -> payer_zip_code
-    -- PHONE -> payer_phone
-    -- AMOUNT_COVERED -> total_covered_amount
-    -- AMOUNT_UNCOVERED -> total_uncovered_amount
-    -- COVERED_ENCOUNTERS -> covered_encounters_count
-    -- UNCOVERED_ENCOUNTERS -> uncovered_encounters_count
-    -- COVERED_MEDICATIONS -> covered_medications_count
-    -- UNCOVERED_MEDICATIONS -> uncovered_medications_count
-    -- COVERED_PROCEDURES -> covered_procedures_count
-    -- UNCOVERED_PROCEDURES -> uncovered_procedures_count
-    -- COVERED_IMMUNIZATIONS -> covered_immunizations_count
-    -- UNCOVERED_IMMUNIZATIONS -> uncovered_immunizations_count
-    -- QOLS_AVG -> average_quality_of_life_score
+    -- OWNERSHIP -> ownership_type
+    -- ADDRESS -> address
+    -- CITY -> city
+    -- STATE_HEADQUARTERED -> state
+    -- ZIP -> zip_code
+    -- PHONE -> phone_number
+    -- AMOUNT_COVERED -> covered_amount
+    -- AMOUNT_UNCOVERED -> uncovered_amount
+    -- REVENUE -> revenue
+    -- COVERED_ENCOUNTERS -> covered_encounters
+    -- UNCOVERED_ENCOUNTERS -> uncovered_encounters
+    -- COVERED_MEDICATIONS -> covered_medications
+    -- UNCOVERED_MEDICATIONS -> uncovered_medications
+    -- COVERED_PROCEDURES -> covered_procedures
+    -- UNCOVERED_PROCEDURES -> uncovered_procedures
+    -- COVERED_IMMUNIZATIONS -> covered_immunizations
+    -- UNCOVERED_IMMUNIZATIONS -> uncovered_immunizations
+    -- UNIQUE_CUSTOMERS -> unique_customers
+    -- QOLS_AVG -> average_qol_score
+    -- MEMBER_MONTHS -> member_months
     SELECT 
         "Id" AS "payer_id",
         "NAME" AS "payer_name",
-        "OWNERSHIP",
-        "ADDRESS" AS "payer_address",
-        "CITY" AS "payer_city",
-        "STATE_HEADQUARTERED" AS "headquarters_state",
-        "ZIP" AS "payer_zip_code",
-        "PHONE" AS "payer_phone",
-        "AMOUNT_COVERED" AS "total_covered_amount",
-        "AMOUNT_UNCOVERED" AS "total_uncovered_amount",
-        "REVENUE",
-        "COVERED_ENCOUNTERS" AS "covered_encounters_count",
-        "UNCOVERED_ENCOUNTERS" AS "uncovered_encounters_count",
-        "COVERED_MEDICATIONS" AS "covered_medications_count",
-        "UNCOVERED_MEDICATIONS" AS "uncovered_medications_count",
-        "COVERED_PROCEDURES" AS "covered_procedures_count",
-        "UNCOVERED_PROCEDURES" AS "uncovered_procedures_count",
-        "COVERED_IMMUNIZATIONS" AS "covered_immunizations_count",
-        "UNCOVERED_IMMUNIZATIONS" AS "uncovered_immunizations_count",
-        "UNIQUE_CUSTOMERS",
-        "QOLS_AVG" AS "average_quality_of_life_score",
-        "MEMBER_MONTHS"
-    FROM "payers"
+        "OWNERSHIP" AS "ownership_type",
+        "ADDRESS" AS "address",
+        "CITY" AS "city",
+        "STATE_HEADQUARTERED" AS "state",
+        "ZIP" AS "zip_code",
+        "PHONE" AS "phone_number",
+        "AMOUNT_COVERED" AS "covered_amount",
+        "AMOUNT_UNCOVERED" AS "uncovered_amount",
+        "REVENUE" AS "revenue",
+        "COVERED_ENCOUNTERS" AS "covered_encounters",
+        "UNCOVERED_ENCOUNTERS" AS "uncovered_encounters",
+        "COVERED_MEDICATIONS" AS "covered_medications",
+        "UNCOVERED_MEDICATIONS" AS "uncovered_medications",
+        "COVERED_PROCEDURES" AS "covered_procedures",
+        "UNCOVERED_PROCEDURES" AS "uncovered_procedures",
+        "COVERED_IMMUNIZATIONS" AS "covered_immunizations",
+        "UNCOVERED_IMMUNIZATIONS" AS "uncovered_immunizations",
+        "UNIQUE_CUSTOMERS" AS "unique_customers",
+        "QOLS_AVG" AS "average_qol_score",
+        "MEMBER_MONTHS" AS "member_months"
+    FROM "memory"."main"."payers"
 ),
 
 "payers_renamed_casted" AS (
     -- Column Type Casting: 
-    -- headquarters_state: from DECIMAL to VARCHAR
-    -- payer_address: from DECIMAL to VARCHAR
-    -- payer_city: from DECIMAL to VARCHAR
+    -- address: from DECIMAL to VARCHAR
+    -- city: from DECIMAL to VARCHAR
     -- payer_id: from VARCHAR to UUID
-    -- payer_phone: from DECIMAL to VARCHAR
-    -- payer_zip_code: from DECIMAL to VARCHAR
+    -- phone_number: from DECIMAL to VARCHAR
+    -- state: from DECIMAL to VARCHAR
+    -- zip_code: from DECIMAL to VARCHAR
     SELECT
         "payer_name",
-        "OWNERSHIP",
-        "total_covered_amount",
-        "total_uncovered_amount",
-        "REVENUE",
-        "covered_encounters_count",
-        "uncovered_encounters_count",
-        "covered_medications_count",
-        "uncovered_medications_count",
-        "covered_procedures_count",
-        "uncovered_procedures_count",
-        "covered_immunizations_count",
-        "uncovered_immunizations_count",
-        "UNIQUE_CUSTOMERS",
-        "average_quality_of_life_score",
-        "MEMBER_MONTHS",
-        CAST("headquarters_state" AS VARCHAR) AS "headquarters_state",
-        CAST("payer_address" AS VARCHAR) AS "payer_address",
-        CAST("payer_city" AS VARCHAR) AS "payer_city",
-        CAST("payer_id" AS UUID) AS "payer_id",
-        CAST("payer_phone" AS VARCHAR) AS "payer_phone",
-        CAST("payer_zip_code" AS VARCHAR) AS "payer_zip_code"
+        "ownership_type",
+        "covered_amount",
+        "uncovered_amount",
+        "revenue",
+        "covered_encounters",
+        "uncovered_encounters",
+        "covered_medications",
+        "uncovered_medications",
+        "covered_procedures",
+        "uncovered_procedures",
+        "covered_immunizations",
+        "uncovered_immunizations",
+        "unique_customers",
+        "average_qol_score",
+        "member_months",
+        CAST("address" AS VARCHAR) 
+        AS "address",
+        CAST("city" AS VARCHAR) 
+        AS "city",
+        CAST("payer_id" AS UUID) 
+        AS "payer_id",
+        CAST("phone_number" AS VARCHAR) 
+        AS "phone_number",
+        CAST("state" AS VARCHAR) 
+        AS "state",
+        CAST("zip_code" AS VARCHAR) 
+        AS "zip_code"
     FROM "payers_renamed"
-),
-
-"payers_renamed_casted_missing_handled" AS (
-    -- Handling missing values: There are 5 columns with unacceptable missing values
-    -- headquarters_state has 100.0 percent missing. Strategy: 🗑️ Drop Column
-    -- payer_address has 100.0 percent missing. Strategy: 🗑️ Drop Column
-    -- payer_city has 100.0 percent missing. Strategy: 🗑️ Drop Column
-    -- payer_phone has 100.0 percent missing. Strategy: 🗑️ Drop Column
-    -- payer_zip_code has 100.0 percent missing. Strategy: 🗑️ Drop Column
-    SELECT
-        "payer_name",
-        "OWNERSHIP",
-        "total_covered_amount",
-        "total_uncovered_amount",
-        "REVENUE",
-        "covered_encounters_count",
-        "uncovered_encounters_count",
-        "covered_medications_count",
-        "uncovered_medications_count",
-        "covered_procedures_count",
-        "uncovered_procedures_count",
-        "covered_immunizations_count",
-        "uncovered_immunizations_count",
-        "UNIQUE_CUSTOMERS",
-        "average_quality_of_life_score",
-        "MEMBER_MONTHS",
-        "payer_id"
-    FROM "payers_renamed_casted"
 )
 
 -- COCOON BLOCK END
-SELECT * FROM "payers_renamed_casted_missing_handled"
+SELECT *
+FROM "payers_renamed_casted"

@@ -1,4 +1,5 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
+-- Generated at 2024-08-01 16:37:43.074313+00:00
 WITH 
 "supplies_renamed" AS (
     -- Rename: Renaming columns
@@ -6,37 +7,36 @@ WITH
     -- PATIENT -> patient_id
     -- ENCOUNTER -> encounter_id
     -- CODE -> supply_code
-    -- DESCRIPTION -> supply_description
-    -- QUANTITY -> supply_quantity
     SELECT 
         "DATE_" AS "supply_date",
         "PATIENT" AS "patient_id",
         "ENCOUNTER" AS "encounter_id",
         "CODE" AS "supply_code",
-        "DESCRIPTION" AS "supply_description",
-        "QUANTITY" AS "supply_quantity"
-    FROM "supplies"
+        "DESCRIPTION",
+        "QUANTITY"
+    FROM "memory"."main"."supplies"
 ),
 
 "supplies_renamed_dedup" AS (
     -- Deduplication: Removed 7 duplicated rows
-    SELECT DISTINCT * FROM "supplies_renamed"
+    SELECT DISTINCT *
+    FROM "supplies_renamed"
 ),
 
 "supplies_renamed_dedup_cleaned" AS (
     -- Clean unusual string values: 
-    -- supply_description: The problem is inconsistent spacing and inconsistent use of abbreviations. The value 'Air filter  device' has an extra space between 'filter' and 'device'. There's also inconsistent use of CPAP/BPAP abbreviations, with some entries using the full words and others using the abbreviations. The correct values should have consistent spacing and use the full words instead of abbreviations for clarity. 
+    -- DESCRIPTION: The problem is inconsistent spacing and inconsistent use of abbreviations. Specifically, 'Air filter  device' has an extra space, and some items use 'CPAP/BPAP' while others spell out 'Continuous positive airway pressure/Bilevel positive airway pressure'. The correct values should have consistent spacing and use the full spelling of CPAP/BPAP for clarity and consistency.
     SELECT
         "supply_date",
         "patient_id",
         "encounter_id",
         "supply_code",
         CASE
-            WHEN "supply_description" = 'Air filter  device (physical object)' THEN 'Air filter device (physical object)'
-            WHEN "supply_description" = 'CPAP/BPAP oral mask (physical object)' THEN 'Continuous positive airway pressure/Bilevel positive airway pressure oral mask (physical object)'
-            ELSE "supply_description"
-        END AS "supply_description",
-        "supply_quantity"
+            WHEN "DESCRIPTION" = 'Air filter  device (physical object)' THEN 'Air filter device (physical object)'
+            WHEN "DESCRIPTION" = 'CPAP/BPAP oral mask (physical object)' THEN 'Continuous positive airway pressure/Bilevel positive airway pressure oral mask (physical object)'
+            ELSE "DESCRIPTION"
+        END AS "DESCRIPTION",
+        "QUANTITY"
     FROM "supplies_renamed_dedup"
 ),
 
@@ -47,14 +47,19 @@ WITH
     -- supply_code: from INT to VARCHAR
     -- supply_date: from VARCHAR to DATE
     SELECT
-        "supply_description",
-        "supply_quantity",
-        CAST("encounter_id" AS UUID) AS "encounter_id",
-        CAST("patient_id" AS UUID) AS "patient_id",
-        CAST("supply_code" AS VARCHAR) AS "supply_code",
-        CAST("supply_date" AS DATE) AS "supply_date"
+        "DESCRIPTION",
+        "QUANTITY",
+        CAST("encounter_id" AS UUID) 
+        AS "encounter_id",
+        CAST("patient_id" AS UUID) 
+        AS "patient_id",
+        CAST("supply_code" AS VARCHAR) 
+        AS "supply_code",
+        CAST("supply_date" AS DATE) 
+        AS "supply_date"
     FROM "supplies_renamed_dedup_cleaned"
 )
 
 -- COCOON BLOCK END
-SELECT * FROM "supplies_renamed_dedup_cleaned_casted"
+SELECT *
+FROM "supplies_renamed_dedup_cleaned_casted"

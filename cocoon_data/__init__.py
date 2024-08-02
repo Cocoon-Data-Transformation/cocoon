@@ -15257,9 +15257,15 @@ class SQLStep(TransformationStep):
     def remove_from_database(self, con=None):
         if con is None:
             con = self.con
-
-        remove_table(con, table_name=self.name, schema_name=self.schema, database_name=self.database)
-        remove_view(con, view_name=self.name, schema_name=self.schema, database_name=self.database)
+            
+        views = list_views(con, schema_name=self.schema, database_name=self.database)
+        if self.name in views:
+            remove_view(con, view_name=self.name, schema_name=self.schema, database_name=self.database)
+            
+        tables = list_tables(con, schema_name=self.schema, database_name=self.database)
+        if self.name in tables:
+            remove_table(con, table_name=self.name, schema_name=self.schema, database_name=self.database)
+        
 
     def run_codes(self, mode="VIEW"):
         sql_code = self.get_codes(mode=mode)
@@ -21613,10 +21619,6 @@ class SelectTable(Node):
         display(HTML(f"🤓 Please select the table:"))
         display(widgets.HBox([database_label, database_dropdown, schema_label, schema_dropdown, table_label, table_dropdown]))
 
-        
-        
-        
-        
 
         mode_selector = widgets.RadioButtons(
             options=[
@@ -30048,7 +30050,7 @@ class SelectSchema(Node):
 
         database_input = widgets.Text(value=database, description="Database:")
         schema_input = widgets.Text(value=schema, description="Schema:")
-        test_button = widgets.Button(description="Test Access", button_style='info', icon='play')
+        test_button = widgets.Button(description="Test and Next", button_style='info', icon='play')
         output = widgets.HTML()
 
         def on_test_button_click(b):

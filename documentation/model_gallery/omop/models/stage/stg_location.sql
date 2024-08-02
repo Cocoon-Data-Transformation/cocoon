@@ -1,41 +1,44 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
+-- Generated at 2024-08-02 00:52:59.900703+00:00
 WITH 
-"location_renamed" AS (
-    -- Rename: Renaming columns
-    -- address_1 -> primary_address
-    -- address_2 -> secondary_address
-    -- zip -> zip_code
-    -- location_source_value -> source_value
-    SELECT 
-        "location_id",
-        "address_1" AS "primary_address",
-        "address_2" AS "secondary_address",
-        "city",
-        "state",
-        "zip" AS "zip_code",
-        "county",
-        "location_source_value" AS "source_value",
-        "latitude",
-        "longitude"
-    FROM "location"
-),
-
-"location_renamed_casted" AS (
-    -- Column Type Casting: 
-    -- zip_code: from INT to VARCHAR
+"location_cleaned" AS (
+    -- Clean unusual string values: 
+    -- county: The problem is that 'Archie' is not a valid county name in any U.S. state. The correct value appears to be 'Hampden', which is a real county name in Massachusetts. 'Archie' is likely a data entry error or misclassification.
     SELECT
         "location_id",
-        "primary_address",
-        "secondary_address",
+        "address_1",
+        "address_2",
+        "city",
+        "state",
+        "zip",
+        CASE
+            WHEN "county" = 'Archie' THEN 'Hampden'
+            ELSE "county"
+        END AS "county",
+        "location_source_value",
+        "latitude",
+        "longitude"
+    FROM "memory"."main"."location"
+),
+
+"location_cleaned_casted" AS (
+    -- Column Type Casting: 
+    -- zip: from INT to VARCHAR
+    SELECT
+        "location_id",
+        "address_1",
+        "address_2",
         "city",
         "state",
         "county",
-        "source_value",
+        "location_source_value",
         "latitude",
         "longitude",
-        CAST("zip_code" AS VARCHAR) AS "zip_code"
-    FROM "location_renamed"
+        CAST("zip" AS VARCHAR) 
+        AS "zip"
+    FROM "location_cleaned"
 )
 
 -- COCOON BLOCK END
-SELECT * FROM "location_renamed_casted"
+SELECT *
+FROM "location_cleaned_casted"

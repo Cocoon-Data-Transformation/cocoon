@@ -1,4 +1,5 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
+-- Generated at 2024-08-01 16:14:08.536848+00:00
 WITH 
 "conditions_renamed" AS (
     -- Rename: Renaming columns
@@ -15,7 +16,7 @@ WITH
         "ENCOUNTER" AS "encounter_id",
         "CODE" AS "condition_code",
         "DESCRIPTION" AS "condition_description"
-    FROM "conditions"
+    FROM "memory"."main"."conditions"
 ),
 
 "conditions_renamed_casted" AS (
@@ -27,13 +28,19 @@ WITH
     -- start_date: from VARCHAR to DATE
     SELECT
         "condition_description",
-        CAST("condition_code" AS VARCHAR) AS "condition_code",
-        CAST("encounter_id" AS UUID) AS "encounter_id",
-        CAST("end_date" AS DATE) AS "end_date",
-        CAST("patient_id" AS UUID) AS "patient_id",
-        CAST("start_date" AS DATE) AS "start_date"
+        CAST("condition_code" AS VARCHAR) 
+        AS "condition_code",
+        CAST("encounter_id" AS UUID) 
+        AS "encounter_id",
+        CAST("end_date" AS DATE) 
+        AS "end_date",
+        CAST("patient_id" AS UUID) 
+        AS "patient_id",
+        CAST("start_date" AS DATE) 
+        AS "start_date"
     FROM "conditions_renamed"
 )
 
 -- COCOON BLOCK END
-SELECT * FROM "conditions_renamed_casted"
+SELECT *
+FROM "conditions_renamed_casted"

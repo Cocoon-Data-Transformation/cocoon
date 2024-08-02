@@ -19,13 +19,36 @@ import json
 import sqlglot
 import re
 
+def is_duckdb_connection(con):
+    try:
+        import duckdb
+        return isinstance(con, duckdb.DuckDBPyConnection)
+    except ImportError:
+        return False
+
+def is_snowflake_connection(con):
+    try:
+        import snowflake.connector
+        return isinstance(con, snowflake.connector.connection.SnowflakeConnection)
+    except ImportError:
+        return False
+
+def is_pyodbc_connection(con):
+    try:
+        import pyodbc
+        return isinstance(con, pyodbc.Connection)
+    except ImportError:
+        return False
+    
 def get_database_name(con):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         return "DuckDB"
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         return "Snowflake"
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         return "SQL Server"
+    elif isinstance(con, pd.DataFrame):
+        raise ValueError("Connector is a pandas DataFrame. Please provide the database connection (e.g., a DuckDB connection that stores this pandas DataFrame as a database)")
     else:
         return "Unknown"
 
@@ -34,7 +57,7 @@ cocoon_query_logs = []
 def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True, log=False):
     if log:
         cocoon_query_logs.append(sql_query)
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         context_queries = []
         if database:
             context_queries.append(f"SET CURRENT_CATALOG = '{database}';")
@@ -47,7 +70,7 @@ def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True
         except Exception as e:
             raise type(e)(f"Error executing query:\n{full_query}\n\nOriginal error: {str(e)}") from e
 
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         cursor = con.cursor()
         try:
             if database:
@@ -68,7 +91,7 @@ def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True
         finally:
             cursor.close()
             
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         cursor = con.cursor()
         try:
             if database:
@@ -159,7 +182,7 @@ def get_schema_snowflake(con):
     return schema_tables
 
 def get_schema(con):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         schema_df = run_sql_return_df(con, "DESCRIBE;")
 
         tables = {}
@@ -170,11 +193,11 @@ def get_schema(con):
         
         return tables
     
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         tables = get_schema_snowflake(con)
         return tables
 
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         tables = get_schema_sqlserver(con)
         return tables
     
@@ -183,12 +206,12 @@ def get_schema(con):
     
 def get_query_schema(con, query, transpile=True):
 
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         describe_query = f"DESCRIBE ({query})"
         schema_df = run_sql_return_df(con, describe_query)
         return dict(zip(schema_df['column_name'], schema_df['column_type']))
     
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         cur = con.cursor()
 
         try:
@@ -204,7 +227,7 @@ def get_query_schema(con, query, transpile=True):
 
         return dict(zip(df['name'], df['type']))
     
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         if transpile:
             try:
                 query = sqlglot.transpile(query, read="tsql", write="tsql", comments=False)[0]
@@ -469,12 +492,12 @@ def create_sample_distinct_query_regex(con, table_name, column_name, sample_size
     return sample_values
 
 def create_regex_match_clause(con, column_name, regex):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         return f'regexp_full_match("{column_name}", \'{regex}\')'
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         regex = regex.replace('\\', '\\\\')
         return f'REGEXP_LIKE("{column_name}", \'{regex}\')'
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         like_pattern = regex_to_like_pattern(regex)
         return f'"{column_name}" LIKE \'{like_pattern}\''
     else:
@@ -691,72 +714,72 @@ def get_default_sqlserver_database_and_schema(con):
     return default_database, default_schema
     
 def list_databases(con):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         return list_duckdb_databases(con)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         return list_snowflake_databases(con)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         return list_sqlserver_databases(con)
     else:
         return []
 
 def list_schemas(con, database):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         return list_duckdb_schemas(con, database)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         return list_snowflake_schemas(con, database)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         return list_sqlserver_schemas(con, database)
     else:
         return []
 
 def list_tables(con, schema, database):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         return list_duckdb_tables(con, schema, database)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         return list_snowflake_tables(con, database, schema)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         return list_sqlserver_tables(con, schema, database)
     else:
         return []
         
 def list_views(con, schema, database):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         return list_duckdb_views(con, schema, database)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         return list_snowflake_views(con, database, schema)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         return list_sqlserver_views(con, schema, database)
     else:
         return []
 
 def get_default_database_and_schema(con):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         return get_default_duckdb_database_and_schema(con)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         return get_default_snowflake_database_and_schema(con)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         return get_default_sqlserver_database_and_schema(con)
     else:
         return None, None
         
 def create_database(con, database_name):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         raise NotImplementedError("DuckDB does not support creating separate databases")
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         query = f'CREATE DATABASE IF NOT EXISTS "{database_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         query = f"IF NOT EXISTS (SELECT name FROM master.dbo.sysdatabases WHERE name = N'{database_name}') CREATE DATABASE [{database_name}]"
         run_sql_return_df(con, query)
 
 def remove_database(con, database_name):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         raise NotImplementedError("DuckDB does not support removing separate databases")
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         query = f'DROP DATABASE IF EXISTS "{database_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         query = f"""
         IF EXISTS (SELECT name FROM master.dbo.sysdatabases WHERE name = N'{database_name}')
         BEGIN
@@ -767,16 +790,16 @@ def remove_database(con, database_name):
         run_sql_return_df(con, query)
 
 def create_schema(con, schema_name, database_name=None):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         query = f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         if database_name:
             query = f'CREATE SCHEMA IF NOT EXISTS "{database_name}"."{schema_name}"'
         else:
             query = f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         if database_name:
             query = f"USE {database_name}; IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') EXEC('CREATE SCHEMA {schema_name}')"
         else:
@@ -784,16 +807,16 @@ def create_schema(con, schema_name, database_name=None):
         run_sql_return_df(con, query, transpile=False)
 
 def remove_schema(con, schema_name, database_name=None):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         query = f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE'
         run_sql_return_df(con, query)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         if database_name:
             query = f'DROP SCHEMA IF EXISTS "{database_name}"."{schema_name}"'
         else:
             query = f'DROP SCHEMA IF EXISTS "{schema_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         if database_name:
             query = f"USE [{database_name}]; IF EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') DROP SCHEMA [{schema_name}]"
         else:
@@ -801,13 +824,13 @@ def remove_schema(con, schema_name, database_name=None):
         run_sql_return_df(con, query)
 
 def remove_table(con, table_name, schema_name=None, database_name=None):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         if schema_name:
             query = f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"'
         else:
             query = f'DROP TABLE IF EXISTS "{table_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         if database_name and schema_name:
             query = f'DROP TABLE IF EXISTS "{database_name}"."{schema_name}"."{table_name}"'
         elif schema_name:
@@ -815,7 +838,7 @@ def remove_table(con, table_name, schema_name=None, database_name=None):
         else:
             query = f'DROP TABLE IF EXISTS "{table_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         if database_name and schema_name:
             query = f"USE [{database_name}]; IF OBJECT_ID('{schema_name}.{table_name}', 'U') IS NOT NULL DROP TABLE [{schema_name}].[{table_name}]"
         elif schema_name:
@@ -825,13 +848,13 @@ def remove_table(con, table_name, schema_name=None, database_name=None):
         run_sql_return_df(con, query, transpile=False)
 
 def remove_view(con, view_name, schema_name=None, database_name=None):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         if schema_name:
             query = f'DROP VIEW IF EXISTS "{schema_name}"."{view_name}"'
         else:
             query = f'DROP VIEW IF EXISTS "{view_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         if database_name and schema_name:
             query = f'DROP VIEW IF EXISTS "{database_name}"."{schema_name}"."{view_name}"'
         elif schema_name:
@@ -839,7 +862,7 @@ def remove_view(con, view_name, schema_name=None, database_name=None):
         else:
             query = f'DROP VIEW IF EXISTS "{view_name}"'
         run_sql_return_df(con, query)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         if database_name and schema_name:
             query = f"USE [{database_name}]; IF OBJECT_ID('{schema_name}.{view_name}', 'V') IS NOT NULL DROP VIEW [{schema_name}].[{view_name}]"
         elif schema_name:
@@ -850,11 +873,11 @@ def remove_view(con, view_name, schema_name=None, database_name=None):
 
 
 def create_table(con, table_name, columns, schema_name=None, database_name=None):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         columns_str = ", ".join([f"{col['name']} {col['type']}" for col in columns])
         query = f'CREATE TABLE IF NOT EXISTS {schema_name+"." if schema_name else ""}{table_name} ({columns_str})'
         run_sql_return_df(con, query)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         columns_str = ", ".join([f'"{col["name"]}" {col["type"]}' for col in columns])
         full_name = ''
         if database_name:
@@ -864,7 +887,7 @@ def create_table(con, table_name, columns, schema_name=None, database_name=None)
         full_name += f'"{table_name}"'
         query = f'CREATE TABLE IF NOT EXISTS {full_name} ({columns_str})'
         run_sql_return_df(con, query)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         columns_str = ", ".join([f"[{col['name']}] {col['type']}" for col in columns])
         full_name = f"{database_name+'.' if database_name else ''}{schema_name+'.' if schema_name else ''}{table_name}"
         query = f"IF OBJECT_ID('{full_name}', 'U') IS NULL CREATE TABLE {full_name} ({columns_str})"
@@ -872,10 +895,10 @@ def create_table(con, table_name, columns, schema_name=None, database_name=None)
 
 
 def create_view(con, view_name, select_statement, schema_name=None, database_name=None):
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         query = f'CREATE OR REPLACE VIEW {schema_name+"." if schema_name else ""}{view_name} AS {select_statement}'
         run_sql_return_df(con, query)
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         full_name = ''
         if database_name:
             full_name += f'"{database_name}".'
@@ -884,7 +907,7 @@ def create_view(con, view_name, select_statement, schema_name=None, database_nam
         full_name += f'"{view_name}"'
         query = f'CREATE OR REPLACE VIEW {full_name} AS {select_statement}'
         run_sql_return_df(con, query)
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
         full_name = f"{schema_name+'.' if schema_name else ''}{view_name}"
         
         use_stmt = f"USE {database_name};" if database_name else ""
@@ -981,19 +1004,22 @@ def insert_df_to_table(con, table_name, df):
 
 def create_table_from_df(df: pd.DataFrame, con, table_name: str, database: str = None, schema: str = None):
 
-    if isinstance(con, duckdb.DuckDBPyConnection):
+    if is_duckdb_connection(con):
         if schema and database:
             full_table_name = f'{enclose_table_name(database)}.{enclose_table_name(schema)}.{enclose_table_name(table_name)}'
         else:
             full_table_name = enclose_table_name(table_name)
         con.execute(f"CREATE OR REPLACE TABLE {full_table_name} AS SELECT * FROM df")
     
-    elif isinstance(con, snowflake.connector.connection.SnowflakeConnection):
+    elif is_snowflake_connection(con):
         write_pandas(con, df, table_name, auto_create_table=True, overwrite=True, database=database, schema=schema)
     
-    elif isinstance(con, pyodbc.Connection):
+    elif is_pyodbc_connection(con):
 
         remove_table(con, table_name, schema_name=schema, database_name=database)
+
+        
+        
 
         full_table_name = ""
         if database:

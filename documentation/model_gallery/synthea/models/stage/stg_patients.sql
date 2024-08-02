@@ -1,12 +1,13 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
+-- Generated at 2024-08-01 16:30:58.336954+00:00
 WITH 
 "patients_renamed" AS (
     -- Rename: Renaming columns
     -- Id -> patient_id
-    -- BIRTHDATE -> date_of_birth
-    -- DEATHDATE -> date_of_death
-    -- SSN -> social_security_number
-    -- DRIVERS -> drivers_license_number
+    -- BIRTHDATE -> birth_date
+    -- DEATHDATE -> death_date
+    -- SSN -> ssn
+    -- DRIVERS -> drivers_license
     -- PASSPORT -> passport_number
     -- PREFIX -> name_prefix
     -- FIRST_ -> first_name
@@ -14,24 +15,27 @@ WITH
     -- SUFFIX -> name_suffix
     -- MAIDEN -> maiden_name
     -- MARITAL -> marital_status
-    -- BIRTHPLACE -> place_of_birth
+    -- RACE -> race
+    -- ETHNICITY -> ethnicity
+    -- GENDER -> gender
+    -- BIRTHPLACE -> birthplace
     -- ADDRESS -> street_address
-    -- CITY -> current_city
-    -- STATE -> current_state
-    -- COUNTY -> current_county
+    -- CITY -> city
+    -- STATE -> state
+    -- COUNTY -> county
     -- FIPS -> fips_code
     -- ZIP -> zip_code
     -- LAT -> latitude
     -- LON -> longitude
-    -- HEALTHCARE_EXPENSES -> healthcare_expenses_amount
-    -- HEALTHCARE_COVERAGE -> healthcare_coverage_amount
+    -- HEALTHCARE_EXPENSES -> healthcare_expenses
+    -- HEALTHCARE_COVERAGE -> healthcare_coverage
     -- INCOME -> annual_income
     SELECT 
         "Id" AS "patient_id",
-        "BIRTHDATE" AS "date_of_birth",
-        "DEATHDATE" AS "date_of_death",
-        "SSN" AS "social_security_number",
-        "DRIVERS" AS "drivers_license_number",
+        "BIRTHDATE" AS "birth_date",
+        "DEATHDATE" AS "death_date",
+        "SSN" AS "ssn",
+        "DRIVERS" AS "drivers_license",
         "PASSPORT" AS "passport_number",
         "PREFIX" AS "name_prefix",
         "FIRST_" AS "first_name",
@@ -39,48 +43,35 @@ WITH
         "SUFFIX" AS "name_suffix",
         "MAIDEN" AS "maiden_name",
         "MARITAL" AS "marital_status",
-        "RACE",
-        "ETHNICITY",
-        "GENDER",
-        "BIRTHPLACE" AS "place_of_birth",
+        "RACE" AS "race",
+        "ETHNICITY" AS "ethnicity",
+        "GENDER" AS "gender",
+        "BIRTHPLACE" AS "birthplace",
         "ADDRESS" AS "street_address",
-        "CITY" AS "current_city",
-        "STATE" AS "current_state",
-        "COUNTY" AS "current_county",
+        "CITY" AS "city",
+        "STATE" AS "state",
+        "COUNTY" AS "county",
         "FIPS" AS "fips_code",
         "ZIP" AS "zip_code",
         "LAT" AS "latitude",
         "LON" AS "longitude",
-        "HEALTHCARE_EXPENSES" AS "healthcare_expenses_amount",
-        "HEALTHCARE_COVERAGE" AS "healthcare_coverage_amount",
+        "HEALTHCARE_EXPENSES" AS "healthcare_expenses",
+        "HEALTHCARE_COVERAGE" AS "healthcare_coverage",
         "INCOME" AS "annual_income"
-    FROM "patients"
+    FROM "memory"."main"."patients"
 ),
 
 "patients_renamed_cleaned" AS (
     -- Clean unusual string values: 
-    -- social_security_number: Fail to run
-    -- first_name: The problem is that all values in the first_name column are unusual because they combine names with numbers, which is not typical for first names. The correct values should be just the name portion without the numbers. 
-    -- last_name: The problem is that the last names contain numbers, which is unusual for real names. Additionally, there are two names with non-ASCII characters (Bermúdez789 and Roldán470), which may cause issues in some systems. The correct values should be the last names without the numbers and with proper capitalization. For the non-ASCII names, we'll keep the accented characters but remove the numbers. 
-    -- maiden_name: The problem is that all values in the maiden_name column are unusual because they combine surnames with three-digit numbers, which is not typical for maiden names. Maiden names are typically just surnames without any numbers. The correct values should be just the surname portion without the appended numbers. 
+    -- first_name: The problem is that all values in the first_name column are unusual because they combine standard first names with three-digit numbers (e.g., 'Hayden835', 'Adelia946'). This is likely not the intended format for first names. The correct values should be the standard first names without the appended numbers.
+    -- last_name: The problem is that some last names contain numeric suffixes, which is unusual for real names. Additionally, there are two names with non-ASCII characters: 'Bermúdez789' and 'Roldán470'. The correct values should be the names without the numeric suffixes and with ASCII-only characters.
+    -- maiden_name: The problem is that all values in the maiden_name column are unusual because they combine surnames with three-digit numbers, which is not typical for maiden names. The correct values should be just the surnames without the numbers.
     SELECT
         "patient_id",
-        "date_of_birth",
-        "date_of_death",
-        CASE
-            WHEN "social_security_number" = '999-79-3695' THEN ''
-            WHEN "social_security_number" = '999-85-2178' THEN ''
-            WHEN "social_security_number" = '999-88-1792' THEN ''
-            WHEN "social_security_number" = '999-89-9127' THEN ''
-            WHEN "social_security_number" = '999-91-9580' THEN ''
-            WHEN "social_security_number" = '999-93-7263' THEN ''
-            WHEN "social_security_number" = '999-95-3792' THEN ''
-            WHEN "social_security_number" = '999-96-6743' THEN ''
-            WHEN "social_security_number" = '999-99-2106' THEN ''
-            WHEN "social_security_number" = '999-99-2436' THEN ''
-            ELSE "social_security_number"
-        END AS "social_security_number",
-        "drivers_license_number",
+        "birth_date",
+        "death_date",
+        "ssn",
+        "drivers_license",
         "passport_number",
         "name_prefix",
         CASE
@@ -157,7 +148,7 @@ WITH
             WHEN "last_name" = 'Armstrong51' THEN 'Armstrong'
             WHEN "last_name" = 'Bailey598' THEN 'Bailey'
             WHEN "last_name" = 'Becker968' THEN 'Becker'
-            WHEN "last_name" = 'Bermúdez789' THEN 'Bermúdez'
+            WHEN "last_name" = 'Bermúdez789' THEN 'Bermudez'
             WHEN "last_name" = 'Brakus656' THEN 'Brakus'
             WHEN "last_name" = 'Collier206' THEN 'Collier'
             WHEN "last_name" = 'Collins926' THEN 'Collins'
@@ -192,7 +183,7 @@ WITH
             WHEN "last_name" = 'Quitzon246' THEN 'Quitzon'
             WHEN "last_name" = 'Rath779' THEN 'Rath'
             WHEN "last_name" = 'Rico947' THEN 'Rico'
-            WHEN "last_name" = 'Roldán470' THEN 'Roldán'
+            WHEN "last_name" = 'Roldán470' THEN 'Roldan'
             WHEN "last_name" = 'Rutherford999' THEN 'Rutherford'
             WHEN "last_name" = 'Stehr398' THEN 'Stehr'
             WHEN "last_name" = 'Trantow673' THEN 'Trantow'
@@ -217,97 +208,65 @@ WITH
             ELSE "maiden_name"
         END AS "maiden_name",
         "marital_status",
-        "RACE",
-        "ETHNICITY",
-        "GENDER",
-        "place_of_birth",
+        "race",
+        "ethnicity",
+        "gender",
+        "birthplace",
         "street_address",
-        "current_city",
-        "current_state",
-        "current_county",
+        "city",
+        "state",
+        "county",
         "fips_code",
         "zip_code",
         "latitude",
         "longitude",
-        "healthcare_expenses_amount",
-        "healthcare_coverage_amount",
+        "healthcare_expenses",
+        "healthcare_coverage",
         "annual_income"
     FROM "patients_renamed"
 ),
 
-"patients_renamed_cleaned_null" AS (
-    -- NULL Imputation: Impute Null to Disguised Missing Values
-    -- social_security_number: ['']
-    SELECT 
-        CASE
-            WHEN "social_security_number" = '' THEN NULL
-            ELSE "social_security_number"
-        END AS "social_security_number",
-        "current_state",
-        "name_suffix",
-        "patient_id",
-        "latitude",
-        "longitude",
-        "healthcare_coverage_amount",
-        "place_of_birth",
-        "date_of_death",
-        "fips_code",
-        "marital_status",
-        "name_prefix",
-        "current_county",
-        "last_name",
-        "annual_income",
-        "RACE",
-        "ETHNICITY",
-        "first_name",
-        "passport_number",
-        "current_city",
-        "zip_code",
-        "healthcare_expenses_amount",
-        "street_address",
-        "date_of_birth",
-        "maiden_name",
-        "drivers_license_number",
-        "GENDER"
-    FROM "patients_renamed_cleaned"
-),
-
-"patients_renamed_cleaned_null_casted" AS (
+"patients_renamed_cleaned_casted" AS (
     -- Column Type Casting: 
-    -- date_of_birth: from VARCHAR to DATE
-    -- date_of_death: from VARCHAR to DATE
+    -- birth_date: from VARCHAR to DATE
+    -- death_date: from VARCHAR to DATE
     -- patient_id: from VARCHAR to UUID
     -- zip_code: from INT to VARCHAR
     SELECT
-        "social_security_number",
-        "current_state",
+        "ssn",
+        "drivers_license",
+        "passport_number",
+        "name_prefix",
+        "first_name",
+        "last_name",
         "name_suffix",
+        "maiden_name",
+        "marital_status",
+        "race",
+        "ethnicity",
+        "gender",
+        "birthplace",
+        "street_address",
+        "city",
+        "state",
+        "county",
+        "fips_code",
         "latitude",
         "longitude",
-        "healthcare_coverage_amount",
-        "place_of_birth",
-        "fips_code",
-        "marital_status",
-        "name_prefix",
-        "current_county",
-        "last_name",
+        "healthcare_expenses",
+        "healthcare_coverage",
         "annual_income",
-        "RACE",
-        "ETHNICITY",
-        "first_name",
-        "passport_number",
-        "current_city",
-        "healthcare_expenses_amount",
-        "street_address",
-        "maiden_name",
-        "drivers_license_number",
-        "GENDER",
-        CAST("date_of_birth" AS DATE) AS "date_of_birth",
-        CAST("date_of_death" AS DATE) AS "date_of_death",
-        CAST("patient_id" AS UUID) AS "patient_id",
-        CAST("zip_code" AS VARCHAR) AS "zip_code"
-    FROM "patients_renamed_cleaned_null"
+        CAST("birth_date" AS DATE) 
+        AS "birth_date",
+        CAST("death_date" AS DATE) 
+        AS "death_date",
+        CAST("patient_id" AS UUID) 
+        AS "patient_id",
+        CAST("zip_code" AS VARCHAR) 
+        AS "zip_code"
+    FROM "patients_renamed_cleaned"
 )
 
 -- COCOON BLOCK END
-SELECT * FROM "patients_renamed_cleaned_null_casted"
+SELECT *
+FROM "patients_renamed_cleaned_casted"

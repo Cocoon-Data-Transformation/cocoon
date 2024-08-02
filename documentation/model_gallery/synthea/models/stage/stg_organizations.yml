@@ -2,141 +2,168 @@ version: 2
 models:
 - name: stg_organizations
   description: The table is about healthcare organizations. It includes details such
-    as unique ID, name, address, location coordinates, phone number, revenue, and
-    utilization. The organizations are various types of healthcare providers like
-    clinics, hospitals, and urgent care centers. They are located in Massachusetts.
-    The table provides contact information and some operational metrics for each organization.
+    as name, address, location coordinates, phone number, revenue, and utilization.
+    Each organization has a unique ID. The organizations are located in Massachusetts
+    (MA). The table provides information on various types of healthcare facilities,
+    including clinics, hospitals, and urgent care centers.
   columns:
-  - name: ORGANIZATION_NAME
-    description: Full name of the healthcare organization
+  - name: NAME
+    description: Name of the healthcare organization
     tests:
     - not_null
     cocoon_meta:
-      patterns:
-      - regex: .*\s(INC|LLC)\.?$
-        summary: Organizations ending with "INC" or "LLC"
-      - regex: .*\b(HEALTH|HEALTHCARE)\b.*
-        summary: Organizations containing "HEALTH" or "HEALTHCARE"
-      - regex: .*\b(HOSPITAL|MEDICAL CENTER)\b.*
-        summary: Organizations containing "HOSPITAL" or "MEDICAL CENTER"
-      - regex: .*\b(CARE|NURSING)\b.*
-        summary: Organizations containing "CARE" or "NURSING"
-      - regex: ^[A-Z\s]+$
-        summary: Organizations with all uppercase letters and spaces
+      unusal_values: Inconsistent use of 'INC' vs 'INC.', and varying formats for
+        company names (e.g., LLC, OPERATING COMPANY).
+      data_type:
+        current_data_type: VARCHAR
   - name: ADDRESS
-    description: Physical street address of the healthcare organization
+    description: Street address of the organization
     tests:
     - not_null
     cocoon_meta:
+      unique_reason: This column represents the street address of the organization.
+        For this table, each row is for a unique healthcare facility. ADDRESS is likely
+        to be unique across rows, as each facility typically has a distinct physical
+        address.
       patterns:
-      - regex: \d+\s+[A-Z\s]+(?:ST|AVE|RD|DRIVE|STREET|AVENUE|ROAD|HIGHWAY|BLVD|BOULEVARD)(?:\s+[A-Z]+)?$
-        summary: Street number followed by street name, often ending with ST, AVE,
-          RD, etc.
-      - regex: .*\s+(?:SUITE|STE)\s+\d+(?:\s+[A-Z]+)?$
-        summary: Addresses with suite or unit numbers
+      - regex: \d+\s+[A-Z][A-Za-z\s]+(?:ST|AVE|RD|DRIVE|STREET|AVENUE|ROAD)
+        summary: Street number followed by street name and optional suffix (ST, AVE,
+          RD, etc.)
+      - regex: .*\s+(?:SUITE|STE)\s+\d+
+        summary: Address with suite or unit number
       - regex: \d+\s+.*
-        summary: General pattern for most addresses (very loose)
+        summary: General pattern for most addresses (looser)
+      data_type:
+        current_data_type: VARCHAR
   - name: CITY
     description: City where the organization is located
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
   - name: STATE
-    description: State where the organization is located
+    description: State abbreviation (MA for Massachusetts)
     tests:
     - not_null
     - accepted_values:
         values:
-        - AL
-        - AK
-        - AZ
-        - AR
-        - CA
-        - CO
-        - CT
-        - DE
-        - FL
-        - GA
-        - HI
-        - ID
-        - IL
-        - IN
-        - IA
-        - KS
-        - KY
-        - LA
-        - ME
-        - MD
         - MA
-        - MI
-        - MN
-        - MS
-        - MO
-        - MT
-        - NE
-        - NV
-        - NH
-        - NJ
-        - NM
-        - NY
-        - NC
-        - ND
-        - OH
-        - OK
-        - OR
-        - PA
-        - RI
-        - SC
-        - SD
-        - TN
-        - TX
-        - UT
-        - VT
-        - VA
-        - WA
-        - WV
-        - WI
-        - WY
-  - name: LATITUDE
-    description: Latitude coordinate of the organization's location
+    cocoon_meta:
+      future_accepted_values:
+      - AL
+      - AK
+      - AZ
+      - AR
+      - CA
+      - CO
+      - CT
+      - DE
+      - FL
+      - GA
+      - HI
+      - ID
+      - IL
+      - IN
+      - IA
+      - KS
+      - KY
+      - LA
+      - ME
+      - MD
+      - MI
+      - MN
+      - MS
+      - MO
+      - MT
+      - NE
+      - NV
+      - NH
+      - NJ
+      - NM
+      - NY
+      - NC
+      - ND
+      - OH
+      - OK
+      - OR
+      - PA
+      - RI
+      - SC
+      - SD
+      - TN
+      - TX
+      - UT
+      - VT
+      - VA
+      - WA
+      - WV
+      - WI
+      - WY
+      data_type:
+        current_data_type: VARCHAR
+  - name: latitude
+    description: Latitude coordinate of the organization
     tests:
     - not_null
-  - name: LONGITUDE
-    description: Longitude coordinate of the organization's location
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: longitude
+    description: Longitude coordinate of the organization
     tests:
     - not_null
-  - name: PHONE_NUMBER
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: PHONE
     description: Contact phone number for the organization
     tests:
     - not_null
     cocoon_meta:
+      unusal_values: '''413-731-6000 Or 413-731-6000'' is unusual because it contains
+        ''Or'' and repeats the same number.'
       patterns:
       - regex: \d{10}
         summary: 10-digit phone numbers without separators
-      - regex: \(\d{3}\) \d{3}-\d{4}
-        summary: Phone numbers with area code in parentheses
+      - regex: \(\d{3}\)\s\d{3}-\d{4}
+        summary: Phone numbers in (xxx) xxx-xxxx format
       - regex: \d{3}-\d{3}-\d{4}
-        summary: Phone numbers with hyphens
-      - regex: \d{3}-\d{3}-\d{4} Or \d{3}-\d{3}-\d{4}
-        summary: Phone numbers with "Or" separator for multiple numbers
-  - name: REVENUE
-    description: Revenue information for the organization
+        summary: Phone numbers with hyphens (xxx-xxx-xxxx)
+      - regex: \d{3}-\d{3}-\d{4}\sOr\s\d{3}-\d{3}-\d{4}
+        summary: Phone numbers with 'Or' between two numbers
+      data_type:
+        current_data_type: VARCHAR
+  - name: revenue
+    description: Revenue information (currently all 0.0)
     tests:
     - not_null
-  - name: UTILIZATION_RATE
-    description: Measure of the organization's resource usage
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
+  - name: utilization_score
+    description: Utilization metric for the organization
     tests:
     - not_null
-  - name: ORGANIZATION_ID
-    description: Unique identifier for each organization
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
+  - name: ZIP
+    description: Postal code of the organization's location
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
+  - name: organization_id
+    description: Unique identifier for each healthcare organization
     tests:
     - not_null
     - unique
     cocoon_meta:
-      uniqueness: This column represents a unique identifier for each organization.
-        For this table, each row is for a unique healthcare provider. The ORGANIZATION_ID
-        is designed to be a unique identifier and is likely to be different for each
-        row.
-  - name: ZIP_CODE
-    description: Postal code of the organization's location
-    tests:
-    - not_null
+      unique_reason: This column represents a unique identifier for each healthcare
+        organization. For this table, each row is for a unique healthcare facility.
+        organization_id is designed to be unique across rows, serving as a primary
+        key for the table.
+      data_type:
+        current_data_type: UUID

@@ -1,97 +1,77 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
+-- Generated at 2024-08-01 15:52:46.834653+00:00
 WITH 
 "allergies_renamed" AS (
     -- Rename: Renaming columns
-    -- START -> ALLERGY_START_DATE
-    -- STOP -> ALLERGY_END_DATE
-    -- PATIENT -> PATIENT_ID
-    -- ENCOUNTER -> ENCOUNTER_ID
-    -- CODE -> ALLERGEN_CODE
-    -- SYSTEM -> CODING_SYSTEM
-    -- DESCRIPTION -> ALLERGEN_DESCRIPTION
-    -- TYPE -> ALLERGY_TYPE
-    -- REACTION1 -> PRIMARY_REACTION_CODE
-    -- DESCRIPTION1 -> ADDITIONAL_DESCRIPTION_1
-    -- SEVERITY1 -> PRIMARY_REACTION_SEVERITY
-    -- REACTION2 -> SECONDARY_REACTION_CODE
-    -- DESCRIPTION2 -> ADDITIONAL_DESCRIPTION_2
-    -- SEVERITY2 -> SECONDARY_REACTION_SEVERITY
+    -- START -> allergy_start_date
+    -- STOP -> allergy_end_date
+    -- PATIENT -> patient_id
+    -- ENCOUNTER -> encounter_id
+    -- CODE -> allergen_code
+    -- SYSTEM -> coding_system
+    -- DESCRIPTION -> allergen_description
+    -- TYPE -> sensitivity_type
+    -- CATEGORY -> allergen_category
+    -- REACTION1 -> primary_reaction_code
+    -- DESCRIPTION1 -> primary_reaction_description
+    -- SEVERITY1 -> primary_reaction_severity
+    -- REACTION2 -> secondary_reaction_code
+    -- DESCRIPTION2 -> secondary_reaction_description
+    -- SEVERITY2 -> secondary_reaction_severity
     SELECT 
-        "START" AS "ALLERGY_START_DATE",
-        "STOP" AS "ALLERGY_END_DATE",
-        "PATIENT" AS "PATIENT_ID",
-        "ENCOUNTER" AS "ENCOUNTER_ID",
-        "CODE" AS "ALLERGEN_CODE",
-        "SYSTEM" AS "CODING_SYSTEM",
-        "DESCRIPTION" AS "ALLERGEN_DESCRIPTION",
-        "TYPE" AS "ALLERGY_TYPE",
-        "CATEGORY",
-        "REACTION1" AS "PRIMARY_REACTION_CODE",
-        "DESCRIPTION1" AS "ADDITIONAL_DESCRIPTION_1",
-        "SEVERITY1" AS "PRIMARY_REACTION_SEVERITY",
-        "REACTION2" AS "SECONDARY_REACTION_CODE",
-        "DESCRIPTION2" AS "ADDITIONAL_DESCRIPTION_2",
-        "SEVERITY2" AS "SECONDARY_REACTION_SEVERITY"
-    FROM "allergies"
+        "START" AS "allergy_start_date",
+        "STOP" AS "allergy_end_date",
+        "PATIENT" AS "patient_id",
+        "ENCOUNTER" AS "encounter_id",
+        "CODE" AS "allergen_code",
+        "SYSTEM" AS "coding_system",
+        "DESCRIPTION" AS "allergen_description",
+        "TYPE" AS "sensitivity_type",
+        "CATEGORY" AS "allergen_category",
+        "REACTION1" AS "primary_reaction_code",
+        "DESCRIPTION1" AS "primary_reaction_description",
+        "SEVERITY1" AS "primary_reaction_severity",
+        "REACTION2" AS "secondary_reaction_code",
+        "DESCRIPTION2" AS "secondary_reaction_description",
+        "SEVERITY2" AS "secondary_reaction_severity"
+    FROM "memory"."main"."allergies"
 ),
 
-"allergies_renamed_cleaned" AS (
-    -- Clean unusual string values: 
-    -- ADDITIONAL_DESCRIPTION_1: The problem is inconsistent use of classifications '(disorder)' and '(finding)', as well as some terms lacking any classification. The correct values should all follow the same pattern, with the most frequent being '(disorder)'. Terms without classification should be updated to include '(disorder)', and '(finding)' should be changed to '(disorder)' for consistency. 
-    SELECT
-        "ALLERGY_START_DATE",
-        "ALLERGY_END_DATE",
-        "PATIENT_ID",
-        "ENCOUNTER_ID",
-        "ALLERGEN_CODE",
-        "CODING_SYSTEM",
-        "ALLERGEN_DESCRIPTION",
-        "ALLERGY_TYPE",
-        "CATEGORY",
-        "PRIMARY_REACTION_CODE",
-        CASE
-            WHEN "ADDITIONAL_DESCRIPTION_1" = 'Allergic skin rash' THEN 'Allergic skin rash (disorder)'
-            WHEN "ADDITIONAL_DESCRIPTION_1" = 'Dyspnea (finding)' THEN 'Dyspnea (disorder)'
-            WHEN "ADDITIONAL_DESCRIPTION_1" = 'Wheal (finding)' THEN 'Wheal (disorder)'
-            WHEN "ADDITIONAL_DESCRIPTION_1" = 'Cough (finding)' THEN 'Cough (disorder)'
-            WHEN "ADDITIONAL_DESCRIPTION_1" = 'Nose running' THEN 'Nose running (disorder)'
-            WHEN "ADDITIONAL_DESCRIPTION_1" = 'Sneezing' THEN 'Sneezing (disorder)'
-            ELSE "ADDITIONAL_DESCRIPTION_1"
-        END AS "ADDITIONAL_DESCRIPTION_1",
-        "PRIMARY_REACTION_SEVERITY",
-        "SECONDARY_REACTION_CODE",
-        "ADDITIONAL_DESCRIPTION_2",
-        "SECONDARY_REACTION_SEVERITY"
-    FROM "allergies_renamed"
-),
-
-"allergies_renamed_cleaned_casted" AS (
+"allergies_renamed_casted" AS (
     -- Column Type Casting: 
-    -- ALLERGEN_CODE: from INT to VARCHAR
-    -- ALLERGY_END_DATE: from DECIMAL to DATE
-    -- ALLERGY_START_DATE: from VARCHAR to DATE
-    -- ENCOUNTER_ID: from VARCHAR to UUID
-    -- PATIENT_ID: from VARCHAR to UUID
-    -- PRIMARY_REACTION_CODE: from DECIMAL to VARCHAR
-    -- SECONDARY_REACTION_CODE: from DECIMAL to VARCHAR
+    -- allergen_code: from INT to VARCHAR
+    -- allergy_end_date: from DECIMAL to DATE
+    -- allergy_start_date: from VARCHAR to DATE
+    -- encounter_id: from VARCHAR to UUID
+    -- patient_id: from VARCHAR to UUID
+    -- primary_reaction_code: from DECIMAL to VARCHAR
+    -- secondary_reaction_code: from DECIMAL to VARCHAR
     SELECT
-        "CODING_SYSTEM",
-        "ALLERGEN_DESCRIPTION",
-        "ALLERGY_TYPE",
-        "CATEGORY",
-        "ADDITIONAL_DESCRIPTION_1",
-        "PRIMARY_REACTION_SEVERITY",
-        "ADDITIONAL_DESCRIPTION_2",
-        "SECONDARY_REACTION_SEVERITY",
-        CAST("ALLERGEN_CODE" AS VARCHAR) AS "ALLERGEN_CODE",
-        CAST("ALLERGY_END_DATE" AS DATE) AS "ALLERGY_END_DATE",
-        CAST("ALLERGY_START_DATE" AS DATE) AS "ALLERGY_START_DATE",
-        CAST("ENCOUNTER_ID" AS UUID) AS "ENCOUNTER_ID",
-        CAST("PATIENT_ID" AS UUID) AS "PATIENT_ID",
-        CAST("PRIMARY_REACTION_CODE" AS VARCHAR) AS "PRIMARY_REACTION_CODE",
-        CAST("SECONDARY_REACTION_CODE" AS VARCHAR) AS "SECONDARY_REACTION_CODE"
-    FROM "allergies_renamed_cleaned"
+        "coding_system",
+        "allergen_description",
+        "sensitivity_type",
+        "allergen_category",
+        "primary_reaction_description",
+        "primary_reaction_severity",
+        "secondary_reaction_description",
+        "secondary_reaction_severity",
+        CAST("allergen_code" AS VARCHAR) 
+        AS "allergen_code",
+        CAST("allergy_end_date" AS DATE) 
+        AS "allergy_end_date",
+        CAST("allergy_start_date" AS DATE) 
+        AS "allergy_start_date",
+        CAST("encounter_id" AS UUID) 
+        AS "encounter_id",
+        CAST("patient_id" AS UUID) 
+        AS "patient_id",
+        CAST("primary_reaction_code" AS VARCHAR) 
+        AS "primary_reaction_code",
+        CAST("secondary_reaction_code" AS VARCHAR) 
+        AS "secondary_reaction_code"
+    FROM "allergies_renamed"
 )
 
 -- COCOON BLOCK END
-SELECT * FROM "allergies_renamed_cleaned_casted"
+SELECT *
+FROM "allergies_renamed_casted"
