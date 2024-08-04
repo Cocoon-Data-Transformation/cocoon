@@ -1267,7 +1267,7 @@ def generate_workflow_image_networkx(nodes, edges, edge_labels=None, highlight_n
 
 
 
-def create_schema_graph(nodes, edges):
+def create_schema_graph(nodes, edges, highlighted_node=None):
     dot = Digraph(format='svg')
     dot.attr(rankdir='LR')
 
@@ -1290,17 +1290,28 @@ def create_schema_graph(nodes, edges):
         'fontsize': '8',
         'fontcolor': '#2E4057',
     }
+    
+    highlighted_node_style = {
+        'fillcolor': '#e1f5fe', 
+        'color': '#4fc3f7'
+    }
+
 
     dot.attr('node', **node_style)
     dot.attr('edge', **edge_style)
 
     table_style = 'BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="4"'
     cell_style = 'ALIGN="LEFT" VALIGN="MIDDLE"'
-    header_style = 'ALIGN="CENTER" VALIGN="MIDDLE" BGCOLOR="#E0E0E0"'
-
+    header_style = 'ALIGN="CENTER" VALIGN="MIDDLE"'
+    
     for table_name, columns in nodes.items():
-        node_html = f'''<<TABLE {table_style}>
-                        <TR><TD PORT="header" {header_style}><FONT COLOR="#000000"><B>{table_name}</B></FONT></TD></TR>'''
+        if table_name == highlighted_node:
+            node_html = f'''<<TABLE {table_style} BGCOLOR="{highlighted_node_style['fillcolor']}" COLOR="{highlighted_node_style['color']}">
+                            <TR><TD PORT="header" {header_style} BGCOLOR="{highlighted_node_style['color']}"><FONT COLOR="#FFFFFF"><B>{table_name}</B></FONT></TD></TR>'''
+        else:
+            node_html = f'''<<TABLE {table_style}>
+                            <TR><TD PORT="header" {header_style} BGCOLOR="#E0E0E0"><FONT COLOR="#000000"><B>{table_name}</B></FONT></TD></TR>'''
+        
         for i, column in enumerate(columns):
             node_html += f'<TR><TD PORT="f{i}" {cell_style}>{column}</TD></TR>'
         node_html += '</TABLE>>'
@@ -1317,8 +1328,77 @@ def create_schema_graph(nodes, edges):
     image = dot.pipe()
     return image
 
-def generate_schema_graph_graphviz(nodes, edges, height=None, format="svg"):
-    image_data = create_schema_graph(nodes, edges)
+def generate_schema_graph_graphviz(nodes, edges, height=None, format="svg", highlighted_node=None):
+    image_data = create_schema_graph(nodes, edges, highlighted_node=highlighted_node)
     return wrap_image_in_html(image_data, height=height, format=format)
 
 
+
+def generate_dropdown_html(selection_group_id, options_dict, full=True, default_selection="Select an option"):
+    dropdown_items = []
+    content_divs = []
+
+    for option_name, option_content in options_dict.items():
+        if option_name.startswith("cocoon_html_divider"):
+            dropdown_items.append('<li><hr class="dropdown-divider"></li>')
+        else:
+            option_id = f"{selection_group_id}_{option_name.replace(' ', '_')}"
+            dropdown_items.append(f'<li><a class="dropdown-item" data-bs-toggle="collapse" data-bs-target="#{option_id}Content" aria-expanded="false" aria-controls="{option_id}Content">{option_name}</a></li>')
+            content_divs.append(f'''
+            <div class="collapse" id="{option_id}Content" data-bs-parent="#{selection_group_id}">
+                {option_content}
+            </div>
+            ''')
+
+    dropdown_html = f'''
+    <div class="dropdown mb-3">
+        <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            {default_selection}
+        </button>
+        <ul class="dropdown-menu">
+            {''.join(dropdown_items)}
+        </ul>
+    </div>
+
+    <div id="{selection_group_id}">
+        {''.join(content_divs)}
+    </div>
+    '''
+
+    if full:
+        return f'''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bootstrap Dropdown Example (No Custom JS)</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    {dropdown_html}
+</body>
+</html>
+'''
+    else:
+        return dropdown_html
+
+
+
+
+def wrap_in_card(header=None, body=None):
+    header_div = f"""
+    <div class="card-header bg-secondary text-white">
+        {header}
+    </div>
+    """ if header else ""
+    
+    return f"""
+<div class="card mb-4 shadow-sm">
+    {header_div}
+    <div class="card-body">
+        {body}
+    </div>
+</div>
+"""

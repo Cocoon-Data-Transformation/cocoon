@@ -9314,8 +9314,10 @@ def write_raster_to_disk(self, meta, output_path):
 
 
 
-def resample_raster_to_transform(raster, target_transform, resampling_method=Resampling.bilinear):
-
+def resample_raster_to_transform(raster, target_transform, resampling_method=None):
+    if resampling_method is None:
+        resampling_method = Resampling.bilinear
+        
     src_meta = raster.meta.copy()
     
     scale_x = target_transform.a
@@ -9347,8 +9349,10 @@ def resample_raster_to_transform(raster, target_transform, resampling_method=Res
     return resampled_raster_data, resampled_meta
 
 
-def resample_array(np_array, bounds, src_meta, target_transform=None, resolution=None, resampling_method=Resampling.bilinear):
-
+def resample_array(np_array, bounds, src_meta, target_transform=None, resolution=None, resampling_method=None):
+    if resampling_method is None:
+        resampling_method = Resampling.bilinear
+    
     if target_transform is None:
         if resolution is None:
             raise ValueError("Either target_transform or resolution must be provided.")
@@ -11610,6 +11614,7 @@ class Node:
 
         self.output = output
         self.class_para = class_para
+        
     
     @contextmanager
     def output_context(self):
@@ -11642,6 +11647,11 @@ class Node:
         
         if not self.item:
             self.item = parent.item
+        
+        self.parent_node = parent
+    
+    def get_sibling_node(self, sibling_name):
+        return self.parent_node.nodes[sibling_name]
 
     def set_global_document(self, value):
         self.global_document.set_nested(self.path, value)
@@ -15258,15 +15268,14 @@ class SQLStep(TransformationStep):
         if con is None:
             con = self.con
             
-        views = list_views(con, schema_name=self.schema, database_name=self.database)
+        views = list_views(con, schema=self.schema, database=self.database)
         if self.name in views:
             remove_view(con, view_name=self.name, schema_name=self.schema, database_name=self.database)
             
-        tables = list_tables(con, schema_name=self.schema, database_name=self.database)
+        tables = list_tables(con, schema=self.schema, database=self.database)
         if self.name in tables:
             remove_table(con, table_name=self.name, schema_name=self.schema, database_name=self.database)
-        
-
+            
     def run_codes(self, mode="VIEW"):
         sql_code = self.get_codes(mode=mode)
         run_sql_return_df(self.con, sql_code)
@@ -15919,8 +15928,21 @@ class DataProject:
             
         return description
 
+    def get_key_columns(self, table):
+        keys_to_exclude = set()
+        
+        table_keys = self.key[table]
+                
+        if 'primary_key' in table_keys:
+            keys_to_exclude.add(table_keys['primary_key'])
+        
+        if 'foreign_keys' in table_keys:
+            for fk in table_keys['foreign_keys']:
+                keys_to_exclude.add(fk['column'])
+                
+        return keys_to_exclude
     
-    def describe_project_yml(self, tables=None, limit=10):
+    def describe_project_yml(self, tables=None, limit=10, exclude_keys=False):
         result = []
         for table, attributes in self.tables.items():
             if tables is not None and table not in tables:
@@ -15943,6 +15965,12 @@ class DataProject:
             
             if isinstance(attributes, dict):
                 attributes = list(attributes.keys())
+            
+            if exclude_keys:
+
+                keys_to_exclude = self.get_key_columns(table)
+                
+                attributes = [attr for attr in attributes if attr not in keys_to_exclude]
             
             attribute_list = attributes[:limit]
             if len(attributes) > limit:
@@ -20897,271 +20925,275 @@ class WriteStageYMLCode(Node):
             file_names.append(f"{new_table_name}.sql")
             contents.append(sql_query)
 
-        if "include_html" in self.class_para and self.class_para["include_html"]:
-            table_pipeline = self.para["table_pipeline"]
-            table_object = self.para["table_object"]
-            before_table_name = table_pipeline.get_source_step()
-            after_table_name = table_pipeline.get_final_step().name
-        
-            bottom_html = "<h1>Cocoon Cleaning Summary 🤗</h1><hr><br>"
-            bottom_idx = 1
-
-            table_summary = table_object.table_summary
-            if table_summary != "":
-                bottom_html += f"""<h2>📃 {bottom_idx}. Table Summary</h2><br>{table_summary}<br><br><br>"""
-                bottom_idx += 1
-
-            column_document = self.get_sibling_document('Describe Columns')
-            if column_document:
-                column_df = pd.read_json(column_document, orient="split")
-                sample_size = 100
-                
-                if len(column_df) > 0:
-                    renamed_columns = column_df[column_df['Column'] != column_df['New Column Name']]
-                    bottom_html += f"""<h2>📊 {bottom_idx}. Column Rename</h2><br>
-                    {"😎 <b>" + str(len(renamed_columns)) + "</b> columns have been renamed" if len(renamed_columns) > 0 else "🤓 No column is renamed"}<br>
-                    {column_df.to_html()}<br><br><br>"""
-                    bottom_idx += 1
-                    
-                    column_mapping = dict(zip(column_df['New Column Name'], column_df['Column']))
-                    final_columns = table_object.columns
-                    
-                    after_columns = [col for col in final_columns]
-                    after_df = table_pipeline.get_samples(con, columns=after_columns, sample_size=sample_size)
-                    before_selection = ", ".join([f'"{column_mapping[col]}"' for col in final_columns])
-                    before_query = f'SELECT {before_selection} FROM {before_table_name}'
-                    before_sample_query = sample_query(con, before_query, sample_size)
-                    before_df = run_sql_return_df(con, before_sample_query)
-                else:
-                    before_query = f'SELECT * FROM "{before_table_name}"'
-                    before_sample_query = sample_query(con, before_query, sample_size)
-                    before_df = run_sql_return_df(con, before_sample_query)
-                    after_df =table_pipeline.get_samples(con, sample_size=sample_size)
-
-                
-            duplication_document = self.get_sibling_document('Decide Duplicate')
-            if duplication_document:
-                duplication_count = duplication_document['duplicate_count']
-                if duplication_count > 0:
-                    duplication_removed = duplication_document['duplicate_removed']
-                    bottom_html += f"""<h2>👯‍♀️ {bottom_idx}. Duplicate</h2><br>
-                    {"🔍 <b>" + str(duplication_count) + "</b> duplicates have been detected" }<br>
-                    {"✔️ Duplicates have been removed" if duplication_removed else "❌ Duplicates have <b>not</b> been removed"}<br><br><br>"""
-                    bottom_idx += 1 
-
-                trim_document = self.get_sibling_document('Decide Trim')
-                trim_df = pd.read_json(trim_document, orient="split")
-                if len(trim_df) > 0:
-                    trimed_column_count = len(trim_df[trim_df['Trim?']])
-                    bottom_html += f"""<h2>✂️ {bottom_idx}. Leading and Trailing Whitespace</h2><br>
-                    {"🔍 <b>" + str(len(trim_df)) + "</b> columns have leading and trailing whitespace"}<br>
-                    {"✔️ <b>" + str(trimed_column_count) + "</b> columns have been trimmed" if trimed_column_count > 0 else "❌ No column is trimmed"}<br><br><br>"""
-                    bottom_idx += 1
-
-            clean_unusual_document = self.get_sibling_document('Clean Unusual For All')
-            if clean_unusual_document:
-                clean_unusual_document = clean_unusual_document['Clean Unusual']
-                bottom_html += f"""<h2>🚧 {bottom_idx}. Erroneous Values</h2><br>
-            {"🔍 <b>" + str(len(clean_unusual_document)) + "</b> columns have erroneous values"}<br>"""
-                bottom_idx += 1
-                bottom_html += "<ol>"
-                for column in clean_unusual_document:
-                    value = clean_unusual_document[column]
-                    unusual_reason = value['unusual_reason']
-                    bottom_html += f"<li><b>{column}</b>: {unusual_reason}<br>"
-                    could_clean = value['could_clean']
-                    bottom_html += f"{'✔️ The column has been cleaned:' if could_clean else '❌ The column has not been cleaned'}<br>"
-                    if could_clean:
-                        mapping = value['mapping']
-                        mapping_df = pd.DataFrame(list(mapping.items()), columns=["Original Value", "Cleaned Value"])
-                        bottom_html += mapping_df.to_html()
-                    bottom_html += "<br></li>"
-                bottom_html += "</ol><br>"
-
-            dmv_document = self.get_sibling_document('Decide Disguised Missing Values For All')
-            if dmv_document:
-                dmv_df = pd.read_json(dmv_document, orient="split")
-                if len(dmv_df) > 0:
-                    dmv_column_count = len(dmv_df[dmv_df["Impute to NULL?"]])
-                    bottom_html += f"""<h2>🕵️‍♂️ {bottom_idx}. Disguised Missing Values</h2><br>
-                    {"🔍 <b>" + str(len(dmv_df)) + "</b> columns have disguised missing values"}<br>
-                    {"✔️ <b>" + str(dmv_column_count) + "</b> columns have been cleaned" if dmv_column_count > 0 else "❌ No column is cleaned"}<br>
-                    {dmv_df.to_html()}<br><br><br>"""
-                    bottom_idx += 1
-
-            transform_document = self.get_sibling_document('Transform Type For All')
-            if transform_document:
-                transform_df = pd.read_json(transform_document, orient="split")
-                if len(transform_df) > 0:
-                    bottom_html += f"""<h2>🔧 {bottom_idx}. Data Type</h2><br>
-                    {"✔️ <b>" + str(len(transform_df)) + "</b> columns have been casted"}<br>
-                    {transform_df.to_html()}<br><br><br>"""
-                    bottom_idx += 1
+        try:
+            if "include_html" in self.class_para and self.class_para["include_html"]:
+                table_pipeline = self.para["table_pipeline"]
+                table_object = self.para["table_object"]
+                before_table_name = table_pipeline.get_source_step()
+                after_table_name = table_pipeline.get_final_step().name
             
-            fd_document = self.get_sibling_document('Decide If Functional Dependency For All')
-            if fd_document and 'Decide If Functional Dependency' in fd_document:
-                fd_document = fd_document['Decide If Functional Dependency']
-                bottom_html += f"""<h2>🔗 {bottom_idx}. Functional Dependencies</h2><br>
-                {"🔍 <b>" + str(len(fd_document)) + "</b> functional dependencies found"}<br>"""
-                bottom_idx += 1
-                bottom_html += "<ol>"
-                for column_a in fd_document:
-                    value = fd_document[column_a]
-                    if value['repair_dfs']:
-                        bottom_html += f"<li><b>{column_a}</b> determines:<br>"
-                        for column_b in value['repair_dfs']:
-                            bottom_html += f"<b>{column_b}</b>:<br>"
-                            repair_df = pd.read_json(value['repair_dfs'][column_b], orient="split")
-                            bottom_html += repair_df.to_html()
-                            bottom_html += "<br>"
-                        explanation = value['explanation']
-                        bottom_html += f"<b>Explanation:</b> {explanation}<br>"
-                        bottom_html += "</li>"
-                bottom_html += "</ol><br>"
-    
-            missing_document = self.get_sibling_document('Decide Missing Values')
-            if missing_document:
-                missing_df = pd.read_json(missing_document, orient="split")
-                if len(missing_df) > 0:
-                    acceptable_missing_count = len(missing_df[missing_df["Is NULL Acceptable?"]])
-                    bottom_html += f"""<h2>❓ {bottom_idx}. Missing Values</h2><br>
-                    {"🔍 <b>" + str(len(missing_df)) + "</b> columns have missing values"}<br>
-                    {"✔️ <b>" + str(acceptable_missing_count) + "</b> of them are acceptable" if acceptable_missing_count > 0 else "❌ No missing value is acceptable"}<br>
-                    {missing_df.to_html()}<br>"""
-                    
-                    handle_missing_document = self.get_sibling_document('Handle Missing Values')
-                    if handle_missing_document:
-                        handle_missing_df = pd.read_json(handle_missing_document, orient="split")
-                        
-                        if len(handle_missing_df) > 0:
-                            bottom_html += f"""🧩 These missing values are handled as follows:<br>
-                            {handle_missing_df.to_html()}<br>"""
-                            
-                    bottom_html += "<br><br>"
-                    bottom_idx += 1
-                
-            column_html = ""        
-            column_javascript = ""
-            schema = table_pipeline.get_schema(con)
-            
+                bottom_html = "<h1>Cocoon Cleaning Summary 🤗</h1><hr><br>"
+                bottom_idx = 1
 
-            for column in yml_dict["models"][0]["columns"]:
-                column_name = column["name"]
-                data_type = schema[column_name]
-                data_type = get_reverse_type(data_type, database_name)
-                
-                single_column_html = ""
-                
-                tests = column.get('tests', [])
-                for test in tests:
-                    if isinstance(test, dict):
-                        test_type = list(test.keys())[0]
-                        test_value = test[test_type]
-                        option_html = "<select>"
-                        for value in test_value["values"]:
-                            option_html += f"<option value='{value}'>{value}</option>"
-                        option_html += "</select>"
-                        single_column_html += f'''<span class="tag tag-purple">{test_type}{option_html}</span>'''
-                    elif test == 'not_null':
-                        single_column_html += f'''<span class="tag tag-red">{test}</span>'''
-                    elif test == 'unique':
-                        single_column_html += f'''<span class="tag tag-blue">{test}</span>'''
-                
-                if len(tests) > 0:
-                    single_column_html += "<br><br>"
+                table_summary = table_object.table_summary
+                if table_summary != "":
+                    bottom_html += f"""<h2>📃 {bottom_idx}. Table Summary</h2><br>{table_summary}<br><br><br>"""
+                    bottom_idx += 1
+
+                column_document = self.get_sibling_document('Describe Columns')
+                if column_document:
+                    column_df = pd.read_json(column_document, orient="split")
+                    sample_size = 100
+                    
+                    if len(column_df) > 0:
+                        renamed_columns = column_df[column_df['Column'] != column_df['New Column Name']]
+                        bottom_html += f"""<h2>📊 {bottom_idx}. Column Rename</h2><br>
+                        {"😎 <b>" + str(len(renamed_columns)) + "</b> columns have been renamed" if len(renamed_columns) > 0 else "🤓 No column is renamed"}<br>
+                        {column_df.to_html()}<br><br><br>"""
+                        bottom_idx += 1
                         
-                html_output, javascript_output = build_column_viz(column_name, is_numeric=is_type_numeric(data_type), con=con, table_name=table_pipeline)
-                single_column_html += html_output
-                single_column_html += "<b>📃 Summary:</b> " + column["description"] + "<br>"
-                            
-                cocoon_meta = column.get('cocoon_meta', {})
-                if 'missing_reason' in cocoon_meta:
-                    if cocoon_meta['missing_reason']:
-                        single_column_html += "<b>❓ Missing:</b> " + str(cocoon_meta['missing_reason']) + "<br>"
+                        column_mapping = dict(zip(column_df['New Column Name'], column_df['Column']))
+                        final_columns = table_object.columns
+                        
+                        after_columns = [col for col in final_columns]
+                        after_df = table_pipeline.get_samples(con, columns=after_columns, sample_size=sample_size)
+                        before_selection = ", ".join([f'"{column_mapping[col]}"' for col in final_columns])
+                        before_query = f'SELECT {before_selection} FROM {before_table_name}'
+                        before_sample_query = sample_query(con, before_query, sample_size)
+                        before_df = run_sql_return_df(con, before_sample_query)
                     else:
-                        single_column_html += "<b>❓ Missing:</b> Reason unknown <br>"
-                if 'unusal_values' in cocoon_meta:
-                    single_column_html += "<b>🚧 Erroneous:</b> " + str(cocoon_meta['unusal_values']) + "<br>"
-                if 'uniqueness' in cocoon_meta:
-                    single_column_html += "<b>🦄 Unique:</b> " + str(cocoon_meta['uniqueness']) + "<br>"
-                if 'patterns' in cocoon_meta:
-                    single_column_html += "<b>🎨 Patterns:</b><br>"
-                    single_column_html += "<ul>"
-                    for pattern in cocoon_meta['patterns']:
-                        summary = pattern['summary']
-                        regex = pattern['regex']
-                        single_column_html += f"<li><code>{regex}</code><br><i>{summary}</i></li>"
-                    single_column_html += "</ul>"
+                        before_query = f'SELECT * FROM "{before_table_name}"'
+                        before_sample_query = sample_query(con, before_query, sample_size)
+                        before_df = run_sql_return_df(con, before_sample_query)
+                        after_df =table_pipeline.get_samples(con, sample_size=sample_size)
+
                     
-                column_html += f"""
-<div class="card-item card-item-collapsed">
-    <span class="field-name">{column_name}</span>
-    <div class="card-controls">
-        <span class="toggle">▲</span>
+                duplication_document = self.get_sibling_document('Decide Duplicate')
+                if duplication_document:
+                    duplication_count = duplication_document['duplicate_count']
+                    if duplication_count > 0:
+                        duplication_removed = duplication_document['duplicate_removed']
+                        bottom_html += f"""<h2>👯‍♀️ {bottom_idx}. Duplicate</h2><br>
+                        {"🔍 <b>" + str(duplication_count) + "</b> duplicates have been detected" }<br>
+                        {"✔️ Duplicates have been removed" if duplication_removed else "❌ Duplicates have <b>not</b> been removed"}<br><br><br>"""
+                        bottom_idx += 1 
+
+                    trim_document = self.get_sibling_document('Decide Trim')
+                    trim_df = pd.read_json(trim_document, orient="split")
+                    if len(trim_df) > 0:
+                        trimed_column_count = len(trim_df[trim_df['Trim?']])
+                        bottom_html += f"""<h2>✂️ {bottom_idx}. Leading and Trailing Whitespace</h2><br>
+                        {"🔍 <b>" + str(len(trim_df)) + "</b> columns have leading and trailing whitespace"}<br>
+                        {"✔️ <b>" + str(trimed_column_count) + "</b> columns have been trimmed" if trimed_column_count > 0 else "❌ No column is trimmed"}<br><br><br>"""
+                        bottom_idx += 1
+
+                clean_unusual_document = self.get_sibling_document('Clean Unusual For All')
+                if clean_unusual_document:
+                    clean_unusual_document = clean_unusual_document['Clean Unusual']
+                    bottom_html += f"""<h2>🚧 {bottom_idx}. Erroneous Values</h2><br>
+                {"🔍 <b>" + str(len(clean_unusual_document)) + "</b> columns have erroneous values"}<br>"""
+                    bottom_idx += 1
+                    bottom_html += "<ol>"
+                    for column in clean_unusual_document:
+                        value = clean_unusual_document[column]
+                        unusual_reason = value['unusual_reason']
+                        bottom_html += f"<li><b>{column}</b>: {unusual_reason}<br>"
+                        could_clean = value['could_clean']
+                        bottom_html += f"{'✔️ The column has been cleaned:' if could_clean else '❌ The column has not been cleaned'}<br>"
+                        if could_clean:
+                            mapping = value['mapping']
+                            mapping_df = pd.DataFrame(list(mapping.items()), columns=["Original Value", "Cleaned Value"])
+                            bottom_html += mapping_df.to_html()
+                        bottom_html += "<br></li>"
+                    bottom_html += "</ol><br>"
+
+                dmv_document = self.get_sibling_document('Decide Disguised Missing Values For All')
+                if dmv_document:
+                    dmv_df = pd.read_json(dmv_document, orient="split")
+                    if len(dmv_df) > 0:
+                        dmv_column_count = len(dmv_df[dmv_df["Impute to NULL?"]])
+                        bottom_html += f"""<h2>🕵️‍♂️ {bottom_idx}. Disguised Missing Values</h2><br>
+                        {"🔍 <b>" + str(len(dmv_df)) + "</b> columns have disguised missing values"}<br>
+                        {"✔️ <b>" + str(dmv_column_count) + "</b> columns have been cleaned" if dmv_column_count > 0 else "❌ No column is cleaned"}<br>
+                        {dmv_df.to_html()}<br><br><br>"""
+                        bottom_idx += 1
+
+                transform_document = self.get_sibling_document('Transform Type For All')
+                if transform_document:
+                    transform_df = pd.read_json(transform_document, orient="split")
+                    if len(transform_df) > 0:
+                        bottom_html += f"""<h2>🔧 {bottom_idx}. Data Type</h2><br>
+                        {"✔️ <b>" + str(len(transform_df)) + "</b> columns have been casted"}<br>
+                        {transform_df.to_html()}<br><br><br>"""
+                        bottom_idx += 1
+                
+                fd_document = self.get_sibling_document('Decide If Functional Dependency For All')
+                if fd_document and 'Decide If Functional Dependency' in fd_document:
+                    fd_document = fd_document['Decide If Functional Dependency']
+                    bottom_html += f"""<h2>🔗 {bottom_idx}. Functional Dependencies</h2><br>
+                    {"🔍 <b>" + str(len(fd_document)) + "</b> functional dependencies found"}<br>"""
+                    bottom_idx += 1
+                    bottom_html += "<ol>"
+                    for column_a in fd_document:
+                        value = fd_document[column_a]
+                        if value['repair_dfs']:
+                            bottom_html += f"<li><b>{column_a}</b> determines:<br>"
+                            for column_b in value['repair_dfs']:
+                                bottom_html += f"<b>{column_b}</b>:<br>"
+                                repair_df = pd.read_json(value['repair_dfs'][column_b], orient="split")
+                                bottom_html += repair_df.to_html()
+                                bottom_html += "<br>"
+                            explanation = value['explanation']
+                            bottom_html += f"<b>Explanation:</b> {explanation}<br>"
+                            bottom_html += "</li>"
+                    bottom_html += "</ol><br>"
+        
+                missing_document = self.get_sibling_document('Decide Missing Values')
+                if missing_document:
+                    missing_df = pd.read_json(missing_document, orient="split")
+                    if len(missing_df) > 0:
+                        acceptable_missing_count = len(missing_df[missing_df["Is NULL Acceptable?"]])
+                        bottom_html += f"""<h2>❓ {bottom_idx}. Missing Values</h2><br>
+                        {"🔍 <b>" + str(len(missing_df)) + "</b> columns have missing values"}<br>
+                        {"✔️ <b>" + str(acceptable_missing_count) + "</b> of them are acceptable" if acceptable_missing_count > 0 else "❌ No missing value is acceptable"}<br>
+                        {missing_df.to_html()}<br>"""
+                        
+                        handle_missing_document = self.get_sibling_document('Handle Missing Values')
+                        if handle_missing_document:
+                            handle_missing_df = pd.read_json(handle_missing_document, orient="split")
+                            
+                            if len(handle_missing_df) > 0:
+                                bottom_html += f"""🧩 These missing values are handled as follows:<br>
+                                {handle_missing_df.to_html()}<br>"""
+                                
+                        bottom_html += "<br><br>"
+                        bottom_idx += 1
+                    
+                column_html = ""        
+                column_javascript = ""
+                schema = table_pipeline.get_schema(con)
+                
+
+                for column in yml_dict["models"][0]["columns"]:
+                    column_name = column["name"]
+                    data_type = schema[column_name]
+                    data_type = get_reverse_type(data_type, database_name)
+                    
+                    single_column_html = ""
+                    
+                    tests = column.get('tests', [])
+                    for test in tests:
+                        if isinstance(test, dict):
+                            test_type = list(test.keys())[0]
+                            test_value = test[test_type]
+                            option_html = "<select>"
+                            for value in test_value["values"]:
+                                option_html += f"<option value='{value}'>{value}</option>"
+                            option_html += "</select>"
+                            single_column_html += f'''<span class="tag tag-purple">{test_type}{option_html}</span>'''
+                        elif test == 'not_null':
+                            single_column_html += f'''<span class="tag tag-red">{test}</span>'''
+                        elif test == 'unique':
+                            single_column_html += f'''<span class="tag tag-blue">{test}</span>'''
+                    
+                    if len(tests) > 0:
+                        single_column_html += "<br><br>"
+                            
+                    html_output, javascript_output = build_column_viz(column_name, is_numeric=is_type_numeric(data_type), con=con, table_name=table_pipeline)
+                    single_column_html += html_output
+                    single_column_html += "<b>📃 Summary:</b> " + column["description"] + "<br>"
+                                
+                    cocoon_meta = column.get('cocoon_meta', {})
+                    if 'missing_reason' in cocoon_meta:
+                        if cocoon_meta['missing_reason']:
+                            single_column_html += "<b>❓ Missing:</b> " + str(cocoon_meta['missing_reason']) + "<br>"
+                        else:
+                            single_column_html += "<b>❓ Missing:</b> Reason unknown <br>"
+                    if 'unusal_values' in cocoon_meta:
+                        single_column_html += "<b>🚧 Erroneous:</b> " + str(cocoon_meta['unusal_values']) + "<br>"
+                    if 'uniqueness' in cocoon_meta:
+                        single_column_html += "<b>🦄 Unique:</b> " + str(cocoon_meta['uniqueness']) + "<br>"
+                    if 'patterns' in cocoon_meta:
+                        single_column_html += "<b>🎨 Patterns:</b><br>"
+                        single_column_html += "<ul>"
+                        for pattern in cocoon_meta['patterns']:
+                            summary = pattern['summary']
+                            regex = pattern['regex']
+                            single_column_html += f"<li><code>{regex}</code><br><i>{summary}</i></li>"
+                        single_column_html += "</ul>"
+                        
+                    column_html += f"""
+    <div class="card-item card-item-collapsed">
+        <span class="field-name">{column_name}</span>
+        <div class="card-controls">
+            <span class="toggle">▲</span>
+        </div>
     </div>
-</div>
-<div class="indent" style="display: block;">{single_column_html}<br></div>
-"""
-                
-                column_javascript += javascript_output
-                
-            html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<title>Cocoon</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <div class="indent" style="display: block;">{single_column_html}<br></div>
+    """
+                    
+                    column_javascript += javascript_output
+                    
+                html_content = f"""<!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <title>Cocoon</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
-{cocoon_html_style_block}
+    {cocoon_html_style_block}
 
-</head>
-<body>
+    </head>
+    <body>
 
-<div class="dashboard">
+    <div class="dashboard">
 
-    <div class="main-panel">
-        <div class="container">
-            {create_cocoon_logo(header="Data Formatting", footer="Powered by Cocoon")}
-            <div><h1>{before_table_name.__repr__(full=False)}</h1>(First 100 rows)</div>
-            <div>
-                {cocoon_html_toggle_block}
+        <div class="main-panel">
+            <div class="container">
+                {create_cocoon_logo(header="Data Formatting", footer="Powered by Cocoon")}
+                <div><h1>{before_table_name.__repr__(full=False)}</h1>(First 100 rows)</div>
+                <div>
+                    {cocoon_html_toggle_block}
+                </div>
+            </div>
+
+            <div class="table-container before active">
+                {before_df.to_html()}
+            </div>
+            <div class="table-container after">
+                {after_df.to_html()}
             </div>
         </div>
-
-        <div class="table-container before active">
-            {before_df.to_html()}
+        <div class="right-panel">
+    {column_html}
         </div>
-        <div class="table-container after">
-            {after_df.to_html()}
+
+        <div class="bottom-panel">
+            {bottom_html}
         </div>
     </div>
-    <div class="right-panel">
-{column_html}
-    </div>
 
-    <div class="bottom-panel">
-        {bottom_html}
-    </div>
-</div>
+    <script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <script>
+    {cocoon_js_expand_block}
+    {cocoon_js_toggle_block}
+    </script>
+    <script>
+    {cocoon_js_viz_block}
+    {column_javascript}
 
-<script src="https://d3js.org/d3.v6.min.js"  charset="utf-8"></script>
-<script src="https://d3js.org/topojson.v3.min.js"></script>
-<script>
-{cocoon_js_expand_block}
-{cocoon_js_toggle_block}
-</script>
-<script>
-{cocoon_js_viz_block}
-{column_javascript}
-
-</script>
-</body>
-</html>"""
-            html_tab = wrap_in_iframe(html_content, width="1000px", height="800px")
-            tab_data.append(("html", html_tab))
-            
-            labels.append("HTML")
-            file_names.append(f"{new_table_name}.html")
-            contents.append(html_content)
+    </script>
+    </body>
+    </html>"""
+                html_tab = wrap_in_iframe(html_content, width="1000px", height="800px")
+                tab_data.append(("html", html_tab))
+                
+                labels.append("HTML")
+                file_names.append(f"{new_table_name}.html")
+                contents.append(html_content)
+        except Exception as e:
+            if cocoon_main_setting['DEBUG_MODE']:
+                raise e
         
         tabs = create_dropdown_with_content(tab_data) 
         
@@ -21619,6 +21651,19 @@ class SelectTable(Node):
         display(HTML(f"🤓 Please select the table:"))
         display(widgets.HBox([database_label, database_dropdown, schema_label, schema_dropdown, table_label, table_dropdown]))
 
+        hint_html = widgets.HTML(
+                value='''
+    <p style="margin-top: 10px; font-style: italic; color: #666;">
+        Unable to find your tables? They might be defined as views.<br>
+        Cocoon uses SQL for data exploration, but querying views can be expensive.<br>
+        We recommend materializing them to tables for better performance.
+    </p>
+    '''
+        )
+        display(hint_html)
+        
+        
+        
 
         mode_selector = widgets.RadioButtons(
             options=[
@@ -29809,8 +29854,11 @@ class DecideVariantTypes(Node):
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         database_name = get_database_name(con)
+        
         if database_name != "Snowflake":
             callback({})
+            return
+        
         schema = table_pipeline.get_schema(con)
         columns = list(schema.keys())
         variant_columns = []
@@ -29818,8 +29866,10 @@ class DecideVariantTypes(Node):
         for col in columns:
             if get_reverse_type(schema[col], database_name) == 'VARIANT':
                 variant_columns.append(col)
+                
         if not variant_columns:
             callback({})
+            return
             
         document = {}
         with_context = table_pipeline.get_codes(mode="WITH")
@@ -30050,7 +30100,7 @@ class SelectSchema(Node):
 
         database_input = widgets.Text(value=database, description="Database:")
         schema_input = widgets.Text(value=schema, description="Schema:")
-        test_button = widgets.Button(description="Test and Next", button_style='info', icon='play')
+        test_button = widgets.Button(description="Test Access", button_style='info', icon='play')
         output = widgets.HTML()
 
         def on_test_button_click(b):
@@ -30481,7 +30531,7 @@ related_steps:
         reset = True
         grid = create_dataframe_grid(df, editable_columns, reset=reset)
         
-        display(HTML(f"❓ <b>Business Question:</b> {business_question}"))
+        display(HTML(f"❓ <b>Question:</b> {business_question}"))
         display(HTML(f"🧠 <b>Analysis Reasoning:</b> {analysis['reasoning']}"))
         display(grid)
         
@@ -30652,8 +30702,64 @@ def generate_er_diagram_html(relation_map, relation_details, highlight_indices):
     {graph_html}
     """
 
-    return html_content           
+    return html_content   
 
+def extract_related_tables(data_project, related_steps):
+    story = data_project.story
+    related_relations = []
+    related_groups = []
+    related_entities = []
+
+    for element in story:
+        if element['Name'] in related_steps:
+            if element['Type'] == 'Relation':
+                related_relations.append(element['Name'])
+            elif element['Type'] == 'Group':
+                related_groups.append(element['Name'])
+            elif element['Type'] == 'Entity':
+                related_entities.append(element['Name'])
+
+    tables = set()
+
+    for relation_name in related_relations:
+        for table, relation_data in data_project.relations.items():
+            if relation_data['relation_name'] == relation_name:
+                tables.add(table)
+                for entity in relation_data['entities']:
+                    for entity_table, entity_data in data_project.entities.items():
+                        if entity_data['entity_name'] == entity:
+                            tables.add(entity_table)
+                    if entity not in related_entities:
+                        related_entities.append(entity)
+                            
+    for entity in related_entities:
+        for entity_table, entity_data in data_project.entities.items():
+            if entity_data['entity_name'] == entity:
+                tables.add(entity_table)
+                
+        for table, relation_data in data_project.relations.items():
+            if relation_data['relation_name'] is None and len(relation_data['entities']) == 1:
+                if relation_data['entities'][0] == entity:
+                    tables.add(table)
+
+    for group_name in related_groups:
+        group_data = data_project.groups[data_project.groups['Group Name'] == group_name]
+        for table in group_data['Tables'].iloc[0]:
+            tables.add(table)
+
+    for table in list(tables):
+        if table in data_project.history_table:
+            tables.add(data_project.history_table[table])
+
+    new_tables = set()
+    for table in tables:
+        if table in data_project.partition_mapping:
+            new_tables.update(data_project.partition_mapping[table])
+        else:
+            new_tables.add(table)
+
+    return list(new_tables)      
+ 
 class BusinessQuestionDataSufficiency(Node):
     default_name = 'Business Question Data Sufficiency Check'
     default_description = 'This node evaluates whether the current tables have enough information to answer the business question.'
@@ -30669,69 +30775,18 @@ class BusinessQuestionDataSufficiency(Node):
 
         df = pd.read_json(self.get_sibling_document('Business Question Entity and Relation Analysis')['related_steps'], orient="split")
         related_steps = df[df['Related'] == True]['Name'].tolist()
-        
-        story = data_project.story
-        related_relations = []
-        related_groups = []
-        related_entities = []
 
-        for element in story:
-            if element['Name'] in related_steps:
-                if element['Type'] == 'Relation':
-                    related_relations.append(element['Name'])
-                elif element['Type'] == 'Group':
-                    related_groups.append(element['Name'])
-                elif element['Type'] == 'Entity':
-                    related_entities.append(element['Name'])
+        tables = extract_related_tables(data_project, related_steps)
 
-        tables = set()
+        schema_description = yaml.dump(data_project.describe_project_yml(tables=tables, limit=9999))
 
-        for relation_name in related_relations:
-            for table, relation_data in data_project.relations.items():
-                if relation_data['relation_name'] == relation_name:
-                    tables.add(table)
-                    for entity in relation_data['entities']:
-                        for entity_table, entity_data in data_project.entities.items():
-                            if entity_data['entity_name'] == entity:
-                                tables.add(entity_table)
-
-        for entity in related_entities:
-            for entity_table, entity_data in data_project.entities.items():
-                if entity_data['entity_name'] == entity:
-                    tables.add(entity_table)
-            
-            for table, relation_data in data_project.relations.items():
-                if relation_data['relation_name'] is None and len(relation_data['entities']) == 1:
-                    if relation_data['entities'][0] == entity:
-                        tables.add(table)
-
-        for group_name in related_groups:
-            group_data = data_project.groups[data_project.groups['Group Name'] == group_name]
-            for table in group_data['Tables'].iloc[0]:
-                tables.add(table)
-        
-        schema_description = yaml.dump(data_project.describe_project_yml(tables=list(tables), limit=9999))
-        
-        for table in tables.copy():
-            if table in data_project.history_table:
-                tables.add(data_project.history_table[table])
-                
-        new_tables = set()
-        for table in tables:
-            if table in data_project.partition_mapping:
-                new_tables.update(data_project.partition_mapping[table])
-            else:
-                new_tables.add(table)
-
-        tables = new_tables
-        
-        return business_question, schema_description, list(tables)
+        return business_question, schema_description, tables
 
     def run(self, extract_output, use_cache=True):
         business_question, schema_description, all_related_tables = extract_output
 
 
-        template = f"""Given the following business question:
+        template = f"""Given the following question:
 '{business_question}'
 
 And the following schema description of relevant tables:
@@ -31735,7 +31790,7 @@ class ChatUI:
         word-wrap: break-word;
     }
     .user-message {
-        background-color: #007AFF;
+        background-color: #449dfc;
         color: #ffffff;
         margin-left: 15%;
     }
@@ -31756,14 +31811,15 @@ class ChatUI:
         color: #8E8E93;
     }
     
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-        font-size: 0.9em;
-        border-radius: 4px;
-        overflow: hidden;
-    }
+table {
+    width: 100%;
+    color: #000000;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9em;
+    border-radius: 4px;
+    overflow: hidden;
+}
 
 th,
 td {
@@ -33170,6 +33226,7 @@ class BuildColumnLineageForAll(MultipleNode):
         
         display(HTML(f"{running_spinner_html} Identifying models for column lineage..."))
         
+
         sql_query = """
 WITH model_with_sql AS (
     SELECT DISTINCT model_name
@@ -33283,7 +33340,7 @@ class ColumnLineageForModel(ListNode):
 
         sql_query, sql_info, columns, parent_nodes, parent_columns = get_model_info(dbt_lineage.conn, model_name)
         
-        chunk_size = 30
+        chunk_size = 10
         outputs = []
         
         for parent, parent_cols in parent_columns.items():
@@ -33311,9 +33368,19 @@ class ColumnLineageForModel(ListNode):
         parent_table = extract_output['parent_table']
         parent_columns = extract_output['parent_columns'][parent_table]
 
-        parent_columns_str = '\n'.join(f"'{col}': {parent_columns[col]['comment']}" if parent_columns[col]['comment'] else f"'{col}'" for col in parent_columns)
+        parent_columns_str = '\n'.join(
+            f"{i+1}. '{col}': {parent_columns[col]['comment'][:97] + '...' if parent_columns[col]['comment'] and len(parent_columns[col]['comment']) > 100 else parent_columns[col]['comment']}" 
+            if parent_columns[col]['comment'] 
+            else f"{i+1}. '{col}'" 
+            for i, col in enumerate(parent_columns)
+        )
 
-        output_columns_str = '\n'.join(f"'{col}': {columns[col]['comment']}" if columns[col]['comment'] else f"'{col}'" for col in columns)
+        output_columns_str = '\n'.join(
+            f"{i+1}. '{col}': {columns[col]['comment'][:97] + '...' if columns[col]['comment'] and len(columns[col]['comment']) > 100 else columns[col]['comment']}" 
+            if columns[col]['comment'] 
+            else f"{i+1}. '{col}'" 
+            for i, col in enumerate(columns)
+        )
         
         template = f"""SQL:
 {sql_query}
@@ -33341,12 +33408,12 @@ column_name:
     is_used: true/false
     # if is_used, fill out below...
     how_used:
-        tag_name: explain this tag
+        'tag_name': explain this tag
     # is this column mapped to another column in the output, for column lineage
     # e.g., it is directly copied to, aggregated, or transformed 
     # if not, says null
     outputs:
-        output_column_name: how it is mapped
+        'output_column_name': how it is mapped
 ```"""
 
         messages = [{"role": "user", "content": template}]
@@ -33360,6 +33427,8 @@ column_name:
         
         if not isinstance(result, dict):
             raise TypeError("result must be a dictionary")
+        
+        columns_to_remove = []
         
         for column_name, column_info in result.items():
             if not isinstance(column_info, dict):
@@ -33382,7 +33451,23 @@ column_name:
                 
                 if column_info['outputs'] and not isinstance(column_info['outputs'], dict):
                     raise TypeError(f"'outputs' for column '{column_name}' must be a dictionary, but currently of type {type(column_info['outputs'])}: {column_info['outputs']}")
+            
+                if column_info['outputs']:
+                    valid_outputs = {}
+                    for output_col, mapping in column_info['outputs'].items():
+                        if output_col in columns:
+                            valid_outputs[output_col] = mapping
+                    
+                    if valid_outputs:
+                        column_info['outputs'] = valid_outputs
+                    else:
+                        columns_to_remove.append(column_name)
+                else:
+                    columns_to_remove.append(column_name)
         
+        for column_name in columns_to_remove:
+            del result[column_name]
+            
         self.progress.value += 1
         
         return {model_name: {parent_table: result}}
@@ -33490,6 +33575,35 @@ def create_cocoon_dbt_explore_workflow(output=None, para={}, dbt_directory=None,
     return main_workflow
 
 class DbtLineage:
+    tag_css = """.tag {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.4rem;
+    margin-right: 0.5em; /* Adds space between tags */
+}"""
+    table_css = """.columns-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.columns-table th, .columns-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+.columns-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+.columns-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}"""
+
     def __init__(self, db_name=None, nodes=None, edges=None, sql_mapping=None, column_mapping=None):
         self.conn = duckdb.connect(':memory:')
         
@@ -33544,13 +33658,27 @@ class DbtLineage:
         """)
 
     def get_ordered_nodes(self):
-        """Retrieve nodes ordered by index."""
         nodes_query = self.conn.execute("""
             SELECT model_name, index
             FROM nodes
             ORDER BY index
         """).fetchall()
         return nodes_query
+    
+    def get_index_by_model_name(self, model_name, one_based=True):
+        query = self.conn.execute("""
+            SELECT index
+            FROM nodes
+            WHERE model_name = ?
+        """, (model_name,)).fetchone()
+        
+        if query:
+            index = query[0]
+            if one_based:
+                index += 1
+            return index
+        else:
+            return None
 
     def get_edges(self):
         """Retrieve edges."""
@@ -33559,8 +33687,9 @@ class DbtLineage:
             FROM edges
         """).fetchall()
         return [(edge[0], edge[1]) for edge in edges_query]
+    
 
-    def display_lineage(self, numbered=True):
+    def display_lineage_html(self, numbered=True):
         nodes_query = self.get_ordered_nodes()
         
         if numbered:
@@ -33572,7 +33701,14 @@ class DbtLineage:
 
         image = generate_workflow_image(nodes, edges, format='svg')
 
-        display(HTML(wrap_image_in_html(image, format='svg')))
+        html_content = wrap_image_in_html(image, format='svg')
+
+        return html_content
+
+    def display_lineage(self, numbered=True):
+        html_content = self.display_lineage_html(numbered)
+
+        display(HTML(html_content))
     
     def interactive_lineage_display(self):
         self.display_lineage(numbered=True)
@@ -33599,6 +33735,82 @@ class DbtLineage:
         dropdown.observe(on_change, names='value')
 
         display(dropdown, output)
+        
+    def to_html(self, column_lineage=True, dbt_name="Cocoon DBT Project"):
+        table_lineage_html = self.display_lineage_html()
+        table_lineage_card = wrap_in_card(body=table_lineage_html)
+        
+        nodes_query = self.get_ordered_nodes()
+        options = OrderedDict()
+        
+        for name, idx in nodes_query:
+            model_key = f"{idx+1}. {name}"
+            model_content = self.get_model_summary_collapse_html(name, column_lineage=True, full=False)
+            model_content_in_card = wrap_in_card(body=model_content)
+            options[model_key] = model_content_in_card
+        
+        model_html = generate_dropdown_html("cocoon", options, default_selection="Choose the Model", full=False)
+        
+        formatter = HtmlFormatter(style='monokai')
+        css_style = formatter.get_style_defs('.highlight')
+        html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <style>
+        pre {{ line-height: 125%; }}
+        .highlight {{
+            background: #272822;
+            color: #f8f8f2;
+            border-radius: 4px;
+            padding: 1em;
+            margin: 1em 0;
+            overflow-x: auto;
+            font-size: 12px;
+        }}
+        {css_style}
+        {self.tag_css}
+        {self.table_css}
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row mb-4">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank"
+                        class="text-decoration-none text-dark">
+                        <div class="d-flex align-items-center">
+                            <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png"
+                                alt="cocoon icon" width="40" class="mr-3">
+                            <div class="mx-3">
+                                <h4 class="mb-0">Cocoon Semantic Lineage</h4>
+                                <small class="mb-0 text-muted">Cocoon uses LLMs and can mistake</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-6 d-flex align-items-center justify-content-end">
+                    <h3>{dbt_name}</h3>
+                </div>
+            </div>
+            {table_lineage_card}
+            {model_html}
+        </div>
+    </div>    
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container">
+            <div style="height: 6rem;"></div>
+        </div>
+    </footer>
+</body>
+</html>
+        """
+        return html
         
     def _parse_dict_or_none(self, value):
         if isinstance(value, (dict, list)):
@@ -33658,148 +33870,151 @@ class DbtLineage:
 
         self.conn.execute("DROP TABLE temp_lineage")
         
-    def display_lineage_summary(self, model_name, column_name, lineage_df=None, display_lineage=True):
-        html_output = self.get_lineage_summary_html(model_name, column_name, lineage_df, display_lineage)
+    def display_column_lineage(self, model_name, column_name, lineage_df=None, display_lineage=True):
+        html_output = self.get_column_lineage_html(model_name, column_name, lineage_df, display_lineage)
         display(HTML(html_output))
         
-    def get_lineage_summary_html(self, model_name, column_name, lineage_df=None, display_lineage=True):
-        
+    
+    def get_column_lineage_dict(self, model_name, column_name, lineage_df=None, display_lineage=True):
         if lineage_df is None:
             lineage_df = self.get_recursive_lineage_df(model_name, column_name)
-            
-        lineage_graph_html = ""
+        
+        lineage_dict = OrderedDict()
+        
+        if lineage_df is None or len(lineage_df) == 0:
+            return lineage_dict
+        
         if display_lineage:
-            lineage_graph_html = self.build_lineage_graph_html(model_name, column_name, lineage_df)
-           
-            
-        def generate_lineage_html(df, lineage_graph_html):
-            tag_styles = {
-                "Direct": {"bg": "#000000", "color": "#FFFFFF"},
-                "Filtering": {"bg": "#BBDEFB", "color": "#1565C0"},
-                "Cleaning": {"bg": "#C8E6C9", "color": "#2E7D32"},
-                "Deduplication": {"bg": "#FFF9C4", "color": "#F9A825"},
-                "Featurization": {"bg": "#E1BEE7", "color": "#6A1B9A"},
-                "Integration": {"bg": "#C5CAE9", "color": "#283593"},
-                "Aggregation": {"bg": "#F8BBD0", "color": "#AD1457"},
-                "Other": {"bg": "#F5F5F5", "color": "#616161"}
-            }
+            lineage_graph_html = self.build_column_lineage_graph_html(model_name, column_name, lineage_df)
+            lineage_dict["Column Lineage"] = lineage_graph_html
+        
+        tag_styles = {
+            "Direct": {"bg": "#000000", "color": "#FFFFFF"},
+            "Filtering": {"bg": "#BBDEFB", "color": "#1565C0"},
+            "Cleaning": {"bg": "#C8E6C9", "color": "#2E7D32"},
+            "Deduplication": {"bg": "#FFF9C4", "color": "#F9A825"},
+            "Featurization": {"bg": "#E1BEE7", "color": "#6A1B9A"},
+            "Integration": {"bg": "#C5CAE9", "color": "#283593"},
+            "Aggregation": {"bg": "#F8BBD0", "color": "#AD1457"},
+            "Other": {"bg": "#F5F5F5", "color": "#616161"}
+        }
 
-            def get_tag_style(tag):
-                return tag_styles.get(tag, tag_styles["Other"])
+        def get_tag_style(tag):
+            return tag_styles.get(tag, tag_styles["Other"])
 
-            def generate_tag_html(tag, explanation):
-                style = get_tag_style(tag)
-                return f'<li><span class="tag" style="background-color: {style["bg"]}; color: {style["color"]};">{tag}</span>: {explanation}</li>'
+        def generate_tag_html(tag, explanation):
+            style = get_tag_style(tag)
+            return f'<li><span class="tag" style="background-color: {style["bg"]}; color: {style["color"]}; border: 1px solid {style["color"]};">{tag}</span> {explanation}</li>'
 
-            content_html = ""
-            for depth in sorted(df['depth'].unique()):
-                depth_df = df[df['depth'] == depth].sort_values('output_model')
-                for output_model in depth_df['output_model'].unique():
-                    model_df = depth_df[depth_df['output_model'] == output_model]
-                    content_html += f"<h2>{output_model}</h2>"
-                    content_html += "<ul class='model-list'>"
-                    for _, row in model_df.iterrows():
-                        input_info = f"{row['input_model']}[{row['input_column']}]"
-                        tags_html = "<ul class='tag-list'>" + "".join([generate_tag_html(tag, explanation) for tag, explanation in row['tags'].items()]) + "</ul>"
-                        
-                        content_html += f"<li>"
-                        content_html += f"<strong>Input Column</strong>: {input_info}<br>"
-                        content_html += f"{tags_html}"
-                        if row['output_columns']:
-                            content_html += f"<strong>Output Columns:</strong>"
-                            content_html += "<ul class='output-columns-list'>"
-                            for col, explanation in row['output_columns'].items():
-                                content_html += f"<li><strong>{col}:</strong> {explanation}</li>"
-                            content_html += "</ul>"
-                        content_html += "</li>"
-                    content_html += "</ul>"
+        for depth in sorted(lineage_df['depth'].unique()):
+            depth_df = lineage_df[lineage_df['depth'] == depth].sort_values('output_model')
+            for output_model in depth_df['output_model'].unique():
+                model_df = depth_df[depth_df['output_model'] == output_model]
+                model_index = self.get_index_by_model_name(output_model)
+                
+                card_header = f"{model_index}. {output_model}"
+                card_body = '<ul class="list-unstyled">'
+                
+                for _, row in model_df.iterrows():
+                    input_model_index = self.get_index_by_model_name(row['input_model'])
+                    input_info = f"{input_model_index}. {row['input_model']}[{row['input_column']}]"
+                    
+                    card_body += f'''
+                        <li>
+                            <strong>Input Column:</strong> {input_info}
+                            <ul class="list-unstyled mt-2">
+                    '''
+                    
+                    for tag, explanation in row['tags'].items():
+                        card_body += generate_tag_html(tag, explanation)
+                    
+                    if row['output_columns']:
+                        card_body += '<strong>Output Columns:</strong><ul>'
+                        for col, explanation in row['output_columns'].items():
+                            card_body += f'<li><strong>{col}:</strong> {explanation}</li>'
+                        card_body += '</ul>'
+                    
+                    card_body += '''
+                            </ul>
+                        </li>
+                    '''
+                
+                card_body += '</ul>'
+                lineage_dict[card_header] = card_body
 
-            html = f"""
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Lineage Information</title>
-                <style>
-                    body {{
-                        font-family: Arial, sans-serif;
-                        line-height: 1.6;
-                        color: #333;
-                    }}
-                    h1, h2, h3 {{
-                        color: #2c3e50;
-                    }}
-                    h1 {{
-                        font-size: 24px;
-                        margin-bottom: 5px;
-                    }}
-                    h2 {{
-                        font-size: 20px;
-                        margin-top: 20px;
-                        border-bottom: 1px solid #eee;
-                        padding-bottom: 5px;
-                    }}
-                    h3 {{
-                        font-size: 16px;
-                        margin-top: 0;
-                        margin-bottom: 20px;
-                        color: #7f8c8d;
-                    }}
-                    .model-list {{
-                        list-style-type: none;
-                        padding-left: 0;
-                    }}
-                    .model-list > li {{
-                        margin-bottom: 15px;
-                        padding: 10px;
-                        border-radius: 5px;
-                    }}
-                    .tag-list, .output-columns-list {{
-                        list-style-type: none;
-                        padding-left: 20px;
-                        margin-top: 5px;
-                        margin-bottom: 5px;
-                    }}
-                    .tag-list > li, .output-columns-list > li {{
-                        margin-bottom: 5px;
-                    }}
-                    .tag {{
-                        display: inline-block;
-                        padding: 3px 8px;
-                        border-radius: 12px;
-                        font-size: 12px;
-                        font-weight: bold;
-                        margin-right: 5px;
-                    }}
-                </style>
-            </head>
-            <body>
-                <h1>Column Lineage</h1>
-                {model_name}[{column_name}]
-                {lineage_graph_html}
-                {content_html}
-            </body>
-            </html>
-            """
-            return html
-
-        html_output = generate_lineage_html(lineage_df, lineage_graph_html)
-        return html_output
+        return lineage_dict
+        
+    def get_column_lineage_html(self, model_name, column_name, lineage_df=None, display_lineage=True, full=True):
+        
+        sections = self.get_column_lineage_dict(model_name, column_name, lineage_df, display_lineage)
+        
+        cards_html = ""
+        for section_name, section_content in sections.items():
+            if section_content:
+                cards_html += wrap_in_card(section_name, section_content)
+                
+        if not full:
+            return cards_html
+        
+        formatter = HtmlFormatter(style='monokai')
+        css_style = formatter.get_style_defs('.highlight')
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+            <style>
+                pre {{ line-height: 125%; }}
+                .highlight {{
+                    background: #272822;
+                    color: #f8f8f2;
+                    border-radius: 4px;
+                    padding: 1em;
+                    margin: 1em 0;
+                    overflow-x: auto;
+                    font-size: 12px;
+                }}
+                {css_style}
+                {self.tag_css}
+                {self.table_css}
+            </style>
+        </head>
+        <body>
+            {cards_html}
+        </body>
+        </html>
+        """
+        return html
 
         
     def get_recursive_lineage_df(self, model_name, column_name):
-        def get_direct_lineage(input_model, input_column):
-            query = """
-            SELECT 
-                input_model, 
-                input_column, 
-                tags, 
-                output_model, 
-                output_columns
-            FROM table_lineage
-            WHERE input_model = ? AND input_column = ?
-            """
+        def get_direct_lineage(input_model, input_column, direction='forward'):
+            if direction == 'forward':
+                query = """
+                SELECT 
+                    input_model, 
+                    input_column, 
+                    tags, 
+                    output_model, 
+                    output_columns
+                FROM table_lineage
+                WHERE input_model = ? AND input_column = ?
+                """
+            else:
+                query = """
+                SELECT 
+                    input_model, 
+                    input_column, 
+                    tags, 
+                    output_model, 
+                    output_columns
+                FROM table_lineage
+                WHERE output_model = ? 
+                AND list_contains(json_keys(output_columns), ?)
+                """
             return self.conn.execute(query, [input_model, input_column]).fetchall()
 
         def safe_json_loads(json_str):
@@ -33810,10 +34025,11 @@ class DbtLineage:
             except json.JSONDecodeError:
                 return {}
 
-        def recursive_lineage(start_model, start_column):
+        def traverse_lineage(start_model, start_column, direction):
             visited = set()
             result = []
-            queue = deque([(start_model, start_column, 1)])
+            initial_depth = 1 if direction == 'forward' else -1
+            queue = deque([(start_model, start_column, initial_depth)])
 
             while queue:
                 current_model, current_column, depth = queue.popleft()
@@ -33823,20 +34039,29 @@ class DbtLineage:
                 
                 visited.add((current_model, current_column))
                 
-                direct_lineage = get_direct_lineage(current_model, current_column)
+                direct_lineage = get_direct_lineage(current_model, current_column, direction)
                 
                 for row in direct_lineage:
                     result.append(row + (depth,))
-                    output_model = row[3]
-                    output_columns = safe_json_loads(row[4])
-                    
-                    for output_column in output_columns.keys():
-                        if (output_model, output_column) not in visited:
-                            queue.append((output_model, output_column, depth + 1))
+                    if direction == 'forward':
+                        next_model = row[3]
+                        next_columns = safe_json_loads(row[4])
+                        for next_column in next_columns.keys():
+                            if (next_model, next_column) not in visited:
+                                queue.append((next_model, next_column, depth + 1))
+                    else:
+                        prev_model = row[0]
+                        prev_column = row[1]
+                        if (prev_model, prev_column) not in visited:
+                            queue.append((prev_model, prev_column, depth - 1))
 
             return result
 
-        lineage_data = recursive_lineage(model_name, column_name)
+        forward_lineage = traverse_lineage(model_name, column_name, 'forward')
+        
+        backward_lineage = traverse_lineage(model_name, column_name, 'backward')
+        
+        lineage_data = backward_lineage + forward_lineage
         
         df = pd.DataFrame(lineage_data, columns=[
             'input_model', 'input_column', 'tags', 'output_model', 'output_columns', 'depth'
@@ -33847,7 +34072,7 @@ class DbtLineage:
         
         return df
     
-    def build_lineage_graph(self, model_name, column_name, lineage_df=None):
+    def build_column_lineage_graph(self, model_name, column_name, lineage_df=None):
         if lineage_df is None:
             lineage_df = self.get_recursive_lineage_df(model_name, column_name)
             
@@ -33877,10 +34102,31 @@ class DbtLineage:
 
         return nodes, edges
     
-    def build_lineage_graph_html(self, model_name, column_name, lineage_df=None):
-        nodes, edges = self.build_lineage_graph(model_name, column_name, lineage_df)
-        html_output = generate_schema_graph_graphviz(nodes, edges)
+    def build_column_lineage_graph_html(self, model_name, column_name, lineage_df=None):
+        nodes, edges = self.build_column_lineage_graph(model_name, column_name, lineage_df)
+        
+        indexed_nodes = {}
+        for model, columns in nodes.items():
+            index = self.get_index_by_model_name(model)
+            indexed_nodes[f"{index}. {model}"] = columns
+
+        indexed_edges = []
+        for input_model, input_column, output_model, output_column in edges:
+            input_index = self.get_index_by_model_name(input_model)
+            output_index = self.get_index_by_model_name(output_model)
+            indexed_edges.append((
+                f"{input_index}. {input_model}",
+                input_column,
+                f"{output_index}. {output_model}",
+                output_column
+            ))
+
+        model_index = self.get_index_by_model_name(model_name)
+        highlighted_node = f"{model_index}. {model_name}"
+
+        html_output = generate_schema_graph_graphviz(indexed_nodes, indexed_edges, highlighted_node=highlighted_node)
         return html_output
+
         
     def save_to_disk(self, db_name="cocoon_lineage.db"):
         if not db_name.endswith('.db'):
@@ -33897,13 +34143,20 @@ class DbtLineage:
         
         print(f"Database imported from {db_name}")
         
-    def display_model_summary(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True):
-        html_output = self.get_model_summary_html(model_name, model_info, display_columns, display_sql, column_mapping)
+    def display_model_summary(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True, column_lineage=False):
+        html_output = self.get_model_summary_html(model_name, model_info, display_columns, display_sql, column_mapping, column_lineage)
         display(HTML(html_output))
     
-    def get_model_summary_html(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True):
+    def get_model_summary_dict(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True, column_lineage=False):
+        if model_info is None:
+            model_info = self.get_model_info(model_name)
+
+        if model_info.get('summary', None) is None:
+            return OrderedDict()
         
-        def generate_model_info_html(model_name, model_info, display_columns):
+        model_index = self.get_index_by_model_name(model_name)
+        
+        def generate_tags_html():
             tag_styles = {
                 "Direct": {"bg": "#000000", "color": "#FFFFFF"},
                 "Filtering": {"bg": "#BBDEFB", "color": "#1565C0"},
@@ -33914,165 +34167,193 @@ class DbtLineage:
                 "Aggregation": {"bg": "#F8BBD0", "color": "#AD1457"},
                 "Other": {"bg": "#F5F5F5", "color": "#616161"}
             }
-
+            
             def get_tag_style(tag):
                 return tag_styles.get(tag, tag_styles["Other"])
-
-            tags_html = "".join([
-                f'<span class="tag" style="background-color: {get_tag_style(tag)["bg"]}; color: {get_tag_style(tag)["color"]};">{tag}</span>'
+            
+            return "".join([
+                f'<span class="tag" style="background-color: {get_tag_style(tag)["bg"]}; color: {get_tag_style(tag)["color"]}; border: 1px solid {get_tag_style(tag)["color"]};">{tag}</span>'
                 for tag in model_info['tags']
             ])
 
-            columns_html = ""
-            if display_columns:
-                columns_html = """
-                    <h2>Columns</h2>
-                    <table class="columns-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Comment</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                """
-                for column in model_info['columns']:
-                    columns_html += f"""
-                        <tr>
-                            <td>{column['name']}</td>
-                            <td>{column['type']}</td>
-                            <td>{column['comment']}</td>
-                        </tr>
-                    """
-                columns_html += """
-                        </tbody>
-                    </table>
-                """
+        def generate_columns_html():
+            if not display_columns:
+                return ""
             
-            sql_html = ""
-            if display_sql and model_info['sql_text']:
-                sql_html = f"""
-                    <h2>SQL</h2>
-                    {wrap_in_scrollable_div(highlight_sql_only(model_info['sql_text']), height='600px')}
-                """
-                
-            column_mapping_html = ""
-            if column_mapping:
-                column_mapping_html = f"""
-                    <h2>Column Mapping</h2>
-                    {self.get_model_column_mapping_html(model_name, model_info)}
-                """
-                
-            formatter = HtmlFormatter(style='monokai')
-            css_style = f"{formatter.get_style_defs('.highlight')}"
-            html = f"""
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>{model_name} Info</title>
-                <style>
-                    body {{
-                        font-family: Arial, sans-serif;
-                        line-height: 1.6;
-                        color: #333;
-                    }}
-                    h1, h2 {{
-                        color: #2c3e50;
-                    }}
-                    h1 {{
-                        font-size: 24px;
-                        margin-bottom: 10px;
-                    }}
-                    h2 {{
-                        font-size: 20px;
-                        margin-top: 20px;
-                    }}
-                    .summary {{
-                        margin-bottom: 15px;
-                    }}
-                    .tags {{
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 8px;
-                        margin-bottom: 20px;
-                    }}
-                    .tag {{
-                        padding: 5px 10px;
-                        border-radius: 20px;
-                        font-size: 12px;
-                        font-weight: bold;
-                    }}
-                    .columns-table {{
-                        width: 100%;
-                        border-collapse: collapse;
-                    }}
-                    .columns-table th, .columns-table td {{
-                        border: 1px solid #ddd;
-                        padding: 8px;
-                        text-align: left;
-                    }}
-                    .columns-table th {{
-                        background-color: #f2f2f2;
-                        font-weight: bold;
-                    }}
-                    .columns-table tr:nth-child(even) {{
-                        background-color: #f9f9f9;
-                    }}
-                    
-                    pre {{ line-height: 125%; }}
-.highlight {{
-    background: #272822;
-    color: #f8f8f2;
-    border-radius: 4px;
-    padding: 1em;
-    margin: 1em 0;
-    overflow-x: auto;
-    font-size: 12px;
-}}
-                    {css_style}
-                </style>
-            </head>
-            <body>
-                <h1>{model_name}</h1>
-                <p class="summary">{model_info['summary']}</p>
-                <div class="tags">
-                    {tags_html}
-                </div>
-                {columns_html}
-                {column_mapping_html}
-                {sql_html}
-            </body>
-            </html>
+            columns_html = """
+                <table class="columns-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Comment</th>
+                        </tr>
+                    </thead>
+                    <tbody>
             """
-            return html
+            for column in model_info['columns']:
+                columns_html += f"""
+                    <tr>
+                        <td>{column['name']}</td>
+                        <td>{column['type']}</td>
+                        <td>{column['comment']}</td>
+                    </tr>
+                """
+            columns_html += """
+                    </tbody>
+                </table>
+            """
+            return columns_html
 
-        if model_info is None:
-            model_info = self.get_model_info(model_name)
-        html_output = generate_model_info_html(model_name, model_info, display_columns)
-        return html_output
+        def generate_sql_html():
+            if not display_sql or not model_info['sql_text']:
+                return ""
+            return wrap_in_scrollable_div(highlight_sql_only(model_info['sql_text']), height='600px')
+
+        def generate_column_mapping_html():
+            if not column_mapping:
+                return ""
+            return self.get_model_column_mapping_html(model_name, model_info)
+
+        sections = OrderedDict([
+            ("Model Summary", f"<p>{model_info['summary']}</p>{generate_tags_html()}"),
+            ("Table Lineage", generate_column_mapping_html()),
+            ("Model Columns", generate_columns_html()),
+            ("SQL Query", generate_sql_html())
+        ])
+        
+        if column_lineage:
+            sections["cocoon_html_divider1"] = ""
+            for column in model_info['columns']:
+                column_name = column['name']
+                html_content = self.get_column_lineage_html(model_name, column_name, full=False)
+                if html_content:
+                    sections[column_name] = html_content
+            
+        return sections
+    
+    def get_model_summary_collapse_html(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True, column_lineage=False, full=True):
+        options = self.get_model_summary_dict(model_name, column_lineage=True)
+        model_summary_html = options.pop('Model Summary', None)
+        model_index = self.get_index_by_model_name(model_name)
+        model_key = f"{model_index}. {model_name}"
+            
+        if model_summary_html is None:
+            combined_html = wrap_in_card(model_key, "The model details are not provided")
+        else:
+            combined_html = wrap_in_card(model_key, model_summary_html)
+            sql_query_html = options.pop('SQL Query', None)
+            if sql_query_html:
+                combined_html += wrap_in_card('SQL Query', sql_query_html)
+            
+            details_html = generate_dropdown_html(model_name, options, default_selection="Explore Lineage", full=False)
+            combined_html +=  details_html
+            
+        if not full:
+            return combined_html
+        
+        formatter = HtmlFormatter(style='monokai')
+        css_style = formatter.get_style_defs('.highlight')
+        html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <style>
+        pre {{ line-height: 125%; }}
+        .highlight {{
+            background: #272822;
+            color: #f8f8f2;
+            border-radius: 4px;
+            padding: 1em;
+            margin: 1em 0;
+            overflow-x: auto;
+            font-size: 12px;
+        }}
+        {css_style}
+        {self.tag_css}
+        {self.table_css}
+    </style>
+</head>
+<body>
+    {combined_html}
+</body>
+</html>
+"""
+        return html
+    
+    def get_model_summary_html(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True, column_lineage=False, full=True):
+        
+        sections = self.get_model_summary_dict(model_name, model_info, display_columns, display_sql, column_mapping, column_lineage)
+        
+        cards_html = ""
+        for section_name, section_content in sections.items():
+            if section_content:
+                cards_html += wrap_in_card(section_name, section_content)
+                
+        if not full:
+            return cards_html
+
+        formatter = HtmlFormatter(style='monokai')
+        css_style = formatter.get_style_defs('.highlight')
+        html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+            <style>
+                pre {{ line-height: 125%; }}
+                .highlight {{
+                    background: #272822;
+                    color: #f8f8f2;
+                    border-radius: 4px;
+                    padding: 1em;
+                    margin: 1em 0;
+                    overflow-x: auto;
+                    font-size: 12px;
+                }}
+                {css_style}
+                {self.tag_css}
+                {self.table_css}
+            </style>
+        </head>
+        <body>
+            {cards_html}
+        </body>
+        </html>
+        """
+        return html
     
     def get_model_column_mapping_html(self, model_name, model_info=None):
-        
+
         if model_info is None:
             model_info = self.get_model_info(model_name)
         
         nodes = {}
         edges = []
 
-        nodes[model_name] = [col['name'] for col in model_info['columns']]
+        model_index = self.get_index_by_model_name(model_name)
+        model_key = f"{model_index}. {model_name}"
+        nodes[model_key] = [col['name'] for col in model_info['columns']]
 
         for parent_model, column_mappings in model_info['column_mapping'].items():
-            if parent_model not in nodes:
-                nodes[parent_model] = list(column_mappings.keys())
+            parent_index = self.get_index_by_model_name(parent_model)
+            
+            parent_key = f"{parent_index}. {parent_model}"
+            if parent_key not in nodes:
+                nodes[parent_key] = list(column_mappings.keys())
 
             for parent_col, child_cols in column_mappings.items():
                 for child_col in child_cols:
-                    edges.append((parent_model, parent_col, model_name, child_col))
+                    edges.append((parent_key, parent_col, model_key, child_col))
 
-        html_output = generate_schema_graph_graphviz(nodes, edges)
+        html_output = generate_schema_graph_graphviz(nodes, edges, highlighted_node=model_key)
         return html_output
     
     def get_model_info(self, model_name):
@@ -34139,3 +34420,187 @@ class DbtLineage:
             "summary": summary,
             "tags": tags
         }
+        
+class ConnectSourceDataNode(Node):
+    default_name = 'Connect Source Data'
+    default_description = 'This step allows you to connect to the source data'
+
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        source_table_object = self.get_sibling_node("Data Stage Workflow").para["table_object"]
+        source_table_pipeline = self.get_sibling_node("Data Stage Workflow").para["table_pipeline"]
+        
+        self.para["source_table_object"] = source_table_object
+        self.para["source_table_pipeline"] = source_table_pipeline
+        callback({})
+        
+class SourceTableDisplayNode(Node):
+    default_name = 'Source Table Display'
+    default_description = 'This step displays the source table information and a sample in the chat UI.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        source_table_object = self.para.get("source_table_object")
+        source_table_pipeline = self.para.get("source_table_pipeline")
+        con = self.item["con"]
+         
+        sample_size = 5
+        sample_df = source_table_pipeline.get_samples(con, sample_size=sample_size)
+
+        message = f"Help me transform the table '{source_table_object.table_name}': \n"
+        message += f"<i>{source_table_object.table_summary}</i>\n\n"
+        styled_table_html = f"""
+        <div style="max-width: 100%; overflow-x: auto;">
+            {sample_df.to_html()}
+        </div>
+        """
+        message += styled_table_html
+
+        if "chatui" in self.para:
+            self.para["chatui"].add_message("You", message)
+
+        callback({})
+
+class TableSummaryAnalysisNode(BusinessQuestionEntityRelationNode):
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🔍 Formulating question for related tables..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        source_table = self.para["source_table_object"]
+        
+        question = f"I have a source table: '{source_table.table_name}'. Its summary is: '{source_table.table_summary}'. Help me find the related tables to map to."
+        
+        return data_project, question
+
+class SourceToTargetTableAnalysisNode(BusinessQuestionDataSufficiency):
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🔍 Analyzing potential target tables for transformation..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["data_project"]
+        source_table_object = self.para["source_table_object"]
+
+        question = f"Find all the target tables that the source table '{source_table_object.table_name}' can be transformed to. Here are the source table details:"
+        
+        column_dict = source_table_object.get_column_desc_yml()
+        question += yaml.dump(column_dict, default_flow_style=False)
+        
+        df = pd.read_json(self.get_sibling_document('Business Question Entity and Relation Analysis')['related_steps'], orient="split")
+        related_steps = df[df['Related'] == True]['Name'].tolist()
+
+        tables = extract_related_tables(data_project, related_steps)
+
+        schema_description = yaml.dump(data_project.describe_project_yml(tables=tables, limit=9999, exclude_keys=True))
+
+        return question, schema_description, tables
+
+
+def is_test_node(node_id, node_info):
+    return node_info.get('resource_type') == 'test'
+
+def clean_sql(sql):
+    try:
+        return sqlglot.transpile(sql, pretty=True)[0]
+    except Exception as e:
+        return sql
+    
+def build_lineage_graph(dbt_path, manifest_path=None, catalog_path=None):
+    if manifest_path is None:
+        manifest_path = os.path.join(dbt_path, 'target', 'manifest.json')
+    if catalog_path is None:
+        catalog_path = os.path.join(dbt_path, 'target', 'catalog.json')
+    
+    if not os.path.exists(manifest_path):
+        raise FileNotFoundError(f"Manifest file not found at {manifest_path}. Please specify the path to the manifest file using the 'manifest_path' argument.")
+        
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+     
+    if not os.path.exists(catalog_path):
+        print(f"Catalog file not found at {catalog_path}. Proceeding without catalog data.")
+        catalog = None
+    else:
+        with open(catalog_path, 'r') as f:
+            catalog = json.load(f)
+    
+    nodes = set()
+    dependencies = defaultdict(set)
+    sql_content_mapping = {}
+    column_mapping = {}
+    
+    def clean_manifest_column(column_info):
+        return {
+            "name": column_info.get("name"),
+            "comment": column_info.get("description"),
+            "type": column_info.get("data_type"),
+            "index": column_info.get("index")
+        }
+    
+    for node_id, node_info in manifest['nodes'].items():
+        if not is_test_node(node_id, node_info):
+            nodes.add(node_id)
+            
+            compiled_path = node_info.get('compiled_path')
+            if compiled_path:
+                full_sql_path = os.path.join(dbt_path, compiled_path)
+                if os.path.exists(full_sql_path):
+                    try:
+                        with open(full_sql_path, 'r') as sql_file:
+                            sql_content = sql_file.read()
+                        sql_content_mapping[node_id] = clean_sql(sql_content)
+                    except Exception as e:
+                        print(f"Error reading SQL file for {node_id}: {str(e)}")
+                else:
+                    print(f"Compiled SQL file not found at {full_sql_path}")
+            
+            manifest_columns = {col_name: clean_manifest_column(col_info) 
+                                for col_name, col_info in node_info.get('columns', {}).items()}
+            
+            catalog_columns = {}
+            if catalog and node_id in catalog.get('nodes', {}):
+                catalog_columns = catalog['nodes'][node_id].get('columns', {})
+            
+            merged_columns = {}
+            
+            for col_name, col_info in manifest_columns.items():
+                merged_col = col_info.copy()
+                if col_name in catalog_columns:
+                    if not merged_col['comment'] and catalog_columns[col_name].get('comment'):
+                        merged_col['comment'] = catalog_columns[col_name]['comment']
+                    if not merged_col['type'] and catalog_columns[col_name].get('type'):
+                        merged_col['type'] = catalog_columns[col_name]['type']
+                merged_columns[col_name] = merged_col
+            
+            for col_name, col_info in catalog_columns.items():
+                if col_name not in merged_columns:
+                    merged_columns[col_name] = {
+                        "name": col_name,
+                        "comment": col_info.get('comment'),
+                        "type": col_info.get('type'),
+                        "index": None
+                    }
+            
+            column_mapping[node_id] = merged_columns
+            
+            if 'depends_on' in node_info and 'nodes' in node_info['depends_on']:
+                for dep in node_info['depends_on']['nodes']:
+                    dep_info = manifest['nodes'].get(dep, {})
+                    if not is_test_node(dep, dep_info):
+                        dependencies[node_id].add(dep)
+                        nodes.add(dep)
+    
+    nodes_list = sorted(list(nodes))
+    node_to_index = {node: index for index, node in enumerate(nodes_list)}
+    
+    edges = []
+    for node, deps in dependencies.items():
+        for dep in deps:
+            edges.append((node_to_index[dep], node_to_index[node]))
+    
+    return nodes_list, edges, sql_content_mapping, column_mapping
