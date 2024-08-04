@@ -1,0 +1,1243 @@
+model_name,sql_text
+model.google_play.google_play__app_version_report,"WITH installs AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_app_version
+), ratings AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_app_version
+), crashes AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_crashes_app_version
+), install_metrics AS (
+  SELECT
+    *,
+    SUM(device_installs) OVER (PARTITION BY app_version_code, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    SUM(device_uninstalls) OVER (PARTITION BY app_version_code, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls
+  FROM installs
+), app_version_join AS (
+  SELECT
+    COALESCE(install_metrics.date_day, ratings.date_day, crashes.date_day) AS date_day, /* these 3 columns are the grain of this model */
+    COALESCE(install_metrics.app_version_code, ratings.app_version_code, crashes.app_version_code) AS app_version_code,
+    COALESCE(install_metrics.package_name, ratings.package_name, crashes.package_name) AS package_name,
+    COALESCE(install_metrics.active_devices_last_30_days, 0) AS active_devices_last_30_days, /* metrics based on unique devices + users */
+    COALESCE(install_metrics.device_installs, 0) AS device_installs,
+    COALESCE(install_metrics.device_uninstalls, 0) AS device_uninstalls,
+    COALESCE(install_metrics.device_upgrades, 0) AS device_upgrades,
+    COALESCE(install_metrics.user_installs, 0) AS user_installs,
+    COALESCE(install_metrics.user_uninstalls, 0) AS user_uninstalls,
+    COALESCE(crashes.crashes, 0) AS crashes, /* metrics based on events. a user or device can have multiple events in one day */
+    COALESCE(crashes.anrs, 0) AS anrs,
+    COALESCE(install_metrics.install_events, 0) AS install_events,
+    COALESCE(install_metrics.uninstall_events, 0) AS uninstall_events,
+    COALESCE(install_metrics.update_events, 0) AS update_events,
+    install_metrics.total_device_installs,
+    install_metrics.total_device_uninstalls,
+    ratings.average_rating, /* this one actually isn't rolling but we won't coalesce days with no reviews to 0 rating */
+    ratings.rolling_total_average_rating
+  FROM install_metrics
+  FULL OUTER JOIN ratings
+    ON install_metrics.date_day = ratings.date_day
+    AND install_metrics.package_name = ratings.package_name
+    AND /* choosing an arbitrary negative integer as we can't coalesce with a string like 'null_version_code'. null app version codes will cause fanout */ COALESCE(install_metrics.app_version_code, -5) = COALESCE(ratings.app_version_code, -5) /* this really doesn't happen IRL but let's be safe */
+  FULL OUTER JOIN crashes
+    ON COALESCE(install_metrics.date_day, ratings.date_day) = crashes.date_day
+    AND COALESCE(install_metrics.package_name, ratings.package_name) = crashes.package_name
+    AND COALESCE(install_metrics.app_version_code, ratings.app_version_code, -5) = COALESCE(crashes.app_version_code, -5)
+), create_partitions /* to backfill in days with NULL values for rolling metrics, we'll create partitions to batch them together with records that have non-null values */ /* we can't just use last_value(ignore nulls) because of postgres :/ */ AS (
+  SELECT
+    *,
+    SUM(CASE WHEN rolling_total_average_rating IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY app_version_code, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating_partition,
+    SUM(CASE WHEN total_device_installs IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY app_version_code, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs_partition,
+    SUM(CASE WHEN total_device_uninstalls IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY app_version_code, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls_partition
+  FROM app_version_join
+), fill_values /* now we'll take the non-null value for each partitioned batch and propagate it across the rows included in the batch */ AS (
+  SELECT
+    date_day,
+    app_version_code,
+    package_name,
+    active_devices_last_30_days,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    crashes,
+    anrs,
+    install_events,
+    uninstall_events,
+    update_events,
+    average_rating,
+    FIRST_VALUE(rolling_total_average_rating) OVER (PARTITION BY rolling_total_average_rating_partition, app_version_code, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating,
+    FIRST_VALUE(total_device_installs) OVER (PARTITION BY total_device_installs_partition, app_version_code, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    FIRST_VALUE(total_device_uninstalls) OVER (PARTITION BY total_device_uninstalls_partition, app_version_code, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls
+  FROM create_partitions
+), final AS (
+  SELECT
+    date_day,
+    app_version_code,
+    package_name,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    crashes,
+    anrs,
+    install_events,
+    uninstall_events,
+    update_events,
+    active_devices_last_30_days,
+    average_rating,
+    rolling_total_average_rating, /* leave null if there are no ratings yet */
+    COALESCE(total_device_installs, 0) AS total_device_installs, /* the first day will have NULL values, let's make it 0 */
+    COALESCE(total_device_uninstalls, 0) AS total_device_uninstalls,
+    COALESCE(total_device_installs, 0) /* calculate difference rolling metric */ - COALESCE(total_device_uninstalls, 0) AS net_device_installs
+  FROM fill_values
+)
+SELECT
+  *
+FROM final"
+model.google_play.google_play__country_report,"WITH installs AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_country
+), ratings AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_country
+), store_performance AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__store_performance_country
+), country_codes AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.google_play__country_codes
+), install_metrics AS (
+  SELECT
+    *,
+    SUM(device_installs) OVER (PARTITION BY country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    SUM(device_uninstalls) OVER (PARTITION BY country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls
+  FROM installs
+), store_performance_metrics AS (
+  SELECT
+    *,
+    SUM(store_listing_acquisitions) OVER (PARTITION BY country_region, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_acquisitions,
+    SUM(store_listing_visitors) OVER (PARTITION BY country_region, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_visitors
+  FROM store_performance
+), country_join AS (
+  SELECT
+    COALESCE(install_metrics.date_day, ratings.date_day, store_performance_metrics.date_day) AS date_day, /* these 3 columns are the grain of this model */
+    COALESCE(install_metrics.country, ratings.country, store_performance_metrics.country_region) AS country,
+    COALESCE(
+      install_metrics.package_name,
+      ratings.package_name,
+      store_performance_metrics.package_name
+    ) AS package_name,
+    COALESCE(install_metrics.active_devices_last_30_days, 0) AS active_devices_last_30_days, /* metrics based on unique devices + users */
+    COALESCE(install_metrics.device_installs, 0) AS device_installs,
+    COALESCE(install_metrics.device_uninstalls, 0) AS device_uninstalls,
+    COALESCE(install_metrics.device_upgrades, 0) AS device_upgrades,
+    COALESCE(install_metrics.user_installs, 0) AS user_installs,
+    COALESCE(install_metrics.user_uninstalls, 0) AS user_uninstalls,
+    COALESCE(store_performance_metrics.store_listing_acquisitions, 0) AS store_listing_acquisitions,
+    COALESCE(store_performance_metrics.store_listing_visitors, 0) AS store_listing_visitors,
+    store_performance_metrics.store_listing_conversion_rate, /* not coalescing if there aren't any visitors */
+    COALESCE(install_metrics.install_events, 0) AS install_events, /* metrics based on events. a user or device can have multiple installs in one day */
+    COALESCE(install_metrics.uninstall_events, 0) AS uninstall_events,
+    COALESCE(install_metrics.update_events, 0) AS update_events,
+    install_metrics.total_device_installs,
+    install_metrics.total_device_uninstalls,
+    ratings.average_rating, /* this one actually isn't rolling but we won't coalesce days with no reviews to 0 rating */
+    ratings.rolling_total_average_rating,
+    store_performance_metrics.total_store_acquisitions,
+    store_performance_metrics.total_store_visitors
+  FROM install_metrics
+  FULL OUTER JOIN ratings
+    ON install_metrics.date_day = ratings.date_day
+    AND install_metrics.package_name = ratings.package_name
+    AND /* coalesce null countries otherwise they'll cause fanout with the full outer join */ COALESCE(install_metrics.country, 'null_country') = COALESCE(ratings.country, 'null_country') /* in the source package we aggregate all null country records together into one batch per day */
+  FULL OUTER JOIN store_performance_metrics
+    ON store_performance_metrics.date_day = COALESCE(install_metrics.date_day, ratings.date_day)
+    AND store_performance_metrics.package_name = COALESCE(install_metrics.package_name, ratings.package_name)
+    AND COALESCE(store_performance_metrics.country_region, 'null_country') = COALESCE(install_metrics.country, ratings.country, 'null_country')
+), create_partitions /* to backfill in days with NULL values for rolling metrics, we'll create partitions to batch them together with records that have non-null values */ /* we can't just use last_value(ignore nulls) because of postgres :/ */ AS (
+  SELECT
+    *,
+    SUM(CASE WHEN rolling_total_average_rating IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating_partition,
+    SUM(CASE WHEN total_device_installs IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs_partition,
+    SUM(CASE WHEN total_device_uninstalls IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls_partition,
+    SUM(CASE WHEN total_store_acquisitions IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_acquisitions_partition,
+    SUM(CASE WHEN total_store_visitors IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_visitors_partition
+  FROM country_join
+), fill_values /* now we'll take the non-null value for each partitioned batch and propagate it across the rows included in the batch */ AS (
+  SELECT
+    date_day,
+    country,
+    package_name,
+    active_devices_last_30_days,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    install_events,
+    uninstall_events,
+    update_events,
+    store_listing_acquisitions,
+    store_listing_visitors,
+    store_listing_conversion_rate,
+    average_rating,
+    FIRST_VALUE(rolling_total_average_rating) OVER (PARTITION BY rolling_total_average_rating_partition, country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating,
+    FIRST_VALUE(total_device_installs) OVER (PARTITION BY total_device_installs_partition, country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    FIRST_VALUE(total_device_uninstalls) OVER (PARTITION BY total_device_uninstalls_partition, country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls,
+    FIRST_VALUE(total_store_acquisitions) OVER (PARTITION BY total_store_acquisitions_partition, country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_acquisitions,
+    FIRST_VALUE(total_store_visitors) OVER (PARTITION BY total_store_visitors_partition, country, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_visitors
+  FROM create_partitions
+), final AS (
+  SELECT
+    date_day,
+    country AS country_short,
+    COALESCE(country_codes.alternative_country_name, country_codes.country_name) AS country_long,
+    country_codes.region,
+    country_codes.sub_region,
+    package_name,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    install_events,
+    uninstall_events,
+    update_events,
+    store_listing_acquisitions,
+    store_listing_visitors,
+    store_listing_conversion_rate,
+    active_devices_last_30_days,
+    average_rating,
+    rolling_total_average_rating, /* leave null if there are no ratings yet */
+    COALESCE(total_device_installs, 0) AS total_device_installs, /* the first day will have NULL values, let's make it 0 */
+    COALESCE(total_device_uninstalls, 0) AS total_device_uninstalls,
+    COALESCE(total_store_acquisitions, 0) AS total_store_acquisitions,
+    COALESCE(total_store_visitors, 0) AS total_store_visitors,
+    ROUND(
+      CAST(total_store_acquisitions AS DECIMAL(28, 6)) / NULLIF(total_store_visitors, 0),
+      4
+    ) AS rolling_store_conversion_rate, /* calculate percentage and difference rolling metrics */
+    COALESCE(total_device_installs, 0) - COALESCE(total_device_uninstalls, 0) AS net_device_installs
+  FROM fill_values
+  LEFT JOIN country_codes
+    ON country_codes.country_code_alpha_2 = fill_values.country
+)
+SELECT
+  *
+FROM final"
+model.google_play.google_play__overview_report,"WITH __dbt__cte__int_google_play__store_performance AS (
+  WITH store_performance AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_google_play_source.stg_google_play__store_performance_country
+  ), store_performance_rollup AS (
+    SELECT
+      date_day,
+      package_name,
+      SUM(store_listing_acquisitions) AS store_listing_acquisitions,
+      SUM(store_listing_visitors) AS store_listing_visitors
+    FROM store_performance
+    GROUP BY
+      1,
+      2
+  ), store_performance_metrics AS (
+    SELECT
+      *,
+      ROUND(store_listing_acquisitions * 1.0 / NULLIF(store_listing_visitors, 0), 4) AS store_listing_conversion_rate,
+      SUM(store_listing_acquisitions) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_acquisitions,
+      SUM(store_listing_visitors) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_visitors
+    FROM store_performance_rollup
+  )
+  SELECT
+    *
+  FROM store_performance_metrics
+), installs AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_overview
+), ratings AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_overview
+), crashes AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_crashes_overview
+), store_performance AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_google_play__store_performance /* country rollup */
+), install_metrics AS (
+  SELECT
+    *,
+    SUM(device_installs) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    SUM(device_uninstalls) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls
+  FROM installs
+), overview_join AS (
+  SELECT
+    COALESCE(
+      install_metrics.date_day,
+      ratings.date_day,
+      store_performance.date_day,
+      crashes.date_day
+    ) AS date_day, /* these 2 columns are the grain of this model */
+    COALESCE(
+      install_metrics.package_name,
+      ratings.package_name,
+      store_performance.package_name,
+      crashes.package_name
+    ) AS package_name,
+    COALESCE(install_metrics.active_devices_last_30_days, 0) AS active_devices_last_30_days, /* metrics based on unique devices + users */
+    COALESCE(install_metrics.device_installs, 0) AS device_installs,
+    COALESCE(install_metrics.device_uninstalls, 0) AS device_uninstalls,
+    COALESCE(install_metrics.device_upgrades, 0) AS device_upgrades,
+    COALESCE(install_metrics.user_installs, 0) AS user_installs,
+    COALESCE(install_metrics.user_uninstalls, 0) AS user_uninstalls,
+    COALESCE(store_performance.store_listing_acquisitions, 0) AS store_listing_acquisitions,
+    COALESCE(store_performance.store_listing_visitors, 0) AS store_listing_visitors,
+    store_performance.store_listing_conversion_rate, /* not coalescing if there aren't any visitors */
+    COALESCE(crashes.crashes, 0) AS crashes, /* metrics based on events. a user or device can have multiple installs in one day */
+    COALESCE(crashes.anrs, 0) AS anrs,
+    COALESCE(install_metrics.install_events, 0) AS install_events,
+    COALESCE(install_metrics.uninstall_events, 0) AS uninstall_events,
+    COALESCE(install_metrics.update_events, 0) AS update_events,
+    install_metrics.total_device_installs,
+    install_metrics.total_device_uninstalls,
+    ratings.average_rating, /* this one actually isn't rolling but we won't coalesce days with no reviews to 0 rating. todo: move */
+    ratings.rolling_total_average_rating,
+    store_performance.total_store_acquisitions,
+    store_performance.total_store_visitors
+  FROM install_metrics
+  FULL OUTER JOIN ratings
+    ON install_metrics.date_day = ratings.date_day
+    AND install_metrics.package_name = ratings.package_name
+  FULL OUTER JOIN store_performance
+    ON store_performance.date_day = COALESCE(install_metrics.date_day, ratings.date_day)
+    AND store_performance.package_name = COALESCE(install_metrics.package_name, ratings.package_name)
+  FULL OUTER JOIN crashes
+    ON COALESCE(install_metrics.date_day, ratings.date_day, store_performance.date_day) = crashes.date_day
+    AND COALESCE(install_metrics.package_name, ratings.package_name, store_performance.package_name) = crashes.package_name
+), create_partitions /* to backfill in days with NULL values for rolling metrics, we'll create partitions to batch them together with records that have non-null values */ /* we can't just use last_value(ignore nulls) because of postgres :/ */ AS (
+  SELECT
+    *,
+    SUM(CASE WHEN rolling_total_average_rating IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating_partition,
+    SUM(CASE WHEN total_device_installs IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs_partition,
+    SUM(CASE WHEN total_device_uninstalls IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls_partition,
+    SUM(CASE WHEN total_store_acquisitions IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_acquisitions_partition,
+    SUM(CASE WHEN total_store_visitors IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_visitors_partition
+  FROM overview_join
+), fill_values /* now we'll take the non-null value for each partitioned batch and propagate it across the rows included in the batch */ AS (
+  SELECT
+    date_day,
+    package_name,
+    active_devices_last_30_days,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    crashes,
+    anrs,
+    install_events,
+    uninstall_events,
+    update_events,
+    store_listing_acquisitions,
+    store_listing_visitors,
+    store_listing_conversion_rate,
+    average_rating,
+    FIRST_VALUE(rolling_total_average_rating) OVER (PARTITION BY rolling_total_average_rating_partition, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating,
+    FIRST_VALUE(total_device_installs) OVER (PARTITION BY total_device_installs_partition, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    FIRST_VALUE(total_device_uninstalls) OVER (PARTITION BY total_device_uninstalls_partition, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls,
+    FIRST_VALUE(total_store_acquisitions) OVER (PARTITION BY total_store_acquisitions_partition, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_acquisitions,
+    FIRST_VALUE(total_store_visitors) OVER (PARTITION BY total_store_visitors_partition, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_visitors
+  FROM create_partitions
+), final AS (
+  SELECT
+    date_day,
+    package_name,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    crashes,
+    anrs,
+    install_events,
+    uninstall_events,
+    update_events,
+    store_listing_acquisitions,
+    store_listing_visitors,
+    store_listing_conversion_rate,
+    active_devices_last_30_days,
+    average_rating,
+    rolling_total_average_rating, /* leave null if there are no ratings yet */
+    COALESCE(total_device_installs, 0) AS total_device_installs, /* the first day will have NULL values, let's make it 0 */
+    COALESCE(total_device_uninstalls, 0) AS total_device_uninstalls,
+    COALESCE(total_store_acquisitions, 0) AS total_store_acquisitions,
+    COALESCE(total_store_visitors, 0) AS total_store_visitors,
+    ROUND(
+      CAST(total_store_acquisitions AS DECIMAL(28, 6)) / NULLIF(total_store_visitors, 0),
+      4
+    ) AS rolling_store_conversion_rate, /* calculate percentage and difference rolling metrics */
+    COALESCE(total_device_installs, 0) - COALESCE(total_device_uninstalls, 0) AS net_device_installs
+  FROM fill_values
+)
+SELECT
+  *
+FROM final"
+model.google_play.google_play__os_version_report,"WITH installs AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_os_version
+), ratings AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_os_version
+), crashes AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_crashes_os_version
+), install_metrics AS (
+  SELECT
+    *,
+    SUM(device_installs) OVER (PARTITION BY android_os_version, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    SUM(device_uninstalls) OVER (PARTITION BY android_os_version, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls
+  FROM installs
+), app_version_join AS (
+  SELECT
+    COALESCE(install_metrics.date_day, ratings.date_day, crashes.date_day) AS date_day, /* these 3 columns are the grain of this model */
+    COALESCE(
+      install_metrics.android_os_version,
+      ratings.android_os_version,
+      crashes.android_os_version
+    ) AS android_os_version,
+    COALESCE(install_metrics.package_name, ratings.package_name, crashes.package_name) AS package_name,
+    COALESCE(install_metrics.active_devices_last_30_days, 0) AS active_devices_last_30_days, /* metrics based on unique devices + users */
+    COALESCE(install_metrics.device_installs, 0) AS device_installs,
+    COALESCE(install_metrics.device_uninstalls, 0) AS device_uninstalls,
+    COALESCE(install_metrics.device_upgrades, 0) AS device_upgrades,
+    COALESCE(install_metrics.user_installs, 0) AS user_installs,
+    COALESCE(install_metrics.user_uninstalls, 0) AS user_uninstalls,
+    COALESCE(crashes.crashes, 0) AS crashes, /* metrics based on events. a user or device can have multiple events in one day */
+    COALESCE(crashes.anrs, 0) AS anrs,
+    COALESCE(install_metrics.install_events, 0) AS install_events,
+    COALESCE(install_metrics.uninstall_events, 0) AS uninstall_events,
+    COALESCE(install_metrics.update_events, 0) AS update_events,
+    install_metrics.total_device_installs,
+    install_metrics.total_device_uninstalls,
+    ratings.average_rating, /* this one actually isn't rolling but we won't coalesce days with no reviews to 0 rating */
+    ratings.rolling_total_average_rating
+  FROM install_metrics
+  FULL OUTER JOIN ratings
+    ON install_metrics.date_day = ratings.date_day
+    AND install_metrics.package_name = ratings.package_name
+    AND /* coalesce null os versions otherwise they'll cause fanout with the full outer join */ COALESCE(install_metrics.android_os_version, 'null_os_version') = COALESCE(ratings.android_os_version, 'null_os_version') /* in the source package we aggregate all null device-type records together into one batch per day */
+  FULL OUTER JOIN crashes
+    ON COALESCE(install_metrics.date_day, ratings.date_day) = crashes.date_day
+    AND COALESCE(install_metrics.package_name, ratings.package_name) = crashes.package_name
+    AND /* coalesce null countries otherwise they'll cause fanout with the full outer join */ COALESCE(install_metrics.android_os_version, ratings.android_os_version, 'null_os_version') = COALESCE(crashes.android_os_version, 'null_os_version') /* in the source package we aggregate all null device-type records together into one batch per day */
+), create_partitions /* to backfill in days with NULL values for rolling metrics, we'll create partitions to batch them together with records that have non-null values */ /* we can't just use last_value(ignore nulls) because of postgres :/ */ AS (
+  SELECT
+    *,
+    SUM(CASE WHEN rolling_total_average_rating IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY android_os_version, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating_partition,
+    SUM(CASE WHEN total_device_installs IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY android_os_version, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs_partition,
+    SUM(CASE WHEN total_device_uninstalls IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY android_os_version, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls_partition
+  FROM app_version_join
+), fill_values /* now we'll take the non-null value for each partitioned batch and propagate it across the rows included in the batch */ AS (
+  SELECT
+    date_day,
+    android_os_version,
+    package_name,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    crashes,
+    anrs,
+    install_events,
+    uninstall_events,
+    update_events,
+    active_devices_last_30_days,
+    average_rating,
+    FIRST_VALUE(rolling_total_average_rating) OVER (PARTITION BY rolling_total_average_rating_partition, android_os_version, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating,
+    FIRST_VALUE(total_device_installs) OVER (PARTITION BY total_device_installs_partition, android_os_version, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    FIRST_VALUE(total_device_uninstalls) OVER (PARTITION BY total_device_uninstalls_partition, android_os_version, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls
+  FROM create_partitions
+), final AS (
+  SELECT
+    date_day,
+    android_os_version,
+    package_name,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    crashes,
+    anrs,
+    install_events,
+    uninstall_events,
+    update_events,
+    active_devices_last_30_days,
+    average_rating,
+    rolling_total_average_rating, /* leave null if there are no ratings yet */
+    COALESCE(total_device_installs, 0) AS total_device_installs, /* the first day will have NULL values, let's make it 0 */
+    COALESCE(total_device_uninstalls, 0) AS total_device_uninstalls,
+    COALESCE(total_device_installs, 0) /* calculate difference rolling metric */ - COALESCE(total_device_uninstalls, 0) AS net_device_installs
+  FROM fill_values
+)
+SELECT
+  *
+FROM final"
+model.google_play.google_play__device_report,"WITH installs AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_device
+), ratings AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_device
+), install_metrics AS (
+  SELECT
+    *,
+    SUM(device_installs) OVER (PARTITION BY device, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    SUM(device_uninstalls) OVER (PARTITION BY device, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls
+  FROM installs
+), device_join AS (
+  SELECT
+    COALESCE(install_metrics.date_day, ratings.date_day) AS date_day, /* these 3 columns are the grain of this model */
+    COALESCE(install_metrics.device, ratings.device) AS device, /* device type */
+    COALESCE(install_metrics.package_name, ratings.package_name) AS package_name,
+    COALESCE(install_metrics.active_devices_last_30_days, 0) AS active_devices_last_30_days, /* metrics based on unique devices + users */
+    COALESCE(install_metrics.device_installs, 0) AS device_installs,
+    COALESCE(install_metrics.device_uninstalls, 0) AS device_uninstalls,
+    COALESCE(install_metrics.device_upgrades, 0) AS device_upgrades,
+    COALESCE(install_metrics.user_installs, 0) AS user_installs,
+    COALESCE(install_metrics.user_uninstalls, 0) AS user_uninstalls,
+    COALESCE(install_metrics.install_events, 0) AS install_events, /* metrics based on events. a user or device can have multiple installs in one day */
+    COALESCE(install_metrics.uninstall_events, 0) AS uninstall_events,
+    COALESCE(install_metrics.update_events, 0) AS update_events,
+    install_metrics.total_device_installs,
+    install_metrics.total_device_uninstalls,
+    ratings.average_rating, /* this one actually isn't rolling but we won't coalesce days with no reviews to 0 rating */
+    ratings.rolling_total_average_rating
+  FROM install_metrics
+  FULL OUTER JOIN ratings
+    ON install_metrics.date_day = ratings.date_day
+    AND install_metrics.package_name = ratings.package_name
+    AND /* coalesce null device types otherwise they'll cause fanout with the full outer join */ COALESCE(install_metrics.device, 'null_device') = COALESCE(ratings.device, 'null_device') /* in the source package we aggregate all null device-type records together into one batch per day */
+), create_partitions /* to backfill in days with NULL values for rolling metrics, we'll create partitions to batch them together with records that have non-null values */ /* we can't just use last_value(ignore nulls) because of postgres :/ */ AS (
+  SELECT
+    *,
+    SUM(CASE WHEN rolling_total_average_rating IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY device, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating_partition,
+    SUM(CASE WHEN total_device_installs IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY device, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs_partition,
+    SUM(CASE WHEN total_device_uninstalls IS NULL THEN 0 ELSE 1 END) OVER (PARTITION BY device, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls_partition
+  FROM device_join
+), fill_values /* now we'll take the non-null value for each partitioned batch and propagate it across the rows included in the batch */ AS (
+  SELECT
+    date_day,
+    device,
+    package_name,
+    active_devices_last_30_days,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    install_events,
+    uninstall_events,
+    update_events,
+    average_rating,
+    FIRST_VALUE(rolling_total_average_rating) OVER (PARTITION BY rolling_total_average_rating_partition, device, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS rolling_total_average_rating,
+    FIRST_VALUE(total_device_installs) OVER (PARTITION BY total_device_installs_partition, device, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_installs,
+    FIRST_VALUE(total_device_uninstalls) OVER (PARTITION BY total_device_uninstalls_partition, device, package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_device_uninstalls
+  FROM create_partitions
+), final AS (
+  SELECT
+    date_day,
+    device,
+    package_name,
+    device_installs,
+    device_uninstalls,
+    device_upgrades,
+    user_installs,
+    user_uninstalls,
+    install_events,
+    uninstall_events,
+    update_events,
+    active_devices_last_30_days,
+    average_rating,
+    rolling_total_average_rating, /* leave null if there are no ratings yet */
+    COALESCE(total_device_installs, 0) AS total_device_installs, /* the first day will have NULL values, let's make it 0 */
+    COALESCE(total_device_uninstalls, 0) AS total_device_uninstalls,
+    COALESCE(total_device_installs, 0) /* calculate difference rolling metric */ - COALESCE(total_device_uninstalls, 0) AS net_device_installs
+  FROM fill_values
+)
+SELECT
+  *
+FROM final"
+model.google_play.int_google_play__store_performance,"WITH store_performance AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__store_performance_country
+), store_performance_rollup AS (
+  SELECT
+    date_day,
+    package_name,
+    SUM(store_listing_acquisitions) AS store_listing_acquisitions,
+    SUM(store_listing_visitors) AS store_listing_visitors
+  FROM store_performance
+  GROUP BY
+    1,
+    2
+), store_performance_metrics AS (
+  SELECT
+    *,
+    ROUND(store_listing_acquisitions * 1.0 / NULLIF(store_listing_visitors, 0), 4) AS store_listing_conversion_rate,
+    SUM(store_listing_acquisitions) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_acquisitions,
+    SUM(store_listing_visitors) OVER (PARTITION BY package_name ORDER BY date_day ASC rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_store_visitors
+  FROM store_performance_rollup
+)
+SELECT
+  *
+FROM store_performance_metrics"
+model.google_play_source.stg_google_play__stats_ratings_os_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_os_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS TEXT) AS android_os_version,
+    CAST(NULL AS TEXT) AS daily_average_rating,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS FLOAT) AS total_average_rating
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    android_os_version,
+    package_name,
+    CASE
+      WHEN android_os_version IS NULL
+      THEN NULL
+      ELSE CAST(NULLIF(CAST(daily_average_rating AS TEXT), 'NA') AS FLOAT)
+    END AS average_rating,
+    CASE WHEN android_os_version IS NULL THEN NULL ELSE total_average_rating END AS rolling_total_average_rating
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__store_performance_source,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__store_performance_source_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS TEXT) AS search_term,
+    CAST(NULL AS INT) AS store_listing_acquisitions,
+    CAST(NULL AS FLOAT) AS store_listing_conversion_rate,
+    CAST(NULL AS INT) AS store_listing_visitors,
+    CAST(NULL AS TEXT) AS traffic_source,
+    CAST(NULL AS TEXT) AS utm_campaign,
+    CAST(NULL AS TEXT) AS utm_source
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    package_name,
+    traffic_source,
+    search_term,
+    utm_campaign,
+    utm_source,
+    store_listing_acquisitions,
+    store_listing_conversion_rate,
+    store_listing_visitors,
+    MD5(
+      CAST(COALESCE(CAST(date AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(package_name AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(traffic_source AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(search_term AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(utm_campaign AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(utm_source AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS traffic_source_unique_key, /* make a surrogate key as the PK involves quite a few columns */
+    _fivetran_synced
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_ratings_app_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_app_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS INT) AS app_version_code,
+    CAST(NULL AS TEXT) AS daily_average_rating,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS FLOAT) AS total_average_rating
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_version_code,
+    package_name,
+    CASE
+      WHEN app_version_code IS NULL
+      THEN NULL
+      ELSE CAST(NULLIF(CAST(daily_average_rating AS TEXT), 'NA') AS FLOAT)
+    END AS average_rating,
+    CASE WHEN app_version_code IS NULL THEN NULL ELSE total_average_rating END AS rolling_total_average_rating
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_crashes_app_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_crashes_app_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS INT) AS app_version_code,
+    CAST(NULL AS INT) AS daily_anrs,
+    CAST(NULL AS INT) AS daily_crashes,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_version_code,
+    package_name,
+    SUM(daily_anrs) AS anrs,
+    SUM(daily_crashes) AS crashes
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_installs_app_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_app_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS INT) AS active_device_installs,
+    CAST(NULL AS INT) AS app_version_code,
+    CAST(NULL AS INT) AS current_device_installs,
+    CAST(NULL AS INT) AS current_user_installs,
+    CAST(NULL AS INT) AS daily_device_installs,
+    CAST(NULL AS INT) AS daily_device_uninstalls,
+    CAST(NULL AS INT) AS daily_device_upgrades,
+    CAST(NULL AS INT) AS daily_user_installs,
+    CAST(NULL AS INT) AS daily_user_uninstalls,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS INT) AS install_events,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS INT) AS total_user_installs,
+    CAST(NULL AS INT) AS uninstall_events,
+    CAST(NULL AS INT) AS update_events
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_version_code,
+    package_name,
+    SUM(active_device_installs) AS active_devices_last_30_days,
+    SUM(daily_device_installs) AS device_installs,
+    SUM(daily_device_uninstalls) AS device_uninstalls,
+    SUM(daily_device_upgrades) AS device_upgrades,
+    SUM(daily_user_installs) AS user_installs,
+    SUM(daily_user_uninstalls) AS user_uninstalls,
+    SUM(install_events) AS install_events,
+    SUM(uninstall_events) AS uninstall_events,
+    SUM(update_events) AS update_events
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__store_performance_country,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__store_performance_country_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS TEXT) AS country_region,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS INT) AS store_listing_acquisitions,
+    CAST(NULL AS FLOAT) AS store_listing_conversion_rate,
+    CAST(NULL AS INT) AS store_listing_visitors
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    country_region,
+    package_name,
+    SUM(store_listing_acquisitions) AS store_listing_acquisitions,
+    AVG(store_listing_conversion_rate) AS store_listing_conversion_rate,
+    SUM(store_listing_visitors) AS store_listing_visitors
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_installs_os_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_os_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS INT) AS active_device_installs,
+    CAST(NULL AS TEXT) AS android_os_version,
+    CAST(NULL AS INT) AS current_device_installs,
+    CAST(NULL AS INT) AS current_user_installs,
+    CAST(NULL AS INT) AS daily_device_installs,
+    CAST(NULL AS INT) AS daily_device_uninstalls,
+    CAST(NULL AS INT) AS daily_device_upgrades,
+    CAST(NULL AS INT) AS daily_user_installs,
+    CAST(NULL AS INT) AS daily_user_uninstalls,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS INT) AS install_events,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS INT) AS total_user_installs,
+    CAST(NULL AS INT) AS uninstall_events,
+    CAST(NULL AS INT) AS update_events
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    package_name,
+    android_os_version,
+    SUM(active_device_installs) AS active_devices_last_30_days,
+    SUM(daily_device_installs) AS device_installs,
+    SUM(daily_device_uninstalls) AS device_uninstalls,
+    SUM(daily_device_upgrades) AS device_upgrades,
+    SUM(daily_user_installs) AS user_installs,
+    SUM(daily_user_uninstalls) AS user_uninstalls,
+    SUM(install_events) AS install_events,
+    SUM(uninstall_events) AS uninstall_events,
+    SUM(update_events) AS update_events
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_ratings_country,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_country_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS TEXT) AS country,
+    CAST(NULL AS TEXT) AS daily_average_rating,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS FLOAT) AS total_average_rating
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    country,
+    package_name,
+    CASE
+      WHEN country IS NULL
+      THEN NULL
+      ELSE CAST(NULLIF(CAST(daily_average_rating AS TEXT), 'NA') AS FLOAT)
+    END AS average_rating,
+    CASE WHEN country IS NULL THEN NULL ELSE total_average_rating END AS rolling_total_average_rating
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_crashes_overview,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_crashes_overview_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS INT) AS daily_anrs,
+    CAST(NULL AS INT) AS daily_crashes,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    package_name,
+    daily_anrs AS anrs,
+    daily_crashes AS crashes,
+    _fivetran_synced
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_installs_overview,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_overview_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS INT) AS active_device_installs,
+    CAST(NULL AS INT) AS current_device_installs,
+    CAST(NULL AS INT) AS current_user_installs,
+    CAST(NULL AS INT) AS daily_device_installs,
+    CAST(NULL AS INT) AS daily_device_uninstalls,
+    CAST(NULL AS INT) AS daily_device_upgrades,
+    CAST(NULL AS INT) AS daily_user_installs,
+    CAST(NULL AS INT) AS daily_user_uninstalls,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS INT) AS install_events,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS INT) AS total_user_installs,
+    CAST(NULL AS INT) AS uninstall_events,
+    CAST(NULL AS INT) AS update_events
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    package_name,
+    active_device_installs AS active_devices_last_30_days,
+    daily_device_installs AS device_installs,
+    daily_device_uninstalls AS device_uninstalls,
+    daily_device_upgrades AS device_upgrades,
+    daily_user_installs AS user_installs,
+    daily_user_uninstalls AS user_uninstalls,
+    install_events,
+    uninstall_events,
+    update_events,
+    _fivetran_synced
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_ratings_device,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_device_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS TEXT) AS daily_average_rating,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS device,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS FLOAT) AS total_average_rating
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    device,
+    package_name,
+    CASE
+      WHEN device IS NULL
+      THEN NULL
+      ELSE CAST(NULLIF(CAST(daily_average_rating AS TEXT), 'NA') AS FLOAT)
+    END AS average_rating,
+    CASE WHEN device IS NULL THEN NULL ELSE total_average_rating END AS rolling_total_average_rating
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_installs_device,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_device_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS INT) AS active_device_installs,
+    CAST(NULL AS INT) AS current_device_installs,
+    CAST(NULL AS INT) AS current_user_installs,
+    CAST(NULL AS INT) AS daily_device_installs,
+    CAST(NULL AS INT) AS daily_device_uninstalls,
+    CAST(NULL AS INT) AS daily_device_upgrades,
+    CAST(NULL AS INT) AS daily_user_installs,
+    CAST(NULL AS INT) AS daily_user_uninstalls,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS device,
+    CAST(NULL AS INT) AS install_events,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS INT) AS total_user_installs,
+    CAST(NULL AS INT) AS uninstall_events,
+    CAST(NULL AS INT) AS update_events
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    device, /* device_type */
+    package_name,
+    SUM(active_device_installs) AS active_devices_last_30_days,
+    SUM(daily_device_installs) AS device_installs,
+    SUM(daily_device_uninstalls) AS device_uninstalls,
+    SUM(daily_device_upgrades) AS device_upgrades,
+    SUM(daily_user_installs) AS user_installs,
+    SUM(daily_user_uninstalls) AS user_uninstalls,
+    SUM(install_events) AS install_events,
+    SUM(uninstall_events) AS uninstall_events,
+    SUM(update_events) AS update_events
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_ratings_overview,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_ratings_overview_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS TEXT) AS daily_average_rating,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS FLOAT) AS total_average_rating
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    package_name,
+    CAST(NULLIF(CAST(daily_average_rating AS TEXT), 'NA') AS FLOAT) AS average_rating,
+    total_average_rating AS rolling_total_average_rating,
+    _fivetran_synced
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_installs_country,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_installs_country_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS INT) AS active_device_installs,
+    CAST(NULL AS TEXT) AS country,
+    CAST(NULL AS INT) AS current_device_installs,
+    CAST(NULL AS INT) AS current_user_installs,
+    CAST(NULL AS INT) AS daily_device_installs,
+    CAST(NULL AS INT) AS daily_device_uninstalls,
+    CAST(NULL AS INT) AS daily_device_upgrades,
+    CAST(NULL AS INT) AS daily_user_installs,
+    CAST(NULL AS INT) AS daily_user_uninstalls,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS INT) AS install_events,
+    CAST(NULL AS TEXT) AS package_name,
+    CAST(NULL AS INT) AS total_user_installs,
+    CAST(NULL AS INT) AS uninstall_events,
+    CAST(NULL AS INT) AS update_events
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    country,
+    package_name,
+    SUM(active_device_installs) AS active_devices_last_30_days,
+    SUM(daily_device_installs) AS device_installs,
+    SUM(daily_device_uninstalls) AS device_uninstalls,
+    SUM(daily_device_upgrades) AS device_upgrades,
+    SUM(daily_user_installs) AS user_installs,
+    SUM(daily_user_uninstalls) AS user_uninstalls,
+    SUM(install_events) AS install_events,
+    SUM(uninstall_events) AS uninstall_events,
+    SUM(update_events) AS update_events
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_crashes_os_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_google_play_source.stg_google_play__stats_crashes_os_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _file,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS _line,
+    CAST(NULL AS TIMESTAMP) AS _modified,
+    CAST(NULL AS TEXT) AS android_os_version,
+    CAST(NULL AS INT) AS daily_anrs,
+    CAST(NULL AS INT) AS daily_crashes,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS TEXT) AS package_name
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    android_os_version,
+    package_name,
+    SUM(daily_anrs) AS anrs,
+    SUM(daily_crashes) AS crashes
+  FROM fields
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM final"
+model.google_play_source.stg_google_play__stats_ratings_country_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_ratings_country"
+model.google_play_source.stg_google_play__stats_installs_app_version_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_installs_app_version"
+model.google_play_source.stg_google_play__stats_crashes_os_version_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_crashes_os_version"
+model.google_play_source.stg_google_play__store_performance_country_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_store_performance_country"
+model.google_play_source.stg_google_play__stats_ratings_overview_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_ratings_overview"
+model.google_play_source.stg_google_play__stats_ratings_app_version_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_ratings_app_version"
+model.google_play_source.stg_google_play__stats_installs_country_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_installs_country"
+model.google_play_source.stg_google_play__stats_installs_os_version_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_installs_os_version"
+model.google_play_source.stg_google_play__stats_installs_device_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_installs_device"
+model.google_play_source.stg_google_play__store_performance_source_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_store_performance_traffic_source"
+model.google_play_source.stg_google_play__stats_installs_overview_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_installs_overview"
+model.google_play_source.stg_google_play__stats_ratings_device_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_ratings_device"
+model.google_play_source.stg_google_play__stats_crashes_overview_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_crashes_overview"
+model.google_play_source.stg_google_play__stats_ratings_os_version_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_ratings_os_version"
+model.google_play_source.stg_google_play__stats_crashes_app_version_tmp,"SELECT
+  *
+FROM TEST.google_play.stats_crashes_app_version"

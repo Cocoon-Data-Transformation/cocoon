@@ -1,0 +1,2 @@
+select * 
+from TEST.itunes_connect.downloads_source_type_device_report

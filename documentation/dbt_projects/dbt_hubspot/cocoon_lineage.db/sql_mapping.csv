@@ -1,0 +1,2543 @@
+model_name,sql_text
+model.hubspot.hubspot__contacts,"WITH __dbt__cte__int_hubspot__engagement_metrics__by_contact AS (
+  WITH engagements AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_hubspot.hubspot__engagements
+  ), engagement_contacts AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_contact
+  ), engagement_contacts_joined AS (
+    SELECT
+      engagements.engagement_type,
+      engagement_contacts.contact_id
+    FROM engagements
+    INNER JOIN engagement_contacts
+      USING (engagement_id)
+  ), engagement_contacts_agg AS (
+    SELECT
+      contact_id,
+      COUNT(CASE WHEN engagement_type = 'NOTE' THEN contact_id END) AS count_engagement_notes,
+      COUNT(CASE WHEN engagement_type = 'TASK' THEN contact_id END) AS count_engagement_tasks,
+      COUNT(CASE WHEN engagement_type = 'CALL' THEN contact_id END) AS count_engagement_calls,
+      COUNT(CASE WHEN engagement_type = 'MEETING' THEN contact_id END) AS count_engagement_meetings,
+      COUNT(CASE WHEN engagement_type = 'EMAIL' THEN contact_id END) AS count_engagement_emails,
+      COUNT(CASE WHEN engagement_type = 'INCOMING_EMAIL' THEN contact_id END) AS count_engagement_incoming_emails,
+      COUNT(CASE WHEN engagement_type = 'FORWARDED_EMAIL' THEN contact_id END) AS count_engagement_forwarded_emails
+    FROM engagement_contacts_joined
+    GROUP BY
+      1
+  )
+  SELECT
+    *
+  FROM engagement_contacts_agg
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), email_sends AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__email_sends
+), email_metrics AS (
+  SELECT
+    recipient_email_address
+  FROM email_sends
+  GROUP BY
+    1
+), email_joined AS (
+  SELECT
+    contacts.*
+  FROM contacts
+  LEFT JOIN email_metrics
+    ON contacts.email = email_metrics.recipient_email_address
+), engagements AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_hubspot__engagement_metrics__by_contact
+), engagements_joined AS (
+  SELECT
+    email_joined.*,
+    COALESCE(engagements.count_engagement_notes, 0) AS count_engagement_notes,
+    COALESCE(engagements.count_engagement_tasks, 0) AS count_engagement_tasks,
+    COALESCE(engagements.count_engagement_calls, 0) AS count_engagement_calls,
+    COALESCE(engagements.count_engagement_meetings, 0) AS count_engagement_meetings,
+    COALESCE(engagements.count_engagement_emails, 0) AS count_engagement_emails,
+    COALESCE(engagements.count_engagement_incoming_emails, 0) AS count_engagement_incoming_emails,
+    COALESCE(engagements.count_engagement_forwarded_emails, 0) AS count_engagement_forwarded_emails
+  FROM email_joined
+  LEFT JOIN engagements
+    USING (contact_id)
+)
+SELECT
+  *
+FROM engagements_joined"
+model.hubspot.hubspot__contact_lists,"WITH contact_lists AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__contact_list
+), email_metrics AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__email_metrics__by_contact_list
+), joined AS (
+  SELECT
+    contact_lists.*
+  FROM contact_lists
+  LEFT JOIN email_metrics
+    USING (contact_list_id)
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.hubspot__email_campaigns,"WITH campaigns AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_campaign
+), email_sends AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__email_sends
+), email_metrics AS (
+  SELECT
+    email_campaign_id
+  FROM email_sends
+  GROUP BY
+    1
+), joined AS (
+  SELECT
+    campaigns.*
+  FROM campaigns
+  LEFT JOIN email_metrics
+    ON campaigns.email_campaign_id = email_metrics.email_campaign_id
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.hubspot__email_sends,"WITH __dbt__cte__int_hubspot__email_event_aggregates AS (
+  WITH events AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+  ), aggregates AS (
+    SELECT
+      sent_by_event_id AS email_send_id,
+      COUNT(CASE WHEN event_type = 'OPEN' THEN sent_by_event_id END) AS opens,
+      COUNT(CASE WHEN event_type = 'SENT' THEN sent_by_event_id END) AS sends,
+      COUNT(CASE WHEN event_type = 'DELIVERED' THEN sent_by_event_id END) AS deliveries,
+      COUNT(CASE WHEN event_type = 'DROPPED' THEN sent_by_event_id END) AS drops,
+      COUNT(CASE WHEN event_type = 'CLICK' THEN sent_by_event_id END) AS clicks,
+      COUNT(CASE WHEN event_type = 'FORWARD' THEN sent_by_event_id END) AS forwards,
+      COUNT(CASE WHEN event_type = 'DEFERRED' THEN sent_by_event_id END) AS deferrals,
+      COUNT(CASE WHEN event_type = 'BOUNCE' THEN sent_by_event_id END) AS bounces,
+      COUNT(CASE WHEN event_type = 'SPAMREPORT' THEN sent_by_event_id END) AS spam_reports,
+      COUNT(CASE WHEN event_type = 'PRINT' THEN sent_by_event_id END) AS prints
+    FROM events
+    WHERE
+      NOT sent_by_event_id IS NULL
+    GROUP BY
+      1
+  )
+  SELECT
+    *
+  FROM aggregates
+), __dbt__cte__int_hubspot__email_aggregate_status_change AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_hubspot.hubspot__email_event_status_change
+  ), aggregates AS (
+    SELECT
+      email_campaign_id,
+      email_send_id,
+      COUNT(CASE WHEN subscription_status = 'UNSUBSCRIBED' THEN 1 END) AS unsubscribes
+    FROM base
+    WHERE
+      NOT email_send_id IS NULL
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM aggregates
+), sends AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__email_event_sent
+), metrics AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_hubspot__email_event_aggregates
+), joined AS (
+  SELECT
+    sends.*,
+    COALESCE(metrics.bounces, 0) AS bounces,
+    COALESCE(metrics.clicks, 0) AS clicks,
+    COALESCE(metrics.deferrals, 0) AS deferrals,
+    COALESCE(metrics.deliveries, 0) AS deliveries,
+    COALESCE(metrics.drops, 0) AS drops,
+    COALESCE(metrics.forwards, 0) AS forwards,
+    COALESCE(metrics.opens, 0) AS opens,
+    COALESCE(metrics.prints, 0) AS prints,
+    COALESCE(metrics.spam_reports, 0) AS spam_reports
+  FROM sends
+  LEFT JOIN metrics
+    USING (email_send_id)
+), booleans AS (
+  SELECT
+    *,
+    bounces > 0 AS was_bounced,
+    clicks > 0 AS was_clicked,
+    deferrals > 0 AS was_deferred,
+    deliveries > 0 AS was_delivered,
+    forwards > 0 AS was_forwarded,
+    opens > 0 AS was_opened,
+    prints > 0 AS was_printed,
+    spam_reports > 0 AS was_spam_reported
+  FROM joined
+), unsubscribes AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_hubspot__email_aggregate_status_change
+), unsubscribes_joined AS (
+  SELECT
+    booleans.*,
+    COALESCE(unsubscribes.unsubscribes, 0) AS unsubscribes,
+    COALESCE(unsubscribes.unsubscribes, 0) > 0 AS was_unsubcribed
+  FROM booleans
+  LEFT JOIN unsubscribes
+    USING (email_send_id)
+)
+SELECT
+  *
+FROM unsubscribes_joined"
+model.hubspot.int_hubspot__contact_merge_adjust,"WITH contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__contact
+), contact_merge_audit AS (
+  SELECT
+    contacts.contact_id,
+    SPLIT_PART(merges.value, ':', 0) AS vid_to_merge
+  FROM contacts
+  CROSS JOIN TABLE(FLATTEN(STRTOK_TO_ARRAY(calculated_merged_vids, ';'))) AS merges
+), contact_merge_removal AS (
+  SELECT
+    contacts.*
+  FROM contacts
+  LEFT JOIN contact_merge_audit
+    ON CAST(contacts.contact_id AS TEXT) = CAST(contact_merge_audit.vid_to_merge AS TEXT)
+  WHERE
+    contact_merge_audit.vid_to_merge IS NULL
+)
+SELECT
+  *
+FROM contact_merge_removal"
+model.hubspot.int_hubspot__engagement_metrics__by_contact,"WITH engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__engagements
+), engagement_contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_contact
+), engagement_contacts_joined AS (
+  SELECT
+    engagements.engagement_type,
+    engagement_contacts.contact_id
+  FROM engagements
+  INNER JOIN engagement_contacts
+    USING (engagement_id)
+), engagement_contacts_agg AS (
+  SELECT
+    contact_id,
+    COUNT(CASE WHEN engagement_type = 'NOTE' THEN contact_id END) AS count_engagement_notes,
+    COUNT(CASE WHEN engagement_type = 'TASK' THEN contact_id END) AS count_engagement_tasks,
+    COUNT(CASE WHEN engagement_type = 'CALL' THEN contact_id END) AS count_engagement_calls,
+    COUNT(CASE WHEN engagement_type = 'MEETING' THEN contact_id END) AS count_engagement_meetings,
+    COUNT(CASE WHEN engagement_type = 'EMAIL' THEN contact_id END) AS count_engagement_emails,
+    COUNT(CASE WHEN engagement_type = 'INCOMING_EMAIL' THEN contact_id END) AS count_engagement_incoming_emails,
+    COUNT(CASE WHEN engagement_type = 'FORWARDED_EMAIL' THEN contact_id END) AS count_engagement_forwarded_emails
+  FROM engagement_contacts_joined
+  GROUP BY
+    1
+)
+SELECT
+  *
+FROM engagement_contacts_agg"
+model.hubspot.int_hubspot__email_event_aggregates,"WITH events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), aggregates AS (
+  SELECT
+    sent_by_event_id AS email_send_id,
+    COUNT(CASE WHEN event_type = 'OPEN' THEN sent_by_event_id END) AS opens,
+    COUNT(CASE WHEN event_type = 'SENT' THEN sent_by_event_id END) AS sends,
+    COUNT(CASE WHEN event_type = 'DELIVERED' THEN sent_by_event_id END) AS deliveries,
+    COUNT(CASE WHEN event_type = 'DROPPED' THEN sent_by_event_id END) AS drops,
+    COUNT(CASE WHEN event_type = 'CLICK' THEN sent_by_event_id END) AS clicks,
+    COUNT(CASE WHEN event_type = 'FORWARD' THEN sent_by_event_id END) AS forwards,
+    COUNT(CASE WHEN event_type = 'DEFERRED' THEN sent_by_event_id END) AS deferrals,
+    COUNT(CASE WHEN event_type = 'BOUNCE' THEN sent_by_event_id END) AS bounces,
+    COUNT(CASE WHEN event_type = 'SPAMREPORT' THEN sent_by_event_id END) AS spam_reports,
+    COUNT(CASE WHEN event_type = 'PRINT' THEN sent_by_event_id END) AS prints
+  FROM events
+  WHERE
+    NOT sent_by_event_id IS NULL
+  GROUP BY
+    1
+)
+SELECT
+  *
+FROM aggregates"
+model.hubspot.int_hubspot__email_aggregate_status_change,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__email_event_status_change
+), aggregates AS (
+  SELECT
+    email_campaign_id,
+    email_send_id,
+    COUNT(CASE WHEN subscription_status = 'UNSUBSCRIBED' THEN 1 END) AS unsubscribes
+  FROM base
+  WHERE
+    NOT email_send_id IS NULL
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM aggregates"
+model.hubspot.int_hubspot__email_metrics__by_contact_list,"WITH email_sends AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__email_sends
+), contact_list_member AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__contact_list_member
+), joined AS (
+  SELECT
+    email_sends.*,
+    contact_list_member.contact_list_id
+  FROM email_sends
+  LEFT JOIN contact_list_member
+    USING (contact_id)
+  WHERE
+    NOT contact_list_member.contact_list_id IS NULL
+), email_metrics AS (
+  SELECT
+    contact_list_id
+  FROM joined
+  GROUP BY
+    1
+)
+SELECT
+  *
+FROM email_metrics"
+model.hubspot.hubspot__email_event_status_change,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_status_change
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_bounce,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_bounce
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_deferred,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_deferred
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_delivered,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_delivered
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_forward,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_forward
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_print,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_print
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_dropped,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_dropped
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_opens,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_open
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_clicks,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_click
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_sent,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_sent
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__email_event_spam_report,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_spam_report
+), events AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.int_hubspot__contact_merge_adjust
+), events_joined AS (
+  SELECT
+    base.*,
+    events.created_timestamp,
+    events.email_campaign_id,
+    events.recipient_email_address,
+    events.sent_timestamp AS email_send_timestamp,
+    events.sent_by_event_id AS email_send_id
+  FROM base
+  LEFT JOIN events
+    USING (event_id)
+), contacts_joined AS (
+  SELECT
+    events_joined.*,
+    contacts.contact_id,
+    COALESCE(contacts.is_contact_deleted, FALSE) AS is_contact_deleted
+  FROM events_joined
+  LEFT JOIN contacts
+    ON events_joined.recipient_email_address = contacts.email
+)
+SELECT
+  *
+FROM contacts_joined"
+model.hubspot.hubspot__contact_history,"WITH history AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__contact_property_history
+), windows AS (
+  SELECT
+    contact_id,
+    field_name,
+    change_source,
+    change_source_id,
+    change_timestamp AS valid_from,
+    new_value,
+    LEAD(change_timestamp) OVER (PARTITION BY contact_id, field_name ORDER BY change_timestamp) AS valid_to
+  FROM history
+), surrogate AS (
+  SELECT
+    windows.*,
+    MD5(
+      CAST(COALESCE(CAST(field_name AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(contact_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(valid_from AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS id
+  FROM windows
+)
+SELECT
+  *
+FROM surrogate"
+model.hubspot.hubspot__companies,"WITH companies AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__company
+), engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__engagements
+), engagement_companies AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_company
+), engagement_companies_joined AS (
+  SELECT
+    engagements.engagement_type,
+    engagement_companies.company_id
+  FROM engagements
+  INNER JOIN engagement_companies
+    USING (engagement_id)
+), engagement_companies_agg AS (
+  SELECT
+    company_id,
+    COUNT(CASE WHEN engagement_type = 'NOTE' THEN company_id END) AS count_engagement_notes,
+    COUNT(CASE WHEN engagement_type = 'TASK' THEN company_id END) AS count_engagement_tasks,
+    COUNT(CASE WHEN engagement_type = 'CALL' THEN company_id END) AS count_engagement_calls,
+    COUNT(CASE WHEN engagement_type = 'MEETING' THEN company_id END) AS count_engagement_meetings,
+    COUNT(CASE WHEN engagement_type = 'EMAIL' THEN company_id END) AS count_engagement_emails,
+    COUNT(CASE WHEN engagement_type = 'INCOMING_EMAIL' THEN company_id END) AS count_engagement_incoming_emails,
+    COUNT(CASE WHEN engagement_type = 'FORWARDED_EMAIL' THEN company_id END) AS count_engagement_forwarded_emails
+  FROM engagement_companies_joined
+  GROUP BY
+    1
+), joined AS (
+  SELECT
+    companies.*,
+    COALESCE(engagement_companies_agg.count_engagement_notes, 0) AS count_engagement_notes,
+    COALESCE(engagement_companies_agg.count_engagement_tasks, 0) AS count_engagement_tasks,
+    COALESCE(engagement_companies_agg.count_engagement_calls, 0) AS count_engagement_calls,
+    COALESCE(engagement_companies_agg.count_engagement_meetings, 0) AS count_engagement_meetings,
+    COALESCE(engagement_companies_agg.count_engagement_emails, 0) AS count_engagement_emails,
+    COALESCE(engagement_companies_agg.count_engagement_incoming_emails, 0) AS count_engagement_incoming_emails,
+    COALESCE(engagement_companies_agg.count_engagement_forwarded_emails, 0) AS count_engagement_forwarded_emails
+  FROM companies
+  LEFT JOIN engagement_companies_agg
+    USING (company_id)
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.hubspot__deals,"WITH __dbt__cte__int_hubspot__deals_enhanced AS (
+  WITH deals AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal
+  ), pipelines AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline
+  ), pipeline_stages AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline_stage
+  ), owners AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__owner
+  ), deal_fields_joined AS (
+    SELECT
+      deals.*,
+      COALESCE(pipelines.is_deal_pipeline_deleted, FALSE) AS is_deal_pipeline_deleted,
+      pipelines.pipeline_label,
+      pipelines.is_active AS is_pipeline_active,
+      COALESCE(pipeline_stages.is_deal_pipeline_stage_deleted, FALSE) AS is_deal_pipeline_stage_deleted,
+      pipelines.deal_pipeline_created_at,
+      pipelines.deal_pipeline_updated_at,
+      pipeline_stages.pipeline_stage_label,
+      owners.email_address AS owner_email_address,
+      owners.full_name AS owner_full_name
+    FROM deals
+    LEFT JOIN pipelines
+      ON deals.deal_pipeline_id = pipelines.deal_pipeline_id
+    LEFT JOIN pipeline_stages
+      ON deals.deal_pipeline_stage_id = pipeline_stages.deal_pipeline_stage_id
+    LEFT JOIN owners
+      ON deals.owner_id = owners.owner_id
+  )
+  SELECT
+    *
+  FROM deal_fields_joined
+), deals_enhanced AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_hubspot__deals_enhanced
+), engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__engagements
+), engagement_deals AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_deal
+), engagement_deal_joined AS (
+  SELECT
+    engagements.engagement_type,
+    engagement_deals.deal_id
+  FROM engagements
+  INNER JOIN engagement_deals
+    ON CAST(engagements.engagement_id AS BIGINT) = CAST(engagement_deals.engagement_id AS BIGINT)
+), engagement_deal_agg AS (
+  SELECT
+    deal_id,
+    COUNT(CASE WHEN engagement_type = 'NOTE' THEN deal_id END) AS count_engagement_notes,
+    COUNT(CASE WHEN engagement_type = 'TASK' THEN deal_id END) AS count_engagement_tasks,
+    COUNT(CASE WHEN engagement_type = 'CALL' THEN deal_id END) AS count_engagement_calls,
+    COUNT(CASE WHEN engagement_type = 'MEETING' THEN deal_id END) AS count_engagement_meetings,
+    COUNT(CASE WHEN engagement_type = 'EMAIL' THEN deal_id END) AS count_engagement_emails,
+    COUNT(CASE WHEN engagement_type = 'INCOMING_EMAIL' THEN deal_id END) AS count_engagement_incoming_emails,
+    COUNT(CASE WHEN engagement_type = 'FORWARDED_EMAIL' THEN deal_id END) AS count_engagement_forwarded_emails
+  FROM engagement_deal_joined
+  GROUP BY
+    1
+), engagements_joined AS (
+  SELECT
+    deals_enhanced.*,
+    COALESCE(engagement_deal_agg.count_engagement_notes, 0) AS count_engagement_notes,
+    COALESCE(engagement_deal_agg.count_engagement_tasks, 0) AS count_engagement_tasks,
+    COALESCE(engagement_deal_agg.count_engagement_calls, 0) AS count_engagement_calls,
+    COALESCE(engagement_deal_agg.count_engagement_meetings, 0) AS count_engagement_meetings,
+    COALESCE(engagement_deal_agg.count_engagement_emails, 0) AS count_engagement_emails,
+    COALESCE(engagement_deal_agg.count_engagement_incoming_emails, 0) AS count_engagement_incoming_emails,
+    COALESCE(engagement_deal_agg.count_engagement_forwarded_emails, 0) AS count_engagement_forwarded_emails
+  FROM deals_enhanced
+  LEFT JOIN engagement_deal_agg
+    ON CAST(deals_enhanced.deal_id AS BIGINT) = CAST(engagement_deal_agg.deal_id AS BIGINT)
+)
+SELECT
+  *
+FROM engagements_joined"
+model.hubspot.hubspot__deal_stages,"WITH __dbt__cte__int_hubspot__deals_enhanced AS (
+  WITH deals AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal
+  ), pipelines AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline
+  ), pipeline_stages AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline_stage
+  ), owners AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__owner
+  ), deal_fields_joined AS (
+    SELECT
+      deals.*,
+      COALESCE(pipelines.is_deal_pipeline_deleted, FALSE) AS is_deal_pipeline_deleted,
+      pipelines.pipeline_label,
+      pipelines.is_active AS is_pipeline_active,
+      COALESCE(pipeline_stages.is_deal_pipeline_stage_deleted, FALSE) AS is_deal_pipeline_stage_deleted,
+      pipelines.deal_pipeline_created_at,
+      pipelines.deal_pipeline_updated_at,
+      pipeline_stages.pipeline_stage_label,
+      owners.email_address AS owner_email_address,
+      owners.full_name AS owner_full_name
+    FROM deals
+    LEFT JOIN pipelines
+      ON deals.deal_pipeline_id = pipelines.deal_pipeline_id
+    LEFT JOIN pipeline_stages
+      ON deals.deal_pipeline_stage_id = pipeline_stages.deal_pipeline_stage_id
+    LEFT JOIN owners
+      ON deals.owner_id = owners.owner_id
+  )
+  SELECT
+    *
+  FROM deal_fields_joined
+), deals_enhanced AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_hubspot__deals_enhanced
+), deal_stage AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_stage
+), pipeline_stage AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline_stage
+), pipeline AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline
+), final AS (
+  SELECT
+    deal_stage.deal_id || '-' || ROW_NUMBER() OVER (PARTITION BY deal_stage.deal_id ORDER BY deal_stage.date_entered ASC) AS deal_stage_id,
+    deals_enhanced.deal_id,
+    deals_enhanced.deal_name,
+    deal_stage._fivetran_start AS date_stage_entered,
+    deal_stage._fivetran_end AS date_stage_exited,
+    deal_stage._fivetran_active AS is_stage_active,
+    deal_stage.deal_stage_name AS pipeline_stage_id,
+    pipeline_stage.pipeline_stage_label,
+    pipeline_stage.deal_pipeline_id AS pipeline_id,
+    pipeline.pipeline_label,
+    deal_stage.source,
+    deal_stage.source_id,
+    pipeline_stage.is_active AS is_pipeline_stage_active,
+    pipeline.is_active AS is_pipeline_active,
+    pipeline_stage.is_closed_won AS is_pipeline_stage_closed_won,
+    pipeline_stage.display_order AS pipeline_stage_display_order,
+    pipeline.display_order AS pipeline_display_order,
+    pipeline_stage.probability AS pipeline_stage_probability,
+    COALESCE(pipeline.is_deal_pipeline_deleted, FALSE) AS is_deal_pipeline_deleted,
+    COALESCE(pipeline_stage.is_deal_pipeline_stage_deleted, FALSE) AS is_deal_pipeline_stage_deleted,
+    COALESCE(deals_enhanced.is_deal_deleted, FALSE) AS is_deal_deleted,
+    pipeline_stage.deal_pipeline_stage_created_at,
+    pipeline_stage.deal_pipeline_stage_updated_at
+  FROM deal_stage
+  LEFT JOIN pipeline_stage
+    ON deal_stage.deal_stage_name = pipeline_stage.deal_pipeline_stage_id
+  LEFT JOIN pipeline
+    ON pipeline_stage.deal_pipeline_id = pipeline.deal_pipeline_id
+  LEFT JOIN deals_enhanced
+    ON deal_stage.deal_id = deals_enhanced.deal_id
+)
+SELECT
+  *
+FROM final"
+model.hubspot.hubspot__engagements,"WITH engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement
+), contacts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_contact
+), contacts_agg AS (
+  SELECT
+    engagement_id,
+    ARRAY_AGG(contact_id) AS contact_ids
+  FROM contacts
+  GROUP BY
+    1
+), deals AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_deal
+), deals_agg AS (
+  SELECT
+    engagement_id,
+    ARRAY_AGG(deal_id) AS deal_ids
+  FROM deals
+  GROUP BY
+    1
+), companies AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_company
+), companies_agg AS (
+  SELECT
+    engagement_id,
+    ARRAY_AGG(company_id) AS company_ids
+  FROM companies
+  GROUP BY
+    1
+), joined AS (
+  SELECT
+    contacts_agg.contact_ids,
+    deals_agg.deal_ids,
+    companies_agg.company_ids,
+    engagements.*
+  FROM engagements
+  LEFT JOIN contacts_agg
+    USING (engagement_id)
+  LEFT JOIN deals_agg
+    USING (engagement_id)
+  LEFT JOIN companies_agg
+    USING (engagement_id)
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.hubspot__engagement_emails,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_email
+), engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__engagements
+), joined AS (
+  SELECT
+    *, /* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+    engagements.contact_ids,
+    engagements.deal_ids,
+    engagements.company_ids,
+    COALESCE(engagements.is_active, NOT base._fivetran_deleted) AS is_active,
+    COALESCE(engagements.created_timestamp, base.created_timestamp) AS created_timestamp,
+    COALESCE(engagements.occurred_timestamp, base.occurred_timestamp) AS occurred_timestamp,
+    COALESCE(engagements.owner_id, base.owner_id) AS owner_id
+  FROM base
+  LEFT JOIN engagements
+    ON base.engagement_id = engagements.engagement_id
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.hubspot__engagement_tasks,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_task
+), engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__engagements
+), joined AS (
+  SELECT
+    *, /* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+    engagements.contact_ids,
+    engagements.deal_ids,
+    engagements.company_ids,
+    COALESCE(engagements.is_active, NOT base._fivetran_deleted) AS is_active,
+    COALESCE(engagements.created_timestamp, base.created_timestamp) AS created_timestamp,
+    COALESCE(engagements.occurred_timestamp, base.occurred_timestamp) AS occurred_timestamp,
+    COALESCE(engagements.owner_id, base.owner_id) AS owner_id
+  FROM base
+  LEFT JOIN engagements
+    ON base.engagement_id = engagements.engagement_id
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.hubspot__engagement_meetings,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_meeting
+), engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__engagements
+), joined AS (
+  SELECT
+    *, /* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+    engagements.contact_ids,
+    engagements.deal_ids,
+    engagements.company_ids,
+    COALESCE(engagements.is_active, NOT base._fivetran_deleted) AS is_active,
+    COALESCE(engagements.created_timestamp, base.created_timestamp) AS created_timestamp,
+    COALESCE(engagements.occurred_timestamp, base.occurred_timestamp) AS occurred_timestamp,
+    COALESCE(engagements.owner_id, base.owner_id) AS owner_id
+  FROM base
+  LEFT JOIN engagements
+    ON base.engagement_id = engagements.engagement_id
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.hubspot__engagement_calls,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_call
+), engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__engagements
+), joined AS (
+  SELECT
+    *, /* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+    engagements.contact_ids,
+    engagements.deal_ids,
+    engagements.company_ids,
+    COALESCE(engagements.is_active, NOT base._fivetran_deleted) AS is_active,
+    COALESCE(engagements.created_timestamp, base.created_timestamp) AS created_timestamp,
+    COALESCE(engagements.occurred_timestamp, base.occurred_timestamp) AS occurred_timestamp,
+    COALESCE(engagements.owner_id, base.owner_id) AS owner_id
+  FROM base
+  LEFT JOIN engagements
+    ON base.engagement_id = engagements.engagement_id
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.hubspot__engagement_notes,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_note
+), engagements AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_hubspot.hubspot__engagements
+), joined AS (
+  SELECT
+    *, /* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+    engagements.contact_ids,
+    engagements.deal_ids,
+    engagements.company_ids,
+    COALESCE(engagements.is_active, NOT base._fivetran_deleted) AS is_active,
+    COALESCE(engagements.created_timestamp, base.created_timestamp) AS created_timestamp,
+    COALESCE(engagements.occurred_timestamp, base.occurred_timestamp) AS occurred_timestamp,
+    COALESCE(engagements.owner_id, base.owner_id) AS owner_id
+  FROM base
+  LEFT JOIN engagements
+    ON base.engagement_id = engagements.engagement_id
+)
+SELECT
+  *
+FROM joined"
+model.hubspot.int_hubspot__deals_enhanced,"WITH deals AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal
+), pipelines AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline
+), pipeline_stages AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline_stage
+), owners AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__owner
+), deal_fields_joined AS (
+  SELECT
+    deals.*,
+    COALESCE(pipelines.is_deal_pipeline_deleted, FALSE) AS is_deal_pipeline_deleted,
+    pipelines.pipeline_label,
+    pipelines.is_active AS is_pipeline_active,
+    COALESCE(pipeline_stages.is_deal_pipeline_stage_deleted, FALSE) AS is_deal_pipeline_stage_deleted,
+    pipelines.deal_pipeline_created_at,
+    pipelines.deal_pipeline_updated_at,
+    pipeline_stages.pipeline_stage_label,
+    owners.email_address AS owner_email_address,
+    owners.full_name AS owner_full_name
+  FROM deals
+  LEFT JOIN pipelines
+    ON deals.deal_pipeline_id = pipelines.deal_pipeline_id
+  LEFT JOIN pipeline_stages
+    ON deals.deal_pipeline_stage_id = pipeline_stages.deal_pipeline_stage_id
+  LEFT JOIN owners
+    ON deals.owner_id = owners.owner_id
+)
+SELECT
+  *
+FROM deal_fields_joined"
+model.hubspot.hubspot__company_history,"WITH history AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__company_property_history
+), windows AS (
+  SELECT
+    company_id,
+    field_name,
+    change_source,
+    change_source_id,
+    change_timestamp AS valid_from,
+    new_value,
+    LEAD(change_timestamp) OVER (PARTITION BY company_id, field_name ORDER BY change_timestamp) AS valid_to
+  FROM history
+), surrogate AS (
+  SELECT
+    windows.*,
+    MD5(
+      CAST(COALESCE(CAST(field_name AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(company_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(valid_from AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS id
+  FROM windows
+)
+SELECT
+  *
+FROM surrogate"
+model.hubspot.hubspot__deal_history,"WITH history AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_property_history
+), windows AS (
+  SELECT
+    deal_id,
+    field_name,
+    change_source,
+    change_source_id,
+    change_timestamp AS valid_from,
+    new_value,
+    LEAD(change_timestamp) OVER (PARTITION BY deal_id, field_name ORDER BY change_timestamp) AS valid_to
+  FROM history
+), surrogate AS (
+  SELECT
+    windows.*,
+    MD5(
+      CAST(COALESCE(CAST(field_name AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(deal_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(valid_from AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS id
+  FROM windows
+)
+SELECT
+  *
+FROM surrogate"
+model.hubspot_source.stg_hubspot__email_event_bounce,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_bounce_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS category,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS response,
+    CAST(NULL AS TEXT) AS status
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    category AS bounce_category,
+    id AS event_id,
+    response AS returned_response,
+    status AS returned_status
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__deal_pipeline_stage,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline_stage_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS active,
+    CAST(NULL AS BOOLEAN) AS closed_won,
+    CAST(NULL AS INT) AS display_order,
+    CAST(NULL AS TEXT) AS label,
+    CAST(NULL AS TEXT) AS pipeline_id,
+    CAST(NULL AS FLOAT) AS probability,
+    CAST(NULL AS TEXT) AS stage_id,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TIMESTAMP) AS updated_at
+  FROM base
+), fields AS (
+  SELECT
+    _fivetran_deleted AS is_deal_pipeline_stage_deleted,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    active AS is_active,
+    closed_won AS is_closed_won,
+    display_order,
+    label AS pipeline_stage_label,
+    pipeline_id AS deal_pipeline_id,
+    probability,
+    CAST(stage_id AS TEXT) AS deal_pipeline_stage_id,
+    created_at AS deal_pipeline_stage_created_at,
+    updated_at AS deal_pipeline_stage_updated_at
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__engagement_note,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_note_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TEXT) AS note,
+    CAST(NULL AS TEXT) AS engagement_type,
+    CAST(NULL AS INT) AS engagement_id,
+    CAST(NULL AS TIMESTAMP) AS created_timestamp,
+    CAST(NULL AS TIMESTAMP) AS occurred_timestamp,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS INT) AS team_id
+  FROM base
+)
+SELECT
+  *
+FROM macro"
+model.hubspot_source.stg_hubspot__company,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__company_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS company_id,
+    CAST(NULL AS BOOLEAN) AS is_company_deleted,
+    CAST(NULL AS TEXT) AS company_name,
+    CAST(NULL AS TEXT) AS description,
+    CAST(NULL AS TIMESTAMP) AS created_date,
+    CAST(NULL AS TEXT) AS industry,
+    CAST(NULL AS TEXT) AS street_address,
+    CAST(NULL AS TEXT) AS street_address_2,
+    CAST(NULL AS TEXT) AS city,
+    CAST(NULL AS TEXT) AS state,
+    CAST(NULL AS TEXT) AS country,
+    CAST(NULL AS INT) AS company_annual_revenue
+  FROM base
+), fields AS (
+  SELECT
+    company_id, /* just default columns + explicitly configured passthrough columns */ /* a few columns below are aliased within the macros/get_company_columns.sql macro */
+    is_company_deleted,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    company_name,
+    description,
+    created_date,
+    industry,
+    street_address,
+    street_address_2,
+    city,
+    state,
+    country,
+    company_annual_revenue
+  /* The below macro adds the fields defined within your hubspot__ticket_pass_through_columns variable into the staging model */ /* The below macro add the ability to create calculated fields using the hubspot__company_calculated_fields variable. */
+  FROM macro
+), joined AS (
+  SELECT
+    fields.*
+  FROM fields
+)
+SELECT
+  *
+FROM joined"
+model.hubspot_source.stg_hubspot__engagement_deal,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_deal_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS deal_id,
+    CAST(NULL AS INT) AS engagement_id
+  FROM base
+)
+SELECT
+  *
+FROM macro"
+model.hubspot_source.stg_hubspot__email_event_delivered,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_delivered_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS response,
+    CAST(NULL AS TEXT) AS smtp_id
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    id AS event_id,
+    response AS returned_response,
+    smtp_id
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__email_event_spam_report,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_spam_report_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS ip_address,
+    CAST(NULL AS TEXT) AS user_agent
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    id AS event_id,
+    ip_address,
+    user_agent
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__contact_list,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__contact_list_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS BOOLEAN) AS deleteable,
+    CAST(NULL AS BOOLEAN) AS dynamic,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS metadata_error,
+    CAST(NULL AS TIMESTAMP) AS metadata_last_processing_state_change_at,
+    CAST(NULL AS TIMESTAMP) AS metadata_last_size_change_at,
+    CAST(NULL AS TEXT) AS metadata_processing,
+    CAST(NULL AS INT) AS metadata_size,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS INT) AS portal_id,
+    CAST(NULL AS TIMESTAMP) AS updated_at
+  FROM base
+), fields AS (
+  SELECT
+    _fivetran_deleted AS is_contact_list_deleted,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    CAST(created_at AS TIMESTAMP) AS created_timestamp,
+    deleteable AS is_deletable,
+    dynamic AS is_dynamic,
+    id AS contact_list_id,
+    metadata_error,
+    CAST(metadata_last_processing_state_change_at AS TIMESTAMP) AS metadata_last_processing_state_change_at,
+    CAST(metadata_last_size_change_at AS TIMESTAMP) AS metadata_last_size_change_at,
+    metadata_processing,
+    metadata_size,
+    name AS contact_list_name,
+    portal_id,
+    CAST(updated_at AS TIMESTAMP) AS updated_timestamp
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__email_event,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS caused_by_created,
+    CAST(NULL AS TEXT) AS caused_by_id,
+    CAST(NULL AS TIMESTAMP) AS created,
+    CAST(NULL AS INT) AS email_campaign_id,
+    CAST(NULL AS BOOLEAN) AS filtered_event,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TIMESTAMP) AS obsoleted_by_created,
+    CAST(NULL AS TEXT) AS obsoleted_by_id,
+    CAST(NULL AS INT) AS portal_id,
+    CAST(NULL AS TEXT) AS recipient,
+    CAST(NULL AS TIMESTAMP) AS sent_by_created,
+    CAST(NULL AS TEXT) AS sent_by_id,
+    CAST(NULL AS TEXT) AS type
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    app_id,
+    CAST(caused_by_created AS TIMESTAMP) AS caused_timestamp,
+    caused_by_id AS caused_by_event_id,
+    CAST(created AS TIMESTAMP) AS created_timestamp,
+    email_campaign_id,
+    filtered_event AS is_filtered_event,
+    id AS event_id,
+    CAST(obsoleted_by_created AS TIMESTAMP) AS obsoleted_timestamp,
+    obsoleted_by_id AS obsoleted_by_event_id,
+    portal_id,
+    recipient AS recipient_email_address,
+    CAST(sent_by_created AS TIMESTAMP) AS sent_timestamp,
+    sent_by_id AS sent_by_event_id,
+    type AS event_type
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__engagement_contact,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_contact_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS contact_id,
+    CAST(NULL AS INT) AS engagement_id
+  FROM base
+)
+SELECT
+  *
+FROM macro"
+model.hubspot_source.stg_hubspot__engagement_company,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_company_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS company_id,
+    CAST(NULL AS INT) AS engagement_id
+  FROM base
+)
+SELECT
+  *
+FROM macro"
+model.hubspot_source.stg_hubspot__email_event_status_change,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_status_change_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS bounced,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS portal_subscription_status,
+    CAST(NULL AS TEXT) AS requested_by,
+    CAST(NULL AS TEXT) AS source,
+    CAST(NULL AS TEXT) AS subscriptions
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    bounced AS is_bounced,
+    id AS event_id,
+    portal_subscription_status AS subscription_status,
+    requested_by AS requested_by_email,
+    source AS change_source,
+    subscriptions
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__owner,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__owner_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TEXT) AS email,
+    CAST(NULL AS TEXT) AS first_name,
+    CAST(NULL AS TEXT) AS last_name,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS INT) AS portal_id,
+    CAST(NULL AS TEXT) AS type,
+    CAST(NULL AS TIMESTAMP) AS updated_at
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    CAST(created_at AS TIMESTAMP) AS created_timestamp,
+    email AS email_address,
+    first_name,
+    last_name,
+    owner_id,
+    portal_id,
+    type AS owner_type,
+    CAST(updated_at AS TIMESTAMP) AS updated_timestamp,
+    TRIM(first_name || ' ' || last_name) AS full_name
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__email_event_dropped,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_dropped_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS bcc,
+    CAST(NULL AS TEXT) AS cc,
+    CAST(NULL AS TEXT) AS drop_message,
+    CAST(NULL AS TEXT) AS drop_reason,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS reply_to,
+    CAST(NULL AS TEXT) AS subject,
+    CAST(NULL AS TEXT) AS from_email
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    bcc AS bcc_emails,
+    cc AS cc_emails,
+    drop_message,
+    drop_reason,
+    from_email, /* source field name = from ; alias declared in macros/get_email_event_dropped_columns.sql */
+    id AS event_id,
+    reply_to AS reply_to_email,
+    subject AS email_subject
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__deal_company,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_company_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS deal_id,
+    CAST(NULL AS INT) AS company_id,
+    CAST(NULL AS INT) AS type_id
+  FROM base
+), fields AS (
+  SELECT
+    company_id,
+    deal_id,
+    type_id,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__deal_property_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_property_history_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS deal_id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS source,
+    CAST(NULL AS TEXT) AS source_id,
+    CAST(NULL AS TIMESTAMP) AS change_timestamp,
+    CAST(NULL AS TEXT) AS value
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    deal_id,
+    name AS field_name,
+    source AS change_source,
+    source_id AS change_source_id,
+    CAST(change_timestamp AS TIMESTAMP) AS change_timestamp, /* source field name = timestamp ; alias declared in macros/get_deal_property_history_columns.sql */
+    value AS new_value
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__engagement_email,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_email_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TEXT) AS engagement_type,
+    CAST(NULL AS INT) AS engagement_id,
+    CAST(NULL AS TIMESTAMP) AS created_timestamp,
+    CAST(NULL AS TIMESTAMP) AS occurred_timestamp,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS INT) AS team_id
+  FROM base
+)
+SELECT
+  *
+FROM macro"
+model.hubspot_source.stg_hubspot__email_event_open,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_open_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS browser,
+    CAST(NULL AS TEXT) AS duration,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS ip_address,
+    CAST(NULL AS TEXT) AS location,
+    CAST(NULL AS TEXT) AS user_agent
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    browser,
+    duration AS duration_open,
+    id AS event_id,
+    ip_address,
+    location AS geo_location,
+    user_agent
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__engagement_meeting,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_meeting_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TEXT) AS engagement_type,
+    CAST(NULL AS INT) AS engagement_id,
+    CAST(NULL AS TIMESTAMP) AS created_timestamp,
+    CAST(NULL AS TIMESTAMP) AS occurred_timestamp,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS INT) AS team_id
+  FROM base
+)
+SELECT
+  *
+FROM macro"
+model.hubspot_source.stg_hubspot__deal_stage,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_stage_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_active,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_end,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_start,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS date_entered,
+    CAST(NULL AS INT) AS deal_id,
+    CAST(NULL AS TEXT) AS source,
+    CAST(NULL AS TEXT) AS source_id,
+    CAST(NULL AS TEXT) AS value
+  FROM base
+), final AS (
+  SELECT
+    CAST(date_entered AS TIMESTAMP) AS date_entered,
+    deal_id,
+    source,
+    source_id,
+    value AS deal_stage_name,
+    _fivetran_active,
+    CAST(_fivetran_end AS TIMESTAMP) AS _fivetran_end,
+    CAST(_fivetran_start AS TIMESTAMP) AS _fivetran_start
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.hubspot_source.stg_hubspot__deal_contact,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_contact_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS deal_id,
+    CAST(NULL AS INT) AS contact_id,
+    CAST(NULL AS INT) AS type_id
+  FROM base
+), fields AS (
+  SELECT
+    contact_id,
+    deal_id,
+    type_id,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__email_campaign,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_campaign_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TEXT) AS app_name,
+    CAST(NULL AS INT) AS content_id,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS INT) AS num_included,
+    CAST(NULL AS INT) AS num_queued,
+    CAST(NULL AS TEXT) AS sub_type,
+    CAST(NULL AS TEXT) AS subject,
+    CAST(NULL AS TEXT) AS type
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    app_id,
+    app_name,
+    content_id,
+    id AS email_campaign_id,
+    name AS email_campaign_name,
+    num_included,
+    num_queued,
+    sub_type AS email_campaign_sub_type,
+    subject AS email_campaign_subject,
+    type AS email_campaign_type
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__contact_property_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__contact_property_history_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS contact_id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS source,
+    CAST(NULL AS TEXT) AS source_id,
+    CAST(NULL AS TIMESTAMP) AS change_timestamp,
+    CAST(NULL AS TEXT) AS value
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    contact_id,
+    name AS field_name,
+    source AS change_source,
+    source_id AS change_source_id,
+    CAST(change_timestamp AS TIMESTAMP) AS change_timestamp, /* source field name = timestamp ; alias declared in macros/get_contact_property_history_columns.sql */
+    value AS new_value
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__email_event_forward,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_forward_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS browser,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS ip_address,
+    CAST(NULL AS TEXT) AS location,
+    CAST(NULL AS TEXT) AS user_agent
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    browser,
+    id AS event_id,
+    ip_address,
+    location AS geo_location,
+    user_agent
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__property_option,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__property_option_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TEXT) AS label,
+    CAST(NULL AS TEXT) AS property_id,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS display_order,
+    CAST(NULL AS BOOLEAN) AS hidden,
+    CAST(NULL AS TEXT) AS value
+  FROM base
+), fields AS (
+  SELECT
+    label AS property_option_label,
+    property_id,
+    _fivetran_synced,
+    display_order,
+    hidden,
+    value AS property_option_value
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__company_property_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__company_property_history_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS company_id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS source,
+    CAST(NULL AS TEXT) AS source_id,
+    CAST(NULL AS TIMESTAMP) AS change_timestamp,
+    CAST(NULL AS TEXT) AS value
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    company_id,
+    name AS field_name,
+    source AS change_source,
+    source_id AS change_source_id,
+    CAST(change_timestamp AS TIMESTAMP) AS change_timestamp, /* source field name = timestamp ; alias declared in macros/get_company_property_history_columns.sql */
+    value AS new_value
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__deal_pipeline,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_pipeline_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS active,
+    CAST(NULL AS INT) AS display_order,
+    CAST(NULL AS TEXT) AS label,
+    CAST(NULL AS TEXT) AS pipeline_id,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TIMESTAMP) AS updated_at
+  FROM base
+), fields AS (
+  SELECT
+    _fivetran_deleted AS is_deal_pipeline_deleted,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    active AS is_active,
+    display_order,
+    label AS pipeline_label,
+    CAST(pipeline_id AS TEXT) AS deal_pipeline_id,
+    created_at AS deal_pipeline_created_at,
+    updated_at AS deal_pipeline_updated_at
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__engagement_task,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_task_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS INT) AS engagement_id,
+    CAST(NULL AS TEXT) AS engagement_type,
+    CAST(NULL AS TIMESTAMP) AS created_timestamp,
+    CAST(NULL AS TIMESTAMP) AS occurred_timestamp,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS INT) AS team_id
+  FROM base
+)
+SELECT
+  *
+FROM macro"
+model.hubspot_source.stg_hubspot__email_event_click,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_click_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS browser,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS ip_address,
+    CAST(NULL AS TEXT) AS location,
+    CAST(NULL AS TEXT) AS referer,
+    CAST(NULL AS TEXT) AS url,
+    CAST(NULL AS TEXT) AS user_agent
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    browser,
+    id AS event_id,
+    ip_address,
+    location AS geo_location,
+    referer AS referer_url,
+    url AS click_url,
+    user_agent
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__email_event_sent,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_sent_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS bcc,
+    CAST(NULL AS TEXT) AS cc,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS reply_to,
+    CAST(NULL AS TEXT) AS subject,
+    CAST(NULL AS TEXT) AS from_email
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    bcc AS bcc_emails,
+    cc AS cc_emails,
+    from_email, /* source field name = from ; alias declared in macros/get_email_event_sent_columns.sql */
+    id AS event_id,
+    reply_to AS reply_to_email,
+    subject AS email_subject
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__email_event_deferred,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_deferred_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS attempt,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS response
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    attempt AS attempt_number,
+    id AS event_id,
+    response AS returned_response
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__contact_list_member,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__contact_list_member_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS added_at,
+    CAST(NULL AS INT) AS contact_id,
+    CAST(NULL AS INT) AS contact_list_id
+  FROM base
+), fields AS (
+  SELECT
+    _fivetran_deleted AS is_contact_list_member_deleted,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    CAST(added_at AS TIMESTAMP) AS added_timestamp,
+    contact_id,
+    contact_list_id
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__engagement,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS is_active,
+    CAST(NULL AS TIMESTAMP) AS created_timestamp,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS INT) AS portal_id,
+    CAST(NULL AS TIMESTAMP) AS occurred_timestamp,
+    CAST(NULL AS TEXT) AS engagement_type
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    id AS engagement_id,
+    created_timestamp,
+    owner_id,
+    occurred_timestamp,
+    portal_id,
+    engagement_type,
+    is_active
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__engagement_call,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__engagement_call_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS INT) AS engagement_id,
+    CAST(NULL AS TEXT) AS engagement_type,
+    CAST(NULL AS TIMESTAMP) AS created_timestamp,
+    CAST(NULL AS TIMESTAMP) AS occurred_timestamp,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS INT) AS team_id
+  FROM base
+)
+SELECT
+  *
+FROM macro"
+model.hubspot_source.stg_hubspot__email_event_print,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__email_event_print_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS browser,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS TEXT) AS ip_address,
+    CAST(NULL AS TEXT) AS location,
+    CAST(NULL AS TEXT) AS user_agent
+  FROM base
+), fields AS (
+  SELECT
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    browser,
+    id AS event_id,
+    ip_address,
+    location AS geo_location,
+    user_agent
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__deal,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__deal_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS deal_id,
+    CAST(NULL AS TEXT) AS deal_pipeline_id,
+    CAST(NULL AS TEXT) AS deal_pipeline_stage_id,
+    CAST(NULL AS BOOLEAN) AS is_deal_deleted,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS INT) AS portal_id,
+    CAST(NULL AS TEXT) AS deal_name,
+    CAST(NULL AS TEXT) AS description,
+    CAST(NULL AS INT) AS amount,
+    CAST(NULL AS TIMESTAMP) AS closed_date,
+    CAST(NULL AS TIMESTAMP) AS created_date
+  FROM base
+), fields AS (
+  SELECT
+    deal_name, /* just default columns + explicitly configured passthrough columns */ /* a few columns below are aliased within the macros/get_deal_columns.sql macro */
+    CAST(closed_date AS TIMESTAMP) AS closed_date,
+    CAST(created_date AS TIMESTAMP) AS created_date,
+    is_deal_deleted,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced,
+    deal_id,
+    CAST(deal_pipeline_id AS TEXT) AS deal_pipeline_id,
+    CAST(deal_pipeline_stage_id AS TEXT) AS deal_pipeline_stage_id,
+    owner_id,
+    portal_id,
+    description,
+    amount
+  /* The below macro adds the fields defined within your hubspot__deal_pass_through_columns variable into the staging model */ /* The below macro add the ability to create calculated fields using the hubspot__deal_calculated_fields variable. */
+  FROM macro
+), joined AS (
+  SELECT
+    fields.*
+  FROM fields
+)
+SELECT
+  *
+FROM joined"
+model.hubspot_source.stg_hubspot__contact,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__contact_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS is_contact_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS contact_id,
+    CAST(NULL AS TEXT) AS calculated_merged_vids,
+    CAST(NULL AS TEXT) AS email,
+    CAST(NULL AS TEXT) AS contact_company,
+    CAST(NULL AS TEXT) AS first_name,
+    CAST(NULL AS TEXT) AS last_name,
+    CAST(NULL AS TIMESTAMP) AS created_date,
+    CAST(NULL AS TEXT) AS job_title,
+    CAST(NULL AS INT) AS company_annual_revenue
+  FROM base
+), fields AS (
+  SELECT
+    contact_id, /* just default columns + explicitly configured passthrough columns. */ /* a few columns below are aliased within the macros/get_contact_columns.sql macro */
+    is_contact_deleted,
+    calculated_merged_vids, /* will be null for BigQuery users until v3 api is rolled out to them */
+    email,
+    contact_company,
+    first_name,
+    last_name,
+    CAST(created_date AS TIMESTAMP) AS created_date,
+    job_title,
+    company_annual_revenue,
+    CAST(_fivetran_synced AS TIMESTAMP) AS _fivetran_synced
+  /* The below macro adds the fields defined within your hubspot__contact_pass_through_columns variable into the staging model */ /* The below macro add the ability to create calculated fields using the hubspot__contact_calculated_fields variable. */
+  FROM macro
+), joined AS (
+  SELECT
+    fields.*
+  FROM fields
+)
+SELECT
+  *
+FROM joined"
+model.hubspot_source.stg_hubspot__property,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_hubspot.stg_hubspot__property_tmp
+), macro AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _fivetran_id,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS calculated,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TEXT) AS description,
+    CAST(NULL AS TEXT) AS field_type,
+    CAST(NULL AS TEXT) AS group_name,
+    CAST(NULL AS BOOLEAN) AS hubspot_defined,
+    CAST(NULL AS TEXT) AS hubspot_object,
+    CAST(NULL AS TEXT) AS label,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS BOOLEAN) AS show_currency_symbol,
+    CAST(NULL AS TEXT) AS type,
+    CAST(NULL AS TIMESTAMP) AS updated_at
+  FROM base
+), fields AS (
+  SELECT
+    _fivetran_id,
+    _fivetran_synced,
+    calculated,
+    created_at,
+    description,
+    field_type,
+    group_name,
+    hubspot_defined,
+    hubspot_object,
+    label AS property_label,
+    name AS property_name,
+    type AS property_type,
+    updated_at
+  FROM macro
+)
+SELECT
+  *
+FROM fields"
+model.hubspot_source.stg_hubspot__email_event_open_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_open"
+model.hubspot_source.stg_hubspot__engagement_task_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement_task"
+model.hubspot_source.stg_hubspot__property_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.property"
+model.hubspot_source.stg_hubspot__contact_list_member_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.contact_list_member"
+model.hubspot_source.stg_hubspot__company_property_history_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.company_property_history"
+model.hubspot_source.stg_hubspot__deal_company_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.deal_company"
+model.hubspot_source.stg_hubspot__engagement_deal_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement_deal"
+model.hubspot_source.stg_hubspot__email_event_deferred_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_deferred"
+model.hubspot_source.stg_hubspot__email_event_delivered_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_delivered"
+model.hubspot_source.stg_hubspot__engagement_contact_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement_contact"
+model.hubspot_source.stg_hubspot__email_event_dropped_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_dropped"
+model.hubspot_source.stg_hubspot__email_event_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event"
+model.hubspot_source.stg_hubspot__email_event_click_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_click"
+model.hubspot_source.stg_hubspot__email_event_forward_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_forward"
+model.hubspot_source.stg_hubspot__contact_list_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.contact_list"
+model.hubspot_source.stg_hubspot__email_event_spam_report_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_spam_report"
+model.hubspot_source.stg_hubspot__property_option_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.property_option"
+model.hubspot_source.stg_hubspot__email_event_sent_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_sent"
+model.hubspot_source.stg_hubspot__email_campaign_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_campaign"
+model.hubspot_source.stg_hubspot__engagement_note_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement_note"
+model.hubspot_source.stg_hubspot__owner_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.owner"
+model.hubspot_source.stg_hubspot__contact_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.contact"
+model.hubspot_source.stg_hubspot__email_event_bounce_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_bounce"
+model.hubspot_source.stg_hubspot__engagement_company_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement_company"
+model.hubspot_source.stg_hubspot__engagement_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement"
+model.hubspot_source.stg_hubspot__deal_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.deal"
+model.hubspot_source.stg_hubspot__deal_property_history_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.deal_property_history"
+model.hubspot_source.stg_hubspot__deal_stage_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.deal_stage"
+model.hubspot_source.stg_hubspot__engagement_email_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement_email"
+model.hubspot_source.stg_hubspot__company_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.company"
+model.hubspot_source.stg_hubspot__engagement_call_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement_call"
+model.hubspot_source.stg_hubspot__engagement_meeting_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.engagement_meeting"
+model.hubspot_source.stg_hubspot__email_event_status_change_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_status_change"
+model.hubspot_source.stg_hubspot__deal_pipeline_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.deal_pipeline"
+model.hubspot_source.stg_hubspot__contact_property_history_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.contact_property_history"
+model.hubspot_source.stg_hubspot__deal_contact_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.deal_contact"
+model.hubspot_source.stg_hubspot__deal_pipeline_stage_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.deal_pipeline_stage"
+model.hubspot_source.stg_hubspot__email_event_print_tmp,"SELECT
+  *
+/* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+FROM TEST.hubspot.email_event_print"

@@ -1,0 +1,4137 @@
+model_name,sql_text
+model.shopify.shopify__customer_cohorts,"WITH calendar AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__calendar
+  WHERE
+    CAST(DATE_TRUNC('MONTH', date_day) AS DATE) = date_day
+), customers AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__customers
+), orders AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__orders
+), customer_calendar AS (
+  SELECT
+    CAST(calendar.date_day AS DATE) AS date_month,
+    customers.customer_id,
+    customers.first_order_timestamp,
+    customers.source_relation,
+    CAST(DATE_TRUNC('MONTH', first_order_timestamp) AS DATE) AS cohort_month
+  FROM calendar
+  INNER JOIN customers
+    ON CAST(DATE_TRUNC('MONTH', first_order_timestamp) AS DATE) <= calendar.date_day
+), orders_joined AS (
+  SELECT
+    customer_calendar.date_month,
+    customer_calendar.customer_id,
+    customer_calendar.first_order_timestamp,
+    customer_calendar.cohort_month,
+    customer_calendar.source_relation,
+    COALESCE(COUNT(DISTINCT orders.order_id), 0) AS order_count_in_month,
+    COALESCE(SUM(orders.order_adjusted_total), 0) AS total_price_in_month,
+    COALESCE(SUM(orders.line_item_count), 0) AS line_item_count_in_month
+  FROM customer_calendar
+  LEFT JOIN orders
+    ON customer_calendar.customer_id = orders.customer_id
+    AND customer_calendar.source_relation = orders.source_relation
+    AND customer_calendar.date_month = CAST(DATE_TRUNC('MONTH', created_timestamp) AS DATE)
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5
+), windows AS (
+  SELECT
+    *,
+    SUM(total_price_in_month) OVER (PARTITION BY customer_id ORDER BY date_month rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_price_lifetime,
+    SUM(order_count_in_month) OVER (PARTITION BY customer_id ORDER BY date_month rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS order_count_lifetime,
+    SUM(line_item_count_in_month) OVER (PARTITION BY customer_id ORDER BY date_month rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS line_item_count_lifetime,
+    ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY date_month ASC) AS cohort_month_number
+  FROM orders_joined
+), final AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(date_month AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(customer_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(source_relation AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS customer_cohort_id
+  FROM windows
+)
+SELECT
+  *
+FROM final"
+model.shopify.shopify__discounts,"WITH __dbt__cte__int_shopify__discounts__order_aggregates AS (
+  WITH order_discount_code AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_discount_code
+  ), orders AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__orders
+  ), orders_aggregated AS (
+    SELECT
+      order_discount_code.code,
+      order_discount_code.type,
+      order_discount_code.source_relation,
+      AVG(order_discount_code.amount) AS avg_order_discount_amount,
+      SUM(order_discount_code.amount) AS total_order_discount_amount,
+      MAX(orders.total_line_items_price) AS total_order_line_items_price, /* summing would multiply the total by the # of discount codes applied to an order */
+      MAX(orders.shipping_cost) AS total_order_shipping_cost, /* summing would multiply the total by the # of discount codes applied to an order */
+      MAX(orders.refund_subtotal + orders.refund_total_tax) AS total_order_refund_amount, /* summing would multiply the total by the # of discount codes applied to an order */
+      COUNT(DISTINCT customer_id) AS count_customers,
+      COUNT(DISTINCT email) AS count_customer_emails,
+      COUNT(DISTINCT order_discount_code.order_id) AS count_orders
+    FROM order_discount_code
+    JOIN orders
+      ON order_discount_code.order_id = orders.order_id
+      AND order_discount_code.source_relation = orders.source_relation
+    GROUP BY
+      1,
+      2,
+      3
+  )
+  SELECT
+    *
+  FROM orders_aggregated
+), __dbt__cte__int_shopify__discounts__abandoned_checkouts AS (
+  WITH abandoned_checkout AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout
+    /* ""deleted"" abandoned checkouts do not appear to have any data tying them to customers, */ /* discounts, or products (and should therefore not get joined in) but let's filter them out here */
+    WHERE
+      NOT COALESCE(is_deleted, FALSE)
+  ), abandoned_checkout_discount_code AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout_discount_code
+    /* we need the TYPE of discount (shipping, percentage, fixed_amount) to avoid fanning out of joins */ /* so filter out records that have this */
+    WHERE
+      COALESCE(type, '') <> ''
+  ), abandoned_checkout_shipping_line AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout_shipping_line
+  ), roll_up_shipping_line AS (
+    SELECT
+      checkout_id,
+      source_relation,
+      SUM(price) AS price
+    FROM abandoned_checkout_shipping_line
+    GROUP BY
+      1,
+      2
+  ), abandoned_checkouts_aggregated AS (
+    SELECT
+      abandoned_checkout_discount_code.code,
+      abandoned_checkout_discount_code.type,
+      abandoned_checkout_discount_code.source_relation,
+      SUM(abandoned_checkout_discount_code.amount) AS total_abandoned_checkout_discount_amount,
+      SUM(COALESCE(abandoned_checkout.total_line_items_price, 0)) AS total_abandoned_checkout_line_items_price,
+      SUM(COALESCE(roll_up_shipping_line.price, 0)) AS total_abandoned_checkout_shipping_price,
+      COUNT(DISTINCT customer_id) AS count_abandoned_checkout_customers,
+      COUNT(DISTINCT email) AS count_abandoned_checkout_customer_emails,
+      COUNT(DISTINCT abandoned_checkout.checkout_id) AS count_abandoned_checkouts
+    FROM abandoned_checkout_discount_code
+    LEFT JOIN abandoned_checkout
+      ON abandoned_checkout_discount_code.checkout_id = abandoned_checkout.checkout_id
+      AND abandoned_checkout_discount_code.source_relation = abandoned_checkout.source_relation
+    LEFT JOIN roll_up_shipping_line
+      ON roll_up_shipping_line.checkout_id = abandoned_checkout_discount_code.checkout_id
+      AND roll_up_shipping_line.source_relation = abandoned_checkout_discount_code.source_relation
+    GROUP BY
+      1,
+      2,
+      3
+  )
+  SELECT
+    *
+  FROM abandoned_checkouts_aggregated
+), discount AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(source_relation AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(discount_code_id AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS discounts_unique_key
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__discount_code
+), price_rule AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__price_rule
+), orders_aggregated AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__discounts__order_aggregates
+), abandoned_checkouts_aggregated AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__discounts__abandoned_checkouts
+), discount_price_rule_joined AS (
+  SELECT
+    discount.*,
+    price_rule.target_selection,
+    price_rule.target_type,
+    price_rule.title,
+    price_rule.usage_limit,
+    price_rule.value,
+    price_rule.value_type,
+    price_rule.allocation_limit,
+    price_rule.allocation_method,
+    price_rule.is_once_per_customer,
+    price_rule.customer_selection,
+    price_rule.prereq_min_quantity,
+    price_rule.prereq_max_shipping_price,
+    price_rule.prereq_min_subtotal,
+    price_rule.prereq_min_purchase_quantity_for_entitlement,
+    price_rule.prereq_buy_x_get_this,
+    price_rule.prereq_buy_this_get_y,
+    price_rule.starts_at,
+    price_rule.ends_at,
+    price_rule.created_at AS price_rule_created_at,
+    price_rule.updated_at AS price_rule_updated_at
+  FROM discount
+  LEFT JOIN price_rule
+    ON discount.price_rule_id = price_rule.price_rule_id
+    AND discount.source_relation = price_rule.source_relation
+), aggregates_joined AS (
+  SELECT
+    discount_price_rule_joined.*,
+    COALESCE(orders_aggregated.count_orders, 0) AS count_orders,
+    COALESCE(abandoned_checkouts_aggregated.count_abandoned_checkouts, 0) AS count_abandoned_checkouts,
+    orders_aggregated.avg_order_discount_amount,
+    COALESCE(orders_aggregated.total_order_discount_amount, 0) AS total_order_discount_amount,
+    COALESCE(abandoned_checkouts_aggregated.total_abandoned_checkout_discount_amount, 0) AS total_abandoned_checkout_discount_amount,
+    COALESCE(orders_aggregated.total_order_line_items_price, 0) AS total_order_line_items_price,
+    COALESCE(orders_aggregated.total_order_shipping_cost, 0) AS total_order_shipping_cost,
+    COALESCE(abandoned_checkouts_aggregated.total_abandoned_checkout_shipping_price, 0) AS total_abandoned_checkout_shipping_price,
+    COALESCE(orders_aggregated.total_order_refund_amount, 0) AS total_order_refund_amount,
+    COALESCE(orders_aggregated.count_customers, 0) AS count_customers,
+    COALESCE(orders_aggregated.count_customer_emails, 0) AS count_customer_emails,
+    COALESCE(abandoned_checkouts_aggregated.count_abandoned_checkout_customers, 0) AS count_abandoned_checkout_customers,
+    COALESCE(abandoned_checkouts_aggregated.count_abandoned_checkout_customer_emails, 0) AS count_abandoned_checkout_customer_emails
+  FROM discount_price_rule_joined
+  LEFT JOIN orders_aggregated
+    ON discount_price_rule_joined.code = orders_aggregated.code
+    AND discount_price_rule_joined.source_relation = orders_aggregated.source_relation
+    AND /* in case one CODE can apply to both shipping and line items, percentages and fixed_amounts */ (
+      CASE
+        WHEN discount_price_rule_joined.target_type = 'shipping_line'
+        THEN 'shipping' /* when target_type = 'shipping', value_type = 'percentage' */
+        ELSE discount_price_rule_joined.value_type
+      END
+    ) = orders_aggregated.type
+  LEFT JOIN abandoned_checkouts_aggregated
+    ON discount_price_rule_joined.code = abandoned_checkouts_aggregated.code
+    AND discount_price_rule_joined.source_relation = abandoned_checkouts_aggregated.source_relation
+    AND /* in case one CODE can apply to both shipping and line items, percentages and fixed_amounts */ (
+      CASE
+        WHEN discount_price_rule_joined.target_type = 'shipping_line'
+        THEN 'shipping' /* when target_type = 'shipping', value_type = 'percentage' */
+        ELSE discount_price_rule_joined.value_type
+      END
+    ) = abandoned_checkouts_aggregated.type
+)
+SELECT
+  *
+FROM aggregates_joined"
+model.shopify.shopify__orders,"WITH __dbt__cte__shopify__orders__order_refunds AS (
+  WITH refunds AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__refund
+  ), order_line_refunds AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line_refund
+  ), refund_join AS (
+    SELECT
+      refunds.refund_id,
+      refunds.created_at,
+      refunds.order_id,
+      refunds.user_id,
+      refunds.source_relation,
+      order_line_refunds.order_line_refund_id,
+      order_line_refunds.order_line_id,
+      order_line_refunds.restock_type,
+      order_line_refunds.quantity,
+      order_line_refunds.subtotal,
+      order_line_refunds.total_tax
+    FROM refunds
+    LEFT JOIN order_line_refunds
+      ON refunds.refund_id = order_line_refunds.refund_id
+      AND refunds.source_relation = order_line_refunds.source_relation
+  )
+  SELECT
+    *
+  FROM refund_join
+), orders AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(source_relation AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(order_id AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS orders_unique_key
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order
+), order_lines AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__orders__order_line_aggregates
+), order_adjustments AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_adjustment
+), order_adjustments_aggregates AS (
+  SELECT
+    order_id,
+    source_relation,
+    SUM(amount) AS order_adjustment_amount,
+    SUM(tax_amount) AS order_adjustment_tax_amount
+  FROM order_adjustments
+  GROUP BY
+    1,
+    2
+), refunds AS (
+  SELECT
+    *
+  FROM __dbt__cte__shopify__orders__order_refunds
+), refund_aggregates AS (
+  SELECT
+    order_id,
+    source_relation,
+    SUM(subtotal) AS refund_subtotal,
+    SUM(total_tax) AS refund_total_tax
+  FROM refunds
+  GROUP BY
+    1,
+    2
+), order_discount_code AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_discount_code
+), discount_aggregates AS (
+  SELECT
+    order_id,
+    source_relation,
+    SUM(CASE WHEN type = 'shipping' THEN amount ELSE 0 END) AS shipping_discount_amount,
+    SUM(CASE WHEN type = 'percentage' THEN amount ELSE 0 END) AS percentage_calc_discount_amount,
+    SUM(CASE WHEN type = 'fixed_amount' THEN amount ELSE 0 END) AS fixed_amount_discount_amount,
+    COUNT(DISTINCT code) AS count_discount_codes_applied
+  FROM order_discount_code
+  GROUP BY
+    1,
+    2
+), order_tag AS (
+  SELECT
+    order_id,
+    source_relation,
+    LISTAGG(DISTINCT CAST(value AS TEXT), ', ') AS order_tags
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_tag
+  GROUP BY
+    1,
+    2
+), order_url_tag AS (
+  SELECT
+    order_id,
+    source_relation,
+    LISTAGG(DISTINCT CAST(value AS TEXT), ', ') AS order_url_tags
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_url_tag
+  GROUP BY
+    1,
+    2
+), fulfillments AS (
+  SELECT
+    order_id,
+    source_relation,
+    COUNT(fulfillment_id) AS number_of_fulfillments,
+    LISTAGG(DISTINCT CAST(service AS TEXT), ', ') AS fulfillment_services,
+    LISTAGG(DISTINCT CAST(tracking_company AS TEXT), ', ') AS tracking_companies,
+    LISTAGG(DISTINCT CAST(tracking_number AS TEXT), ', ') AS tracking_numbers
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__fulfillment
+  GROUP BY
+    1,
+    2
+), joined AS (
+  SELECT
+    orders.*,
+    COALESCE(CAST(PARSE_JSON(total_shipping_price_set)['shop_money']['amount'] AS FLOAT), 0) AS shipping_cost,
+    order_adjustments_aggregates.order_adjustment_amount,
+    order_adjustments_aggregates.order_adjustment_tax_amount,
+    refund_aggregates.refund_subtotal,
+    refund_aggregates.refund_total_tax,
+    (
+      orders.total_price + COALESCE(order_adjustments_aggregates.order_adjustment_amount, 0) + COALESCE(order_adjustments_aggregates.order_adjustment_tax_amount, 0) - COALESCE(refund_aggregates.refund_subtotal, 0) - COALESCE(refund_aggregates.refund_total_tax, 0)
+    ) AS order_adjusted_total,
+    order_lines.line_item_count,
+    COALESCE(discount_aggregates.shipping_discount_amount, 0) AS shipping_discount_amount,
+    COALESCE(discount_aggregates.percentage_calc_discount_amount, 0) AS percentage_calc_discount_amount,
+    COALESCE(discount_aggregates.fixed_amount_discount_amount, 0) AS fixed_amount_discount_amount,
+    COALESCE(discount_aggregates.count_discount_codes_applied, 0) AS count_discount_codes_applied,
+    COALESCE(order_lines.order_total_shipping_tax, 0) AS order_total_shipping_tax,
+    order_tag.order_tags,
+    order_url_tag.order_url_tags,
+    fulfillments.number_of_fulfillments,
+    fulfillments.fulfillment_services,
+    fulfillments.tracking_companies,
+    fulfillments.tracking_numbers
+  FROM orders
+  LEFT JOIN order_lines
+    ON orders.order_id = order_lines.order_id
+    AND orders.source_relation = order_lines.source_relation
+  LEFT JOIN refund_aggregates
+    ON orders.order_id = refund_aggregates.order_id
+    AND orders.source_relation = refund_aggregates.source_relation
+  LEFT JOIN order_adjustments_aggregates
+    ON orders.order_id = order_adjustments_aggregates.order_id
+    AND orders.source_relation = order_adjustments_aggregates.source_relation
+  LEFT JOIN discount_aggregates
+    ON orders.order_id = discount_aggregates.order_id
+    AND orders.source_relation = discount_aggregates.source_relation
+  LEFT JOIN order_tag
+    ON orders.order_id = order_tag.order_id
+    AND orders.source_relation = order_tag.source_relation
+  LEFT JOIN order_url_tag
+    ON orders.order_id = order_url_tag.order_id
+    AND orders.source_relation = order_url_tag.source_relation
+  LEFT JOIN fulfillments
+    ON orders.order_id = fulfillments.order_id
+    AND orders.source_relation = fulfillments.source_relation
+), windows AS (
+  SELECT
+    *,
+    ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY created_timestamp) AS customer_order_seq_number
+  FROM joined
+), new_vs_repeat AS (
+  SELECT
+    *,
+    CASE WHEN customer_order_seq_number = 1 THEN 'new' ELSE 'repeat' END AS new_vs_repeat
+  FROM windows
+)
+SELECT
+  *
+FROM new_vs_repeat"
+model.shopify.shopify__products,"WITH __dbt__cte__int_shopify__products_with_aggregates AS (
+  WITH products AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__product
+  ), collection_product AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__collection_product
+  ), collection AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__collection
+    WHERE
+      NOT COALESCE(is_deleted, FALSE) /* limit to only active collections */
+  ), product_tag AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_tag
+  ), product_variant AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_variant
+  ), product_image AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_image
+  ), collections_aggregated AS (
+    SELECT
+      collection_product.product_id,
+      collection_product.source_relation,
+      LISTAGG(collection.title, ', ') AS collections
+    FROM collection_product
+    JOIN collection
+      ON collection_product.collection_id = collection.collection_id
+      AND collection_product.source_relation = collection.source_relation
+    GROUP BY
+      1,
+      2
+  ), tags_aggregated AS (
+    SELECT
+      product_id,
+      source_relation,
+      LISTAGG(value, ', ') AS tags
+    FROM product_tag
+    GROUP BY
+      1,
+      2
+  ), variants_aggregated AS (
+    SELECT
+      product_id,
+      source_relation,
+      COUNT(variant_id) AS count_variants
+    FROM product_variant
+    GROUP BY
+      1,
+      2
+  ), images_aggregated AS (
+    SELECT
+      product_id,
+      source_relation,
+      COUNT(*) AS count_images
+    FROM product_image
+    GROUP BY
+      1,
+      2
+  ), joined AS (
+    SELECT
+      products.*,
+      collections_aggregated.collections,
+      tags_aggregated.tags,
+      variants_aggregated.count_variants,
+      COALESCE(images_aggregated.count_images, 0) > 0 AS has_product_image
+    FROM products
+    LEFT JOIN collections_aggregated
+      ON products.product_id = collections_aggregated.product_id
+      AND products.source_relation = collections_aggregated.source_relation
+    LEFT JOIN tags_aggregated
+      ON products.product_id = tags_aggregated.product_id
+      AND products.source_relation = tags_aggregated.source_relation
+    LEFT JOIN variants_aggregated
+      ON products.product_id = variants_aggregated.product_id
+      AND products.source_relation = variants_aggregated.source_relation
+    LEFT JOIN images_aggregated
+      ON products.product_id = images_aggregated.product_id
+      AND products.source_relation = images_aggregated.source_relation
+  )
+  SELECT
+    *
+  FROM joined
+), __dbt__cte__int_shopify__product__order_line_aggregates AS (
+  WITH order_lines AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__order_lines
+  ), orders AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__orders
+  ), product_aggregated AS (
+    SELECT
+      order_lines.product_id,
+      order_lines.source_relation,
+      SUM(order_lines.quantity) AS quantity_sold, /* moved over from shopify__products */
+      SUM(order_lines.pre_tax_price) AS subtotal_sold,
+      SUM(order_lines.quantity_net_refunds) AS quantity_sold_net_refunds,
+      SUM(order_lines.subtotal_net_refunds) AS subtotal_sold_net_refunds,
+      MIN(orders.created_timestamp) AS first_order_timestamp,
+      MAX(orders.created_timestamp) AS most_recent_order_timestamp,
+      SUM(order_lines.total_discount) AS product_total_discount, /* new columns */
+      SUM(order_lines.order_line_tax) AS product_total_tax,
+      AVG(order_lines.quantity) AS avg_quantity_per_order_line,
+      AVG(order_lines.total_discount) AS product_avg_discount_per_order_line,
+      AVG(order_lines.order_line_tax) AS product_avg_tax_per_order_line
+    FROM order_lines
+    LEFT JOIN orders
+      ON order_lines.order_id = orders.order_id
+      AND order_lines.source_relation = orders.source_relation
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM product_aggregated
+), products AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__products_with_aggregates
+), product_order_lines AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__product__order_line_aggregates
+), joined AS (
+  SELECT
+    products.*,
+    COALESCE(product_order_lines.quantity_sold, 0) AS total_quantity_sold,
+    COALESCE(product_order_lines.subtotal_sold, 0) AS subtotal_sold,
+    COALESCE(product_order_lines.quantity_sold_net_refunds, 0) AS quantity_sold_net_refunds,
+    COALESCE(product_order_lines.subtotal_sold_net_refunds, 0) AS subtotal_sold_net_refunds,
+    product_order_lines.first_order_timestamp,
+    product_order_lines.most_recent_order_timestamp,
+    product_order_lines.avg_quantity_per_order_line AS avg_quantity_per_order_line,
+    COALESCE(product_order_lines.product_total_discount, 0) AS product_total_discount,
+    product_order_lines.product_avg_discount_per_order_line AS product_avg_discount_per_order_line,
+    COALESCE(product_order_lines.product_total_tax, 0) AS product_total_tax,
+    product_order_lines.product_avg_tax_per_order_line AS product_avg_tax_per_order_line
+  FROM products
+  LEFT JOIN product_order_lines
+    ON products.product_id = product_order_lines.product_id
+    AND products.source_relation = product_order_lines.source_relation
+)
+SELECT
+  *
+FROM joined"
+model.shopify.shopify__transactions,"WITH transactions AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(source_relation AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(transaction_id AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS transactions_unique_id
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__transaction
+), tender_transactions AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__tender_transaction
+), joined AS (
+  SELECT
+    transactions.*,
+    tender_transactions.payment_method,
+    parent_transactions.created_timestamp AS parent_created_timestamp,
+    parent_transactions.kind AS parent_kind,
+    parent_transactions.amount AS parent_amount,
+    parent_transactions.status AS parent_status
+  FROM transactions
+  LEFT JOIN tender_transactions
+    ON transactions.transaction_id = tender_transactions.transaction_id
+    AND transactions.source_relation = tender_transactions.source_relation
+  LEFT JOIN transactions AS parent_transactions
+    ON transactions.parent_id = parent_transactions.transaction_id
+    AND transactions.source_relation = parent_transactions.source_relation
+), exchange_rate AS (
+  SELECT
+    *,
+    COALESCE(
+      CAST(NULLIF(
+        PARSE_JSON(receipt)['charges']['data'][0]['balance_transaction']['exchange_rate'],
+        ''
+      ) AS DECIMAL(28, 6)),
+      1
+    ) AS exchange_rate,
+    COALESCE(
+      CAST(NULLIF(
+        PARSE_JSON(receipt)['charges']['data'][0]['balance_transaction']['exchange_rate'],
+        ''
+      ) AS DECIMAL(28, 6)),
+      1
+    ) * amount AS currency_exchange_calculated_amount
+  FROM joined
+)
+SELECT
+  *
+FROM exchange_rate"
+model.shopify.shopify__customer_emails,"WITH __dbt__cte__int_shopify__emails__order_aggregates AS (
+  WITH orders AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order
+  ), order_aggregates AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__orders__order_line_aggregates
+  ), transactions AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__transactions
+    WHERE
+      LOWER(status) = 'success'
+      AND NOT LOWER(kind) IN ('authorization', 'void')
+      AND LOWER(gateway) <> 'gift_card' /* redeeming a giftcard does not introduce new revenue */
+  ), transaction_aggregates AS (
+    /* this is necessary as customers can pay via multiple payment gateways */
+    SELECT
+      order_id,
+      source_relation,
+      LOWER(kind) AS kind,
+      SUM(currency_exchange_calculated_amount) AS currency_exchange_calculated_amount
+    FROM transactions
+    GROUP BY
+      1,
+      2,
+      3
+  ), customer_emails AS (
+    /* in case any orders records don't have the customer email attached yet */
+    SELECT
+      customer_id,
+      source_relation,
+      email
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer
+    WHERE
+      NOT email IS NULL
+    GROUP BY
+      1,
+      2,
+      3
+  ), aggregated AS (
+    SELECT
+      LOWER(customer_emails.email) AS email,
+      orders.source_relation,
+      MIN(orders.created_timestamp) AS first_order_timestamp,
+      MAX(orders.created_timestamp) AS most_recent_order_timestamp,
+      AVG(transaction_aggregates.currency_exchange_calculated_amount) AS avg_order_value,
+      SUM(transaction_aggregates.currency_exchange_calculated_amount) AS lifetime_total_spent,
+      SUM(refunds.currency_exchange_calculated_amount) AS lifetime_total_refunded,
+      COUNT(DISTINCT orders.order_id) AS lifetime_count_orders,
+      AVG(order_aggregates.order_total_quantity) AS avg_quantity_per_order,
+      SUM(order_aggregates.order_total_tax) AS lifetime_total_tax,
+      AVG(order_aggregates.order_total_tax) AS avg_tax_per_order,
+      SUM(order_aggregates.order_total_discount) AS lifetime_total_discount,
+      AVG(order_aggregates.order_total_discount) AS avg_discount_per_order,
+      SUM(order_aggregates.order_total_shipping) AS lifetime_total_shipping,
+      AVG(order_aggregates.order_total_shipping) AS avg_shipping_per_order,
+      SUM(order_aggregates.order_total_shipping_with_discounts) AS lifetime_total_shipping_with_discounts,
+      AVG(order_aggregates.order_total_shipping_with_discounts) AS avg_shipping_with_discounts_per_order,
+      SUM(order_aggregates.order_total_shipping_tax) AS lifetime_total_shipping_tax,
+      AVG(order_aggregates.order_total_shipping_tax) AS avg_shipping_tax_per_order
+    FROM orders
+    JOIN customer_emails
+      ON orders.customer_id = customer_emails.customer_id
+      AND orders.source_relation = customer_emails.source_relation
+    LEFT JOIN transaction_aggregates
+      ON orders.order_id = transaction_aggregates.order_id
+      AND orders.source_relation = transaction_aggregates.source_relation
+      AND transaction_aggregates.kind IN ('sale', 'capture')
+    LEFT JOIN transaction_aggregates AS refunds
+      ON orders.order_id = refunds.order_id
+      AND orders.source_relation = refunds.source_relation
+      AND refunds.kind = 'refund'
+    LEFT JOIN order_aggregates
+      ON orders.order_id = order_aggregates.order_id
+      AND orders.source_relation = order_aggregates.source_relation
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM aggregated
+), customer_emails AS (
+  SELECT
+    *
+  /* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+  FROM TEST.PUBLIC_shopify.int_shopify__customer_email_rollup
+), orders AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__emails__order_aggregates
+  WHERE
+    NOT email IS NULL
+), abandoned AS (
+  SELECT
+    LOWER(email) AS email,
+    source_relation,
+    COUNT(DISTINCT checkout_id) AS lifetime_abandoned_checkouts
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout
+  WHERE
+    NOT email IS NULL
+  GROUP BY
+    1,
+    2
+), joined AS (
+  SELECT
+    customer_emails.*,
+    COALESCE(abandoned.lifetime_abandoned_checkouts, 0) AS lifetime_abandoned_checkouts,
+    orders.first_order_timestamp,
+    orders.most_recent_order_timestamp,
+    orders.avg_order_value,
+    COALESCE(orders.lifetime_total_spent, 0) AS lifetime_total_spent,
+    COALESCE(orders.lifetime_total_refunded, 0) AS lifetime_total_refunded,
+    (
+      COALESCE(orders.lifetime_total_spent, 0) - COALESCE(orders.lifetime_total_refunded, 0)
+    ) AS lifetime_total_net,
+    COALESCE(orders.lifetime_count_orders, 0) AS lifetime_count_orders,
+    orders.avg_quantity_per_order,
+    COALESCE(orders.lifetime_total_tax, 0) AS lifetime_total_tax,
+    orders.avg_tax_per_order,
+    COALESCE(orders.lifetime_total_discount, 0) AS lifetime_total_discount,
+    orders.avg_discount_per_order,
+    COALESCE(orders.lifetime_total_shipping, 0) AS lifetime_total_shipping,
+    orders.avg_shipping_per_order,
+    COALESCE(orders.lifetime_total_shipping_with_discounts, 0) AS lifetime_total_shipping_with_discounts,
+    orders.avg_shipping_with_discounts_per_order,
+    COALESCE(orders.lifetime_total_shipping_tax, 0) AS lifetime_total_shipping_tax,
+    orders.avg_shipping_tax_per_order
+  FROM customer_emails
+  LEFT JOIN orders
+    ON customer_emails.email = orders.email
+    AND customer_emails.source_relation = orders.source_relation
+  LEFT JOIN abandoned
+    ON customer_emails.email = abandoned.email
+    AND customer_emails.source_relation = abandoned.source_relation
+)
+SELECT
+  *
+FROM joined"
+model.shopify.shopify__daily_shop,"WITH __dbt__cte__int_shopify__daily_orders AS (
+  WITH orders AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__orders
+    WHERE
+      NOT COALESCE(is_deleted, FALSE)
+  ), order_lines AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__order_lines
+  ), order_aggregates AS (
+    SELECT
+      source_relation,
+      CAST(DATE_TRUNC('DAY', created_timestamp) AS DATE) AS date_day,
+      COUNT(DISTINCT order_id) AS count_orders,
+      SUM(line_item_count) AS count_line_items,
+      AVG(line_item_count) AS avg_line_item_count,
+      COUNT(DISTINCT customer_id) AS count_customers,
+      COUNT(DISTINCT email) AS count_customer_emails,
+      SUM(order_adjusted_total) AS order_adjusted_total,
+      AVG(order_adjusted_total) AS avg_order_value,
+      SUM(shipping_cost) AS shipping_cost,
+      SUM(order_adjustment_amount) AS order_adjustment_amount,
+      SUM(order_adjustment_tax_amount) AS order_adjustment_tax_amount,
+      SUM(refund_subtotal) AS refund_subtotal,
+      SUM(refund_total_tax) AS refund_total_tax,
+      SUM(total_discounts) AS total_discounts,
+      AVG(total_discounts) AS avg_discount,
+      SUM(shipping_discount_amount) AS shipping_discount_amount,
+      AVG(shipping_discount_amount) AS avg_shipping_discount_amount,
+      SUM(percentage_calc_discount_amount) AS percentage_calc_discount_amount,
+      AVG(percentage_calc_discount_amount) AS avg_percentage_calc_discount_amount,
+      SUM(fixed_amount_discount_amount) AS fixed_amount_discount_amount,
+      AVG(fixed_amount_discount_amount) AS avg_fixed_amount_discount_amount,
+      SUM(count_discount_codes_applied) AS count_discount_codes_applied,
+      COUNT(DISTINCT location_id) AS count_locations_ordered_from,
+      SUM(CASE WHEN count_discount_codes_applied > 0 THEN 1 ELSE 0 END) AS count_orders_with_discounts,
+      SUM(CASE WHEN refund_subtotal > 0 THEN 1 ELSE 0 END) AS count_orders_with_refunds,
+      MIN(created_timestamp) AS first_order_timestamp,
+      MAX(created_timestamp) AS last_order_timestamp
+    FROM orders
+    GROUP BY
+      1,
+      2
+  ), order_line_aggregates AS (
+    SELECT
+      order_lines.source_relation,
+      CAST(DATE_TRUNC('DAY', orders.created_timestamp) AS DATE) AS date_day,
+      SUM(order_lines.quantity) AS quantity_sold,
+      SUM(order_lines.refunded_quantity) AS quantity_refunded,
+      SUM(order_lines.quantity_net_refunds) AS quantity_net,
+      SUM(order_lines.quantity) / COUNT(DISTINCT order_lines.order_id) AS avg_quantity_sold,
+      SUM(order_lines.quantity_net_refunds) / COUNT(DISTINCT order_lines.order_id) AS avg_quantity_net,
+      COUNT(DISTINCT order_lines.variant_id) AS count_variants_sold,
+      COUNT(DISTINCT order_lines.product_id) AS count_products_sold,
+      SUM(
+        CASE WHEN order_lines.is_gift_card THEN order_lines.quantity_net_refunds ELSE 0 END
+      ) AS quantity_gift_cards_sold,
+      SUM(
+        CASE
+          WHEN order_lines.is_shipping_required
+          THEN order_lines.quantity_net_refunds
+          ELSE 0
+        END
+      ) AS quantity_requiring_shipping
+    FROM order_lines
+    LEFT JOIN orders /* just joining with order to get the created_timestamp */
+      ON order_lines.order_id = orders.order_id
+      AND order_lines.source_relation = orders.source_relation
+    GROUP BY
+      1,
+      2
+  ), final AS (
+    SELECT
+      order_aggregates.*,
+      order_line_aggregates.quantity_sold,
+      order_line_aggregates.quantity_refunded,
+      order_line_aggregates.quantity_net,
+      order_line_aggregates.count_variants_sold,
+      order_line_aggregates.count_products_sold,
+      order_line_aggregates.quantity_gift_cards_sold,
+      order_line_aggregates.quantity_requiring_shipping,
+      order_line_aggregates.avg_quantity_sold,
+      order_line_aggregates.avg_quantity_net
+    FROM order_aggregates
+    LEFT JOIN order_line_aggregates
+      ON order_aggregates.date_day = order_line_aggregates.date_day
+      AND order_aggregates.source_relation = order_line_aggregates.source_relation
+  )
+  SELECT
+    *
+  FROM final
+), __dbt__cte__int_shopify__daily_abandoned_checkouts AS (
+  WITH abandoned_checkout AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout
+    /* ""deleted"" abandoned checkouts do not appear to have any data tying them to customers, */ /* discounts, or products (and should therefore not get joined in) but let's filter them out here */
+    WHERE
+      NOT COALESCE(is_deleted, FALSE)
+  ), abandoned_checkout_aggregates AS (
+    SELECT
+      source_relation,
+      CAST(DATE_TRUNC('DAY', created_at) AS DATE) AS date_day,
+      COUNT(DISTINCT checkout_id) AS count_abandoned_checkouts,
+      COUNT(DISTINCT customer_id) AS count_customers_abandoned_checkout,
+      COUNT(DISTINCT email) AS count_customer_emails_abandoned_checkout
+    FROM abandoned_checkout
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM abandoned_checkout_aggregates
+), shop AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__shop
+), calendar AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__calendar
+  WHERE
+    CAST(DATE_TRUNC('DAY', date_day) AS DATE) = date_day
+), daily_orders AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__daily_orders
+), daily_abandoned_checkouts AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__daily_abandoned_checkouts
+), shop_calendar AS (
+  SELECT
+    CAST(DATE_TRUNC('DAY', calendar.date_day) AS DATE) AS date_day,
+    shop.shop_id,
+    shop.name,
+    shop.domain,
+    shop.is_deleted,
+    shop.currency,
+    shop.enabled_presentment_currencies,
+    shop.iana_timezone,
+    shop.created_at,
+    shop.source_relation
+  FROM calendar
+  JOIN shop
+    ON CAST(shop.created_at AS DATE) <= calendar.date_day
+), final AS (
+  SELECT
+    shop_calendar.*,
+    COALESCE(daily_orders.count_orders, 0) AS count_orders,
+    COALESCE(daily_orders.count_line_items, 0) AS count_line_items,
+    daily_orders.avg_line_item_count,
+    COALESCE(daily_orders.count_customers, 0) AS count_customers,
+    COALESCE(daily_orders.count_customer_emails, 0) AS count_customer_emails,
+    COALESCE(daily_orders.order_adjusted_total, 0) AS order_adjusted_total,
+    daily_orders.avg_order_value,
+    COALESCE(daily_orders.shipping_cost, 0) AS shipping_cost,
+    COALESCE(daily_orders.order_adjustment_amount, 0) AS order_adjustment_amount,
+    COALESCE(daily_orders.order_adjustment_tax_amount, 0) AS order_adjustment_tax_amount,
+    COALESCE(daily_orders.refund_subtotal, 0) AS refund_subtotal,
+    COALESCE(daily_orders.refund_total_tax, 0) AS refund_total_tax,
+    COALESCE(daily_orders.total_discounts, 0) AS total_discounts,
+    daily_orders.avg_discount,
+    COALESCE(daily_orders.shipping_discount_amount, 0) AS shipping_discount_amount,
+    daily_orders.avg_shipping_discount_amount,
+    COALESCE(daily_orders.percentage_calc_discount_amount, 0) AS percentage_calc_discount_amount,
+    daily_orders.avg_percentage_calc_discount_amount,
+    COALESCE(daily_orders.fixed_amount_discount_amount, 0) AS fixed_amount_discount_amount,
+    daily_orders.avg_fixed_amount_discount_amount,
+    COALESCE(daily_orders.count_discount_codes_applied, 0) AS count_discount_codes_applied,
+    COALESCE(daily_orders.count_locations_ordered_from, 0) AS count_locations_ordered_from,
+    COALESCE(daily_orders.count_orders_with_discounts, 0) AS count_orders_with_discounts,
+    COALESCE(daily_orders.count_orders_with_refunds, 0) AS count_orders_with_refunds,
+    daily_orders.first_order_timestamp,
+    daily_orders.last_order_timestamp,
+    COALESCE(daily_orders.quantity_sold, 0) AS quantity_sold,
+    COALESCE(daily_orders.quantity_refunded, 0) AS quantity_refunded,
+    COALESCE(daily_orders.quantity_net, 0) AS quantity_net,
+    daily_orders.avg_quantity_sold,
+    daily_orders.avg_quantity_net,
+    COALESCE(daily_orders.count_variants_sold, 0) AS count_variants_sold,
+    COALESCE(daily_orders.count_products_sold, 0) AS count_products_sold,
+    COALESCE(daily_orders.quantity_gift_cards_sold, 0) AS quantity_gift_cards_sold,
+    COALESCE(daily_orders.quantity_requiring_shipping, 0) AS quantity_requiring_shipping,
+    COALESCE(daily_abandoned_checkouts.count_abandoned_checkouts, 0) AS count_abandoned_checkouts,
+    COALESCE(daily_abandoned_checkouts.count_customers_abandoned_checkout, 0) AS count_customers_abandoned_checkout,
+    COALESCE(daily_abandoned_checkouts.count_customer_emails_abandoned_checkout, 0) AS count_customer_emails_abandoned_checkout
+  FROM shop_calendar
+  LEFT JOIN daily_orders
+    ON shop_calendar.source_relation = daily_orders.source_relation
+    AND shop_calendar.date_day = daily_orders.date_day
+  LEFT JOIN daily_abandoned_checkouts
+    ON shop_calendar.source_relation = daily_abandoned_checkouts.source_relation
+    AND shop_calendar.date_day = daily_abandoned_checkouts.date_day
+)
+SELECT
+  *
+FROM final"
+model.shopify.shopify__customer_email_cohorts,"WITH calendar AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__calendar
+  WHERE
+    CAST(DATE_TRUNC('MONTH', date_day) AS DATE) = date_day
+), customers AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__customer_emails
+), orders AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__orders
+), customer_calendar AS (
+  SELECT
+    CAST(calendar.date_day AS DATE) AS date_month,
+    customers.email,
+    customers.first_order_timestamp,
+    customers.source_relation,
+    DATE_TRUNC('MONTH', first_order_timestamp) AS cohort_month
+  FROM calendar
+  INNER JOIN customers
+    ON CAST(DATE_TRUNC('MONTH', first_order_timestamp) AS DATE) <= calendar.date_day
+), orders_joined AS (
+  SELECT
+    customer_calendar.date_month,
+    customer_calendar.email,
+    customer_calendar.first_order_timestamp,
+    customer_calendar.cohort_month,
+    customer_calendar.source_relation,
+    COALESCE(COUNT(DISTINCT orders.order_id), 0) AS order_count_in_month,
+    COALESCE(SUM(orders.order_adjusted_total), 0) AS total_price_in_month,
+    COALESCE(SUM(orders.line_item_count), 0) AS line_item_count_in_month
+  FROM customer_calendar
+  LEFT JOIN orders
+    ON customer_calendar.email = orders.email
+    AND customer_calendar.source_relation = orders.source_relation
+    AND customer_calendar.date_month = CAST(DATE_TRUNC('MONTH', created_timestamp) AS DATE)
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5
+), windows AS (
+  SELECT
+    *,
+    SUM(total_price_in_month) OVER (PARTITION BY email ORDER BY date_month rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS total_price_lifetime,
+    SUM(order_count_in_month) OVER (PARTITION BY email ORDER BY date_month rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS order_count_lifetime,
+    SUM(line_item_count_in_month) OVER (PARTITION BY email ORDER BY date_month rows BETWEEN UNBOUNDED preceding AND CURRENT ROW) AS line_item_count_lifetime,
+    ROW_NUMBER() OVER (PARTITION BY email ORDER BY date_month ASC) AS cohort_month_number
+  FROM orders_joined
+), final AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(date_month AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(email AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(source_relation AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS customer_cohort_id
+  FROM windows
+)
+SELECT
+  *
+FROM final"
+model.shopify.shopify__customers,"WITH __dbt__cte__shopify__customers__order_aggregates AS (
+  WITH orders AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order
+    WHERE
+      NOT customer_id IS NULL
+  ), order_aggregates AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__orders__order_line_aggregates
+  ), transactions AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_shopify.shopify__transactions
+    WHERE
+      LOWER(status) = 'success'
+      AND NOT LOWER(kind) IN ('authorization', 'void')
+      AND LOWER(gateway) <> 'gift_card' /* redeeming a giftcard does not introduce new revenue */
+  ), transaction_aggregates AS (
+    /* this is necessary as customers can pay via multiple payment gateways */
+    SELECT
+      order_id,
+      source_relation,
+      LOWER(kind) AS kind,
+      SUM(currency_exchange_calculated_amount) AS currency_exchange_calculated_amount
+    FROM transactions
+    GROUP BY
+      1,
+      2,
+      3
+  ), customer_tags AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer_tag
+  ), customer_tags_aggregated AS (
+    SELECT
+      customer_id,
+      source_relation,
+      LISTAGG(DISTINCT CAST(value AS TEXT), ', ') AS customer_tags
+    FROM customer_tags
+    GROUP BY
+      1,
+      2
+  ), aggregated AS (
+    SELECT
+      orders.customer_id,
+      orders.source_relation,
+      customer_tags_aggregated.customer_tags,
+      MIN(orders.created_timestamp) AS first_order_timestamp,
+      MAX(orders.created_timestamp) AS most_recent_order_timestamp,
+      AVG(transaction_aggregates.currency_exchange_calculated_amount) AS avg_order_value,
+      SUM(transaction_aggregates.currency_exchange_calculated_amount) AS lifetime_total_spent,
+      SUM(refunds.currency_exchange_calculated_amount) AS lifetime_total_refunded,
+      COUNT(DISTINCT orders.order_id) AS lifetime_count_orders,
+      AVG(order_aggregates.order_total_quantity) AS avg_quantity_per_order,
+      SUM(order_aggregates.order_total_tax) AS lifetime_total_tax,
+      AVG(order_aggregates.order_total_tax) AS avg_tax_per_order,
+      SUM(order_aggregates.order_total_discount) AS lifetime_total_discount,
+      AVG(order_aggregates.order_total_discount) AS avg_discount_per_order,
+      SUM(order_aggregates.order_total_shipping) AS lifetime_total_shipping,
+      AVG(order_aggregates.order_total_shipping) AS avg_shipping_per_order,
+      SUM(order_aggregates.order_total_shipping_with_discounts) AS lifetime_total_shipping_with_discounts,
+      AVG(order_aggregates.order_total_shipping_with_discounts) AS avg_shipping_with_discounts_per_order,
+      SUM(order_aggregates.order_total_shipping_tax) AS lifetime_total_shipping_tax,
+      AVG(order_aggregates.order_total_shipping_tax) AS avg_shipping_tax_per_order
+    FROM orders
+    LEFT JOIN transaction_aggregates
+      ON orders.order_id = transaction_aggregates.order_id
+      AND orders.source_relation = transaction_aggregates.source_relation
+      AND transaction_aggregates.kind IN ('sale', 'capture')
+    LEFT JOIN transaction_aggregates AS refunds
+      ON orders.order_id = refunds.order_id
+      AND orders.source_relation = refunds.source_relation
+      AND refunds.kind = 'refund'
+    LEFT JOIN order_aggregates
+      ON orders.order_id = order_aggregates.order_id
+      AND orders.source_relation = order_aggregates.source_relation
+    LEFT JOIN customer_tags_aggregated
+      ON orders.customer_id = customer_tags_aggregated.customer_id
+      AND orders.source_relation = customer_tags_aggregated.source_relation
+    GROUP BY
+      1,
+      2,
+      3
+  )
+  SELECT
+    *
+  FROM aggregated
+), customers AS (
+  SELECT
+    *
+  /* No columns were returned. Maybe the relation doesn't exist yet 
+or all columns were excluded. This star is only output during  
+dbt compile, and exists to keep SQLFluff happy. */
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer
+), orders AS (
+  SELECT
+    *
+  FROM __dbt__cte__shopify__customers__order_aggregates
+), abandoned AS (
+  SELECT
+    customer_id,
+    source_relation,
+    COUNT(DISTINCT checkout_id) AS lifetime_abandoned_checkouts
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout
+  WHERE
+    NOT customer_id IS NULL
+  GROUP BY
+    1,
+    2
+), joined AS (
+  SELECT
+    customers.*,
+    COALESCE(abandoned.lifetime_abandoned_checkouts, 0) AS lifetime_abandoned_checkouts,
+    orders.first_order_timestamp,
+    orders.most_recent_order_timestamp,
+    orders.customer_tags,
+    orders.avg_order_value,
+    COALESCE(orders.lifetime_total_spent, 0) AS lifetime_total_spent,
+    COALESCE(orders.lifetime_total_refunded, 0) AS lifetime_total_refunded,
+    (
+      COALESCE(orders.lifetime_total_spent, 0) - COALESCE(orders.lifetime_total_refunded, 0)
+    ) AS lifetime_total_net,
+    COALESCE(orders.lifetime_count_orders, 0) AS lifetime_count_orders,
+    orders.avg_quantity_per_order,
+    COALESCE(orders.lifetime_total_tax, 0) AS lifetime_total_tax,
+    orders.avg_tax_per_order,
+    COALESCE(orders.lifetime_total_discount, 0) AS lifetime_total_discount,
+    orders.avg_discount_per_order,
+    COALESCE(orders.lifetime_total_shipping, 0) AS lifetime_total_shipping,
+    orders.avg_shipping_per_order,
+    COALESCE(orders.lifetime_total_shipping_with_discounts, 0) AS lifetime_total_shipping_with_discounts,
+    orders.avg_shipping_with_discounts_per_order,
+    COALESCE(orders.lifetime_total_shipping_tax, 0) AS lifetime_total_shipping_tax,
+    orders.avg_shipping_tax_per_order
+  FROM customers
+  LEFT JOIN orders
+    ON customers.customer_id = orders.customer_id
+    AND customers.source_relation = orders.source_relation
+  LEFT JOIN abandoned
+    ON customers.customer_id = abandoned.customer_id
+    AND customers.source_relation = abandoned.source_relation
+)
+SELECT
+  *
+FROM joined"
+model.shopify.shopify__inventory_levels,"WITH __dbt__cte__shopify__orders__order_refunds AS (
+  WITH refunds AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__refund
+  ), order_line_refunds AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line_refund
+  ), refund_join AS (
+    SELECT
+      refunds.refund_id,
+      refunds.created_at,
+      refunds.order_id,
+      refunds.user_id,
+      refunds.source_relation,
+      order_line_refunds.order_line_refund_id,
+      order_line_refunds.order_line_id,
+      order_line_refunds.restock_type,
+      order_line_refunds.quantity,
+      order_line_refunds.subtotal,
+      order_line_refunds.total_tax
+    FROM refunds
+    LEFT JOIN order_line_refunds
+      ON refunds.refund_id = order_line_refunds.refund_id
+      AND refunds.source_relation = order_line_refunds.source_relation
+  )
+  SELECT
+    *
+  FROM refund_join
+), __dbt__cte__int_shopify__inventory_level__aggregates AS (
+  WITH order_lines AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line
+  ), fulfillment AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__fulfillment
+  ), orders AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order
+    WHERE
+      NOT COALESCE(is_deleted, FALSE)
+  ), refunds AS (
+    SELECT
+      *
+    FROM __dbt__cte__shopify__orders__order_refunds
+  ), refunds_aggregated AS (
+    SELECT
+      order_line_id,
+      source_relation,
+      SUM(quantity) AS quantity,
+      SUM(COALESCE(subtotal, 0)) AS subtotal
+    FROM refunds
+    GROUP BY
+      1,
+      2
+  ), joined AS (
+    SELECT
+      order_lines.order_line_id,
+      order_lines.variant_id,
+      order_lines.source_relation,
+      fulfillment.location_id, /* location id is stored in fulfillment rather than order */
+      orders.order_id,
+      orders.customer_id,
+      fulfillment.fulfillment_id,
+      LOWER(orders.email) AS email,
+      order_lines.pre_tax_price,
+      order_lines.quantity,
+      orders.created_timestamp AS order_created_timestamp,
+      fulfillment.status AS fulfillment_status,
+      refunds_aggregated.subtotal AS subtotal_sold_refunds,
+      refunds_aggregated.quantity AS quantity_sold_refunds
+    FROM order_lines
+    JOIN orders
+      ON order_lines.order_id = orders.order_id
+      AND order_lines.source_relation = orders.source_relation
+    JOIN fulfillment
+      ON orders.order_id = fulfillment.order_id
+      AND orders.source_relation = fulfillment.source_relation
+    LEFT JOIN refunds_aggregated
+      ON refunds_aggregated.order_line_id = order_lines.order_line_id
+      AND refunds_aggregated.source_relation = order_lines.source_relation
+  ), aggregated AS (
+    SELECT
+      variant_id,
+      location_id,
+      source_relation,
+      SUM(pre_tax_price) AS subtotal_sold,
+      SUM(quantity) AS quantity_sold,
+      COUNT(DISTINCT order_id) AS count_distinct_orders,
+      COUNT(DISTINCT customer_id) AS count_distinct_customers,
+      COUNT(DISTINCT email) AS count_distinct_customer_emails,
+      MIN(order_created_timestamp) AS first_order_timestamp,
+      MAX(order_created_timestamp) AS last_order_timestamp,
+      COUNT(DISTINCT CASE WHEN fulfillment_status = 'pending' THEN fulfillment_id END) AS count_fulfillment_pending,
+      COUNT(DISTINCT CASE WHEN fulfillment_status = 'open' THEN fulfillment_id END) AS count_fulfillment_open,
+      COUNT(DISTINCT CASE WHEN fulfillment_status = 'success' THEN fulfillment_id END) AS count_fulfillment_success,
+      COUNT(DISTINCT CASE WHEN fulfillment_status = 'cancelled' THEN fulfillment_id END) AS count_fulfillment_cancelled,
+      COUNT(DISTINCT CASE WHEN fulfillment_status = 'error' THEN fulfillment_id END) AS count_fulfillment_error,
+      COUNT(DISTINCT CASE WHEN fulfillment_status = 'failure' THEN fulfillment_id END) AS count_fulfillment_failure,
+      SUM(COALESCE(subtotal_sold_refunds, 0)) AS subtotal_sold_refunds,
+      SUM(COALESCE(quantity_sold_refunds, 0)) AS quantity_sold_refunds
+    FROM joined
+    GROUP BY
+      1,
+      2,
+      3
+  )
+  SELECT
+    *
+  FROM aggregated
+), inventory_level AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__inventory_level
+), inventory_item AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__inventory_item
+), location AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__location
+), product_variant AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_variant
+), product AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product
+), inventory_level_aggregated AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__inventory_level__aggregates
+), joined_info AS (
+  SELECT
+    inventory_level.*,
+    inventory_item.sku,
+    inventory_item.is_deleted AS is_inventory_item_deleted,
+    inventory_item.cost,
+    inventory_item.country_code_of_origin,
+    inventory_item.province_code_of_origin,
+    inventory_item.is_shipping_required,
+    inventory_item.is_inventory_quantity_tracked,
+    inventory_item.created_at AS inventory_item_created_at,
+    inventory_item.updated_at AS inventory_item_updated_at,
+    location.name AS location_name,
+    location.is_deleted AS is_location_deleted,
+    location.is_active AS is_location_active,
+    location.address_1,
+    location.address_2,
+    location.city,
+    location.country,
+    location.country_code,
+    location.is_legacy AS is_legacy_location,
+    location.province,
+    location.province_code,
+    location.phone,
+    location.zip,
+    location.created_at AS location_created_at,
+    location.updated_at AS location_updated_at,
+    product_variant.variant_id,
+    product_variant.product_id,
+    product_variant.title AS variant_title,
+    product_variant.inventory_policy AS variant_inventory_policy,
+    product_variant.price AS variant_price,
+    product_variant.image_id AS variant_image_id,
+    product_variant.fulfillment_service AS variant_fulfillment_service,
+    product_variant.inventory_management AS variant_inventory_management,
+    product_variant.is_taxable AS is_variant_taxable,
+    product_variant.barcode AS variant_barcode,
+    product_variant.grams AS variant_grams,
+    product_variant.inventory_quantity AS variant_inventory_quantity,
+    product_variant.weight AS variant_weight,
+    product_variant.weight_unit AS variant_weight_unit,
+    product_variant.option_1 AS variant_option_1,
+    product_variant.option_2 AS variant_option_2,
+    product_variant.option_3 AS variant_option_3,
+    product_variant.tax_code AS variant_tax_code,
+    product_variant.created_timestamp AS variant_created_at,
+    product_variant.updated_timestamp AS variant_updated_at
+  FROM inventory_level
+  JOIN inventory_item
+    ON inventory_level.inventory_item_id = inventory_item.inventory_item_id
+    AND inventory_level.source_relation = inventory_item.source_relation
+  JOIN location
+    ON inventory_level.location_id = location.location_id
+    AND inventory_level.source_relation = location.source_relation
+  JOIN product_variant
+    ON inventory_item.inventory_item_id = product_variant.inventory_item_id
+    AND inventory_item.source_relation = product_variant.source_relation
+), joined_aggregates AS (
+  SELECT
+    joined_info.*,
+    COALESCE(inventory_level_aggregated.subtotal_sold, 0) AS subtotal_sold,
+    COALESCE(inventory_level_aggregated.quantity_sold, 0) AS quantity_sold,
+    COALESCE(inventory_level_aggregated.count_distinct_orders, 0) AS count_distinct_orders,
+    COALESCE(inventory_level_aggregated.count_distinct_customers, 0) AS count_distinct_customers,
+    COALESCE(inventory_level_aggregated.count_distinct_customer_emails, 0) AS count_distinct_customer_emails,
+    inventory_level_aggregated.first_order_timestamp,
+    inventory_level_aggregated.last_order_timestamp,
+    COALESCE(inventory_level_aggregated.subtotal_sold_refunds, 0) AS subtotal_sold_refunds,
+    COALESCE(inventory_level_aggregated.quantity_sold_refunds, 0) AS quantity_sold_refunds,
+    COALESCE(count_fulfillment_pending, 0) AS count_fulfillment_pending,
+    COALESCE(count_fulfillment_open, 0) AS count_fulfillment_open,
+    COALESCE(count_fulfillment_success, 0) AS count_fulfillment_success,
+    COALESCE(count_fulfillment_cancelled, 0) AS count_fulfillment_cancelled,
+    COALESCE(count_fulfillment_error, 0) AS count_fulfillment_error,
+    COALESCE(count_fulfillment_failure, 0) AS count_fulfillment_failure
+  FROM joined_info
+  LEFT JOIN inventory_level_aggregated
+    ON joined_info.location_id = inventory_level_aggregated.location_id
+    AND joined_info.variant_id = inventory_level_aggregated.variant_id
+    AND joined_info.source_relation = inventory_level_aggregated.source_relation
+), final AS (
+  SELECT
+    *,
+    subtotal_sold - subtotal_sold_refunds AS net_subtotal_sold,
+    quantity_sold - quantity_sold_refunds AS net_quantity_sold
+  FROM joined_aggregates
+)
+SELECT
+  *
+FROM final"
+model.shopify.shopify__order_lines,"WITH __dbt__cte__shopify__orders__order_refunds AS (
+  WITH refunds AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__refund
+  ), order_line_refunds AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line_refund
+  ), refund_join AS (
+    SELECT
+      refunds.refund_id,
+      refunds.created_at,
+      refunds.order_id,
+      refunds.user_id,
+      refunds.source_relation,
+      order_line_refunds.order_line_refund_id,
+      order_line_refunds.order_line_id,
+      order_line_refunds.restock_type,
+      order_line_refunds.quantity,
+      order_line_refunds.subtotal,
+      order_line_refunds.total_tax
+    FROM refunds
+    LEFT JOIN order_line_refunds
+      ON refunds.refund_id = order_line_refunds.refund_id
+      AND refunds.source_relation = order_line_refunds.source_relation
+  )
+  SELECT
+    *
+  FROM refund_join
+), order_lines AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(source_relation AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(order_line_id AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS order_lines_unique_key
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line
+), product_variants AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_variant
+), refunds AS (
+  SELECT
+    *
+  FROM __dbt__cte__shopify__orders__order_refunds
+), refunds_aggregated AS (
+  SELECT
+    order_line_id,
+    source_relation,
+    SUM(quantity) AS quantity,
+    SUM(COALESCE(subtotal, 0)) AS subtotal,
+    LISTAGG(DISTINCT CAST(refunds.restock_type AS TEXT), ', ') AS restock_types
+  FROM refunds
+  GROUP BY
+    1,
+    2
+), tax_lines AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__tax_line
+), tax_lines_aggregated AS (
+  SELECT
+    tax_lines.order_line_id,
+    tax_lines.source_relation,
+    SUM(tax_lines.price) AS order_line_tax
+  FROM tax_lines
+  GROUP BY
+    1,
+    2
+), joined AS (
+  SELECT
+    order_lines.*,
+    refunds_aggregated.restock_types,
+    COALESCE(refunds_aggregated.quantity, 0) AS refunded_quantity,
+    COALESCE(refunds_aggregated.subtotal, 0) AS refunded_subtotal,
+    order_lines.quantity - COALESCE(refunds_aggregated.quantity, 0) AS quantity_net_refunds,
+    order_lines.pre_tax_price - COALESCE(refunds_aggregated.subtotal, 0) AS subtotal_net_refunds,
+    product_variants.created_timestamp AS variant_created_at,
+    product_variants.updated_timestamp AS variant_updated_at,
+    product_variants.inventory_item_id,
+    product_variants.image_id,
+    product_variants.price AS variant_price,
+    product_variants.sku AS variant_sku,
+    product_variants.position AS variant_position,
+    product_variants.inventory_policy AS variant_inventory_policy,
+    product_variants.compare_at_price AS variant_compare_at_price,
+    product_variants.fulfillment_service AS variant_fulfillment_service,
+    product_variants.is_taxable AS variant_is_taxable,
+    product_variants.barcode AS variant_barcode,
+    product_variants.grams AS variant_grams,
+    product_variants.inventory_quantity AS variant_inventory_quantity,
+    product_variants.weight AS variant_weight,
+    product_variants.weight_unit AS variant_weight_unit,
+    product_variants.option_1 AS variant_option_1,
+    product_variants.option_2 AS variant_option_2,
+    product_variants.option_3 AS variant_option_3,
+    product_variants.tax_code AS variant_tax_code,
+    tax_lines_aggregated.order_line_tax
+  FROM order_lines
+  LEFT JOIN refunds_aggregated
+    ON refunds_aggregated.order_line_id = order_lines.order_line_id
+    AND refunds_aggregated.source_relation = order_lines.source_relation
+  LEFT JOIN product_variants
+    ON product_variants.variant_id = order_lines.variant_id
+    AND product_variants.source_relation = order_lines.source_relation
+  LEFT JOIN tax_lines_aggregated
+    ON tax_lines_aggregated.order_line_id = order_lines.order_line_id
+    AND tax_lines_aggregated.source_relation = order_lines.source_relation
+)
+SELECT
+  *
+FROM joined"
+model.shopify.shopify__customers__order_aggregates,"WITH orders AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order
+  WHERE
+    NOT customer_id IS NULL
+), order_aggregates AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__orders__order_line_aggregates
+), transactions AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__transactions
+  WHERE
+    LOWER(status) = 'success'
+    AND NOT LOWER(kind) IN ('authorization', 'void')
+    AND LOWER(gateway) <> 'gift_card' /* redeeming a giftcard does not introduce new revenue */
+), transaction_aggregates AS (
+  /* this is necessary as customers can pay via multiple payment gateways */
+  SELECT
+    order_id,
+    source_relation,
+    LOWER(kind) AS kind,
+    SUM(currency_exchange_calculated_amount) AS currency_exchange_calculated_amount
+  FROM transactions
+  GROUP BY
+    1,
+    2,
+    3
+), customer_tags AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer_tag
+), customer_tags_aggregated AS (
+  SELECT
+    customer_id,
+    source_relation,
+    LISTAGG(DISTINCT CAST(value AS TEXT), ', ') AS customer_tags
+  FROM customer_tags
+  GROUP BY
+    1,
+    2
+), aggregated AS (
+  SELECT
+    orders.customer_id,
+    orders.source_relation,
+    customer_tags_aggregated.customer_tags,
+    MIN(orders.created_timestamp) AS first_order_timestamp,
+    MAX(orders.created_timestamp) AS most_recent_order_timestamp,
+    AVG(transaction_aggregates.currency_exchange_calculated_amount) AS avg_order_value,
+    SUM(transaction_aggregates.currency_exchange_calculated_amount) AS lifetime_total_spent,
+    SUM(refunds.currency_exchange_calculated_amount) AS lifetime_total_refunded,
+    COUNT(DISTINCT orders.order_id) AS lifetime_count_orders,
+    AVG(order_aggregates.order_total_quantity) AS avg_quantity_per_order,
+    SUM(order_aggregates.order_total_tax) AS lifetime_total_tax,
+    AVG(order_aggregates.order_total_tax) AS avg_tax_per_order,
+    SUM(order_aggregates.order_total_discount) AS lifetime_total_discount,
+    AVG(order_aggregates.order_total_discount) AS avg_discount_per_order,
+    SUM(order_aggregates.order_total_shipping) AS lifetime_total_shipping,
+    AVG(order_aggregates.order_total_shipping) AS avg_shipping_per_order,
+    SUM(order_aggregates.order_total_shipping_with_discounts) AS lifetime_total_shipping_with_discounts,
+    AVG(order_aggregates.order_total_shipping_with_discounts) AS avg_shipping_with_discounts_per_order,
+    SUM(order_aggregates.order_total_shipping_tax) AS lifetime_total_shipping_tax,
+    AVG(order_aggregates.order_total_shipping_tax) AS avg_shipping_tax_per_order
+  FROM orders
+  LEFT JOIN transaction_aggregates
+    ON orders.order_id = transaction_aggregates.order_id
+    AND orders.source_relation = transaction_aggregates.source_relation
+    AND transaction_aggregates.kind IN ('sale', 'capture')
+  LEFT JOIN transaction_aggregates AS refunds
+    ON orders.order_id = refunds.order_id
+    AND orders.source_relation = refunds.source_relation
+    AND refunds.kind = 'refund'
+  LEFT JOIN order_aggregates
+    ON orders.order_id = order_aggregates.order_id
+    AND orders.source_relation = order_aggregates.source_relation
+  LEFT JOIN customer_tags_aggregated
+    ON orders.customer_id = customer_tags_aggregated.customer_id
+    AND orders.source_relation = customer_tags_aggregated.source_relation
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM aggregated"
+model.shopify.shopify__orders__order_refunds,"WITH refunds AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__refund
+), order_line_refunds AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line_refund
+), refund_join AS (
+  SELECT
+    refunds.refund_id,
+    refunds.created_at,
+    refunds.order_id,
+    refunds.user_id,
+    refunds.source_relation,
+    order_line_refunds.order_line_refund_id,
+    order_line_refunds.order_line_id,
+    order_line_refunds.restock_type,
+    order_line_refunds.quantity,
+    order_line_refunds.subtotal,
+    order_line_refunds.total_tax
+  FROM refunds
+  LEFT JOIN order_line_refunds
+    ON refunds.refund_id = order_line_refunds.refund_id
+    AND refunds.source_relation = order_line_refunds.source_relation
+)
+SELECT
+  *
+FROM refund_join"
+model.shopify.int_shopify__daily_orders,"WITH orders AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__orders
+  WHERE
+    NOT COALESCE(is_deleted, FALSE)
+), order_lines AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__order_lines
+), order_aggregates AS (
+  SELECT
+    source_relation,
+    CAST(DATE_TRUNC('DAY', created_timestamp) AS DATE) AS date_day,
+    COUNT(DISTINCT order_id) AS count_orders,
+    SUM(line_item_count) AS count_line_items,
+    AVG(line_item_count) AS avg_line_item_count,
+    COUNT(DISTINCT customer_id) AS count_customers,
+    COUNT(DISTINCT email) AS count_customer_emails,
+    SUM(order_adjusted_total) AS order_adjusted_total,
+    AVG(order_adjusted_total) AS avg_order_value,
+    SUM(shipping_cost) AS shipping_cost,
+    SUM(order_adjustment_amount) AS order_adjustment_amount,
+    SUM(order_adjustment_tax_amount) AS order_adjustment_tax_amount,
+    SUM(refund_subtotal) AS refund_subtotal,
+    SUM(refund_total_tax) AS refund_total_tax,
+    SUM(total_discounts) AS total_discounts,
+    AVG(total_discounts) AS avg_discount,
+    SUM(shipping_discount_amount) AS shipping_discount_amount,
+    AVG(shipping_discount_amount) AS avg_shipping_discount_amount,
+    SUM(percentage_calc_discount_amount) AS percentage_calc_discount_amount,
+    AVG(percentage_calc_discount_amount) AS avg_percentage_calc_discount_amount,
+    SUM(fixed_amount_discount_amount) AS fixed_amount_discount_amount,
+    AVG(fixed_amount_discount_amount) AS avg_fixed_amount_discount_amount,
+    SUM(count_discount_codes_applied) AS count_discount_codes_applied,
+    COUNT(DISTINCT location_id) AS count_locations_ordered_from,
+    SUM(CASE WHEN count_discount_codes_applied > 0 THEN 1 ELSE 0 END) AS count_orders_with_discounts,
+    SUM(CASE WHEN refund_subtotal > 0 THEN 1 ELSE 0 END) AS count_orders_with_refunds,
+    MIN(created_timestamp) AS first_order_timestamp,
+    MAX(created_timestamp) AS last_order_timestamp
+  FROM orders
+  GROUP BY
+    1,
+    2
+), order_line_aggregates AS (
+  SELECT
+    order_lines.source_relation,
+    CAST(DATE_TRUNC('DAY', orders.created_timestamp) AS DATE) AS date_day,
+    SUM(order_lines.quantity) AS quantity_sold,
+    SUM(order_lines.refunded_quantity) AS quantity_refunded,
+    SUM(order_lines.quantity_net_refunds) AS quantity_net,
+    SUM(order_lines.quantity) / COUNT(DISTINCT order_lines.order_id) AS avg_quantity_sold,
+    SUM(order_lines.quantity_net_refunds) / COUNT(DISTINCT order_lines.order_id) AS avg_quantity_net,
+    COUNT(DISTINCT order_lines.variant_id) AS count_variants_sold,
+    COUNT(DISTINCT order_lines.product_id) AS count_products_sold,
+    SUM(
+      CASE WHEN order_lines.is_gift_card THEN order_lines.quantity_net_refunds ELSE 0 END
+    ) AS quantity_gift_cards_sold,
+    SUM(
+      CASE
+        WHEN order_lines.is_shipping_required
+        THEN order_lines.quantity_net_refunds
+        ELSE 0
+      END
+    ) AS quantity_requiring_shipping
+  FROM order_lines
+  LEFT JOIN orders /* just joining with order to get the created_timestamp */
+    ON order_lines.order_id = orders.order_id
+    AND order_lines.source_relation = orders.source_relation
+  GROUP BY
+    1,
+    2
+), final AS (
+  SELECT
+    order_aggregates.*,
+    order_line_aggregates.quantity_sold,
+    order_line_aggregates.quantity_refunded,
+    order_line_aggregates.quantity_net,
+    order_line_aggregates.count_variants_sold,
+    order_line_aggregates.count_products_sold,
+    order_line_aggregates.quantity_gift_cards_sold,
+    order_line_aggregates.quantity_requiring_shipping,
+    order_line_aggregates.avg_quantity_sold,
+    order_line_aggregates.avg_quantity_net
+  FROM order_aggregates
+  LEFT JOIN order_line_aggregates
+    ON order_aggregates.date_day = order_line_aggregates.date_day
+    AND order_aggregates.source_relation = order_line_aggregates.source_relation
+)
+SELECT
+  *
+FROM final"
+model.shopify.int_shopify__daily_abandoned_checkouts,"WITH abandoned_checkout AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout
+  /* ""deleted"" abandoned checkouts do not appear to have any data tying them to customers, */ /* discounts, or products (and should therefore not get joined in) but let's filter them out here */
+  WHERE
+    NOT COALESCE(is_deleted, FALSE)
+), abandoned_checkout_aggregates AS (
+  SELECT
+    source_relation,
+    CAST(DATE_TRUNC('DAY', created_at) AS DATE) AS date_day,
+    COUNT(DISTINCT checkout_id) AS count_abandoned_checkouts,
+    COUNT(DISTINCT customer_id) AS count_customers_abandoned_checkout,
+    COUNT(DISTINCT email) AS count_customer_emails_abandoned_checkout
+  FROM abandoned_checkout
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM abandoned_checkout_aggregates"
+model.shopify.int_shopify__customer_email_rollup,"WITH customers AS (
+  SELECT
+    *,
+    ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_timestamp DESC) AS customer_index
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer
+  WHERE
+    NOT email IS NULL /* nonsensical to include any null emails here */
+), customer_tags AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer_tag
+), rollup_customers AS (
+  SELECT
+    LOWER(customers.email) AS email, /* fields to group by */
+    customers.source_relation,
+    LISTAGG(DISTINCT CAST(customers.customer_id AS TEXT), ', ') AS customer_ids, /* fields to string agg together */
+    LISTAGG(DISTINCT CAST(customers.phone AS TEXT), ', ') AS phone_numbers,
+    LISTAGG(DISTINCT CAST(customer_tags.value AS TEXT), ', ') AS customer_tags,
+    MIN(customers.created_timestamp) AS first_account_created_at, /* fields to take aggregates of */
+    MAX(customers.created_timestamp) AS last_account_created_at,
+    MAX(customers.updated_timestamp) AS last_updated_at,
+    MAX(customers.marketing_consent_updated_at) AS marketing_consent_updated_at,
+    MAX(customers._fivetran_synced) AS last_fivetran_synced,
+    MAX(
+      CASE WHEN customers.customer_index = 1 THEN customers.is_tax_exempt ELSE NULL END
+    ) AS is_tax_exempt, /* take true if ever given for boolean fields */ /* since this changes every year */
+    MAX(customers.is_verified_email) AS is_verified_email
+  /* for all other fields, just take the latest value */
+  FROM customers
+  LEFT JOIN customer_tags
+    ON customers.customer_id = customer_tags.customer_id
+    AND customers.source_relation = customer_tags.source_relation
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM rollup_customers"
+model.shopify.int_shopify__discounts__abandoned_checkouts,"WITH abandoned_checkout AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout
+  /* ""deleted"" abandoned checkouts do not appear to have any data tying them to customers, */ /* discounts, or products (and should therefore not get joined in) but let's filter them out here */
+  WHERE
+    NOT COALESCE(is_deleted, FALSE)
+), abandoned_checkout_discount_code AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout_discount_code
+  /* we need the TYPE of discount (shipping, percentage, fixed_amount) to avoid fanning out of joins */ /* so filter out records that have this */
+  WHERE
+    COALESCE(type, '') <> ''
+), abandoned_checkout_shipping_line AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout_shipping_line
+), roll_up_shipping_line AS (
+  SELECT
+    checkout_id,
+    source_relation,
+    SUM(price) AS price
+  FROM abandoned_checkout_shipping_line
+  GROUP BY
+    1,
+    2
+), abandoned_checkouts_aggregated AS (
+  SELECT
+    abandoned_checkout_discount_code.code,
+    abandoned_checkout_discount_code.type,
+    abandoned_checkout_discount_code.source_relation,
+    SUM(abandoned_checkout_discount_code.amount) AS total_abandoned_checkout_discount_amount,
+    SUM(COALESCE(abandoned_checkout.total_line_items_price, 0)) AS total_abandoned_checkout_line_items_price,
+    SUM(COALESCE(roll_up_shipping_line.price, 0)) AS total_abandoned_checkout_shipping_price,
+    COUNT(DISTINCT customer_id) AS count_abandoned_checkout_customers,
+    COUNT(DISTINCT email) AS count_abandoned_checkout_customer_emails,
+    COUNT(DISTINCT abandoned_checkout.checkout_id) AS count_abandoned_checkouts
+  FROM abandoned_checkout_discount_code
+  LEFT JOIN abandoned_checkout
+    ON abandoned_checkout_discount_code.checkout_id = abandoned_checkout.checkout_id
+    AND abandoned_checkout_discount_code.source_relation = abandoned_checkout.source_relation
+  LEFT JOIN roll_up_shipping_line
+    ON roll_up_shipping_line.checkout_id = abandoned_checkout_discount_code.checkout_id
+    AND roll_up_shipping_line.source_relation = abandoned_checkout_discount_code.source_relation
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM abandoned_checkouts_aggregated"
+model.shopify.int_shopify__product__order_line_aggregates,"WITH order_lines AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__order_lines
+), orders AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__orders
+), product_aggregated AS (
+  SELECT
+    order_lines.product_id,
+    order_lines.source_relation,
+    SUM(order_lines.quantity) AS quantity_sold, /* moved over from shopify__products */
+    SUM(order_lines.pre_tax_price) AS subtotal_sold,
+    SUM(order_lines.quantity_net_refunds) AS quantity_sold_net_refunds,
+    SUM(order_lines.subtotal_net_refunds) AS subtotal_sold_net_refunds,
+    MIN(orders.created_timestamp) AS first_order_timestamp,
+    MAX(orders.created_timestamp) AS most_recent_order_timestamp,
+    SUM(order_lines.total_discount) AS product_total_discount, /* new columns */
+    SUM(order_lines.order_line_tax) AS product_total_tax,
+    AVG(order_lines.quantity) AS avg_quantity_per_order_line,
+    AVG(order_lines.total_discount) AS product_avg_discount_per_order_line,
+    AVG(order_lines.order_line_tax) AS product_avg_tax_per_order_line
+  FROM order_lines
+  LEFT JOIN orders
+    ON order_lines.order_id = orders.order_id
+    AND order_lines.source_relation = orders.source_relation
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM product_aggregated"
+model.shopify.int_shopify__emails__order_aggregates,"WITH orders AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order
+), order_aggregates AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__orders__order_line_aggregates
+), transactions AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__transactions
+  WHERE
+    LOWER(status) = 'success'
+    AND NOT LOWER(kind) IN ('authorization', 'void')
+    AND LOWER(gateway) <> 'gift_card' /* redeeming a giftcard does not introduce new revenue */
+), transaction_aggregates AS (
+  /* this is necessary as customers can pay via multiple payment gateways */
+  SELECT
+    order_id,
+    source_relation,
+    LOWER(kind) AS kind,
+    SUM(currency_exchange_calculated_amount) AS currency_exchange_calculated_amount
+  FROM transactions
+  GROUP BY
+    1,
+    2,
+    3
+), customer_emails AS (
+  /* in case any orders records don't have the customer email attached yet */
+  SELECT
+    customer_id,
+    source_relation,
+    email
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer
+  WHERE
+    NOT email IS NULL
+  GROUP BY
+    1,
+    2,
+    3
+), aggregated AS (
+  SELECT
+    LOWER(customer_emails.email) AS email,
+    orders.source_relation,
+    MIN(orders.created_timestamp) AS first_order_timestamp,
+    MAX(orders.created_timestamp) AS most_recent_order_timestamp,
+    AVG(transaction_aggregates.currency_exchange_calculated_amount) AS avg_order_value,
+    SUM(transaction_aggregates.currency_exchange_calculated_amount) AS lifetime_total_spent,
+    SUM(refunds.currency_exchange_calculated_amount) AS lifetime_total_refunded,
+    COUNT(DISTINCT orders.order_id) AS lifetime_count_orders,
+    AVG(order_aggregates.order_total_quantity) AS avg_quantity_per_order,
+    SUM(order_aggregates.order_total_tax) AS lifetime_total_tax,
+    AVG(order_aggregates.order_total_tax) AS avg_tax_per_order,
+    SUM(order_aggregates.order_total_discount) AS lifetime_total_discount,
+    AVG(order_aggregates.order_total_discount) AS avg_discount_per_order,
+    SUM(order_aggregates.order_total_shipping) AS lifetime_total_shipping,
+    AVG(order_aggregates.order_total_shipping) AS avg_shipping_per_order,
+    SUM(order_aggregates.order_total_shipping_with_discounts) AS lifetime_total_shipping_with_discounts,
+    AVG(order_aggregates.order_total_shipping_with_discounts) AS avg_shipping_with_discounts_per_order,
+    SUM(order_aggregates.order_total_shipping_tax) AS lifetime_total_shipping_tax,
+    AVG(order_aggregates.order_total_shipping_tax) AS avg_shipping_tax_per_order
+  FROM orders
+  JOIN customer_emails
+    ON orders.customer_id = customer_emails.customer_id
+    AND orders.source_relation = customer_emails.source_relation
+  LEFT JOIN transaction_aggregates
+    ON orders.order_id = transaction_aggregates.order_id
+    AND orders.source_relation = transaction_aggregates.source_relation
+    AND transaction_aggregates.kind IN ('sale', 'capture')
+  LEFT JOIN transaction_aggregates AS refunds
+    ON orders.order_id = refunds.order_id
+    AND orders.source_relation = refunds.source_relation
+    AND refunds.kind = 'refund'
+  LEFT JOIN order_aggregates
+    ON orders.order_id = order_aggregates.order_id
+    AND orders.source_relation = order_aggregates.source_relation
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM aggregated"
+model.shopify.int_shopify__order__shipping_aggregates,"WITH order_shipping_line AS (
+  SELECT
+    order_id,
+    source_relation,
+    order_shipping_line_id,
+    SUM(price) AS shipping_price,
+    SUM(discounted_price) AS discounted_shipping_price
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_shipping_line
+  GROUP BY
+    1,
+    2,
+    3
+), order_shipping_tax_line AS (
+  SELECT
+    order_shipping_line_id,
+    source_relation,
+    SUM(price) AS shipping_tax
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_shipping_tax_line
+  GROUP BY
+    1,
+    2
+), aggregated AS (
+  SELECT
+    order_shipping_line.order_id,
+    order_shipping_line.source_relation,
+    SUM(order_shipping_line.shipping_price) AS shipping_price,
+    SUM(order_shipping_line.discounted_shipping_price) AS discounted_shipping_price,
+    SUM(order_shipping_tax_line.shipping_tax) AS shipping_tax
+  FROM order_shipping_line
+  LEFT JOIN order_shipping_tax_line
+    ON order_shipping_line.order_shipping_line_id = order_shipping_tax_line.order_shipping_line_id
+    AND order_shipping_line.source_relation = order_shipping_tax_line.source_relation
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM aggregated"
+model.shopify.int_shopify__discounts__order_aggregates,"WITH order_discount_code AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_discount_code
+), orders AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_shopify.shopify__orders
+), orders_aggregated AS (
+  SELECT
+    order_discount_code.code,
+    order_discount_code.type,
+    order_discount_code.source_relation,
+    AVG(order_discount_code.amount) AS avg_order_discount_amount,
+    SUM(order_discount_code.amount) AS total_order_discount_amount,
+    MAX(orders.total_line_items_price) AS total_order_line_items_price, /* summing would multiply the total by the # of discount codes applied to an order */
+    MAX(orders.shipping_cost) AS total_order_shipping_cost, /* summing would multiply the total by the # of discount codes applied to an order */
+    MAX(orders.refund_subtotal + orders.refund_total_tax) AS total_order_refund_amount, /* summing would multiply the total by the # of discount codes applied to an order */
+    COUNT(DISTINCT customer_id) AS count_customers,
+    COUNT(DISTINCT email) AS count_customer_emails,
+    COUNT(DISTINCT order_discount_code.order_id) AS count_orders
+  FROM order_discount_code
+  JOIN orders
+    ON order_discount_code.order_id = orders.order_id
+    AND order_discount_code.source_relation = orders.source_relation
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM orders_aggregated"
+model.shopify.int_shopify__products_with_aggregates,"WITH products AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product
+), collection_product AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__collection_product
+), collection AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__collection
+  WHERE
+    NOT COALESCE(is_deleted, FALSE) /* limit to only active collections */
+), product_tag AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_tag
+), product_variant AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_variant
+), product_image AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_image
+), collections_aggregated AS (
+  SELECT
+    collection_product.product_id,
+    collection_product.source_relation,
+    LISTAGG(collection.title, ', ') AS collections
+  FROM collection_product
+  JOIN collection
+    ON collection_product.collection_id = collection.collection_id
+    AND collection_product.source_relation = collection.source_relation
+  GROUP BY
+    1,
+    2
+), tags_aggregated AS (
+  SELECT
+    product_id,
+    source_relation,
+    LISTAGG(value, ', ') AS tags
+  FROM product_tag
+  GROUP BY
+    1,
+    2
+), variants_aggregated AS (
+  SELECT
+    product_id,
+    source_relation,
+    COUNT(variant_id) AS count_variants
+  FROM product_variant
+  GROUP BY
+    1,
+    2
+), images_aggregated AS (
+  SELECT
+    product_id,
+    source_relation,
+    COUNT(*) AS count_images
+  FROM product_image
+  GROUP BY
+    1,
+    2
+), joined AS (
+  SELECT
+    products.*,
+    collections_aggregated.collections,
+    tags_aggregated.tags,
+    variants_aggregated.count_variants,
+    COALESCE(images_aggregated.count_images, 0) > 0 AS has_product_image
+  FROM products
+  LEFT JOIN collections_aggregated
+    ON products.product_id = collections_aggregated.product_id
+    AND products.source_relation = collections_aggregated.source_relation
+  LEFT JOIN tags_aggregated
+    ON products.product_id = tags_aggregated.product_id
+    AND products.source_relation = tags_aggregated.source_relation
+  LEFT JOIN variants_aggregated
+    ON products.product_id = variants_aggregated.product_id
+    AND products.source_relation = variants_aggregated.source_relation
+  LEFT JOIN images_aggregated
+    ON products.product_id = images_aggregated.product_id
+    AND products.source_relation = images_aggregated.source_relation
+)
+SELECT
+  *
+FROM joined"
+model.shopify.shopify__orders__order_line_aggregates,"WITH __dbt__cte__int_shopify__order__shipping_aggregates AS (
+  WITH order_shipping_line AS (
+    SELECT
+      order_id,
+      source_relation,
+      order_shipping_line_id,
+      SUM(price) AS shipping_price,
+      SUM(discounted_price) AS discounted_shipping_price
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_shipping_line
+    GROUP BY
+      1,
+      2,
+      3
+  ), order_shipping_tax_line AS (
+    SELECT
+      order_shipping_line_id,
+      source_relation,
+      SUM(price) AS shipping_tax
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_shipping_tax_line
+    GROUP BY
+      1,
+      2
+  ), aggregated AS (
+    SELECT
+      order_shipping_line.order_id,
+      order_shipping_line.source_relation,
+      SUM(order_shipping_line.shipping_price) AS shipping_price,
+      SUM(order_shipping_line.discounted_shipping_price) AS discounted_shipping_price,
+      SUM(order_shipping_tax_line.shipping_tax) AS shipping_tax
+    FROM order_shipping_line
+    LEFT JOIN order_shipping_tax_line
+      ON order_shipping_line.order_shipping_line_id = order_shipping_tax_line.order_shipping_line_id
+      AND order_shipping_line.source_relation = order_shipping_tax_line.source_relation
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM aggregated
+), order_line AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line
+), tax AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__tax_line
+), shipping AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_shopify__order__shipping_aggregates
+), tax_aggregates AS (
+  SELECT
+    order_line_id,
+    source_relation,
+    SUM(price) AS price
+  FROM tax
+  GROUP BY
+    1,
+    2
+), order_line_aggregates AS (
+  SELECT
+    order_line.order_id,
+    order_line.source_relation,
+    COUNT(*) AS line_item_count,
+    SUM(order_line.quantity) AS order_total_quantity,
+    SUM(tax_aggregates.price) AS order_total_tax,
+    SUM(order_line.total_discount) AS order_total_discount
+  FROM order_line
+  LEFT JOIN tax_aggregates
+    ON tax_aggregates.order_line_id = order_line.order_line_id
+    AND tax_aggregates.source_relation = order_line.source_relation
+  GROUP BY
+    1,
+    2
+), final AS (
+  SELECT
+    order_line_aggregates.order_id,
+    order_line_aggregates.source_relation,
+    order_line_aggregates.line_item_count,
+    order_line_aggregates.order_total_quantity,
+    order_line_aggregates.order_total_tax,
+    order_line_aggregates.order_total_discount,
+    shipping.shipping_price AS order_total_shipping,
+    shipping.discounted_shipping_price AS order_total_shipping_with_discounts,
+    shipping.shipping_tax AS order_total_shipping_tax
+  FROM order_line_aggregates
+  LEFT JOIN shipping
+    ON shipping.order_id = order_line_aggregates.order_id
+    AND shipping.source_relation = order_line_aggregates.source_relation
+)
+SELECT
+  *
+FROM final"
+model.shopify.int_shopify__inventory_level__aggregates,"WITH __dbt__cte__shopify__orders__order_refunds AS (
+  WITH refunds AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__refund
+  ), order_line_refunds AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line_refund
+  ), refund_join AS (
+    SELECT
+      refunds.refund_id,
+      refunds.created_at,
+      refunds.order_id,
+      refunds.user_id,
+      refunds.source_relation,
+      order_line_refunds.order_line_refund_id,
+      order_line_refunds.order_line_id,
+      order_line_refunds.restock_type,
+      order_line_refunds.quantity,
+      order_line_refunds.subtotal,
+      order_line_refunds.total_tax
+    FROM refunds
+    LEFT JOIN order_line_refunds
+      ON refunds.refund_id = order_line_refunds.refund_id
+      AND refunds.source_relation = order_line_refunds.source_relation
+  )
+  SELECT
+    *
+  FROM refund_join
+), order_lines AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line
+), fulfillment AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__fulfillment
+), orders AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order
+  WHERE
+    NOT COALESCE(is_deleted, FALSE)
+), refunds AS (
+  SELECT
+    *
+  FROM __dbt__cte__shopify__orders__order_refunds
+), refunds_aggregated AS (
+  SELECT
+    order_line_id,
+    source_relation,
+    SUM(quantity) AS quantity,
+    SUM(COALESCE(subtotal, 0)) AS subtotal
+  FROM refunds
+  GROUP BY
+    1,
+    2
+), joined AS (
+  SELECT
+    order_lines.order_line_id,
+    order_lines.variant_id,
+    order_lines.source_relation,
+    fulfillment.location_id, /* location id is stored in fulfillment rather than order */
+    orders.order_id,
+    orders.customer_id,
+    fulfillment.fulfillment_id,
+    LOWER(orders.email) AS email,
+    order_lines.pre_tax_price,
+    order_lines.quantity,
+    orders.created_timestamp AS order_created_timestamp,
+    fulfillment.status AS fulfillment_status,
+    refunds_aggregated.subtotal AS subtotal_sold_refunds,
+    refunds_aggregated.quantity AS quantity_sold_refunds
+  FROM order_lines
+  JOIN orders
+    ON order_lines.order_id = orders.order_id
+    AND order_lines.source_relation = orders.source_relation
+  JOIN fulfillment
+    ON orders.order_id = fulfillment.order_id
+    AND orders.source_relation = fulfillment.source_relation
+  LEFT JOIN refunds_aggregated
+    ON refunds_aggregated.order_line_id = order_lines.order_line_id
+    AND refunds_aggregated.source_relation = order_lines.source_relation
+), aggregated AS (
+  SELECT
+    variant_id,
+    location_id,
+    source_relation,
+    SUM(pre_tax_price) AS subtotal_sold,
+    SUM(quantity) AS quantity_sold,
+    COUNT(DISTINCT order_id) AS count_distinct_orders,
+    COUNT(DISTINCT customer_id) AS count_distinct_customers,
+    COUNT(DISTINCT email) AS count_distinct_customer_emails,
+    MIN(order_created_timestamp) AS first_order_timestamp,
+    MAX(order_created_timestamp) AS last_order_timestamp,
+    COUNT(DISTINCT CASE WHEN fulfillment_status = 'pending' THEN fulfillment_id END) AS count_fulfillment_pending,
+    COUNT(DISTINCT CASE WHEN fulfillment_status = 'open' THEN fulfillment_id END) AS count_fulfillment_open,
+    COUNT(DISTINCT CASE WHEN fulfillment_status = 'success' THEN fulfillment_id END) AS count_fulfillment_success,
+    COUNT(DISTINCT CASE WHEN fulfillment_status = 'cancelled' THEN fulfillment_id END) AS count_fulfillment_cancelled,
+    COUNT(DISTINCT CASE WHEN fulfillment_status = 'error' THEN fulfillment_id END) AS count_fulfillment_error,
+    COUNT(DISTINCT CASE WHEN fulfillment_status = 'failure' THEN fulfillment_id END) AS count_fulfillment_failure,
+    SUM(COALESCE(subtotal_sold_refunds, 0)) AS subtotal_sold_refunds,
+    SUM(COALESCE(quantity_sold_refunds, 0)) AS quantity_sold_refunds
+  FROM joined
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM aggregated"
+model.shopify.shopify__calendar,"WITH rawdata AS (
+  WITH p AS (
+    SELECT
+      0 AS generated_number
+    UNION ALL
+    SELECT
+      1
+  ), unioned AS (
+    SELECT
+      p0.generated_number * POWER(2, 0) + p1.generated_number * POWER(2, 1) + p2.generated_number * POWER(2, 2) + p3.generated_number * POWER(2, 3) + p4.generated_number * POWER(2, 4) + p5.generated_number * POWER(2, 5) + p6.generated_number * POWER(2, 6) + p7.generated_number * POWER(2, 7) + p8.generated_number * POWER(2, 8) + p9.generated_number * POWER(2, 9) + p10.generated_number * POWER(2, 10) + 1 AS generated_number
+    FROM p AS p0
+    CROSS JOIN p AS p1
+    CROSS JOIN p AS p2
+    CROSS JOIN p AS p3
+    CROSS JOIN p AS p4
+    CROSS JOIN p AS p5
+    CROSS JOIN p AS p6
+    CROSS JOIN p AS p7
+    CROSS JOIN p AS p8
+    CROSS JOIN p AS p9
+    CROSS JOIN p AS p10
+  )
+  SELECT
+    *
+  FROM unioned
+  WHERE
+    generated_number <= 2041
+  ORDER BY
+    generated_number
+), all_periods AS (
+  SELECT
+    (
+      DATEADD(day, ROW_NUMBER() OVER (ORDER BY 1) - 1, CAST('2019-01-01' AS DATE))
+    ) AS date_day
+  FROM rawdata
+), filtered AS (
+  SELECT
+    *
+  FROM all_periods
+  WHERE
+    date_day <= CURRENT_DATE
+)
+SELECT
+  *
+FROM filtered"
+model.shopify_source.stg_shopify__abandoned_checkout_shipping_line,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout_shipping_line_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS carrier_identifier,
+    CAST(NULL AS INT) AS checkout_id,
+    CAST(NULL AS TEXT) AS code,
+    CAST(NULL AS TEXT) AS delivery_category,
+    CAST(NULL AS TEXT) AS delivery_expectation_range,
+    CAST(NULL AS INT) AS delivery_expectation_range_max,
+    CAST(NULL AS INT) AS delivery_expectation_range_min,
+    CAST(NULL AS TEXT) AS delivery_expectation_type,
+    CAST(NULL AS FLOAT) AS discounted_price,
+    CAST(NULL AS TEXT) AS id,
+    CAST(NULL AS INT) AS index,
+    CAST(NULL AS TEXT) AS phone,
+    CAST(NULL AS FLOAT) AS price,
+    CAST(NULL AS TEXT) AS requested_fulfillment_service_id,
+    CAST(NULL AS TEXT) AS source,
+    CAST(NULL AS TEXT) AS title,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS abandoned_checkout_shipping_line_id,
+    checkout_id,
+    index,
+    carrier_identifier,
+    code AS shipping_code,
+    delivery_category,
+    delivery_expectation_range,
+    delivery_expectation_range_max,
+    delivery_expectation_range_min,
+    delivery_expectation_type,
+    discounted_price,
+    phone,
+    price,
+    requested_fulfillment_service_id,
+    source,
+    title,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__transaction,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__transaction_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS DECIMAL(28, 6)) AS order_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS refund_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS amount,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TIMESTAMP) AS processed_at,
+    CAST(NULL AS DECIMAL(28, 6)) AS device_id,
+    CAST(NULL AS TEXT) AS gateway,
+    CAST(NULL AS TEXT) AS source_name,
+    CAST(NULL AS TEXT) AS message,
+    CAST(NULL AS TEXT) AS currency,
+    CAST(NULL AS DECIMAL(28, 6)) AS location_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS parent_id,
+    CAST(NULL AS TEXT) AS payment_avs_result_code,
+    CAST(NULL AS TEXT) AS payment_credit_card_bin,
+    CAST(NULL AS TEXT) AS payment_cvv_result_code,
+    CAST(NULL AS TEXT) AS payment_credit_card_number,
+    CAST(NULL AS TEXT) AS payment_credit_card_company,
+    CAST(NULL AS TEXT) AS kind,
+    CAST(NULL AS TEXT) AS receipt,
+    CAST(NULL AS DECIMAL(28, 6)) AS currency_exchange_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS currency_exchange_adjustment,
+    CAST(NULL AS DECIMAL(28, 6)) AS currency_exchange_original_amount,
+    CAST(NULL AS DECIMAL(28, 6)) AS currency_exchange_final_amount,
+    CAST(NULL AS TEXT) AS currency_exchange_currency,
+    CAST(NULL AS TEXT) AS error_code,
+    CAST(NULL AS TEXT) AS status,
+    CAST(NULL AS BOOLEAN) AS test,
+    CAST(NULL AS DECIMAL(28, 6)) AS user_id,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS authorization_expires_at,
+    CAST(NULL AS TEXT) AS authorization_code,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS transaction_id,
+    order_id,
+    refund_id,
+    amount,
+    device_id,
+    gateway,
+    source_name,
+    message,
+    currency,
+    location_id,
+    parent_id,
+    payment_avs_result_code,
+    payment_credit_card_bin,
+    payment_cvv_result_code,
+    payment_credit_card_number,
+    payment_credit_card_company,
+    kind,
+    receipt,
+    currency_exchange_id,
+    currency_exchange_adjustment,
+    currency_exchange_original_amount,
+    currency_exchange_final_amount,
+    currency_exchange_currency,
+    error_code,
+    status,
+    user_id,
+    authorization_code,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(processed_at AS TIMESTAMP) AS TIMESTAMP)) AS processed_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(authorization_expires_at AS TIMESTAMP) AS TIMESTAMP)) AS authorization_expires_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+  WHERE
+    NOT COALESCE(test, FALSE)
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__fulfillment,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__fulfillment_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS INT) AS location_id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS INT) AS order_id,
+    CAST(NULL AS TEXT) AS service,
+    CAST(NULL AS TEXT) AS shipment_status,
+    CAST(NULL AS TEXT) AS status,
+    CAST(NULL AS TEXT) AS tracking_company,
+    CAST(NULL AS TEXT) AS tracking_number,
+    CAST(NULL AS TEXT) AS tracking_numbers,
+    CAST(NULL AS TEXT) AS tracking_urls,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS fulfillment_id,
+    location_id,
+    order_id,
+    name,
+    service,
+    shipment_status,
+    LOWER(status) AS status,
+    tracking_company,
+    tracking_number,
+    tracking_numbers,
+    tracking_urls,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__product_image,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_image_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS INT) AS height,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS INT) AS position,
+    CAST(NULL AS INT) AS product_id,
+    CAST(NULL AS TEXT) AS src,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS TEXT) AS variant_ids,
+    CAST(NULL AS INT) AS width,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS product_image_id,
+    product_id,
+    height,
+    position,
+    src,
+    variant_ids,
+    width,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+  WHERE
+    NOT COALESCE(_fivetran_deleted, FALSE)
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__collection_product,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__collection_product_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS collection_id,
+    CAST(NULL AS INT) AS product_id,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    collection_id,
+    product_id,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__discount_code,"/* this model will be all NULL until you create a discount code in Shopify */
+WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__discount_code_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS code,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS INT) AS price_rule_id,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS FLOAT) AS usage_count,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS discount_code_id,
+    UPPER(code) AS code,
+    price_rule_id,
+    usage_count,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__inventory_level,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__inventory_level_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS available,
+    CAST(NULL AS INT) AS inventory_item_id,
+    CAST(NULL AS INT) AS location_id,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    inventory_item_id,
+    location_id,
+    available AS available_quantity,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__customer,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS accepts_marketing,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS DECIMAL(28, 6)) AS default_address_id,
+    CAST(NULL AS TEXT) AS email,
+    CAST(NULL AS TEXT) AS first_name,
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS TEXT) AS last_name,
+    CAST(NULL AS DECIMAL(28, 6)) AS orders_count,
+    CAST(NULL AS TEXT) AS phone,
+    CAST(NULL AS TEXT) AS state,
+    CAST(NULL AS BOOLEAN) AS tax_exempt,
+    CAST(NULL AS FLOAT) AS total_spent,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS BOOLEAN) AS verified_email,
+    CAST(NULL AS TIMESTAMP) AS email_marketing_consent_consent_updated_at,
+    CAST(NULL AS TEXT) AS email_marketing_consent_opt_in_level,
+    CAST(NULL AS TEXT) AS email_marketing_consent_state,
+    CAST(NULL AS TEXT) AS note,
+    CAST(NULL AS TIMESTAMP) AS accepts_marketing_updated_at,
+    CAST(NULL AS TEXT) AS marketing_opt_in_level,
+    CAST(NULL AS TEXT) AS currency,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS customer_id,
+    LOWER(email) AS email,
+    first_name,
+    last_name,
+    orders_count,
+    default_address_id,
+    phone,
+    LOWER(state) AS account_state,
+    tax_exempt AS is_tax_exempt,
+    total_spent,
+    verified_email AS is_verified_email,
+    note,
+    currency,
+    CASE
+      WHEN email_marketing_consent_state IS NULL
+      THEN CASE
+        WHEN accepts_marketing IS NULL
+        THEN NULL
+        WHEN accepts_marketing
+        THEN 'subscribed (legacy)'
+        ELSE 'not_subscribed (legacy)'
+      END
+      ELSE LOWER(email_marketing_consent_state)
+    END AS marketing_consent_state,
+    LOWER(COALESCE(email_marketing_consent_opt_in_level, marketing_opt_in_level)) AS marketing_opt_in_level,
+    CONVERT_TIMEZONE(
+      'UTC',
+      'UTC',
+      CAST(CAST(COALESCE(accepts_marketing_updated_at, email_marketing_consent_consent_updated_at) AS TIMESTAMP) AS TIMESTAMP)
+    ) AS marketing_consent_updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS TIMESTAMP) AS processed_at,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS DECIMAL(28, 6)) AS user_id,
+    CAST(NULL AS FLOAT) AS total_discounts,
+    CAST(NULL AS TEXT) AS total_discounts_set,
+    CAST(NULL AS FLOAT) AS total_line_items_price,
+    CAST(NULL AS TEXT) AS total_line_items_price_set,
+    CAST(NULL AS FLOAT) AS total_price,
+    CAST(NULL AS TEXT) AS total_price_set,
+    CAST(NULL AS TEXT) AS total_tax_set,
+    CAST(NULL AS FLOAT) AS total_tax,
+    CAST(NULL AS TEXT) AS source_name,
+    CAST(NULL AS FLOAT) AS subtotal_price,
+    CAST(NULL AS BOOLEAN) AS taxes_included,
+    CAST(NULL AS DECIMAL(28, 6)) AS total_weight,
+    CAST(NULL AS FLOAT) AS total_tip_received,
+    CAST(NULL AS TEXT) AS landing_site_base_url,
+    CAST(NULL AS DECIMAL(28, 6)) AS location_id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS note,
+    CAST(NULL AS DECIMAL(28, 6)) AS number,
+    CAST(NULL AS DECIMAL(28, 6)) AS order_number,
+    CAST(NULL AS TEXT) AS cancel_reason,
+    CAST(NULL AS TIMESTAMP) AS cancelled_at,
+    CAST(NULL AS TEXT) AS cart_token,
+    CAST(NULL AS TEXT) AS checkout_token,
+    CAST(NULL AS TIMESTAMP) AS closed_at,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TEXT) AS currency,
+    CAST(NULL AS DECIMAL(28, 6)) AS customer_id,
+    CAST(NULL AS TEXT) AS email,
+    CAST(NULL AS TEXT) AS financial_status,
+    CAST(NULL AS TEXT) AS fulfillment_status,
+    CAST(NULL AS TEXT) AS referring_site,
+    CAST(NULL AS TEXT) AS billing_address_address_1,
+    CAST(NULL AS TEXT) AS billing_address_address_2,
+    CAST(NULL AS TEXT) AS billing_address_city,
+    CAST(NULL AS TEXT) AS billing_address_company,
+    CAST(NULL AS TEXT) AS billing_address_country,
+    CAST(NULL AS TEXT) AS billing_address_country_code,
+    CAST(NULL AS TEXT) AS billing_address_first_name,
+    CAST(NULL AS TEXT) AS billing_address_last_name,
+    CAST(NULL AS TEXT) AS billing_address_latitude,
+    CAST(NULL AS TEXT) AS billing_address_longitude,
+    CAST(NULL AS TEXT) AS billing_address_name,
+    CAST(NULL AS TEXT) AS billing_address_phone,
+    CAST(NULL AS TEXT) AS billing_address_province,
+    CAST(NULL AS TEXT) AS billing_address_province_code,
+    CAST(NULL AS TEXT) AS billing_address_zip,
+    CAST(NULL AS TEXT) AS browser_ip,
+    CAST(NULL AS BOOLEAN) AS buyer_accepts_marketing,
+    CAST(NULL AS TEXT) AS total_shipping_price_set,
+    CAST(NULL AS TEXT) AS shipping_address_address_1,
+    CAST(NULL AS TEXT) AS shipping_address_address_2,
+    CAST(NULL AS TEXT) AS shipping_address_city,
+    CAST(NULL AS TEXT) AS shipping_address_company,
+    CAST(NULL AS TEXT) AS shipping_address_country,
+    CAST(NULL AS TEXT) AS shipping_address_country_code,
+    CAST(NULL AS TEXT) AS shipping_address_first_name,
+    CAST(NULL AS TEXT) AS shipping_address_last_name,
+    CAST(NULL AS TEXT) AS shipping_address_latitude,
+    CAST(NULL AS TEXT) AS shipping_address_longitude,
+    CAST(NULL AS TEXT) AS shipping_address_name,
+    CAST(NULL AS TEXT) AS shipping_address_phone,
+    CAST(NULL AS TEXT) AS shipping_address_province,
+    CAST(NULL AS TEXT) AS shipping_address_province_code,
+    CAST(NULL AS TEXT) AS shipping_address_zip,
+    CAST(NULL AS BOOLEAN) AS test,
+    CAST(NULL AS TEXT) AS token,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS INT) AS checkout_id,
+    CAST(NULL AS TEXT) AS client_details_user_agent,
+    CAST(NULL AS TEXT) AS customer_locale,
+    CAST(NULL AS TEXT) AS order_status_url,
+    CAST(NULL AS TEXT) AS presentment_currency,
+    CAST(NULL AS BOOLEAN) AS confirmed,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS order_id,
+    user_id,
+    total_discounts,
+    total_discounts_set,
+    total_line_items_price,
+    total_line_items_price_set,
+    total_price,
+    total_price_set,
+    total_tax_set,
+    total_tax,
+    source_name,
+    subtotal_price,
+    taxes_included AS has_taxes_included,
+    total_weight,
+    total_tip_received,
+    landing_site_base_url,
+    location_id,
+    name,
+    note,
+    number,
+    order_number,
+    cancel_reason,
+    cart_token,
+    checkout_token,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(cancelled_at AS TIMESTAMP) AS TIMESTAMP)) AS cancelled_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(closed_at AS TIMESTAMP) AS TIMESTAMP)) AS closed_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(processed_at AS TIMESTAMP) AS TIMESTAMP)) AS processed_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_timestamp,
+    currency,
+    customer_id,
+    LOWER(email) AS email,
+    financial_status,
+    fulfillment_status,
+    referring_site,
+    billing_address_address_1,
+    billing_address_address_2,
+    billing_address_city,
+    billing_address_company,
+    billing_address_country,
+    billing_address_country_code,
+    billing_address_first_name,
+    billing_address_last_name,
+    billing_address_latitude,
+    billing_address_longitude,
+    billing_address_name,
+    billing_address_phone,
+    billing_address_province,
+    billing_address_province_code,
+    billing_address_zip,
+    browser_ip,
+    total_shipping_price_set,
+    shipping_address_address_1,
+    shipping_address_address_2,
+    shipping_address_city,
+    shipping_address_company,
+    shipping_address_country,
+    shipping_address_country_code,
+    shipping_address_first_name,
+    shipping_address_last_name,
+    shipping_address_latitude,
+    shipping_address_longitude,
+    shipping_address_name,
+    shipping_address_phone,
+    shipping_address_province,
+    shipping_address_province_code,
+    shipping_address_zip,
+    token,
+    app_id,
+    checkout_id,
+    client_details_user_agent,
+    customer_locale,
+    order_status_url,
+    presentment_currency,
+    test AS is_test_order,
+    _fivetran_deleted AS is_deleted,
+    buyer_accepts_marketing AS has_buyer_accepted_marketing,
+    confirmed AS is_confirmed,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final
+WHERE
+  NOT COALESCE(is_test_order, FALSE) AND NOT COALESCE(is_deleted, FALSE)"
+model.shopify_source.stg_shopify__order_adjustment,"/* this model will be all NULL until you have made an order adjustment in Shopify */
+WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_adjustment_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS DECIMAL(28, 6)) AS order_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS refund_id,
+    CAST(NULL AS FLOAT) AS amount,
+    CAST(NULL AS TEXT) AS amount_set,
+    CAST(NULL AS FLOAT) AS tax_amount,
+    CAST(NULL AS TEXT) AS tax_amount_set,
+    CAST(NULL AS TEXT) AS kind,
+    CAST(NULL AS TEXT) AS reason,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS order_adjustment_id,
+    order_id,
+    refund_id,
+    amount,
+    amount_set,
+    tax_amount,
+    tax_amount_set,
+    kind,
+    reason,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order_tag,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_tag_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS index,
+    CAST(NULL AS INT) AS order_id,
+    CAST(NULL AS TEXT) AS value,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    order_id,
+    index,
+    value,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__customer_tag,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__customer_tag_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS index,
+    CAST(NULL AS INT) AS customer_id,
+    CAST(NULL AS TEXT) AS value,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    customer_id,
+    index,
+    value,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order_note_attribute,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_note_attribute_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS INT) AS order_id,
+    CAST(NULL AS TEXT) AS value,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    order_id,
+    name,
+    value,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__product,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TEXT) AS handle,
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS TEXT) AS product_type,
+    CAST(NULL AS TIMESTAMP) AS published_at,
+    CAST(NULL AS TEXT) AS published_scope,
+    CAST(NULL AS TEXT) AS title,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS TEXT) AS vendor,
+    CAST(NULL AS TEXT) AS status,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS product_id,
+    handle,
+    product_type,
+    published_scope,
+    title,
+    vendor,
+    status,
+    _fivetran_deleted AS is_deleted,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(published_at AS TIMESTAMP) AS TIMESTAMP)) AS published_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__metafield,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__metafield_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TEXT) AS description,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS key,
+    CAST(NULL AS TEXT) AS namespace,
+    CAST(NULL AS INT) AS owner_id,
+    CAST(NULL AS TEXT) AS owner_resource,
+    CAST(NULL AS TEXT) AS type,
+    CAST(NULL AS TEXT) AS value_type,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS TEXT) AS value,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS metafield_id,
+    description,
+    namespace,
+    key,
+    value,
+    LOWER(COALESCE(type, value_type)) AS value_type,
+    owner_id AS owner_resource_id,
+    LOWER(owner_resource) AS owner_resource,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    LOWER(namespace || '_' || key) AS metafield_reference,
+    CASE
+      WHEN id IS NULL AND updated_at IS NULL
+      THEN ROW_NUMBER() OVER (PARTITION BY source_relation ORDER BY source_relation) = 1
+      ELSE ROW_NUMBER() OVER (PARTITION BY id, source_relation ORDER BY updated_at DESC) = 1
+    END AS is_most_recent_record,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__product_variant,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_variant_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS DECIMAL(28, 6)) AS product_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS inventory_item_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS image_id,
+    CAST(NULL AS TEXT) AS title,
+    CAST(NULL AS FLOAT) AS price,
+    CAST(NULL AS TEXT) AS sku,
+    CAST(NULL AS DECIMAL(28, 6)) AS position,
+    CAST(NULL AS TEXT) AS inventory_policy,
+    CAST(NULL AS FLOAT) AS compare_at_price,
+    CAST(NULL AS TEXT) AS fulfillment_service,
+    CAST(NULL AS TEXT) AS inventory_management,
+    CAST(NULL AS BOOLEAN) AS taxable,
+    CAST(NULL AS TEXT) AS barcode,
+    CAST(NULL AS FLOAT) AS grams,
+    CAST(NULL AS DECIMAL(28, 6)) AS old_inventory_quantity,
+    CAST(NULL AS DECIMAL(28, 6)) AS inventory_quantity,
+    CAST(NULL AS FLOAT) AS weight,
+    CAST(NULL AS TEXT) AS weight_unit,
+    CAST(NULL AS TEXT) AS option_1,
+    CAST(NULL AS TEXT) AS option_2,
+    CAST(NULL AS TEXT) AS option_3,
+    CAST(NULL AS TEXT) AS tax_code,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS variant_id,
+    product_id,
+    inventory_item_id,
+    image_id,
+    title,
+    price,
+    sku,
+    position,
+    inventory_policy,
+    compare_at_price,
+    fulfillment_service,
+    inventory_management,
+    taxable AS is_taxable,
+    barcode,
+    grams,
+    COALESCE(inventory_quantity, old_inventory_quantity) AS inventory_quantity,
+    weight,
+    weight_unit,
+    option_1,
+    option_2,
+    option_3,
+    tax_code,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_timestamp,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__price_rule,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__price_rule_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS allocation_limit,
+    CAST(NULL AS TEXT) AS allocation_method,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TEXT) AS customer_selection,
+    CAST(NULL AS TIMESTAMP) AS ends_at,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS BOOLEAN) AS once_per_customer,
+    CAST(NULL AS FLOAT) AS prerequisite_quantity_range,
+    CAST(NULL AS FLOAT) AS prerequisite_shipping_price_range,
+    CAST(NULL AS FLOAT) AS prerequisite_subtotal_range,
+    CAST(NULL AS FLOAT) AS prerequisite_to_entitlement_purchase_prerequisite_amount,
+    CAST(NULL AS INT) AS quantity_ratio_entitled_quantity,
+    CAST(NULL AS INT) AS quantity_ratio_prerequisite_quantity,
+    CAST(NULL AS TIMESTAMP) AS starts_at,
+    CAST(NULL AS TEXT) AS target_selection,
+    CAST(NULL AS TEXT) AS target_type,
+    CAST(NULL AS TEXT) AS title,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS INT) AS usage_limit,
+    CAST(NULL AS FLOAT) AS value,
+    CAST(NULL AS TEXT) AS value_type,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS price_rule_id,
+    allocation_limit,
+    allocation_method,
+    customer_selection,
+    once_per_customer AS is_once_per_customer,
+    prerequisite_quantity_range AS prereq_min_quantity,
+    prerequisite_shipping_price_range AS prereq_max_shipping_price,
+    prerequisite_subtotal_range AS prereq_min_subtotal,
+    prerequisite_to_entitlement_purchase_prerequisite_amount AS prereq_min_purchase_quantity_for_entitlement,
+    quantity_ratio_entitled_quantity AS prereq_buy_x_get_this,
+    quantity_ratio_prerequisite_quantity AS prereq_buy_this_get_y,
+    target_selection,
+    target_type,
+    title,
+    usage_limit,
+    value,
+    value_type,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(starts_at AS TIMESTAMP) AS TIMESTAMP)) AS starts_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(ends_at AS TIMESTAMP) AS TIMESTAMP)) AS ends_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__abandoned_checkout_discount_code,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout_discount_code_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS FLOAT) AS amount,
+    CAST(NULL AS INT) AS checkout_id,
+    CAST(NULL AS TEXT) AS code,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS INT) AS discount_id,
+    CAST(NULL AS INT) AS index,
+    CAST(NULL AS TEXT) AS type,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    checkout_id,
+    UPPER(code) AS code,
+    discount_id,
+    amount,
+    type,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation,
+    CASE
+      WHEN checkout_id IS NULL AND code IS NULL AND index IS NULL
+      THEN ROW_NUMBER() OVER (PARTITION BY source_relation ORDER BY source_relation)
+      ELSE ROW_NUMBER() OVER (PARTITION BY checkout_id, UPPER(code), source_relation ORDER BY index DESC)
+    END AS index
+  FROM fields
+)
+SELECT
+  *
+FROM final
+WHERE
+  index = 1"
+model.shopify_source.stg_shopify__product_tag,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__product_tag_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS index,
+    CAST(NULL AS INT) AS product_id,
+    CAST(NULL AS TEXT) AS value,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    product_id,
+    index,
+    value,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__inventory_item,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__inventory_item_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS FLOAT) AS cost,
+    CAST(NULL AS TEXT) AS country_code_of_origin,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS province_code_of_origin,
+    CAST(NULL AS BOOLEAN) AS requires_shipping,
+    CAST(NULL AS TEXT) AS sku,
+    CAST(NULL AS BOOLEAN) AS tracked,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS inventory_item_id,
+    sku,
+    _fivetran_deleted AS is_deleted, /* won't filter out for now */
+    cost,
+    country_code_of_origin,
+    province_code_of_origin,
+    requires_shipping AS is_shipping_required,
+    tracked AS is_inventory_quantity_tracked,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order_discount_code,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_discount_code_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS FLOAT) AS amount,
+    CAST(NULL AS TEXT) AS code,
+    CAST(NULL AS INT) AS index,
+    CAST(NULL AS INT) AS order_id,
+    CAST(NULL AS TEXT) AS type,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    order_id,
+    index,
+    UPPER(code) AS code,
+    type,
+    amount,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order_url_tag,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_url_tag_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS key,
+    CAST(NULL AS INT) AS order_id,
+    CAST(NULL AS TEXT) AS value,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    order_id,
+    key,
+    value,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__refund,"/* this model will be all NULL until you have made a refund in Shopify */
+WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__refund_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS TEXT) AS note,
+    CAST(NULL AS DECIMAL(28, 6)) AS order_id,
+    CAST(NULL AS TIMESTAMP) AS processed_at,
+    CAST(NULL AS BOOLEAN) AS restock,
+    CAST(NULL AS TEXT) AS total_duties_set,
+    CAST(NULL AS DECIMAL(28, 6)) AS user_id,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS refund_id,
+    note,
+    order_id,
+    restock,
+    total_duties_set,
+    user_id,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(processed_at AS TIMESTAMP) AS TIMESTAMP)) AS processed_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__location,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__location_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS active,
+    CAST(NULL AS TEXT) AS address_1,
+    CAST(NULL AS TEXT) AS address_2,
+    CAST(NULL AS TEXT) AS city,
+    CAST(NULL AS TEXT) AS country,
+    CAST(NULL AS TEXT) AS country_code,
+    CAST(NULL AS TEXT) AS country_name,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS BOOLEAN) AS legacy,
+    CAST(NULL AS TEXT) AS localized_country_name,
+    CAST(NULL AS TEXT) AS localized_province_name,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS phone,
+    CAST(NULL AS TEXT) AS province,
+    CAST(NULL AS TEXT) AS province_code,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS TEXT) AS zip,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS location_id,
+    name,
+    _fivetran_deleted AS is_deleted,
+    active AS is_active,
+    address_1,
+    address_2,
+    city,
+    country,
+    country_code,
+    country_name,
+    legacy AS is_legacy,
+    localized_country_name,
+    localized_province_name,
+    phone,
+    province,
+    province_code,
+    zip,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__collection,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__collection_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS disjunctive,
+    CAST(NULL AS TEXT) AS handle,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TIMESTAMP) AS published_at,
+    CAST(NULL AS TEXT) AS published_scope,
+    CAST(NULL AS TEXT) AS rules,
+    CAST(NULL AS TEXT) AS sort_order,
+    CAST(NULL AS TEXT) AS title,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS collection_id,
+    _fivetran_deleted AS is_deleted,
+    CASE
+      WHEN disjunctive IS NULL
+      THEN NULL
+      WHEN disjunctive
+      THEN 'disjunctive'
+      ELSE 'conjunctive'
+    END AS rule_logic,
+    handle,
+    published_scope,
+    rules,
+    sort_order,
+    title,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(published_at AS TIMESTAMP) AS TIMESTAMP)) AS published_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order_line,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS DECIMAL(28, 6)) AS fulfillable_quantity,
+    CAST(NULL AS TEXT) AS fulfillment_status,
+    CAST(NULL AS BOOLEAN) AS gift_card,
+    CAST(NULL AS DECIMAL(28, 6)) AS grams,
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS DECIMAL(28, 6)) AS index,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS DECIMAL(28, 6)) AS order_id,
+    CAST(NULL AS FLOAT) AS pre_tax_price,
+    CAST(NULL AS TEXT) AS pre_tax_price_set,
+    CAST(NULL AS FLOAT) AS price,
+    CAST(NULL AS TEXT) AS price_set,
+    CAST(NULL AS DECIMAL(28, 6)) AS product_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS quantity,
+    CAST(NULL AS BOOLEAN) AS requires_shipping,
+    CAST(NULL AS TEXT) AS sku,
+    CAST(NULL AS BOOLEAN) AS taxable,
+    CAST(NULL AS TEXT) AS tax_code,
+    CAST(NULL AS TEXT) AS title,
+    CAST(NULL AS FLOAT) AS total_discount,
+    CAST(NULL AS TEXT) AS total_discount_set,
+    CAST(NULL AS DECIMAL(28, 6)) AS variant_id,
+    CAST(NULL AS TEXT) AS variant_title,
+    CAST(NULL AS TEXT) AS variant_inventory_management,
+    CAST(NULL AS TEXT) AS vendor,
+    CAST(NULL AS TEXT) AS properties,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS order_line_id,
+    index,
+    name,
+    order_id,
+    fulfillable_quantity,
+    fulfillment_status,
+    gift_card AS is_gift_card,
+    grams,
+    pre_tax_price,
+    pre_tax_price_set,
+    price,
+    price_set,
+    product_id,
+    quantity,
+    requires_shipping AS is_shipping_required,
+    sku,
+    taxable AS is_taxable,
+    tax_code,
+    title,
+    total_discount,
+    total_discount_set,
+    variant_id,
+    variant_title,
+    variant_inventory_management,
+    vendor,
+    properties,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order_line_refund,"/* this model will be all NULL until you have made an order line refund in Shopify */
+WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_line_refund_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS DECIMAL(28, 6)) AS id,
+    CAST(NULL AS DECIMAL(28, 6)) AS location_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS order_line_id,
+    CAST(NULL AS DECIMAL(28, 6)) AS subtotal,
+    CAST(NULL AS TEXT) AS subtotal_set,
+    CAST(NULL AS DECIMAL(28, 6)) AS total_tax,
+    CAST(NULL AS TEXT) AS total_tax_set,
+    CAST(NULL AS FLOAT) AS quantity,
+    CAST(NULL AS DECIMAL(28, 6)) AS refund_id,
+    CAST(NULL AS TEXT) AS restock_type,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS order_line_refund_id,
+    location_id,
+    order_line_id,
+    subtotal,
+    subtotal_set,
+    total_tax,
+    total_tax_set,
+    quantity,
+    refund_id,
+    restock_type,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order_shipping_tax_line,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_shipping_tax_line_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS index,
+    CAST(NULL AS INT) AS order_shipping_line_id,
+    CAST(NULL AS FLOAT) AS price,
+    CAST(NULL AS TEXT) AS price_set,
+    CAST(NULL AS FLOAT) AS rate,
+    CAST(NULL AS TEXT) AS title,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    order_shipping_line_id,
+    index,
+    price,
+    price_set,
+    rate,
+    title,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__tender_transaction,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__tender_transaction_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS FLOAT) AS amount,
+    CAST(NULL AS TEXT) AS currency,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS INT) AS order_id,
+    CAST(NULL AS TEXT) AS payment_method,
+    CAST(NULL AS TIMESTAMP) AS processed_at,
+    CAST(NULL AS TEXT) AS remote_reference,
+    CAST(NULL AS BOOLEAN) AS test,
+    CAST(NULL AS INT) AS user_id,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS transaction_id,
+    order_id,
+    amount,
+    currency,
+    payment_method,
+    remote_reference,
+    user_id,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(processed_at AS TIMESTAMP) AS TIMESTAMP)) AS processed_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+  WHERE
+    NOT COALESCE(test, FALSE)
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__shop,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__shop_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS address_1,
+    CAST(NULL AS TEXT) AS address_2,
+    CAST(NULL AS BOOLEAN) AS checkout_api_supported,
+    CAST(NULL AS TEXT) AS city,
+    CAST(NULL AS TEXT) AS cookie_consent_level,
+    CAST(NULL AS TEXT) AS country,
+    CAST(NULL AS TEXT) AS country_code,
+    CAST(NULL AS TEXT) AS country_name,
+    CAST(NULL AS BOOLEAN) AS county_taxes,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TEXT) AS currency,
+    CAST(NULL AS TEXT) AS customer_email,
+    CAST(NULL AS TEXT) AS domain,
+    CAST(NULL AS BOOLEAN) AS eligible_for_card_reader_giveaway,
+    CAST(NULL AS BOOLEAN) AS eligible_for_payments,
+    CAST(NULL AS TEXT) AS email,
+    CAST(NULL AS TEXT) AS enabled_presentment_currencies,
+    CAST(NULL AS TEXT) AS google_apps_domain,
+    CAST(NULL AS BOOLEAN) AS google_apps_login_enabled,
+    CAST(NULL AS BOOLEAN) AS has_discounts,
+    CAST(NULL AS BOOLEAN) AS has_gift_cards,
+    CAST(NULL AS BOOLEAN) AS has_storefront,
+    CAST(NULL AS TEXT) AS iana_timezone,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS FLOAT) AS latitude,
+    CAST(NULL AS FLOAT) AS longitude,
+    CAST(NULL AS TEXT) AS money_format,
+    CAST(NULL AS TEXT) AS money_in_emails_format,
+    CAST(NULL AS TEXT) AS money_with_currency_format,
+    CAST(NULL AS TEXT) AS money_with_currency_in_emails_format,
+    CAST(NULL AS TEXT) AS myshopify_domain,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS BOOLEAN) AS password_enabled,
+    CAST(NULL AS TEXT) AS phone,
+    CAST(NULL AS TEXT) AS plan_display_name,
+    CAST(NULL AS TEXT) AS plan_name,
+    CAST(NULL AS BOOLEAN) AS pre_launch_enabled,
+    CAST(NULL AS TEXT) AS primary_locale,
+    CAST(NULL AS TEXT) AS province,
+    CAST(NULL AS TEXT) AS province_code,
+    CAST(NULL AS BOOLEAN) AS requires_extra_payments_agreement,
+    CAST(NULL AS BOOLEAN) AS setup_required,
+    CAST(NULL AS TEXT) AS shop_owner,
+    CAST(NULL AS TEXT) AS source,
+    CAST(NULL AS BOOLEAN) AS tax_shipping,
+    CAST(NULL AS BOOLEAN) AS taxes_included,
+    CAST(NULL AS TEXT) AS timezone,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS TEXT) AS weight_unit,
+    CAST(NULL AS TEXT) AS zip,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS shop_id,
+    name,
+    _fivetran_deleted AS is_deleted,
+    address_1,
+    address_2,
+    city,
+    province,
+    province_code,
+    country,
+    country_code,
+    country_name,
+    zip,
+    latitude,
+    longitude,
+    CASE WHEN county_taxes IS NULL THEN FALSE ELSE county_taxes END AS has_county_taxes,
+    currency,
+    enabled_presentment_currencies,
+    customer_email,
+    email,
+    domain,
+    phone,
+    timezone,
+    iana_timezone,
+    primary_locale,
+    weight_unit,
+    myshopify_domain,
+    cookie_consent_level,
+    shop_owner,
+    source,
+    tax_shipping AS has_shipping_taxes,
+    CASE WHEN taxes_included IS NULL THEN FALSE ELSE taxes_included END AS has_taxes_included_in_price,
+    has_discounts,
+    has_gift_cards,
+    has_storefront,
+    checkout_api_supported AS has_checkout_api_supported,
+    eligible_for_card_reader_giveaway AS is_eligible_for_card_reader_giveaway,
+    eligible_for_payments AS is_eligible_for_payments,
+    google_apps_domain,
+    CASE
+      WHEN google_apps_login_enabled IS NULL
+      THEN FALSE
+      ELSE google_apps_login_enabled
+    END AS is_google_apps_login_enabled,
+    money_format,
+    money_in_emails_format,
+    money_with_currency_format,
+    money_with_currency_in_emails_format,
+    plan_display_name,
+    plan_name,
+    password_enabled AS is_password_enabled,
+    pre_launch_enabled AS is_pre_launch_enabled,
+    requires_extra_payments_agreement AS is_extra_payments_agreement_required,
+    setup_required AS is_setup_required,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__tax_line,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__tax_line_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS index,
+    CAST(NULL AS INT) AS order_line_id,
+    CAST(NULL AS FLOAT) AS price,
+    CAST(NULL AS TEXT) AS price_set,
+    CAST(NULL AS FLOAT) AS rate,
+    CAST(NULL AS TEXT) AS title,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    index,
+    order_line_id,
+    price,
+    price_set,
+    rate,
+    title,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__order_shipping_line,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__order_shipping_line_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS carrier_identifier,
+    CAST(NULL AS TEXT) AS code,
+    CAST(NULL AS TEXT) AS delivery_category,
+    CAST(NULL AS FLOAT) AS discounted_price,
+    CAST(NULL AS TEXT) AS discounted_price_set,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS INT) AS order_id,
+    CAST(NULL AS TEXT) AS phone,
+    CAST(NULL AS FLOAT) AS price,
+    CAST(NULL AS TEXT) AS price_set,
+    CAST(NULL AS TEXT) AS requested_fulfillment_service_id,
+    CAST(NULL AS TEXT) AS source,
+    CAST(NULL AS TEXT) AS title,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    id AS order_shipping_line_id,
+    order_id,
+    carrier_identifier,
+    code,
+    delivery_category,
+    discounted_price,
+    discounted_price_set,
+    phone,
+    price,
+    price_set,
+    NOT requested_fulfillment_service_id IS NULL AS is_third_party_required,
+    source,
+    title,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__abandoned_checkout,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_stg_shopify.stg_shopify__abandoned_checkout_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS abandoned_checkout_url,
+    CAST(NULL AS TEXT) AS billing_address_address_1,
+    CAST(NULL AS TEXT) AS billing_address_address_2,
+    CAST(NULL AS TEXT) AS billing_address_city,
+    CAST(NULL AS TEXT) AS billing_address_company,
+    CAST(NULL AS TEXT) AS billing_address_country,
+    CAST(NULL AS TEXT) AS billing_address_country_code,
+    CAST(NULL AS TEXT) AS billing_address_first_name,
+    CAST(NULL AS TEXT) AS billing_address_last_name,
+    CAST(NULL AS TEXT) AS billing_address_latitude,
+    CAST(NULL AS TEXT) AS billing_address_longitude,
+    CAST(NULL AS TEXT) AS billing_address_name,
+    CAST(NULL AS TEXT) AS billing_address_phone,
+    CAST(NULL AS TEXT) AS billing_address_province,
+    CAST(NULL AS TEXT) AS billing_address_province_code,
+    CAST(NULL AS TEXT) AS billing_address_zip,
+    CAST(NULL AS BOOLEAN) AS buyer_accepts_marketing,
+    CAST(NULL AS TEXT) AS cart_token,
+    CAST(NULL AS TIMESTAMP) AS closed_at,
+    CAST(NULL AS TIMESTAMP) AS created_at,
+    CAST(NULL AS TEXT) AS currency,
+    CAST(NULL AS INT) AS customer_id,
+    CAST(NULL AS TEXT) AS customer_locale,
+    CAST(NULL AS INT) AS device_id,
+    CAST(NULL AS TEXT) AS email,
+    CAST(NULL AS TEXT) AS gateway,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS landing_site_base_url,
+    CAST(NULL AS INT) AS location_id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS note,
+    CAST(NULL AS TEXT) AS phone,
+    CAST(NULL AS TEXT) AS presentment_currency,
+    CAST(NULL AS TEXT) AS referring_site,
+    CAST(NULL AS TEXT) AS shipping_address_address_1,
+    CAST(NULL AS TEXT) AS shipping_address_address_2,
+    CAST(NULL AS TEXT) AS shipping_address_city,
+    CAST(NULL AS TEXT) AS shipping_address_company,
+    CAST(NULL AS TEXT) AS shipping_address_country,
+    CAST(NULL AS TEXT) AS shipping_address_country_code,
+    CAST(NULL AS TEXT) AS shipping_address_first_name,
+    CAST(NULL AS TEXT) AS shipping_address_last_name,
+    CAST(NULL AS TEXT) AS shipping_address_latitude,
+    CAST(NULL AS TEXT) AS shipping_address_longitude,
+    CAST(NULL AS TEXT) AS shipping_address_name,
+    CAST(NULL AS TEXT) AS shipping_address_phone,
+    CAST(NULL AS TEXT) AS shipping_address_province,
+    CAST(NULL AS TEXT) AS shipping_address_province_code,
+    CAST(NULL AS TEXT) AS shipping_address_zip,
+    CAST(NULL AS TEXT) AS source_name,
+    CAST(NULL AS FLOAT) AS subtotal_price,
+    CAST(NULL AS BOOLEAN) AS taxes_included,
+    CAST(NULL AS TEXT) AS token,
+    CAST(NULL AS FLOAT) AS total_discounts,
+    CAST(NULL AS TEXT) AS total_duties,
+    CAST(NULL AS FLOAT) AS total_line_items_price,
+    CAST(NULL AS FLOAT) AS total_price,
+    CAST(NULL AS FLOAT) AS total_tax,
+    CAST(NULL AS INT) AS total_weight,
+    CAST(NULL AS TIMESTAMP) AS updated_at,
+    CAST(NULL AS INT) AS user_id,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    _fivetran_deleted AS is_deleted,
+    abandoned_checkout_url,
+    billing_address_address_1,
+    billing_address_address_2,
+    billing_address_city,
+    billing_address_company,
+    billing_address_country,
+    billing_address_country_code,
+    billing_address_first_name,
+    billing_address_last_name,
+    billing_address_latitude,
+    billing_address_longitude,
+    billing_address_name,
+    billing_address_phone,
+    billing_address_province,
+    billing_address_province_code,
+    billing_address_zip,
+    buyer_accepts_marketing AS has_buyer_accepted_marketing,
+    cart_token,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(created_at AS TIMESTAMP) AS TIMESTAMP)) AS created_at,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(closed_at AS TIMESTAMP) AS TIMESTAMP)) AS closed_at,
+    currency AS shop_currency,
+    customer_id,
+    customer_locale,
+    device_id,
+    email,
+    gateway,
+    id AS checkout_id,
+    landing_site_base_url,
+    location_id,
+    name,
+    note,
+    phone,
+    presentment_currency,
+    referring_site,
+    shipping_address_address_1,
+    shipping_address_address_2,
+    shipping_address_city,
+    shipping_address_company,
+    shipping_address_country,
+    shipping_address_country_code,
+    shipping_address_first_name,
+    shipping_address_last_name,
+    shipping_address_latitude,
+    shipping_address_longitude,
+    shipping_address_name,
+    shipping_address_phone,
+    shipping_address_province,
+    shipping_address_province_code,
+    shipping_address_zip,
+    source_name,
+    subtotal_price,
+    taxes_included AS has_taxes_included,
+    token,
+    total_discounts,
+    total_duties,
+    total_line_items_price,
+    total_price,
+    total_tax,
+    total_weight,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(updated_at AS TIMESTAMP) AS TIMESTAMP)) AS updated_at,
+    user_id,
+    CONVERT_TIMEZONE('UTC', 'UTC', CAST(CAST(_fivetran_synced AS TIMESTAMP) AS TIMESTAMP)) AS _fivetran_synced,
+    source_relation
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.shopify_source.stg_shopify__collection_product_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_line_refund_tmp,"/* this model will be all NULL until you have made an order line refund in Shopify */
+SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__abandoned_checkout_discount_code_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__metafield_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__refund_tmp,"/* this model will be all NULL until you create a refund in Shopify */
+SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__tax_line_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__customer_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__transaction_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_shipping_tax_line_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__inventory_item_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__customer_tag_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__fulfillment_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_note_attribute_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__abandoned_checkout_shipping_line_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_adjustment_tmp,"/* this model will be all NULL until you have made an order adjustment in Shopify */
+SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_url_tag_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__collection_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__product_image_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__abandoned_checkout_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_line_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__price_rule_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__shop_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_discount_code_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__product_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__discount_code_tmp,"/* this model will be all NULL until you create a discount code in Shopify */
+SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__product_variant_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__location_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__tender_transaction_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__inventory_level_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_shipping_line_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__product_tag_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.shopify_source.stg_shopify__order_tag_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"

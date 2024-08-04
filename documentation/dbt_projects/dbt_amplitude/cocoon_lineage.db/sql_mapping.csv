@@ -1,0 +1,508 @@
+model_name,sql_text
+model.amplitude.amplitude__event_enhanced,"WITH event_data_raw AS (
+  SELECT
+    events.*
+  FROM TEST.PUBLIC__source_amplitude.stg_amplitude__event AS events
+), event_data /* deduplicate */ AS (
+  SELECT
+    *
+  FROM (
+    SELECT
+      *,
+      CASE
+        WHEN NOT _insert_id IS NULL
+        THEN ROW_NUMBER() OVER (PARTITION BY _insert_id ORDER BY client_upload_time DESC)
+        ELSE ROW_NUMBER() OVER (PARTITION BY event_id, device_id, client_event_time, amplitude_user_id ORDER BY client_upload_time DESC)
+      END AS nth_event_record
+    FROM event_data_raw
+  ) AS duplicates
+  WHERE
+    nth_event_record = 1
+), event_type AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC__source_amplitude.stg_amplitude__event_type
+), session_data AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_amplitude.amplitude__sessions
+), event_enhanced AS (
+  SELECT
+    event_data.unique_event_id,
+    event_data.unique_session_id,
+    CAST(event_data.amplitude_user_id AS TEXT) AS amplitude_user_id,
+    event_data.event_id,
+    event_data.event_type,
+    event_data.event_time,
+    event_data.event_day,
+    event_type.event_type_id,
+    event_type.event_type_name,
+    event_data.session_id,
+    ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY event_time ASC) AS session_event_number,
+    ROW_NUMBER() OVER (PARTITION BY amplitude_user_id ORDER BY event_time ASC) AS user_event_number,
+    event_data.group_types,
+    CAST(event_data.user_id AS TEXT) AS user_id,
+    event_data.user_creation_time,
+    event_data.amplitude_id,
+    event_data.app,
+    event_data.project_name,
+    event_data.version_name,
+    event_data.client_event_time,
+    event_data.client_upload_time,
+    event_data.server_received_time,
+    event_data.server_upload_time,
+    event_data.city,
+    event_data.country,
+    event_data.region,
+    event_data.data,
+    event_data.location_lat,
+    event_data.location_lng,
+    event_data.device_brand,
+    event_data.device_carrier,
+    event_data.device_family,
+    event_data.device_id,
+    event_data.device_manufacturer,
+    event_data.device_model,
+    event_data.device_type,
+    event_data.ip_address,
+    event_data.os_name,
+    event_data.os_version,
+    event_data.platform,
+    event_data.language,
+    event_data.dma,
+    event_data.schema,
+    event_data.start_version,
+    event_type.totals,
+    event_type.value,
+    session_data.events_per_session,
+    session_data.session_started_at,
+    session_data.session_ended_at,
+    session_data.user_session_number,
+    session_data.session_started_at_day,
+    session_data.session_ended_at_day,
+    session_data.session_length_in_minutes,
+    session_data.is_first_user_session,
+    session_data.minutes_in_between_sessions
+  FROM event_data
+  LEFT JOIN event_type
+    ON event_data.event_type_id = event_type.event_type_id
+  LEFT JOIN session_data
+    ON event_data.unique_session_id = session_data.unique_session_id
+), final AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(unique_event_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(event_day AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS unique_key
+  FROM event_enhanced
+)
+SELECT
+  *
+FROM final"
+model.amplitude.amplitude__daily_performance,"WITH event_enhanced AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_amplitude.amplitude__event_enhanced
+), date_spine AS (
+  SELECT
+    spine.*
+  FROM TEST.PUBLIC_int_amplitude.int_amplitude__date_spine AS spine
+), agg_event_data AS (
+  SELECT
+    event_day,
+    event_type,
+    COUNT(DISTINCT unique_event_id) AS number_events,
+    COUNT(DISTINCT unique_session_id) AS number_sessions,
+    COUNT(DISTINCT amplitude_user_id) AS number_users,
+    COUNT(
+      DISTINCT (
+        CASE
+          WHEN CAST(DATE_TRUNC('DAY', user_creation_time) AS DATE) = event_day
+          THEN amplitude_user_id
+        END
+      )
+    ) AS number_new_users
+  FROM event_enhanced
+  GROUP BY
+    1,
+    2
+), spine_joined AS (
+  SELECT
+    date_spine.event_day,
+    date_spine.event_type,
+    agg_event_data.number_events,
+    agg_event_data.number_sessions,
+    agg_event_data.number_users,
+    agg_event_data.number_new_users
+  FROM date_spine
+  LEFT JOIN agg_event_data
+    ON date_spine.event_day = agg_event_data.event_day
+    AND date_spine.event_type = agg_event_data.event_type
+), final AS (
+  SELECT
+    event_day,
+    event_type,
+    COALESCE(number_events, 0) AS number_events,
+    COALESCE(number_sessions, 0) AS number_sessions,
+    COALESCE(number_users, 0) AS number_users,
+    COALESCE(number_new_users, 0) AS number_new_users,
+    MD5(
+      CAST(COALESCE(CAST(event_day AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(event_type AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS daily_unique_key
+  FROM spine_joined
+)
+SELECT
+  *
+FROM final"
+model.amplitude.amplitude__sessions,"WITH event_data_raw AS (
+  SELECT
+    events.*
+  FROM TEST.PUBLIC__source_amplitude.stg_amplitude__event AS events
+), event_data /* deduplicate */ AS (
+  SELECT
+    *
+  FROM (
+    SELECT
+      *,
+      CASE
+        WHEN NOT _insert_id IS NULL
+        THEN ROW_NUMBER() OVER (PARTITION BY _insert_id ORDER BY client_upload_time DESC)
+        ELSE ROW_NUMBER() OVER (PARTITION BY event_id, device_id, client_event_time, amplitude_user_id ORDER BY client_upload_time DESC)
+      END AS nth_event_record
+    FROM event_data_raw
+  ) AS duplicates
+  WHERE
+    nth_event_record = 1
+), session_agg AS (
+  SELECT
+    unique_session_id,
+    user_id,
+    COUNT(event_id) AS events_per_session,
+    MIN(event_time) AS session_started_at,
+    MAX(event_time) AS session_ended_at,
+    DATEDIFF(second, MIN(event_time), MAX(event_time)) / 60 AS session_length_in_minutes
+  FROM event_data
+  GROUP BY
+    1,
+    2
+), session_ranking AS (
+  SELECT
+    unique_session_id,
+    user_id,
+    events_per_session,
+    session_started_at,
+    session_ended_at,
+    session_length_in_minutes,
+    DATE_TRUNC('DAY', session_started_at) AS session_started_at_day,
+    DATE_TRUNC('DAY', session_ended_at) AS session_ended_at_day,
+    CASE
+      WHEN NOT user_id IS NULL
+      THEN ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY session_started_at)
+      ELSE NULL
+    END AS user_session_number
+  FROM session_agg
+), session_lag AS (
+  SELECT
+    *,
+    CASE
+      WHEN NOT user_id IS NULL
+      THEN LAG(session_ended_at, 1) OVER (PARTITION BY user_id ORDER BY session_ended_at)
+      ELSE NULL
+    END AS last_session_ended_at, /* determine prior sessions' end time, then in the following cte calculate the difference between current session's start time and last session's end time to determine the time in between sessions */
+    CASE
+      WHEN NOT user_id IS NULL
+      THEN LAG(session_ended_at_day, 1) OVER (PARTITION BY user_id ORDER BY session_ended_at_day)
+      ELSE NULL
+    END AS last_session_ended_at_day
+  FROM session_ranking
+)
+SELECT
+  *,
+  CASE WHEN user_session_number = 1 THEN 1 ELSE 0 END AS is_first_user_session,
+  CASE
+    WHEN NOT user_id IS NULL
+    THEN DATEDIFF(second, last_session_ended_at, SESSION_STARTED_AT) / 60
+    ELSE NULL
+  END AS minutes_in_between_sessions
+FROM session_lag"
+model.amplitude.amplitude__user_enhanced,"WITH event_enhanced AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_amplitude.amplitude__event_enhanced
+), session_data AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_amplitude.amplitude__sessions
+)
+SELECT
+  event_enhanced.amplitude_user_id,
+  MIN(event_enhanced.user_creation_time) AS user_created_at,
+  MIN(event_enhanced.session_started_at) AS first_session_at,
+  MAX(event_enhanced.session_ended_at) AS last_session_at,
+  COUNT(DISTINCT event_enhanced.unique_event_id) AS total_events_per_user,
+  COUNT(DISTINCT session_data.unique_session_id) AS total_sessions_per_user,
+  AVG(session_data.session_length_in_minutes) AS average_session_length_in_minutes,
+  AVG(session_data.minutes_in_between_sessions) AS average_minutes_in_between_sessions
+FROM event_enhanced
+LEFT JOIN session_data
+  ON event_enhanced.unique_session_id = session_data.unique_session_id
+GROUP BY
+  1"
+model.amplitude.int_amplitude__date_spine,"WITH event_data AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_amplitude.amplitude__event_enhanced
+), spine /* create end_date_adjust variable */ AS (
+  SELECT
+    spine.*
+  FROM (
+    WITH rawdata AS (
+      WITH p AS (
+        SELECT
+          0 AS generated_number
+        UNION ALL
+        SELECT
+          1
+      ), unioned AS (
+        SELECT
+          p0.generated_number * POWER(2, 0) + p1.generated_number * POWER(2, 1) + p2.generated_number * POWER(2, 2) + p3.generated_number * POWER(2, 3) + p4.generated_number * POWER(2, 4) + p5.generated_number * POWER(2, 5) + p6.generated_number * POWER(2, 6) + p7.generated_number * POWER(2, 7) + p8.generated_number * POWER(2, 8) + p9.generated_number * POWER(2, 9) + p10.generated_number * POWER(2, 10) + 1 AS generated_number
+        FROM p AS p0
+        CROSS JOIN p AS p1
+        CROSS JOIN p AS p2
+        CROSS JOIN p AS p3
+        CROSS JOIN p AS p4
+        CROSS JOIN p AS p5
+        CROSS JOIN p AS p6
+        CROSS JOIN p AS p7
+        CROSS JOIN p AS p8
+        CROSS JOIN p AS p9
+        CROSS JOIN p AS p10
+      )
+      SELECT
+        *
+      FROM unioned
+      WHERE
+        generated_number <= 1674
+      ORDER BY
+        generated_number
+    ), all_periods AS (
+      SELECT
+        (
+          DATEADD(day, ROW_NUMBER() OVER (ORDER BY 1) - 1, CAST('2020-01-01' AS DATE))
+        ) AS date_day
+      FROM rawdata
+    ), filtered AS (
+      SELECT
+        *
+      FROM all_periods
+      WHERE
+        date_day <= CAST('2024-08-01' AS DATE)
+    )
+    SELECT
+      *
+    FROM filtered
+  ) AS spine
+), date_spine AS (
+  SELECT DISTINCT
+    event_data.event_type,
+    CAST(spine.date_day AS DATE) AS event_day,
+    MD5(
+      CAST(COALESCE(CAST(spine.date_day AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(event_data.event_type AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS date_spine_unique_key
+  FROM spine
+  JOIN event_data
+    ON spine.date_day >= event_data.event_day /* each event_type will have a record for every day since their first day */
+)
+SELECT
+  *
+FROM date_spine"
+model.amplitude_source.stg_amplitude__event_type,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC__source_amplitude.stg_amplitude__event_type_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS BOOLEAN) AS _fivetran_deleted,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS BOOLEAN) AS autohidden,
+    CAST(NULL AS BOOLEAN) AS deleted,
+    CAST(NULL AS TEXT) AS display,
+    CAST(NULL AS BOOLEAN) AS flow_hidden,
+    CAST(NULL AS BOOLEAN) AS hidden,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS BOOLEAN) AS in_waitroom,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS BOOLEAN) AS non_active,
+    CAST(NULL AS TEXT) AS project_name,
+    CAST(NULL AS BOOLEAN) AS timeline_hidden,
+    CAST(NULL AS INT) AS totals,
+    CAST(NULL AS INT) AS totals_delta,
+    CAST(NULL AS TEXT) AS value,
+    CAST(NULL AS TEXT) AS waitroom_approved
+  FROM base
+), final AS (
+  SELECT
+    id AS event_type_id,
+    name AS event_type_name,
+    project_name,
+    display,
+    totals,
+    totals_delta,
+    value,
+    flow_hidden AS is_flow_hidden,
+    hidden AS is_hidden,
+    in_waitroom AS is_in_waitroom,
+    non_active AS is_non_active,
+    autohidden AS is_autohidden,
+    deleted AS is_deleted,
+    timeline_hidden AS is_timeline_hidden,
+    waitroom_approved AS is_waitroom_approved,
+    _fivetran_deleted,
+    _fivetran_synced
+  FROM fields
+), surrogate AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(event_type_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(project_name AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS unique_event_type_id
+  FROM final
+)
+SELECT
+  *
+FROM surrogate"
+model.amplitude_source.stg_amplitude__event,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC__source_amplitude.stg_amplitude__event_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS _insert_id,
+    CAST(NULL AS TEXT) AS ad_id,
+    CAST(NULL AS TEXT) AS amplitude_id,
+    CAST(NULL AS TEXT) AS app,
+    CAST(NULL AS TEXT) AS city,
+    CAST(NULL AS TIMESTAMP) AS client_event_time,
+    CAST(NULL AS TIMESTAMP) AS client_upload_time,
+    CAST(NULL AS TEXT) AS country,
+    CAST(NULL AS TEXT) AS data,
+    CAST(NULL AS TEXT) AS device_brand,
+    CAST(NULL AS TEXT) AS device_carrier,
+    CAST(NULL AS TEXT) AS device_family,
+    CAST(NULL AS TEXT) AS device_id,
+    CAST(NULL AS TEXT) AS device_manufacturer,
+    CAST(NULL AS TEXT) AS device_model,
+    CAST(NULL AS TEXT) AS device_type,
+    CAST(NULL AS TEXT) AS dma,
+    CAST(NULL AS TEXT) AS event_properties,
+    CAST(NULL AS TIMESTAMP) AS event_time,
+    CAST(NULL AS TEXT) AS event_type,
+    CAST(NULL AS INT) AS event_type_id,
+    CAST(NULL AS TEXT) AS group_properties,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS idfa,
+    CAST(NULL AS TEXT) AS ip_address,
+    CAST(NULL AS BOOLEAN) AS is_attribution_event,
+    CAST(NULL AS TEXT) AS language,
+    CAST(NULL AS TEXT) AS library,
+    CAST(NULL AS TEXT) AS location_lat,
+    CAST(NULL AS TEXT) AS location_lng,
+    CAST(NULL AS TEXT) AS os_name,
+    CAST(NULL AS TEXT) AS os_version,
+    CAST(NULL AS BOOLEAN) AS paying,
+    CAST(NULL AS TEXT) AS platform,
+    CAST(NULL AS TIMESTAMP) AS processed_time,
+    CAST(NULL AS TEXT) AS project_name,
+    CAST(NULL AS TEXT) AS region,
+    CAST(NULL AS INT) AS schema,
+    CAST(NULL AS TIMESTAMP) AS server_received_time,
+    CAST(NULL AS TIMESTAMP) AS server_upload_time,
+    CAST(NULL AS INT) AS session_id,
+    CAST(NULL AS TEXT) AS start_version,
+    CAST(NULL AS TIMESTAMP) AS user_creation_time,
+    CAST(NULL AS TEXT) AS user_id,
+    CAST(NULL AS TEXT) AS user_properties,
+    CAST(NULL AS TEXT) AS uuid,
+    CAST(NULL AS TEXT) AS version_name,
+    CAST(NULL AS TEXT) AS group_types
+  FROM base
+), final AS (
+  SELECT
+    id AS event_id,
+    CAST(event_time AS TIMESTAMP) AS event_time,
+    CAST(DATE_TRUNC('DAY', event_time) AS DATE) AS event_day,
+    MD5(
+      CAST(COALESCE(CAST(user_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(session_id AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS unique_session_id,
+    COALESCE(CAST(user_id AS TEXT), (
+      CAST(amplitude_id AS TEXT)
+    )) AS amplitude_user_id,
+    event_properties,
+    event_type,
+    event_type_id,
+    group_types,
+    group_properties,
+    session_id,
+    CAST(user_id AS TEXT) AS user_id,
+    user_properties,
+    CAST(amplitude_id AS TEXT) AS amplitude_id,
+    _insert_id,
+    ad_id,
+    app,
+    project_name,
+    CAST(client_event_time AS TIMESTAMP) AS client_event_time,
+    CAST(client_upload_time AS TIMESTAMP) AS client_upload_time,
+    city,
+    country,
+    data,
+    device_brand,
+    device_carrier,
+    device_family,
+    device_id,
+    device_manufacturer,
+    device_model,
+    device_type,
+    dma,
+    idfa,
+    ip_address,
+    language,
+    location_lat,
+    location_lng,
+    os_name,
+    os_version,
+    is_attribution_event,
+    library,
+    paying AS is_paying,
+    platform,
+    CAST(processed_time AS TIMESTAMP) AS processed_time,
+    region,
+    schema,
+    CAST(server_received_time AS TIMESTAMP) AS server_received_time,
+    CAST(server_upload_time AS TIMESTAMP) AS server_upload_time,
+    start_version,
+    CAST(user_creation_time AS TIMESTAMP) AS user_creation_time,
+    uuid,
+    version_name,
+    _fivetran_synced
+  FROM fields
+  WHERE
+    CAST(DATE_TRUNC('DAY', event_time) AS DATE) >= CAST('2020-01-01' AS DATE) /* filter to records past a specific date */
+    AND CAST(DATE_TRUNC('DAY', event_time) AS DATE) <= CAST(DATEADD(month, 1, DATE_TRUNC('DAY', CAST(CURRENT_TIMESTAMP() AS TIMESTAMP))) AS DATE) /* filter to records before a specific date */
+), surrogate AS (
+  SELECT
+    *,
+    MD5(
+      CAST(COALESCE(CAST(event_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(device_id AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(client_event_time AS TEXT), '_dbt_utils_surrogate_key_null_') || '-' || COALESCE(CAST(amplitude_user_id AS TEXT), '_dbt_utils_surrogate_key_null_') AS TEXT)
+    ) AS unique_event_id
+  FROM final
+)
+SELECT
+  *
+FROM surrogate"
+model.amplitude_source.stg_amplitude__event_type_tmp,"SELECT
+  *
+FROM TEST.amplitude.event_type"
+model.amplitude_source.stg_amplitude__event_tmp,"SELECT
+  *
+FROM TEST.amplitude.event"

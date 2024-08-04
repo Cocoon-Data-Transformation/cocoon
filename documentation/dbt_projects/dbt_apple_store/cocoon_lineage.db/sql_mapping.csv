@@ -1,0 +1,1297 @@
+model_name,sql_text
+model.apple_store.apple_store__app_version_report,"WITH __dbt__cte__int_apple_store__crashes_app_version AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_app_version
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      app_version,
+      CAST(NULL AS TEXT) AS source_type,
+      SUM(crashes) AS crashes
+    FROM base
+    GROUP BY
+      1,
+      2,
+      3,
+      4
+  )
+  SELECT
+    *
+  FROM aggregated
+), app AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app
+), crashes_app_version_report AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__crashes_app_version
+), usage_app_version_report AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_app_version
+), reporting_grain_combined AS (
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    app_version
+  FROM usage_app_version_report
+  UNION ALL
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    app_version
+  FROM crashes_app_version_report
+), reporting_grain AS (
+  SELECT DISTINCT
+    *
+  FROM reporting_grain_combined
+), joined AS (
+  SELECT
+    reporting_grain.date_day,
+    reporting_grain.app_id,
+    app.app_name,
+    reporting_grain.source_type,
+    reporting_grain.app_version,
+    COALESCE(crashes_app_version_report.crashes, 0) AS crashes,
+    COALESCE(usage_app_version_report.active_devices, 0) AS active_devices,
+    COALESCE(usage_app_version_report.active_devices_last_30_days, 0) AS active_devices_last_30_days,
+    COALESCE(usage_app_version_report.deletions, 0) AS deletions,
+    COALESCE(usage_app_version_report.installations, 0) AS installations,
+    COALESCE(usage_app_version_report.sessions, 0) AS sessions
+  FROM reporting_grain
+  LEFT JOIN app
+    ON reporting_grain.app_id = app.app_id
+  LEFT JOIN crashes_app_version_report
+    ON reporting_grain.date_day = crashes_app_version_report.date_day
+    AND reporting_grain.app_id = crashes_app_version_report.app_id
+    AND reporting_grain.source_type = crashes_app_version_report.source_type
+    AND reporting_grain.app_version = crashes_app_version_report.app_version
+  LEFT JOIN usage_app_version_report
+    ON reporting_grain.date_day = usage_app_version_report.date_day
+    AND reporting_grain.app_id = usage_app_version_report.app_id
+    AND reporting_grain.source_type = usage_app_version_report.source_type
+    AND reporting_grain.app_version = usage_app_version_report.app_version
+)
+SELECT
+  *
+FROM joined"
+model.apple_store.apple_store__source_type_report,"WITH __dbt__cte__int_apple_store__app_store_source_type AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_device
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      source_type,
+      SUM(impressions) AS impressions,
+      SUM(page_views) AS page_views
+    FROM base
+    GROUP BY
+      1,
+      2,
+      3
+  )
+  SELECT
+    *
+  FROM aggregated
+), __dbt__cte__int_apple_store__downloads_source_type AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_device
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      source_type,
+      SUM(first_time_downloads) AS first_time_downloads,
+      SUM(redownloads) AS redownloads,
+      SUM(total_downloads) AS total_downloads
+    FROM base
+    GROUP BY
+      1,
+      2,
+      3
+  )
+  SELECT
+    *
+  FROM aggregated
+), __dbt__cte__int_apple_store__usage_source_type AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_device
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      source_type,
+      SUM(active_devices) AS active_devices,
+      SUM(deletions) AS deletions,
+      SUM(installations) AS installations,
+      SUM(sessions) AS sessions
+    FROM base
+    GROUP BY
+      1,
+      2,
+      3
+  )
+  SELECT
+    *
+  FROM aggregated
+), app AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app
+), app_store_source_type AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__app_store_source_type
+), downloads_source_type AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__downloads_source_type
+), usage_source_type AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__usage_source_type
+), reporting_grain AS (
+  SELECT DISTINCT
+    date_day,
+    app_id,
+    source_type
+  FROM app_store_source_type
+), joined AS (
+  SELECT
+    reporting_grain.date_day,
+    reporting_grain.app_id,
+    app.app_name,
+    reporting_grain.source_type,
+    COALESCE(app_store_source_type.impressions, 0) AS impressions,
+    COALESCE(app_store_source_type.page_views, 0) AS page_views,
+    COALESCE(downloads_source_type.first_time_downloads, 0) AS first_time_downloads,
+    COALESCE(downloads_source_type.redownloads, 0) AS redownloads,
+    COALESCE(downloads_source_type.total_downloads, 0) AS total_downloads,
+    COALESCE(usage_source_type.active_devices, 0) AS active_devices,
+    COALESCE(usage_source_type.deletions, 0) AS deletions,
+    COALESCE(usage_source_type.installations, 0) AS installations,
+    COALESCE(usage_source_type.sessions, 0) AS sessions
+  FROM reporting_grain
+  LEFT JOIN app
+    ON reporting_grain.app_id = app.app_id
+  LEFT JOIN app_store_source_type
+    ON reporting_grain.date_day = app_store_source_type.date_day
+    AND reporting_grain.app_id = app_store_source_type.app_id
+    AND reporting_grain.source_type = app_store_source_type.source_type
+  LEFT JOIN downloads_source_type
+    ON reporting_grain.date_day = downloads_source_type.date_day
+    AND reporting_grain.app_id = downloads_source_type.app_id
+    AND reporting_grain.source_type = downloads_source_type.source_type
+  LEFT JOIN usage_source_type
+    ON reporting_grain.date_day = usage_source_type.date_day
+    AND reporting_grain.app_id = usage_source_type.app_id
+    AND reporting_grain.source_type = usage_source_type.source_type
+)
+SELECT
+  *
+FROM joined"
+model.apple_store.apple_store__device_report,"WITH __dbt__cte__int_apple_store__crashes_device AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_app_version
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      device,
+      CAST(NULL AS TEXT) AS source_type,
+      SUM(crashes) AS crashes
+    FROM base
+    GROUP BY
+      1,
+      2,
+      3,
+      4
+  )
+  SELECT
+    *
+  FROM aggregated
+), app AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app
+), app_store_device AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_device
+), downloads_device AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_device
+), usage_device AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_device
+), crashes_device AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__crashes_device
+), reporting_grain_combined AS (
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    device
+  FROM app_store_device
+  UNION ALL
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    device
+  FROM crashes_device
+), reporting_grain AS (
+  SELECT DISTINCT
+    *
+  FROM reporting_grain_combined
+), joined AS (
+  SELECT
+    reporting_grain.date_day,
+    reporting_grain.app_id,
+    app.app_name,
+    reporting_grain.source_type,
+    reporting_grain.device,
+    COALESCE(app_store_device.impressions, 0) AS impressions,
+    COALESCE(app_store_device.impressions_unique_device, 0) AS impressions_unique_device,
+    COALESCE(app_store_device.page_views, 0) AS page_views,
+    COALESCE(app_store_device.page_views_unique_device, 0) AS page_views_unique_device,
+    COALESCE(crashes_device.crashes, 0) AS crashes,
+    COALESCE(downloads_device.first_time_downloads, 0) AS first_time_downloads,
+    COALESCE(downloads_device.redownloads, 0) AS redownloads,
+    COALESCE(downloads_device.total_downloads, 0) AS total_downloads,
+    COALESCE(usage_device.active_devices, 0) AS active_devices,
+    COALESCE(usage_device.active_devices_last_30_days, 0) AS active_devices_last_30_days,
+    COALESCE(usage_device.deletions, 0) AS deletions,
+    COALESCE(usage_device.installations, 0) AS installations,
+    COALESCE(usage_device.sessions, 0) AS sessions
+  FROM reporting_grain
+  LEFT JOIN app
+    ON reporting_grain.app_id = app.app_id
+  LEFT JOIN app_store_device
+    ON reporting_grain.date_day = app_store_device.date_day
+    AND reporting_grain.app_id = app_store_device.app_id
+    AND reporting_grain.source_type = app_store_device.source_type
+    AND reporting_grain.device = app_store_device.device
+  LEFT JOIN crashes_device
+    ON reporting_grain.date_day = crashes_device.date_day
+    AND reporting_grain.app_id = crashes_device.app_id
+    AND reporting_grain.source_type = crashes_device.source_type
+    AND reporting_grain.device = crashes_device.device
+  LEFT JOIN downloads_device
+    ON reporting_grain.date_day = downloads_device.date_day
+    AND reporting_grain.app_id = downloads_device.app_id
+    AND reporting_grain.source_type = downloads_device.source_type
+    AND reporting_grain.device = downloads_device.device
+  LEFT JOIN usage_device
+    ON reporting_grain.date_day = usage_device.date_day
+    AND reporting_grain.app_id = usage_device.app_id
+    AND reporting_grain.source_type = usage_device.source_type
+    AND reporting_grain.device = usage_device.device
+)
+SELECT
+  *
+FROM joined"
+model.apple_store.apple_store__overview_report,"WITH __dbt__cte__int_apple_store__app_store_overview AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_device
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      SUM(impressions) AS impressions,
+      SUM(page_views) AS page_views
+    FROM base
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM aggregated
+), __dbt__cte__int_apple_store__crashes_overview AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_app_version
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      SUM(crashes) AS crashes
+    FROM base
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM aggregated
+), __dbt__cte__int_apple_store__downloads_overview AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_device
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      SUM(first_time_downloads) AS first_time_downloads,
+      SUM(redownloads) AS redownloads,
+      SUM(total_downloads) AS total_downloads
+    FROM base
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM aggregated
+), __dbt__cte__int_apple_store__usage_overview AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_device
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      SUM(active_devices) AS active_devices,
+      SUM(deletions) AS deletions,
+      SUM(installations) AS installations,
+      SUM(sessions) AS sessions
+    FROM base
+    GROUP BY
+      1,
+      2
+  )
+  SELECT
+    *
+  FROM aggregated
+), app AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app
+), app_store AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__app_store_overview
+), crashes AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__crashes_overview
+), downloads AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__downloads_overview
+), usage AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__usage_overview
+), reporting_grain AS (
+  SELECT DISTINCT
+    date_day,
+    app_id
+  FROM app_store
+), joined AS (
+  SELECT
+    reporting_grain.date_day,
+    reporting_grain.app_id,
+    app.app_name,
+    COALESCE(app_store.impressions, 0) AS impressions,
+    COALESCE(app_store.page_views, 0) AS page_views,
+    COALESCE(crashes.crashes, 0) AS crashes,
+    COALESCE(downloads.first_time_downloads, 0) AS first_time_downloads,
+    COALESCE(downloads.redownloads, 0) AS redownloads,
+    COALESCE(downloads.total_downloads, 0) AS total_downloads,
+    COALESCE(usage.active_devices, 0) AS active_devices,
+    COALESCE(usage.deletions, 0) AS deletions,
+    COALESCE(usage.installations, 0) AS installations,
+    COALESCE(usage.sessions, 0) AS sessions
+  FROM reporting_grain
+  LEFT JOIN app
+    ON reporting_grain.app_id = app.app_id
+  LEFT JOIN app_store
+    ON reporting_grain.date_day = app_store.date_day
+    AND reporting_grain.app_id = app_store.app_id
+  LEFT JOIN crashes
+    ON reporting_grain.date_day = crashes.date_day
+    AND reporting_grain.app_id = crashes.app_id
+  LEFT JOIN downloads
+    ON reporting_grain.date_day = downloads.date_day
+    AND reporting_grain.app_id = downloads.app_id
+  LEFT JOIN usage
+    ON reporting_grain.date_day = usage.date_day
+    AND reporting_grain.app_id = usage.app_id
+)
+SELECT
+  *
+FROM joined"
+model.apple_store.apple_store__territory_report,"WITH app AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app
+), app_store_territory AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_territory
+), country_codes AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.apple_store_country_codes
+), downloads_territory AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_territory
+), usage_territory AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_territory
+), reporting_grain AS (
+  SELECT DISTINCT
+    date_day,
+    app_id,
+    source_type,
+    territory
+  FROM app_store_territory
+), joined AS (
+  SELECT
+    reporting_grain.date_day,
+    reporting_grain.app_id,
+    app.app_name,
+    reporting_grain.source_type,
+    reporting_grain.territory AS territory_long,
+    COALESCE(
+      official_country_codes.country_code_alpha_2,
+      alternative_country_codes.country_code_alpha_2
+    ) AS territory_short,
+    COALESCE(official_country_codes.region, alternative_country_codes.region) AS region,
+    COALESCE(official_country_codes.sub_region, alternative_country_codes.sub_region) AS sub_region,
+    COALESCE(app_store_territory.impressions, 0) AS impressions,
+    COALESCE(app_store_territory.impressions_unique_device, 0) AS impressions_unique_device,
+    COALESCE(app_store_territory.page_views, 0) AS page_views,
+    COALESCE(app_store_territory.page_views_unique_device, 0) AS page_views_unique_device,
+    COALESCE(downloads_territory.first_time_downloads, 0) AS first_time_downloads,
+    COALESCE(downloads_territory.redownloads, 0) AS redownloads,
+    COALESCE(downloads_territory.total_downloads, 0) AS total_downloads,
+    COALESCE(usage_territory.active_devices, 0) AS active_devices,
+    COALESCE(usage_territory.active_devices_last_30_days, 0) AS active_devices_last_30_days,
+    COALESCE(usage_territory.deletions, 0) AS deletions,
+    COALESCE(usage_territory.installations, 0) AS installations,
+    COALESCE(usage_territory.sessions, 0) AS sessions
+  FROM reporting_grain
+  LEFT JOIN app
+    ON reporting_grain.app_id = app.app_id
+  LEFT JOIN app_store_territory
+    ON reporting_grain.date_day = app_store_territory.date_day
+    AND reporting_grain.app_id = app_store_territory.app_id
+    AND reporting_grain.source_type = app_store_territory.source_type
+    AND reporting_grain.territory = app_store_territory.territory
+  LEFT JOIN downloads_territory
+    ON reporting_grain.date_day = downloads_territory.date_day
+    AND reporting_grain.app_id = downloads_territory.app_id
+    AND reporting_grain.source_type = downloads_territory.source_type
+    AND reporting_grain.territory = downloads_territory.territory
+  LEFT JOIN usage_territory
+    ON reporting_grain.date_day = usage_territory.date_day
+    AND reporting_grain.app_id = usage_territory.app_id
+    AND reporting_grain.source_type = usage_territory.source_type
+    AND reporting_grain.territory = usage_territory.territory
+  LEFT JOIN country_codes AS official_country_codes
+    ON reporting_grain.territory = official_country_codes.country_name
+  LEFT JOIN country_codes AS alternative_country_codes
+    ON reporting_grain.territory = alternative_country_codes.alternative_country_name
+)
+SELECT
+  *
+FROM joined"
+model.apple_store.apple_store__platform_version_report,"WITH __dbt__cte__int_apple_store__platform_version AS (
+  WITH base AS (
+    SELECT
+      *
+    FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_platform_version
+  ), aggregated AS (
+    SELECT
+      date_day,
+      app_id,
+      platform_version,
+      CAST(NULL AS TEXT) AS source_type,
+      SUM(crashes) AS crashes
+    FROM base
+    GROUP BY
+      1,
+      2,
+      3,
+      4
+  )
+  SELECT
+    *
+  FROM aggregated
+), app AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app
+), app_store_platform_version AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_platform_version
+), crashes_platform_version AS (
+  SELECT
+    *
+  FROM __dbt__cte__int_apple_store__platform_version
+), downloads_platform_version AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_platform_version
+), usage_platform_version AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_platform_version
+), reporting_grain_combined AS (
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    platform_version
+  FROM app_store_platform_version
+  UNION ALL
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    platform_version
+  FROM crashes_platform_version
+), reporting_grain AS (
+  SELECT DISTINCT
+    *
+  FROM reporting_grain_combined
+), joined AS (
+  SELECT
+    reporting_grain.date_day,
+    reporting_grain.app_id,
+    app.app_name,
+    reporting_grain.source_type,
+    reporting_grain.platform_version,
+    COALESCE(app_store_platform_version.impressions, 0) AS impressions,
+    COALESCE(app_store_platform_version.impressions_unique_device, 0) AS impressions_unique_device,
+    COALESCE(app_store_platform_version.page_views, 0) AS page_views,
+    COALESCE(app_store_platform_version.page_views_unique_device, 0) AS page_views_unique_device,
+    COALESCE(crashes_platform_version.crashes, 0) AS crashes,
+    COALESCE(downloads_platform_version.first_time_downloads, 0) AS first_time_downloads,
+    COALESCE(downloads_platform_version.redownloads, 0) AS redownloads,
+    COALESCE(downloads_platform_version.total_downloads, 0) AS total_downloads,
+    COALESCE(usage_platform_version.active_devices, 0) AS active_devices,
+    COALESCE(usage_platform_version.active_devices_last_30_days, 0) AS active_devices_last_30_days,
+    COALESCE(usage_platform_version.deletions, 0) AS deletions,
+    COALESCE(usage_platform_version.installations, 0) AS installations,
+    COALESCE(usage_platform_version.sessions, 0) AS sessions
+  FROM reporting_grain
+  LEFT JOIN app
+    ON reporting_grain.app_id = app.app_id
+  LEFT JOIN app_store_platform_version
+    ON reporting_grain.date_day = app_store_platform_version.date_day
+    AND reporting_grain.app_id = app_store_platform_version.app_id
+    AND reporting_grain.source_type = app_store_platform_version.source_type
+    AND reporting_grain.platform_version = app_store_platform_version.platform_version
+  LEFT JOIN crashes_platform_version
+    ON reporting_grain.date_day = crashes_platform_version.date_day
+    AND reporting_grain.app_id = crashes_platform_version.app_id
+    AND reporting_grain.source_type = crashes_platform_version.source_type
+    AND reporting_grain.platform_version = crashes_platform_version.platform_version
+  LEFT JOIN downloads_platform_version
+    ON reporting_grain.date_day = downloads_platform_version.date_day
+    AND reporting_grain.app_id = downloads_platform_version.app_id
+    AND reporting_grain.source_type = downloads_platform_version.source_type
+    AND reporting_grain.platform_version = downloads_platform_version.platform_version
+  LEFT JOIN usage_platform_version
+    ON reporting_grain.date_day = usage_platform_version.date_day
+    AND reporting_grain.app_id = usage_platform_version.app_id
+    AND reporting_grain.source_type = usage_platform_version.source_type
+    AND reporting_grain.platform_version = usage_platform_version.platform_version
+)
+SELECT
+  *
+FROM joined"
+model.apple_store.int_apple_store__usage_overview,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_device
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    SUM(active_devices) AS active_devices,
+    SUM(deletions) AS deletions,
+    SUM(installations) AS installations,
+    SUM(sessions) AS sessions
+  FROM base
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__crashes_overview,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_app_version
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    SUM(crashes) AS crashes
+  FROM base
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__app_store_overview,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_device
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    SUM(impressions) AS impressions,
+    SUM(page_views) AS page_views
+  FROM base
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__downloads_overview,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_device
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    SUM(first_time_downloads) AS first_time_downloads,
+    SUM(redownloads) AS redownloads,
+    SUM(total_downloads) AS total_downloads
+  FROM base
+  GROUP BY
+    1,
+    2
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__crashes_device,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_app_version
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    device,
+    CAST(NULL AS TEXT) AS source_type,
+    SUM(crashes) AS crashes
+  FROM base
+  GROUP BY
+    1,
+    2,
+    3,
+    4
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__app_store_source_type,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_device
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    SUM(impressions) AS impressions,
+    SUM(page_views) AS page_views
+  FROM base
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__usage_source_type,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_device
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    SUM(active_devices) AS active_devices,
+    SUM(deletions) AS deletions,
+    SUM(installations) AS installations,
+    SUM(sessions) AS sessions
+  FROM base
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__downloads_source_type,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_device
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    source_type,
+    SUM(first_time_downloads) AS first_time_downloads,
+    SUM(redownloads) AS redownloads,
+    SUM(total_downloads) AS total_downloads
+  FROM base
+  GROUP BY
+    1,
+    2,
+    3
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__crashes_app_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_app_version
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    app_version,
+    CAST(NULL AS TEXT) AS source_type,
+    SUM(crashes) AS crashes
+  FROM base
+  GROUP BY
+    1,
+    2,
+    3,
+    4
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store.int_apple_store__platform_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_platform_version
+), aggregated AS (
+  SELECT
+    date_day,
+    app_id,
+    platform_version,
+    CAST(NULL AS TEXT) AS source_type,
+    SUM(crashes) AS crashes
+  FROM base
+  GROUP BY
+    1,
+    2,
+    3,
+    4
+)
+SELECT
+  *
+FROM aggregated"
+model.apple_store_source.stg_apple_store__usage_app_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_app_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS active_devices,
+    CAST(NULL AS INT) AS active_devices_last_30_days,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TEXT) AS app_version,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS INT) AS deletions,
+    CAST(NULL AS INT) AS installations,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS INT) AS sessions,
+    CAST(NULL AS TEXT) AS source_type
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    app_version,
+    active_devices,
+    active_devices_last_30_days,
+    deletions,
+    installations,
+    sessions
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__crashes_platform_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_platform_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS INT) AS crashes,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS TEXT) AS device,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS TEXT) AS platform_version
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    device,
+    platform_version,
+    crashes
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__downloads_device,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_device_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS TEXT) AS device,
+    CAST(NULL AS INT) AS first_time_downloads,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS INT) AS redownloads,
+    CAST(NULL AS TEXT) AS source_type,
+    CAST(NULL AS INT) AS total_downloads
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    device,
+    first_time_downloads,
+    redownloads,
+    total_downloads
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__app_store_device,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_device_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS TEXT) AS device,
+    CAST(NULL AS INT) AS impressions,
+    CAST(NULL AS INT) AS impressions_unique_device,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS INT) AS page_views,
+    CAST(NULL AS INT) AS page_views_unique_device,
+    CAST(NULL AS TEXT) AS source_type
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    device,
+    impressions,
+    impressions_unique_device,
+    page_views,
+    page_views_unique_device
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__crashes_app_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__crashes_app_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TEXT) AS app_version,
+    CAST(NULL AS INT) AS crashes,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS TEXT) AS device,
+    CAST(NULL AS BOOLEAN) AS meets_threshold
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    device,
+    app_version,
+    crashes
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__usage_device,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_device_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS active_devices,
+    CAST(NULL AS INT) AS active_devices_last_30_days,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS INT) AS deletions,
+    CAST(NULL AS TEXT) AS device,
+    CAST(NULL AS INT) AS installations,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS INT) AS sessions,
+    CAST(NULL AS TEXT) AS source_type
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    device,
+    active_devices,
+    active_devices_last_30_days,
+    deletions,
+    installations,
+    sessions
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__usage_platform_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_platform_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS active_devices,
+    CAST(NULL AS INT) AS active_devices_last_30_days,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS INT) AS deletions,
+    CAST(NULL AS INT) AS installations,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS TEXT) AS platform_version,
+    CAST(NULL AS INT) AS sessions,
+    CAST(NULL AS TEXT) AS source_type
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    platform_version,
+    active_devices,
+    active_devices_last_30_days,
+    deletions,
+    installations,
+    sessions
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__downloads_platform_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_platform_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS INT) AS first_time_downloads,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS TEXT) AS platform_version,
+    CAST(NULL AS INT) AS redownloads,
+    CAST(NULL AS TEXT) AS source_type,
+    CAST(NULL AS INT) AS total_downloads
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    platform_version,
+    first_time_downloads,
+    redownloads,
+    total_downloads
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__downloads_territory,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__downloads_territory_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS INT) AS first_time_downloads,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS INT) AS redownloads,
+    CAST(NULL AS TEXT) AS source_type,
+    CAST(NULL AS TEXT) AS territory,
+    CAST(NULL AS INT) AS total_downloads
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    territory,
+    first_time_downloads,
+    redownloads,
+    total_downloads
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__usage_territory,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__usage_territory_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS active_devices,
+    CAST(NULL AS INT) AS active_devices_last_30_days,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS INT) AS deletions,
+    CAST(NULL AS INT) AS installations,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS INT) AS sessions,
+    CAST(NULL AS TEXT) AS source_type,
+    CAST(NULL AS TEXT) AS territory
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    territory,
+    active_devices,
+    active_devices_last_30_days,
+    deletions,
+    installations,
+    sessions
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__app,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_opt_in_rate,
+    CAST(NULL AS TEXT) AS asset_token,
+    CAST(NULL AS TEXT) AS icon_url,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS BOOLEAN) AS ios,
+    CAST(NULL AS BOOLEAN) AS is_bundle,
+    CAST(NULL AS BOOLEAN) AS is_enabled,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS pre_order_info,
+    CAST(NULL AS BOOLEAN) AS tvos
+  FROM base
+), final AS (
+  SELECT
+    id AS app_id,
+    name AS app_name,
+    is_enabled
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__app_store_territory,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_territory_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS INT) AS impressions,
+    CAST(NULL AS INT) AS impressions_unique_device,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS INT) AS page_views,
+    CAST(NULL AS INT) AS page_views_unique_device,
+    CAST(NULL AS TEXT) AS source_type,
+    CAST(NULL AS TEXT) AS territory
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    territory,
+    impressions,
+    impressions_unique_device,
+    page_views,
+    page_views_unique_device
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__sales_account,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__sales_account_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS name
+  FROM base
+), final AS (
+  SELECT
+    id AS account_id,
+    name AS account_name
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__app_store_platform_version,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_apple_store_source.stg_apple_store__app_store_platform_version_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS app_id,
+    CAST(NULL AS TIMESTAMP) AS date,
+    CAST(NULL AS INT) AS impressions,
+    CAST(NULL AS INT) AS impressions_unique_device,
+    CAST(NULL AS BOOLEAN) AS meets_threshold,
+    CAST(NULL AS INT) AS page_views,
+    CAST(NULL AS INT) AS page_views_unique_device,
+    CAST(NULL AS TEXT) AS platform_version,
+    CAST(NULL AS TEXT) AS source_type
+  FROM base
+), final AS (
+  SELECT
+    CAST(date AS DATE) AS date_day,
+    app_id,
+    source_type,
+    platform_version,
+    impressions,
+    impressions_unique_device,
+    page_views,
+    page_views_unique_device
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.apple_store_source.stg_apple_store__downloads_platform_version_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.downloads_platform_version_source_type_report"
+model.apple_store_source.stg_apple_store__app_store_territory_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.app_store_territory_source_type_report"
+model.apple_store_source.stg_apple_store__app_store_device_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.app_store_source_type_device_report"
+model.apple_store_source.stg_apple_store__app_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.app"
+model.apple_store_source.stg_apple_store__downloads_territory_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.downloads_territory_source_type_report"
+model.apple_store_source.stg_apple_store__usage_device_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.usage_source_type_device_report"
+model.apple_store_source.stg_apple_store__crashes_platform_version_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.crashes_platform_version_device_report"
+model.apple_store_source.stg_apple_store__sales_account_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.sales_account"
+model.apple_store_source.stg_apple_store__app_store_platform_version_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.app_store_platform_version_source_type_report"
+model.apple_store_source.stg_apple_store__usage_territory_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.usage_territory_source_type_report"
+model.apple_store_source.stg_apple_store__usage_app_version_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.usage_app_version_source_type_report"
+model.apple_store_source.stg_apple_store__usage_platform_version_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.usage_platform_version_source_type_report"
+model.apple_store_source.stg_apple_store__downloads_device_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.downloads_source_type_device_report"
+model.apple_store_source.stg_apple_store__crashes_app_version_tmp,"SELECT
+  *
+FROM TEST.itunes_connect.crashes_app_version_device_report"

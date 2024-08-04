@@ -1,0 +1,807 @@
+model_name,sql_text
+model.facebook_ads.facebook_ads__ad_set_report,"WITH report AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__basic_ad
+), accounts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__account_history
+  WHERE
+    is_most_recent_record = TRUE
+), campaigns AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__campaign_history
+  WHERE
+    is_most_recent_record = TRUE
+), ad_sets AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_set_history
+  WHERE
+    is_most_recent_record = TRUE
+), ads AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_history
+  WHERE
+    is_most_recent_record = TRUE
+), joined AS (
+  SELECT
+    report.source_relation,
+    report.date_day,
+    accounts.account_id,
+    accounts.account_name,
+    campaigns.campaign_id,
+    campaigns.campaign_name,
+    ad_sets.ad_set_id,
+    ad_sets.ad_set_name,
+    ad_sets.start_at,
+    ad_sets.end_at,
+    ad_sets.bid_strategy,
+    ad_sets.daily_budget,
+    ad_sets.budget_remaining,
+    SUM(report.clicks) AS clicks,
+    SUM(report.impressions) AS impressions,
+    SUM(report.spend) AS spend
+  FROM report
+  LEFT JOIN accounts
+    ON report.account_id = accounts.account_id
+    AND report.source_relation = accounts.source_relation
+  LEFT JOIN ads
+    ON report.ad_id = ads.ad_id AND report.source_relation = ads.source_relation
+  LEFT JOIN campaigns
+    ON ads.campaign_id = campaigns.campaign_id
+    AND ads.source_relation = campaigns.source_relation
+  LEFT JOIN ad_sets
+    ON ads.ad_set_id = ad_sets.ad_set_id
+    AND ads.source_relation = ad_sets.source_relation
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13
+)
+SELECT
+  *
+FROM joined"
+model.facebook_ads.facebook_ads__url_tags,"
+
+with base as (
+
+    select *
+    from TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__creative_history
+    where is_most_recent_record = true
+), 
+
+required_fields as (
+
+    select
+        source_relation,
+        _fivetran_id,
+        creative_id,
+        url_tags
+    from base
+    where url_tags is not null
+), 
+
+
+
+  cleaned_fields as (
+
+      select
+          source_relation,
+          _fivetran_id,
+          creative_id,
+          parse_json(url_tags) as url_tags
+      from required_fields
+      where url_tags is not null
+  ), 
+
+  fields as (
+
+      select
+          source_relation,
+          _fivetran_id,
+          creative_id,
+          url_tags.value:key::string as key,
+          url_tags.value:value::string as value,
+          url_tags.value:type::string as type
+      from cleaned_fields,
+      lateral flatten( input => url_tags ) as url_tags
+  )
+
+ 
+
+select *
+from fields"
+model.facebook_ads.facebook_ads__account_report,"WITH report AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__basic_ad
+), accounts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__account_history
+  WHERE
+    is_most_recent_record = TRUE
+), joined AS (
+  SELECT
+    report.source_relation,
+    report.date_day,
+    accounts.account_id,
+    accounts.account_name,
+    accounts.account_status,
+    accounts.business_country_code,
+    accounts.created_at,
+    accounts.currency,
+    accounts.timezone_name,
+    SUM(report.clicks) AS clicks,
+    SUM(report.impressions) AS impressions,
+    SUM(report.spend) AS spend
+  FROM report
+  LEFT JOIN accounts
+    ON report.account_id = accounts.account_id
+    AND report.source_relation = accounts.source_relation
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+)
+SELECT
+  *
+FROM joined"
+model.facebook_ads.facebook_ads__campaign_report,"WITH report AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__basic_ad
+), accounts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__account_history
+  WHERE
+    is_most_recent_record = TRUE
+), campaigns AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__campaign_history
+  WHERE
+    is_most_recent_record = TRUE
+), ads AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_history
+  WHERE
+    is_most_recent_record = TRUE
+), joined AS (
+  SELECT
+    report.source_relation,
+    report.date_day,
+    accounts.account_id,
+    accounts.account_name,
+    campaigns.campaign_id,
+    campaigns.campaign_name,
+    campaigns.start_at,
+    campaigns.end_at,
+    campaigns.status,
+    campaigns.daily_budget,
+    campaigns.lifetime_budget,
+    campaigns.budget_remaining,
+    SUM(report.clicks) AS clicks,
+    SUM(report.impressions) AS impressions,
+    SUM(report.spend) AS spend
+  FROM report
+  LEFT JOIN accounts
+    ON report.account_id = accounts.account_id
+    AND report.source_relation = accounts.source_relation
+  LEFT JOIN ads
+    ON report.ad_id = ads.ad_id AND report.source_relation = ads.source_relation
+  LEFT JOIN campaigns
+    ON ads.campaign_id = campaigns.campaign_id
+    AND ads.source_relation = campaigns.source_relation
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+)
+SELECT
+  *
+FROM joined"
+model.facebook_ads.facebook_ads__url_report,"WITH report AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__basic_ad
+), creatives AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads.int_facebook_ads__creative_history
+), accounts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__account_history
+  WHERE
+    is_most_recent_record = TRUE
+), ads AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_history
+  WHERE
+    is_most_recent_record = TRUE
+), ad_sets AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_set_history
+  WHERE
+    is_most_recent_record = TRUE
+), campaigns AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__campaign_history
+  WHERE
+    is_most_recent_record = TRUE
+), joined AS (
+  SELECT
+    report.source_relation,
+    report.date_day,
+    accounts.account_id,
+    accounts.account_name,
+    campaigns.campaign_id,
+    campaigns.campaign_name,
+    ad_sets.ad_set_id,
+    ad_sets.ad_set_name,
+    ads.ad_id,
+    ads.ad_name,
+    creatives.creative_id,
+    creatives.creative_name,
+    creatives.base_url,
+    creatives.url_host,
+    creatives.url_path,
+    creatives.utm_source,
+    creatives.utm_medium,
+    creatives.utm_campaign,
+    creatives.utm_content,
+    creatives.utm_term,
+    SUM(report.clicks) AS clicks,
+    SUM(report.impressions) AS impressions,
+    SUM(report.spend) AS spend
+  FROM report
+  LEFT JOIN ads
+    ON report.ad_id = ads.ad_id AND report.source_relation = ads.source_relation
+  LEFT JOIN creatives
+    ON ads.creative_id = creatives.creative_id
+    AND ads.source_relation = creatives.source_relation
+  LEFT JOIN ad_sets
+    ON ads.ad_set_id = ad_sets.ad_set_id
+    AND ads.source_relation = ad_sets.source_relation
+  LEFT JOIN campaigns
+    ON ads.campaign_id = campaigns.campaign_id
+    AND ads.source_relation = campaigns.source_relation
+  LEFT JOIN accounts
+    ON report.account_id = accounts.account_id
+    AND report.source_relation = accounts.source_relation
+  WHERE
+    NOT creatives.url IS NULL
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+)
+SELECT
+  *
+FROM joined"
+model.facebook_ads.facebook_ads__ad_report,"WITH report AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__basic_ad
+), accounts AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__account_history
+  WHERE
+    is_most_recent_record = TRUE
+), campaigns AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__campaign_history
+  WHERE
+    is_most_recent_record = TRUE
+), ad_sets AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_set_history
+  WHERE
+    is_most_recent_record = TRUE
+), ads AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_history
+  WHERE
+    is_most_recent_record = TRUE
+), joined AS (
+  SELECT
+    report.source_relation,
+    report.date_day,
+    accounts.account_id,
+    accounts.account_name,
+    campaigns.campaign_id,
+    campaigns.campaign_name,
+    ad_sets.ad_set_id,
+    ad_sets.ad_set_name,
+    ads.ad_id,
+    ads.ad_name,
+    SUM(report.clicks) AS clicks,
+    SUM(report.impressions) AS impressions,
+    SUM(report.spend) AS spend
+  FROM report
+  LEFT JOIN accounts
+    ON report.account_id = accounts.account_id
+    AND report.source_relation = accounts.source_relation
+  LEFT JOIN ads
+    ON report.ad_id = ads.ad_id AND report.source_relation = ads.source_relation
+  LEFT JOIN campaigns
+    ON ads.campaign_id = campaigns.campaign_id
+    AND ads.source_relation = campaigns.source_relation
+  LEFT JOIN ad_sets
+    ON ads.ad_set_id = ad_sets.ad_set_id
+    AND ads.source_relation = ad_sets.source_relation
+  GROUP BY
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+)
+SELECT
+  *
+FROM joined"
+model.facebook_ads.int_facebook_ads__creative_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__creative_history
+  WHERE
+    is_most_recent_record = TRUE
+), url_tags AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads.facebook_ads__url_tags
+), url_tags_pivoted AS (
+  SELECT
+    source_relation,
+    _fivetran_id,
+    creative_id,
+    MIN(CASE WHEN key = 'utm_source' THEN value END) AS utm_source,
+    MIN(CASE WHEN key = 'utm_medium' THEN value END) AS utm_medium,
+    MIN(CASE WHEN key = 'utm_campaign' THEN value END) AS utm_campaign,
+    MIN(CASE WHEN key = 'utm_content' THEN value END) AS utm_content,
+    MIN(CASE WHEN key = 'utm_term' THEN value END) AS utm_term
+  FROM url_tags
+  GROUP BY
+    1,
+    2,
+    3
+), fields AS (
+  SELECT
+    base.source_relation,
+    base._fivetran_id,
+    base.creative_id,
+    base.account_id,
+    base.creative_name,
+    COALESCE(page_link, template_page_link) AS url,
+    SPLIT_PART(COALESCE(page_link, template_page_link), '?', 1) AS base_url,
+    TRY_CAST(SPLIT_PART(
+      SPLIT_PART(
+        REPLACE(
+          REPLACE(
+            REPLACE(COALESCE(page_link, template_page_link), 'android-app://', ''),
+            'http://',
+            ''
+          ),
+          'https://',
+          ''
+        ),
+        '/',
+        1
+      ),
+      '?',
+      1
+    ) AS TEXT) AS url_host,
+    '/' || TRY_CAST(SPLIT_PART(
+      CASE
+        WHEN LENGTH(
+          REPLACE(REPLACE(COALESCE(page_link, template_page_link), 'http://', ''), 'https://', '')
+        ) - COALESCE(
+          NULLIF(
+            STR_POSITION(
+              REPLACE(REPLACE(COALESCE(page_link, template_page_link), 'http://', ''), 'https://', ''),
+              '/'
+            ),
+            0
+          ),
+          STR_POSITION(
+            REPLACE(REPLACE(COALESCE(page_link, template_page_link), 'http://', ''), 'https://', ''),
+            '?'
+          ) - 1
+        ) = 0
+        THEN ''
+        ELSE RIGHT(
+          REPLACE(REPLACE(COALESCE(page_link, template_page_link), 'http://', ''), 'https://', ''),
+          LENGTH(
+            REPLACE(REPLACE(COALESCE(page_link, template_page_link), 'http://', ''), 'https://', '')
+          ) - COALESCE(
+            NULLIF(
+              STR_POSITION(
+                REPLACE(REPLACE(COALESCE(page_link, template_page_link), 'http://', ''), 'https://', ''),
+                '/'
+              ),
+              0
+            ),
+            STR_POSITION(
+              REPLACE(REPLACE(COALESCE(page_link, template_page_link), 'http://', ''), 'https://', ''),
+              '?'
+            ) - 1
+          )
+        )
+      END,
+      '?',
+      1
+    ) AS TEXT) AS url_path,
+    COALESCE(
+      url_tags_pivoted.utm_source,
+      NULLIF(
+        SPLIT_PART(SPLIT_PART(COALESCE(page_link, template_page_link), 'utm_source=', 2), '&', 1),
+        ''
+      )
+    ) AS utm_source,
+    COALESCE(
+      url_tags_pivoted.utm_medium,
+      NULLIF(
+        SPLIT_PART(SPLIT_PART(COALESCE(page_link, template_page_link), 'utm_medium=', 2), '&', 1),
+        ''
+      )
+    ) AS utm_medium,
+    COALESCE(
+      url_tags_pivoted.utm_campaign,
+      NULLIF(
+        SPLIT_PART(SPLIT_PART(COALESCE(page_link, template_page_link), 'utm_campaign=', 2), '&', 1),
+        ''
+      )
+    ) AS utm_campaign,
+    COALESCE(
+      url_tags_pivoted.utm_content,
+      NULLIF(
+        SPLIT_PART(SPLIT_PART(COALESCE(page_link, template_page_link), 'utm_content=', 2), '&', 1),
+        ''
+      )
+    ) AS utm_content,
+    COALESCE(
+      url_tags_pivoted.utm_term,
+      NULLIF(
+        SPLIT_PART(SPLIT_PART(COALESCE(page_link, template_page_link), 'utm_term=', 2), '&', 1),
+        ''
+      )
+    ) AS utm_term
+  FROM base
+  LEFT JOIN url_tags_pivoted
+    ON base._fivetran_id = url_tags_pivoted._fivetran_id
+    AND base.source_relation = url_tags_pivoted.source_relation
+    AND base.creative_id = url_tags_pivoted.creative_id
+)
+SELECT
+  *
+FROM fields"
+model.facebook_ads_source.stg_facebook_ads__basic_ad,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__basic_ad_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS ad_id,
+    CAST(NULL AS TEXT) AS ad_name,
+    CAST(NULL AS TEXT) AS adset_name,
+    CAST(NULL AS DATE) AS date,
+    CAST(NULL AS INT) AS account_id,
+    CAST(NULL AS INT) AS impressions,
+    CAST(NULL AS INT) AS inline_link_clicks,
+    CAST(NULL AS FLOAT) AS spend,
+    CAST(NULL AS INT) AS reach,
+    CAST(NULL AS FLOAT) AS frequency,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    source_relation,
+    CAST(ad_id AS BIGINT) AS ad_id,
+    ad_name,
+    adset_name AS ad_set_name,
+    date AS date_day,
+    CAST(account_id AS BIGINT) AS account_id,
+    impressions,
+    COALESCE(inline_link_clicks, 0) AS clicks,
+    spend,
+    reach,
+    frequency
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.facebook_ads_source.stg_facebook_ads__account_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__account_history_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS account_status,
+    CAST(NULL AS TEXT) AS business_country_code,
+    CAST(NULL AS TIMESTAMP) AS created_time,
+    CAST(NULL AS TEXT) AS currency,
+    CAST(NULL AS TEXT) AS timezone_name,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    source_relation,
+    CAST(id AS BIGINT) AS account_id,
+    _fivetran_synced,
+    name AS account_name,
+    account_status,
+    business_country_code,
+    created_time AS created_at,
+    currency,
+    timezone_name,
+    CASE
+      WHEN id IS NULL AND _fivetran_synced IS NULL
+      THEN ROW_NUMBER() OVER (PARTITION BY source_relation ORDER BY source_relation)
+      ELSE ROW_NUMBER() OVER (PARTITION BY source_relation, id ORDER BY _fivetran_synced DESC)
+    END = 1 AS is_most_recent_record
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.facebook_ads_source.stg_facebook_ads__creative_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__creative_history_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TEXT) AS _fivetran_id,
+    CAST(NULL AS TIMESTAMP) AS _fivetran_synced,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS INT) AS account_id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TEXT) AS page_link,
+    CAST(NULL AS TEXT) AS template_page_link,
+    CAST(NULL AS TEXT) AS url_tags,
+    CAST(NULL AS TEXT) AS asset_feed_spec_link_urls,
+    CAST(NULL AS TEXT) AS object_story_link_data_child_attachments,
+    CAST(NULL AS TEXT) AS object_story_link_data_caption,
+    CAST(NULL AS TEXT) AS object_story_link_data_description,
+    CAST(NULL AS TEXT) AS object_story_link_data_link,
+    CAST(NULL AS TEXT) AS object_story_link_data_message,
+    CAST(NULL AS TEXT) AS template_app_link_spec_android,
+    CAST(NULL AS TEXT) AS template_app_link_spec_ios,
+    CAST(NULL AS TEXT) AS template_app_link_spec_ipad,
+    CAST(NULL AS TEXT) AS template_app_link_spec_iphone,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    source_relation,
+    _fivetran_id,
+    _fivetran_synced,
+    CAST(id AS BIGINT) AS creative_id,
+    CAST(account_id AS BIGINT) AS account_id,
+    name AS creative_name,
+    page_link,
+    template_page_link,
+    url_tags,
+    asset_feed_spec_link_urls,
+    object_story_link_data_child_attachments,
+    object_story_link_data_caption,
+    object_story_link_data_description,
+    object_story_link_data_link,
+    object_story_link_data_message,
+    template_app_link_spec_ios,
+    template_app_link_spec_ipad,
+    template_app_link_spec_android,
+    template_app_link_spec_iphone,
+    CASE
+      WHEN id IS NULL AND _fivetran_synced IS NULL
+      THEN ROW_NUMBER() OVER (PARTITION BY source_relation ORDER BY source_relation)
+      ELSE ROW_NUMBER() OVER (PARTITION BY source_relation, id ORDER BY _fivetran_synced DESC)
+    END = 1 AS is_most_recent_record
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.facebook_ads_source.stg_facebook_ads__campaign_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__campaign_history_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS updated_time,
+    CAST(NULL AS TIMESTAMP) AS created_time,
+    CAST(NULL AS INT) AS account_id,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS TIMESTAMP) AS start_time,
+    CAST(NULL AS TIMESTAMP) AS stop_time,
+    CAST(NULL AS TEXT) AS status,
+    CAST(NULL AS INT) AS daily_budget,
+    CAST(NULL AS INT) AS lifetime_budget,
+    CAST(NULL AS FLOAT) AS budget_remaining,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    source_relation,
+    updated_time AS updated_at,
+    created_time AS created_at,
+    CAST(account_id AS BIGINT) AS account_id,
+    CAST(id AS BIGINT) AS campaign_id,
+    name AS campaign_name,
+    start_time AS start_at,
+    stop_time AS end_at,
+    status,
+    daily_budget,
+    lifetime_budget,
+    budget_remaining,
+    CASE
+      WHEN id IS NULL AND updated_time IS NULL
+      THEN ROW_NUMBER() OVER (PARTITION BY source_relation ORDER BY source_relation)
+      ELSE ROW_NUMBER() OVER (PARTITION BY source_relation, id ORDER BY updated_time DESC)
+    END = 1 AS is_most_recent_record
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.facebook_ads_source.stg_facebook_ads__ad_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_history_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS updated_time,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS INT) AS account_id,
+    CAST(NULL AS INT) AS ad_set_id,
+    CAST(NULL AS INT) AS campaign_id,
+    CAST(NULL AS INT) AS creative_id,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    source_relation,
+    updated_time AS updated_at,
+    CAST(id AS BIGINT) AS ad_id,
+    name AS ad_name,
+    CAST(account_id AS BIGINT) AS account_id,
+    CAST(ad_set_id AS BIGINT) AS ad_set_id,
+    CAST(campaign_id AS BIGINT) AS campaign_id,
+    CAST(creative_id AS BIGINT) AS creative_id,
+    CASE
+      WHEN id IS NULL AND updated_time IS NULL
+      THEN ROW_NUMBER() OVER (PARTITION BY source_relation ORDER BY source_relation)
+      ELSE ROW_NUMBER() OVER (PARTITION BY source_relation, id ORDER BY updated_time DESC)
+    END = 1 AS is_most_recent_record
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.facebook_ads_source.stg_facebook_ads__ad_set_history,"WITH base AS (
+  SELECT
+    *
+  FROM TEST.PUBLIC_facebook_ads_source.stg_facebook_ads__ad_set_history_tmp
+), fields AS (
+  SELECT
+    CAST(NULL AS TIMESTAMP) AS updated_time,
+    CAST(NULL AS INT) AS id,
+    CAST(NULL AS TEXT) AS name,
+    CAST(NULL AS INT) AS account_id,
+    CAST(NULL AS INT) AS campaign_id,
+    CAST(NULL AS TIMESTAMP) AS start_time,
+    CAST(NULL AS TIMESTAMP) AS end_time,
+    CAST(NULL AS TEXT) AS bid_strategy,
+    CAST(NULL AS INT) AS daily_budget,
+    CAST(NULL AS INT) AS budget_remaining,
+    CAST(NULL AS TEXT) AS status,
+    CAST('' AS TEXT) AS source_relation
+  FROM base
+), final AS (
+  SELECT
+    source_relation,
+    updated_time AS updated_at,
+    CAST(id AS BIGINT) AS ad_set_id,
+    name AS ad_set_name,
+    CAST(account_id AS BIGINT) AS account_id,
+    CAST(campaign_id AS BIGINT) AS campaign_id,
+    start_time AS start_at,
+    end_time AS end_at,
+    bid_strategy,
+    daily_budget,
+    budget_remaining,
+    status,
+    CASE
+      WHEN id IS NULL AND updated_time IS NULL
+      THEN ROW_NUMBER() OVER (PARTITION BY source_relation ORDER BY source_relation)
+      ELSE ROW_NUMBER() OVER (PARTITION BY source_relation, id ORDER BY updated_time DESC)
+    END = 1 AS is_most_recent_record
+  FROM fields
+)
+SELECT
+  *
+FROM final"
+model.facebook_ads_source.stg_facebook_ads__creative_history_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.facebook_ads_source.stg_facebook_ads__account_history_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.facebook_ads_source.stg_facebook_ads__ad_set_history_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.facebook_ads_source.stg_facebook_ads__ad_history_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.facebook_ads_source.stg_facebook_ads__campaign_history_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"
+model.facebook_ads_source.stg_facebook_ads__basic_ad_tmp,"SELECT
+  CAST(NULL AS TEXT) AS _dbt_source_relation
+LIMIT 0"

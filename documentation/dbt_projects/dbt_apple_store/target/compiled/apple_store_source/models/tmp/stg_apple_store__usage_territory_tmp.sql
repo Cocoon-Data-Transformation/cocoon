@@ -1,0 +1,2 @@
+select * 
+from TEST.itunes_connect.usage_territory_source_type_report

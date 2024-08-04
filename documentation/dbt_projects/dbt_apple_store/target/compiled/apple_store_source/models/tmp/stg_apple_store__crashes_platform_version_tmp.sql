@@ -1,0 +1,2 @@
+select * 
+from TEST.itunes_connect.crashes_platform_version_device_report
