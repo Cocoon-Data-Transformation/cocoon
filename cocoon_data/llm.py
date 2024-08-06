@@ -1,8 +1,14 @@
-import openai
+
 import os
 import json
 import hashlib
 from collections import OrderedDict
+
+
+try:
+    import openai
+except ImportError as e:
+    raise ImportError("Failed to import openai. Please verify if the openai package is installed correctly.") from e
 
 try:
     import vertexai

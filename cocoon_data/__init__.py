@@ -9645,7 +9645,6 @@ Below are the first 2 rows of the gdf:
 {self.gdf.head(2)}"""
 
         elif hasattr(self, 'raster'):
-            value_max
             return f"""raster is rasterio.DatasetReader. It has {self.raster.count} bands, {self.raster.width} columns, and {self.raster.height} rows.
 Its nodata value is {self.raster.nodata}. Its crs is {self.raster.crs.to_string()}. Its transform is {self.raster.transform}."""
 
@@ -16450,6 +16449,12 @@ class DecideProjection(Node):
         submit_button.on_click(submit)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            if (hasattr(self, 'para') and 
+                isinstance(self.para, dict) and 
+                isinstance(self.para.get('cocoon_stage_options'), dict) and 
+                self.para['cocoon_stage_options'].get('projection') is False):
+                multi_select.value = [i for i in range(num_cols)]
+            
             submit(submit_button)
             return
         
@@ -16873,6 +16878,14 @@ The error is: {e}
             display(HBox([no_button, yes_button]))
 
             if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+                
+                if (hasattr(self, 'para') and 
+                    isinstance(self.para, dict) and 
+                    isinstance(self.para.get('cocoon_stage_options'), dict) and 
+                    self.para['cocoon_stage_options'].get('deduplication') is False):
+                    on_button_clicked(no_button)
+                    return
+
                 on_button_clicked(yes_button)  
                 return       
 
@@ -17072,6 +17085,11 @@ class DecideRegexForAll(MultipleNode):
         self.nodes = {}
 
         if database_name not in ["Snowflake", "DuckDB"]:
+            return
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('detect_regex_patterns') is False):
             return
         
         with_context = table_pipeline.get_codes(mode="WITH")
@@ -17717,6 +17735,12 @@ class DecideDMVforAll(MultipleNode):
         self.elements = []
         self.nodes = {}
         
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('detect_disguised_missing_values') is False):
+            return
+        
         idx = 0
         for col in columns:
             self.elements.append(col)
@@ -17914,6 +17938,12 @@ class DecideUnique(ListNode):
         for i in range(0, len(highly_unique_columns), 10):
             outputs.append((unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns[i:i+10]))
         
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('unique_test') is False):
+            outputs = []
+        
         if len(outputs) == 0:
             outputs.append((unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, []))
         
@@ -17926,7 +17956,7 @@ class DecideUnique(ListNode):
         if len(highly_unique_columns) == 0:
             return {"reasoning": "No single column that can be candidate key.", 
                     "continuous_columns": [],
-                    "non_continuous_columns": {}}
+                    "not_continuous_columns": {}}
         
         column_descs_str = "\n".join([column_descs[col] for col in highly_unique_columns])
 
@@ -17950,7 +17980,7 @@ But "region_id" could be the candidate key for region table.
 Return in the following format:
 ```yml
 continuous_columns: ['col1', ...]
-non_continuous_columns: 
+not_continuous_columns: 
     {highly_unique_columns[0]}: 
         reasoning: this columns means... For this table, each row is for ... {highly_unique_columns[0]} is (not) unique across rows.
         candidate_key: true/false
@@ -17967,10 +17997,10 @@ non_continuous_columns:
         checks = [
             (lambda jc: isinstance(jc, dict), "The returned JSON code is not a dictionary."),
             (lambda jc: "continuous_columns" in jc, "The 'continuous_columns' key is missing."),
-            (lambda jc: "non_continuous_columns" in jc, "The 'non_continuous_columns' key is missing."),
+            (lambda jc: "not_continuous_columns" in jc, "The 'not_continuous_columns' key is missing."),
             (lambda jc: isinstance(jc["continuous_columns"], list), "The value of 'continuous_columns' is not a list."),
-            (lambda jc: isinstance(jc["non_continuous_columns"], dict) or not jc["non_continuous_columns"], 
-     "The value of 'non_continuous_columns' is neither a dictionary nor empty."),
+            (lambda jc: isinstance(jc["not_continuous_columns"], dict) or not jc["not_continuous_columns"], 
+     "The value of 'not_continuous_columns' is neither a dictionary nor empty."),
         ]
 
         for check, error_message in checks:
@@ -17981,16 +18011,16 @@ non_continuous_columns:
     
     def merge_run_output(self, run_outputs):
         continuous_columns = []
-        non_continuous_columns = {}
+        not_continuous_columns = {}
         for run_output in run_outputs:
             continuous_columns.extend(run_output["continuous_columns"])
-            non_continuous_columns.update(run_output["non_continuous_columns"])
-        return {"continuous_columns": continuous_columns, "non_continuous_columns": non_continuous_columns}
+            not_continuous_columns.update(run_output["not_continuous_columns"])
+        return {"continuous_columns": continuous_columns, "not_continuous_columns": not_continuous_columns}
     
     def run_but_fail(self, extract_output, use_cache=True):
         unique_columns, column_descs, table_desc, sample_df_str, table_name, columns, highly_unique_columns = extract_output
         return {"continuous_columns": [],
-                "non_continuous_columns": {col: 
+                "not_continuous_columns": {col: 
                     {"reasoning": "Fail to run",
                       "candidate_key": False} for col in highly_unique_columns}}
 
@@ -18019,12 +18049,12 @@ non_continuous_columns:
         for col in highly_unique_columns:
             is_unique = (col in unique_columns)
             
-            if col not in json_code["non_continuous_columns"]:
+            if col not in json_code["not_continuous_columns"]:
                 reason = "This column contains continuous values"
                 should_unique = False
             else:       
-                reason = json_code["non_continuous_columns"][col].get("reasoning", "")
-                should_unique = json_code["non_continuous_columns"][col].get("candidate_key", False)
+                reason = json_code["not_continuous_columns"][col].get("reasoning", "")
+                should_unique = json_code["not_continuous_columns"][col].get("candidate_key", False)
             
             rows_list.append({
                 "Column": col,
@@ -19399,6 +19429,12 @@ class CleanUnusual(ListNode):
         show_progress(max_value=total, value=idx)
         
         sample_size = self.class_para.get("sample_size", self.default_sample_size)
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            'cardinality_threshold' in self.para['cocoon_stage_options']):
+            sample_size = self.para['cocoon_stage_options']['cardinality_threshold']
 
         query = create_sample_distinct_query(table_pipeline, column_name, sample_size)
         with_context = table_pipeline.get_codes(mode="WITH")
@@ -20253,6 +20289,12 @@ class TransformTypeForAll(MultipleNode):
         self.elements = []
         self.nodes = {}
         
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('transform_data_type') is False):
+            return
+        
         for idx, row in df.iterrows():
             column_name = row['Column']
             current_type = row['Current Type']
@@ -20752,6 +20794,12 @@ class DecideStringUnusualForAll(MultipleNode):
 
         self.elements = []
         self.nodes = {}
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('standardize_values') is False):
+            return
 
         idx = 0
         for col in columns:
@@ -20926,7 +20974,10 @@ class WriteStageYMLCode(Node):
             contents.append(sql_query)
 
         try:
-            if "include_html" in self.class_para and self.class_para["include_html"]:
+            if (hasattr(self, 'para') and 
+                isinstance(self.para, dict) and 
+                isinstance(self.para.get('cocoon_stage_options'), dict) and 
+                self.para['cocoon_stage_options'].get('generate_html_report') is True):
                 table_pipeline = self.para["table_pipeline"]
                 table_object = self.para["table_object"]
                 before_table_name = table_pipeline.get_source_step()
@@ -21725,6 +21776,7 @@ def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, t
                             para = workflow_para,
                             output=output)
     
+    main_workflow.add_to_leaf(SelectStageOptions(output = output))
     main_workflow.add_to_leaf(SelectTable(output=output))
     main_workflow.add_to_leaf(CreateShortTableSummary(output=output))
     main_workflow.add_to_leaf(DescribeColumnsList(output=output))
@@ -21819,6 +21871,7 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
     main_workflow.add_to_leaf(SelectSchema(output = output))
     main_workflow.add_to_leaf(DBTProjectConfig(output = output))
     main_workflow.add_to_leaf(SelectTables(output = output))
+    main_workflow.add_to_leaf(SelectStageOptions(output = output))
     main_workflow.add_to_leaf(DecidePartition(output = output))
     main_workflow.add_to_leaf(DescribePartitionForAll(output = output))
     
@@ -22059,6 +22112,12 @@ Return in the following format:
         reject_button.on_click(on_button_clicked2)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            if (hasattr(self, 'para') and 
+                isinstance(self.para, dict) and 
+                isinstance(self.para.get('cocoon_stage_options'), dict) and 
+                self.para['cocoon_stage_options'].get('rename') is False):
+                on_button_clicked2(reject_button)
+                return
             on_button_clicked(next_button)
             return
         
@@ -22570,7 +22629,7 @@ class CocoonBranchStep(Node):
         hint_html = widgets.HTML(
             value='<p style="margin-top: 10px; font-style: italic; color: #666;">'
                     'Not Responding? Some Jupyter Notebooks need an output widget. <br>'
-                    'Try <code>create_cocoon_workflow(con=con, output=widgets.Output())</code>'
+                    'Try <code>query_widget, cocoon_workflow = create_cocoon_workflow(con=con, output=widgets.Output())</code>'
                     '</p>'
         )
         
@@ -22639,6 +22698,7 @@ def create_cocoon_data_format_workflow(con, query_widget=None, viewer=False, dbt
     main_workflow.add_to_leaf(SelectSchema(output = output))
     main_workflow.add_to_leaf(DBTProjectConfig(output = output))
     main_workflow.add_to_leaf(SelectTables(output = output))
+    main_workflow.add_to_leaf(SelectStageOptions(output = output))
     main_workflow.add_to_leaf(StageForAllAndEnd(output = output))
 
     return query_widget, main_workflow
@@ -23743,7 +23803,13 @@ class DecideStringCategoricalForAll(MultipleNode):
         
         self.elements = []
         self.nodes = {}
-
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('category_test') is False):
+            return
+        
         idx = 0
         for col in columns:
             self.elements.append(col)
@@ -26696,12 +26762,6 @@ class StageForAll(MultipleNode):
 
         column_order = ["table"] + list(all_tags.keys())
         df = df[column_order]
-
-        display(HTML("💯 All the tables are staged! Here are what we have performed ..."))
-        display(df)
-        display(HTML("😎 Next, we will integrate the tables ... <br> ⚠️ You need to materialize the tables before proceeding."))
-
-        display(widgets.HBox([view_button, table_button]))
         
         submit_button = widgets.Button(description="Next", button_style='success', icon='check')
         
@@ -26754,8 +26814,20 @@ class StageForAll(MultipleNode):
                             return
                 
                 callback({})
+                
         
         submit_button.on_click(on_submit_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_materialize_click(view_button, "WITH_VIEW")
+            on_submit_button_click(submit_button)
+            return
+        
+        display(HTML("💯 All the tables are staged! Here are what we have performed ..."))
+        display(df)
+        display(HTML("😎 Next, we will integrate the tables ... <br> ⚠️ You need to materialize the tables before proceeding."))
+
+        display(widgets.HBox([view_button, table_button]))
         display(submit_button)
         
 class StageForAllAndEnd(StageForAll):
@@ -27099,6 +27171,10 @@ class DisplayJoinGraph(Node):
         
         next_button.on_click(on_button_click)
         
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
         display(HTML("🎉 Next, we will model your data warehouses!"))
         display(next_button)
 
@@ -27384,7 +27460,6 @@ Return in the following format:
         editable_columns = [False, False, True, True]
         reset = True
         grid = create_dataframe_grid(df, editable_columns, reset=reset)
-        display(grid)
         
         next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
         
@@ -27403,6 +27478,12 @@ Return in the following format:
                 callback(document)
             
         next_button.on_click(on_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+        display(grid)
         display(next_button)
         
 
@@ -27683,6 +27764,11 @@ class BuildERStory(Node):
                 callback({})
             
         next_button.on_click(on_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+
         display(next_button)
 
 
@@ -28455,8 +28541,7 @@ class DecideSCDForAll(MultipleNode):
                                     table_name=list(data_project.table_pipelines.keys()),
                                     logical_to_physical=data_project.table_pipelines)
         
-        display(HTML("🤓 We have identified slowly changing dimensions. <br> 😎 Slowly changing dimensions are hard to model, so we will get the latest snapshot"))
-        
+
         data = {
             'Table': [],
             'Is SCD': [],
@@ -28490,7 +28575,7 @@ class DecideSCDForAll(MultipleNode):
         }
         
         grid = create_dataframe_grid(df, editable_columns, reset=reset,  editable_list=editable_list)
-        display(grid)
+        
         
         
         next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
@@ -28503,7 +28588,13 @@ class DecideSCDForAll(MultipleNode):
                 callback(document)
 
         next_button.on_click(on_button_click)
-                
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+        display(HTML("🤓 We have identified slowly changing dimensions. <br> 😎 Slowly changing dimensions are hard to model, so we will get the latest snapshot"))  
+        display(grid)
         display(next_button)
         
 class DecideKeysForAll(MultipleNode):
@@ -28578,6 +28669,9 @@ class DecideKeysForAll(MultipleNode):
 
         next_button.on_click(on_button_click)
         
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
         
         display(HTML("🤓 We have identified keys for the tables"))
         display(grid)
@@ -28872,8 +28966,6 @@ fks:
         
         grid = create_dataframe_grid(df, editable_columns, reset=reset, editable_list=editable_list)
         
-        display(grid)
-        
         next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
         
         def on_button_click(b):
@@ -28895,6 +28987,12 @@ fks:
                 callback(document)
         
         next_button.on_click(on_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+        display(grid)
         display(next_button)
         
 
@@ -29859,6 +29957,13 @@ class DecideVariantTypes(Node):
             callback({})
             return
         
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('parse_variant_types') is False):
+            callback({})
+            return
+        
         schema = table_pipeline.get_schema(con)
         columns = list(schema.keys())
         variant_columns = []
@@ -30060,6 +30165,10 @@ clusters:
                 callback(document)
 
         next_button.on_click(on_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
         
         display(HTML("🤓 We have clustered tables based on shared primary keys. Please review and refine the clusters:"))
         display(grid)
@@ -30268,9 +30377,6 @@ renamed_relations:
         
         grid = create_dataframe_grid(original_df, editable_columns, reset=reset, lists=lists)
         
-        display(HTML("🤓 We have described the relations. Please review and make any necessary adjustments:"))
-        display(grid)
-        
         next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
         
         def on_button_click(b):
@@ -30290,6 +30396,13 @@ renamed_relations:
                 callback(document)
         
         next_button.on_click(on_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+        display(HTML("🤓 We have described the relations. Please review and make any necessary adjustments:"))
+        display(grid)
         display(next_button)
         
 def get_tags(input_string):
@@ -31680,7 +31793,6 @@ The node is {self.name}
 The error is: {e}
 pl_table: {pk_table}, pl_column: {pk_column}, fk_table: {fk_table}, fk_column: {fk_column}
 """)
-                    
 
         integrity_df = pd.DataFrame(integrity_data)
 
@@ -31688,16 +31800,12 @@ pl_table: {pk_table}, pl_column: {pk_column}, fk_table: {fk_table}, fk_column: {
             callback(integrity_df.to_json(orient="split"))
             return
 
-        print("⚠️ Referential Integrity Violations Detected, Please Explain:")
         dropdown = create_explore_button(query_widget, 
                             table_name=list(data_project.table_pipelines.keys()),
                             logical_to_physical=data_project.table_pipelines)
-
         
         editable_columns = [False, False, False, True]
         grid = create_dataframe_grid(integrity_df, editable_columns, reset=True)
-        display(grid)
-
 
         next_button = widgets.Button(
             description='Submit',
@@ -31722,11 +31830,14 @@ pl_table: {pk_table}, pl_column: {pk_column}, fk_table: {fk_table}, fk_column: {
                 callback(document)
 
         next_button.on_click(on_button_clicked)
-        display(next_button)
 
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_clicked(next_button)
             return
+        
+        display(HTML("⚠️ Referential Integrity Violations Detected, Please Explain:"))
+        display(grid)
+        display(next_button)
         
 class ChatUI:
     def __init__(self):
@@ -32298,6 +32409,12 @@ Return in the following format:
         reject_button.on_click(on_button_clicked2)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            if (hasattr(self, 'para') and 
+                isinstance(self.para, dict) and 
+                isinstance(self.para.get('cocoon_stage_options'), dict) and 
+                self.para['cocoon_stage_options'].get('rename') is False):
+                on_button_clicked2(reject_button)
+                return
             on_button_clicked(next_button)
             return
         
@@ -32635,20 +32752,26 @@ class DecidePartition(Node):
 
         buttons = [reject_button, endorse_button]
         
+        def on_express(b):
+            clear_output(wait=True)
+            updated_data_project = read_partition_ymls_and_update_project(data_project, dbt_directory)
+            self.para["data_project"] = updated_data_project
+            print("✅ Express load completed. Partitions have been updated.")
+            callback([])
+        
         if dbt_directory and os.path.exists(os.path.join(dbt_directory, "partition")):
             print("🚀 Found existing partitions. You can express load them.")
             express_button = widgets.Button(description="Express Load", button_style='info', icon='fast-forward')
-            
-            def on_express(b):
-                clear_output(wait=True)
-                updated_data_project = read_partition_ymls_and_update_project(data_project, dbt_directory)
-                self.para["data_project"] = updated_data_project
-                print("✅ Express load completed. Partitions have been updated.")
-                callback([])
-            
             express_button.on_click(on_express)
             buttons.append(express_button)
             
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if len(buttons) == 2:
+                on_endorse(None)
+            elif len(buttons) == 3:
+                on_express(None)
+            return
             
         button_box = widgets.HBox(buttons)
         display(button_box)
@@ -32847,7 +32970,6 @@ groups:
         }
         
         grid = create_dataframe_grid(df, editable_columns, reset=reset, editable_list=editable_list)
-        display(grid)
         
         next_button = widgets.Button(description="Next Step", button_style='success', icon='check')
         
@@ -32860,6 +32982,12 @@ groups:
                 callback(document)
             
         next_button.on_click(on_button_click)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+            return
+        
+        display(grid)
         display(next_button)
         
 class ReorderRelationToStory(Node):
@@ -34604,3 +34732,160 @@ def build_lineage_graph(dbt_path, manifest_path=None, catalog_path=None):
             edges.append((node_to_index[dep], node_to_index[node]))
     
     return nodes_list, edges, sql_content_mapping, column_mapping
+
+class SelectStageOptions(Node):
+    default_name = 'Select Stage Options'
+    default_description = 'This step allows you to select the stage options.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        style = HTML("""
+        <style>
+        .widget-checkbox { margin-right: 10px; }
+        .option-label { font-size: 14px; }
+        em { 
+            font-size: 12px; 
+            color: #666; 
+            display: block;
+            margin-top: -5px;
+        }
+        /* Base styles for all code blocks */
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* Styles for multi-line code blocks */
+        pre.command-line {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #333;
+            border: 1px solid #e1e4e8;
+        }
+
+        pre.command-line code {
+            background-color: transparent;
+            padding: 0;
+            border: none;
+        }
+        </style>
+        """)
+        display(style)
+
+        def create_html_checkboxes(html_labels, disabled=False):
+            labels_html = [widgets.HTML(value=label) for label in html_labels]
+            checkbox_style = {'description_width': '0px'}
+            checkboxes = [widgets.Checkbox(value=True, description='', disabled=disabled, style=checkbox_style, layout={'width': 'initial'}) for _ in html_labels]
+            checkboxes_widget = widgets.VBox([widgets.HBox([cb, label], layout=widgets.Layout(align_items='center', margin='0')) for cb, label in zip(checkboxes, labels_html)])
+            return checkboxes_widget, checkboxes
+
+        options = [
+            '<span class="option-label"><div><strong>Projection</strong></div><div><em>Cocoon projects out some columns like fivetran sync time, or index</em></div></span>',
+            '<span class="option-label"><div><strong>Column rename</strong></div><div><em>Cocoon renames columns to be descriptive</em></div></span>',
+            '<span class="option-label"><div><strong>Deduplicate</strong></div><div><em>Cocoon removes duplicated rows</em></div></span>',
+            '<span class="option-label"><div><strong>Standardize values</strong></div><div><em>Cocoon standardizes inconsistent values and fix typos</em></div></span>',
+            '<span class="option-label"><div><strong>Detect disguised missing values</strong></div><div><em>Cocoon detects and fixes missing values not already as NULL</em></div></span>',
+            '<span class="option-label"><div><strong>Detect Regex Patterns</strong></div><div><em>Cocoon detects regular patterns for string</em></div></span>',
+            '<span class="option-label"><div><strong>Transform data type</strong></div><div><em>Cocoon casts column with wrong data type</em></div></span>',
+            '<span class="option-label"><div><strong>Parse Variant Types (Snowflake)</strong></div><div><em>Cocoon identifies the data type for Variant type</em></div></span>',
+            '<span class="option-label"><div><strong>Unique test</strong></div><div><em>Cocoon writes tests for columns shall be unique</em></div></span>',
+            '<span class="option-label"><div><strong>Accepted Values test</strong></div><div><em>Cocoon writes tests for columns shall have fixed accepted values</em></div></span>',
+            '<span class="option-label"><div><strong>Generate HTML report</strong></div><div><em>Cocoon generates HTML report to help visualize the results</em></div></span>'
+        ]
+
+        checkboxes_widget, checkboxes = create_html_checkboxes(options)
+
+        checkboxes[-1].value = False
+
+        cardinality_threshold = widgets.IntText(
+            value=300,
+            description='',
+            disabled=False,
+            style={'description_width': 'auto'},
+        )
+
+        cardinality_description = widgets.HTML(
+            value='<span class="option-label"><div><strong>Cardinality Threshold</strong></div><div><em>(If standardize: Cocoon inspects each value for columns whose cardinality is below threshold)</em></div></span>'
+        )
+
+        cardinality_widget = widgets.VBox([
+            cardinality_threshold,
+            cardinality_description
+        ], layout=widgets.Layout(margin='0 0 0 45px'))
+
+        submit_button = widgets.Button(
+            description='Submit',
+            icon='check',
+            button_style='success'
+        )
+
+        export_button = widgets.Button(
+            description='Export',
+            icon='download',
+            button_style='info'
+        )
+
+        output = widgets.Output()
+        
+        if hasattr(self, 'para') and 'cocoon_stage_options' in self.para:
+            options = self.para['cocoon_stage_options']
+            option_names = ['projection', 'rename', 'deduplication', 'standardize_values', 'detect_disguised_missing_values',
+                            'detect_regex_patterns', 'transform_data_type', 'parse_variant_types',
+                            'unique_test', 'category_test', 'generate_html_report']
+            
+            for name, checkbox in zip(option_names, checkboxes):
+                if name in options:
+                    checkbox.value = options[name]
+            
+            if 'cardinality_threshold' in options:
+                cardinality_threshold.value = options['cardinality_threshold']
+
+        def on_submit(b):
+            with self.output_context():
+                selected_options = get_selected_options()
+                self.para["cocoon_stage_options"] = selected_options
+                callback(selected_options)
+
+        def on_export(b):
+            with output:
+                output.clear_output()
+                selected_options = get_selected_options()
+                code_snippet = f"""para = {{"cocoon_stage_options": {json.dumps(selected_options, indent=2)}}}
+create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
+                display(HTML(f'To reuse the options in the future run:<pre class="command-line"><code>{code_snippet}</code></pre>'))
+                
+        def get_selected_options():
+            option_names = ['projection', 'rename', 'deduplication', 'standardize_values', 'detect_disguised_missing_values',
+                            'detect_regex_patterns', 'transform_data_type', 'parse_variant_types',
+                            'unique_test', 'category_test', 'generate_html_report']
+            
+            selected_options = {name: checkbox.value for name, checkbox in zip(option_names, checkboxes)}
+            
+            if selected_options['standardize_values']:
+                selected_options['cardinality_threshold'] = cardinality_threshold.value
+            
+            return selected_options
+
+        submit_button.on_click(on_submit)
+        export_button.on_click(on_export)
+
+        widget = widgets.VBox([
+            widgets.HTML(value='<h2>⚙️ Data Cleaning Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em>'),
+            checkboxes_widget,
+            cardinality_widget,
+            widgets.HBox([export_button, submit_button]),
+            output
+        ])
+        
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_submit(submit_button)
+            return
+
+        display(style)
+        display(widget)

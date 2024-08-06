@@ -1267,7 +1267,7 @@ def generate_workflow_image_networkx(nodes, edges, edge_labels=None, highlight_n
 
 
 
-def create_schema_graph(nodes, edges, highlighted_node=None):
+def create_schema_graph(nodes, edges, highlighted_node=None, highlighted_edge_indices=None):
     dot = Digraph(format='svg')
     dot.attr(rankdir='LR')
 
@@ -1296,6 +1296,10 @@ def create_schema_graph(nodes, edges, highlighted_node=None):
         'color': '#4fc3f7'
     }
 
+    highlighted_edge_style = {
+        'color': '#4fc3f7',
+        'penwidth': '1.0'
+    }
 
     dot.attr('node', **node_style)
     dot.attr('edge', **edge_style)
@@ -1317,20 +1321,25 @@ def create_schema_graph(nodes, edges, highlighted_node=None):
         node_html += '</TABLE>>'
         dot.node(table_name, node_html)
 
-    for parent_table, parent_column, child_table, child_column in edges:
+    for idx, (parent_table, parent_column, child_table, child_column) in enumerate(edges):
         parent_port = f"{parent_table}:f{nodes[parent_table].index(parent_column)}"
         if child_column is None:
             child_port = f"{child_table}:header"
         else:
             child_port = f"{child_table}:f{nodes[child_table].index(child_column)}"
-        dot.edge(parent_port, child_port)
+        
+        if highlighted_edge_indices and idx in highlighted_edge_indices:
+            dot.edge(parent_port, child_port, **highlighted_edge_style)
+        else:
+            dot.edge(parent_port, child_port)
 
     image = dot.pipe()
     return image
 
-def generate_schema_graph_graphviz(nodes, edges, height=None, format="svg", highlighted_node=None):
-    image_data = create_schema_graph(nodes, edges, highlighted_node=highlighted_node)
+def generate_schema_graph_graphviz(nodes, edges, height=None, format="svg", highlighted_node=None, highlighted_edge_indices=None):
+    image_data = create_schema_graph(nodes, edges, highlighted_node=highlighted_node, highlighted_edge_indices=highlighted_edge_indices)
     return wrap_image_in_html(image_data, height=height, format=format)
+
 
 
 
