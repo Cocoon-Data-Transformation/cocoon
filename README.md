@@ -15,7 +15,7 @@
 <br>
 
 - 📚 [Learn more about features](https://cocoon-data-transformation.github.io/page/)
--  💪 Need support? Email: zh2408@columbia.edu
+-  💪 Need support? Create an issue or email: zh2408@columbia.edu
 
 
 ## Get Started
