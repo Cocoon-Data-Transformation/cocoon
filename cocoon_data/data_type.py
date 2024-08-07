@@ -241,13 +241,13 @@ def get_reverse_type(data_type, database):
     data_type = data_type.split('(')[0].upper().strip()
     
     if database not in data_types_database:
-        raise ValueError(f"Database '{database}' not found in data_types_database")
+        return data_type
 
     for key, value in data_types_database[database].items():
         if data_type.upper() in value:
             return key
-
-    raise ValueError(f"Data type '{data_type}' not found in database '{database}'")
+        
+    return data_type
 
 reverse_data_types = {}
 for key, value in data_types.items():
