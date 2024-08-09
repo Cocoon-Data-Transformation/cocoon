@@ -1,3 +1,5 @@
+from .config import *
+
 data_types ={
     "INT": ["INT", "INTEGER", "BIGINT", "SMALLINT", "TINYINT", "BYTEINT"],
     "DECIMAL": ["DECIMAL", "NUMERIC", "DOUBLE", "FLOAT", "FIXED", "REAL", "DOUBLE PRECISION"],
@@ -62,6 +64,21 @@ data_types_database = {
         "JSON": ["JSON", "TABLE"],
         "HIERARCHYID": ["HIERARCHYID"],
         "SQL_VARIANT": ["SQL_VARIANT"]
+    },
+    "BigQuery": {
+        "INT": ["INT64", "INTEGER", "BIGINT", "SMALLINT", "TINYINT"],
+        "FLOAT": ["FLOAT64", "NUMERIC", "DECIMAL", "BIGNUMERIC"],
+        "BOOLEAN": ["BOOL", "BOOLEAN"],
+        "STRING": ["STRING"],
+        "BYTES": ["BYTES"],
+        "DATE": ["DATE"],
+        "TIME": ["TIME"],
+        "DATETIME": ["DATETIME"],
+        "TIMESTAMP": ["TIMESTAMP"],
+        "STRUCT": ["STRUCT", "RECORD"],
+        "ARRAY": ["ARRAY"],
+        "GEOGRAPHY": ["GEOGRAPHY"],
+        "JSON": ["JSON"],
     }
 }
 
@@ -241,13 +258,19 @@ def get_reverse_type(data_type, database):
     data_type = data_type.split('(')[0].upper().strip()
     
     if database not in data_types_database:
+        if cocoon_main_setting['DEBUG_MODE']:
+            raise ValueError(f"Database '{database}' not found in data_types_database")
         return data_type
 
     for key, value in data_types_database[database].items():
         if data_type.upper() in value:
             return key
         
+    if cocoon_main_setting['DEBUG_MODE']:
+            raise ValueError(f"Data type '{data_type}' not found in database '{database}'")
+    
     return data_type
+
 
 reverse_data_types = {}
 for key, value in data_types.items():

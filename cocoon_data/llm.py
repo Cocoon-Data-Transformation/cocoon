@@ -119,7 +119,7 @@ class LRUCache:
             loaded_cache = json.load(file)
             self.cache = OrderedDict(loaded_cache)
 
-lru_cache = LRUCache(5000)
+lru_cache = LRUCache(20000)
 
 
 

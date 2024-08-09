@@ -14,10 +14,16 @@ try:
 except ImportError:
     pass
 
+try:
+    from google.cloud import bigquery
+except ImportError:
+    pass
+
 import pandas as pd
 import json
 import sqlglot
 import re
+from .config import *
 
 def is_duckdb_connection(con):
     try:
@@ -39,6 +45,13 @@ def is_pyodbc_connection(con):
         return isinstance(con, pyodbc.Connection)
     except ImportError:
         return False
+
+def is_bigquery_connection(con):
+    try:
+        from google.cloud import bigquery
+        return isinstance(con, bigquery.Client)
+    except ImportError:
+        return False
     
 def get_database_name(con):
     if is_duckdb_connection(con):
@@ -47,6 +60,8 @@ def get_database_name(con):
         return "Snowflake"
     elif is_pyodbc_connection(con):
         return "SQL Server"
+    elif is_bigquery_connection(con):
+        return "BigQuery"
     elif isinstance(con, pd.DataFrame):
         raise ValueError("Connector is a pandas DataFrame. Please provide the database connection (e.g., a DuckDB connection that stores this pandas DataFrame as a database)")
     else:
@@ -54,6 +69,18 @@ def get_database_name(con):
 
 cocoon_query_logs = []
 
+
+def transpile_query(sql_query, read, write):
+    try:
+        sql_query = sqlglot.transpile(sql_query, read=read, write=write, comments=False)[0]
+    except Exception as e:
+        if cocoon_main_setting['DEBUG_MODE']:
+            raise ValueError(f"Error transpiling query:\n{sql_query}\n\nOriginal error: {str(e)}")
+        else:        
+            print(f"Error transpiling query:\n{sql_query}\n\nOriginal error: {str(e)}") 
+    return sql_query
+        
+        
 def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True, log=False):
     if log:
         cocoon_query_logs.append(sql_query)
@@ -65,6 +92,10 @@ def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True
             context_queries.append(f"SET CURRENT_SCHEMA = '{schema}';")
         
         full_query = "\n".join(context_queries + [sql_query])
+        
+        if transpile:
+            sql_query = transpile_query(sql_query, read="duckdb", write="duckdb")
+                
         try:
             return con.execute(full_query).df()
         except Exception as e:
@@ -77,7 +108,9 @@ def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True
                 cursor.execute(f'USE DATABASE "{database}"')
             if schema:
                 cursor.execute(f'USE SCHEMA "{schema}"')
-            
+                
+            if transpile:
+                sql_query = transpile_query(sql_query, read="snowflake", write="snowflake")
             try:
                 cursor.execute(sql_query)
                 if cursor.description:
@@ -100,10 +133,7 @@ def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True
                 cursor.execute(f'SET SCHEMA {schema}')
             
             if transpile:
-                try:
-                    sql_query = sqlglot.transpile(sql_query, read="tsql", write="tsql", comments=False)[0]
-                except Exception as e:
-                    print(f"Error transpiling query:\n{sql_query}\n\nOriginal error: {str(e)}") 
+                sql_query = transpile_query(sql_query, read="tsql", write="tsql")
             try:
                 cursor.execute(sql_query)
                 if cursor.description:
@@ -118,6 +148,21 @@ def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True
                 raise type(e)(f"Error executing query:\n{sql_query}\n\nOriginal error: {str(e)}") from e
         finally:
             cursor.close()
+            
+    elif is_bigquery_connection(con):
+        job_config = bigquery.QueryJobConfig()
+        
+        if database:
+            job_config.default_dataset = f"{database}.{schema}" if schema else database
+        
+        if transpile:
+            sql_query = transpile_query(sql_query, read="bigquery", write="bigquery")
+        
+        try:
+            query_job = con.query(sql_query, job_config=job_config)
+            return query_job.to_dataframe()
+        except Exception as e:
+            raise type(e)(f"Error executing BigQuery query:\n{sql_query}\n\nOriginal error: {str(e)}") from e
     else:
         raise ValueError(f"Connection type {type(con)} not supported")
 
@@ -181,9 +226,30 @@ def get_schema_snowflake(con):
         
     return schema_tables
 
+
+def get_schema_bigquery(con):
+    tables = {}
+    
+    datasets = list(con.list_datasets())
+    
+    for dataset in datasets:
+        tables_list = list(con.list_tables(dataset.dataset_id))
+        
+        for table in tables_list:
+            table_ref = con.dataset(dataset.dataset_id).table(table.table_id)
+            
+            table_schema = con.get_table(table_ref).schema
+            
+            column_names = [field.name for field in table_schema]
+            
+            full_table_name = f"{dataset.dataset_id}.{table.table_id}"
+            tables[full_table_name] = column_names
+    
+    return tables
+
 def get_schema(con):
     if is_duckdb_connection(con):
-        schema_df = run_sql_return_df(con, "DESCRIBE;")
+        schema_df = run_sql_return_df(con, "DESCRIBE;", transpile=False)
 
         tables = {}
         for _, row in schema_df.iterrows():
@@ -201,17 +267,26 @@ def get_schema(con):
         tables = get_schema_sqlserver(con)
         return tables
     
+    elif is_bigquery_connection(con):
+        return get_schema_bigquery(con)
+    
     else:
         return {}
     
 def get_query_schema(con, query, transpile=True):
 
     if is_duckdb_connection(con):
+        if transpile:
+            query = transpile_query(query, read="duckdb", write="duckdb")
         describe_query = f"DESCRIBE ({query})"
-        schema_df = run_sql_return_df(con, describe_query)
+        schema_df = run_sql_return_df(con, describe_query, transpile=False)
         return dict(zip(schema_df['column_name'], schema_df['column_type']))
     
     elif is_snowflake_connection(con):
+        
+        if transpile:
+            query = transpile_query(query, read="snowflake", write="snowflake")
+            
         cur = con.cursor()
 
         try:
@@ -221,7 +296,7 @@ def get_query_schema(con, query, transpile=True):
 
         query_id = cur.sfqid
 
-        df = run_sql_return_df(con, f"DESCRIBE RESULT '{query_id}'; ")
+        df = run_sql_return_df(con, f"DESCRIBE RESULT '{query_id}'; ", transpile=False)
 
         cur.close()
 
@@ -229,17 +304,14 @@ def get_query_schema(con, query, transpile=True):
     
     elif is_pyodbc_connection(con):
         if transpile:
-            try:
-                query = sqlglot.transpile(query, read="tsql", write="tsql", comments=False)[0]
-            except Exception as e:
-                print(f"Error transpiling query:\n{query}\n\nOriginal error: {str(e)}") 
+            query = transpile_query(query, read="tsql", write="tsql")
 
         escaped_query = query.replace("'", "''")
 
         describe_query = f"EXEC sp_describe_first_result_set N'{escaped_query}'"
 
         try:
-            df = pd.read_sql(describe_query, con)
+            df = pd.read_sql(describe_query, con, transpile=False)
             df = df[df['is_hidden'] == False][['name', 'system_type_name']]
 
             return dict(zip(df['name'], df['system_type_name']))
@@ -247,25 +319,45 @@ def get_query_schema(con, query, transpile=True):
         except pyodbc.Error as e:
             raise ValueError(f"Error executing query:\n{query}\n\nOriginal error: {str(e)}")
     
+    elif is_bigquery_connection(con):
+        if transpile:
+            query = transpile_query(query, read="bigquery", write="bigquery")
+        
+        job_config = bigquery.QueryJobConfig()
+        job_config.dry_run = True
+        job_config.use_query_cache = False
+
+        query_job = con.query(query, job_config=job_config)
+
+        schema = query_job.schema
+
+        schema_dict = {}
+        for field in schema:
+            bq_type = field.field_type
+            schema_dict[field.name] = bq_type
+
+        return schema_dict
+    
     else:
         return {}
 
 
 def get_table_schema(conn, table_name, schema=None, database=None):
     raw_table_name = table_name
+    
     if schema and database:
         table_name = f'{enclose_table_name(database)}.{enclose_table_name(schema)}.{enclose_table_name(table_name)}'
     else:
         table_name = enclose_table_name(table_name)
     if isinstance(conn, duckdb.DuckDBPyConnection):
         describe_query = f"DESCRIBE {table_name}"
-        schema_df = run_sql_return_df(conn, describe_query)
+        schema_df = run_sql_return_df(conn, describe_query, transpile=False)
         return dict(zip(schema_df['column_name'], schema_df['column_type']))
 
     elif isinstance(conn, snowflake.connector.connection.SnowflakeConnection):
         query = f'SHOW COLUMNS IN TABLE {table_name}'
 
-        df = run_sql_return_df(conn, query)
+        df = run_sql_return_df(conn, query, transpile=False)
         df = df[["table_name", "column_name", "data_type"]]
         def determine_data_type(x):
             data = json.loads(x)
@@ -279,6 +371,23 @@ def get_table_schema(conn, table_name, schema=None, database=None):
         schema = {}
         for _, row in df.iterrows():
             schema[row['column_name']] = row['simple_data_type']
+
+        return schema
+
+    elif isinstance(conn, bigquery.Client):
+
+        project_id = database if database else conn.project
+
+        if schema:
+            table_id = f"{project_id}.{schema}.{raw_table_name}"
+        else:
+            table_id = f"{project_id}.{raw_table_name}"
+
+        table = conn.get_table(table_id)
+
+        schema = {}
+        for field in table.schema:
+            schema[field.name] = field.field_type
 
         return schema
 
@@ -305,21 +414,40 @@ def get_table_schema(conn, table_name, schema=None, database=None):
 
         cursor.close()
         return schema
+    
+    else:
+        if cocoon_main_setting['DEBUG_MODE']:
+            raise ValueError("Unsupported connection type")
 
 def get_table_names(conn):
     if isinstance(conn, duckdb.DuckDBPyConnection):
         query = "SHOW TABLES"
-        df = run_sql_return_df(conn, query)
+        df = run_sql_return_df(conn, query, transpile=False)
         df = df[['name']]
         table_names = df['name'].tolist()
         return table_names
 
     elif isinstance(conn, snowflake.connector.connection.SnowflakeConnection):
         query = "SHOW TABLES"
-        df = run_sql_return_df(conn, query)
+        df = run_sql_return_df(conn, query, transpile=False)
         df = df[['name']]
         table_names = df['name'].tolist()
         
+        return table_names
+    
+    elif isinstance(conn, bigquery.Client):
+        table_names = []
+
+        datasets = list(conn.list_datasets())
+
+        for dataset in datasets:
+            dataset_id = dataset.dataset_id
+            
+            tables = list(conn.list_tables(dataset_id))
+            
+            for table in tables:
+                table_names.append(f"{dataset_id}.{table.table_id}")
+
         return table_names
     
     elif isinstance(conn, pyodbc.Connection):
@@ -339,6 +467,8 @@ def get_table_names(conn):
         return table_names
         
     else:
+        if cocoon_main_setting['DEBUG_MODE']:
+            raise ValueError("Unsupported connection type")
         return []
     
 
@@ -500,6 +630,8 @@ def create_regex_match_clause(con, column_name, regex):
     elif is_pyodbc_connection(con):
         like_pattern = regex_to_like_pattern(regex)
         return f'"{column_name}" LIKE \'{like_pattern}\''
+    elif isinstance(con, bigquery.Client):
+        return f'REGEXP_CONTAINS({column_name}, r\'{regex}\')'
     else:
         raise ValueError(f"Connection type {type(con)} not supported")
 
@@ -639,28 +771,28 @@ def get_default_duckdb_database_and_schema(con):
     return default_catalog, default_schema
 
 def list_snowflake_databases(con):
-    df = run_sql_return_df(con, "SHOW DATABASES")
+    df = run_sql_return_df(con, "SHOW DATABASES", transpile=False)
     return df['name'].tolist()
 
 
 def list_snowflake_schemas(con, database_name):
     query = f'SHOW SCHEMAS IN DATABASE "{database_name}"'
-    df = run_sql_return_df(con, query)
+    df = run_sql_return_df(con, query, transpile=False)
     return df['name'].tolist()
 
 def list_snowflake_tables(con, database_name, schema):
     query = f'SHOW TABLES IN "{database_name}"."{schema}"'
-    df = run_sql_return_df(con, query)
+    df = run_sql_return_df(con, query, transpile=False)
     return df['name'].tolist()
 
 def list_snowflake_views(con, database_name, schema):
     query = f'SHOW VIEWS IN "{database_name}"."{schema}"'
-    df = run_sql_return_df(con, query)
+    df = run_sql_return_df(con, query, transpile=False)
     return df['name'].tolist()
 
 def get_default_snowflake_database_and_schema(con):
     query = "SELECT CURRENT_DATABASE(), CURRENT_SCHEMA()"
-    df = run_sql_return_df(con, query)
+    df = run_sql_return_df(con, query, transpile=False)
     
     if df.empty:
         return None, None
@@ -669,6 +801,34 @@ def get_default_snowflake_database_and_schema(con):
     default_schema = df.iloc[0, 1]
     
     return default_database, default_schema
+
+def list_bigquery_projects(con):
+    return [con.project]
+
+def list_bigquery_datasets(con, project_id):
+    datasets = list(con.list_datasets(project=project_id))
+    return [dataset.dataset_id for dataset in datasets]
+
+def list_bigquery_tables(con, project_id, dataset_id):
+    dataset_ref = con.dataset(dataset_id, project=project_id)
+    tables = list(con.list_tables(dataset_ref))
+    return [table.table_id for table in tables if table.table_type == 'TABLE']
+
+def list_bigquery_views(con, project_id, dataset_id):
+    dataset_ref = con.dataset(dataset_id, project=project_id)
+    tables = list(con.list_tables(dataset_ref))
+    return [table.table_id for table in tables if table.table_type == 'VIEW']
+
+def get_default_bigquery_project_and_dataset(con):
+    default_project = con.project
+
+    all_datasets = list(con.list_datasets())
+    if all_datasets:
+        default_dataset = all_datasets[0].dataset_id
+    else:
+        default_dataset = None
+
+    return default_project, default_dataset
 
 def list_sqlserver_databases(con):
     query = "SELECT name FROM sys.databases"
@@ -718,6 +878,8 @@ def list_databases(con):
         return list_duckdb_databases(con)
     elif is_snowflake_connection(con):
         return list_snowflake_databases(con)
+    elif is_bigquery_connection(con):
+        return list_bigquery_projects(con)
     elif is_pyodbc_connection(con):
         return list_sqlserver_databases(con)
     else:
@@ -728,6 +890,8 @@ def list_schemas(con, database):
         return list_duckdb_schemas(con, database)
     elif is_snowflake_connection(con):
         return list_snowflake_schemas(con, database)
+    elif is_bigquery_connection(con):
+        return list_bigquery_datasets(con, database)
     elif is_pyodbc_connection(con):
         return list_sqlserver_schemas(con, database)
     else:
@@ -738,6 +902,8 @@ def list_tables(con, schema, database):
         return list_duckdb_tables(con, schema, database)
     elif is_snowflake_connection(con):
         return list_snowflake_tables(con, database, schema)
+    elif is_bigquery_connection(con):
+        return list_bigquery_tables(con, database, schema)
     elif is_pyodbc_connection(con):
         return list_sqlserver_tables(con, schema, database)
     else:
@@ -748,6 +914,8 @@ def list_views(con, schema, database):
         return list_duckdb_views(con, schema, database)
     elif is_snowflake_connection(con):
         return list_snowflake_views(con, database, schema)
+    elif is_bigquery_connection(con):
+        return list_bigquery_views(con, database, schema)
     elif is_pyodbc_connection(con):
         return list_sqlserver_views(con, schema, database)
     else:
@@ -758,6 +926,8 @@ def get_default_database_and_schema(con):
         return get_default_duckdb_database_and_schema(con)
     elif is_snowflake_connection(con):
         return get_default_snowflake_database_and_schema(con)
+    elif is_bigquery_connection(con):
+        return get_default_bigquery_project_and_dataset(con)
     elif is_pyodbc_connection(con):
         return get_default_sqlserver_database_and_schema(con)
     else:
@@ -768,17 +938,21 @@ def create_database(con, database_name):
         raise NotImplementedError("DuckDB does not support creating separate databases")
     elif is_snowflake_connection(con):
         query = f'CREATE DATABASE IF NOT EXISTS "{database_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+    elif is_bigquery_connection(con):
+        raise NotImplementedError("BigQuery does not support creating separate projects")
     elif is_pyodbc_connection(con):
         query = f"IF NOT EXISTS (SELECT name FROM master.dbo.sysdatabases WHERE name = N'{database_name}') CREATE DATABASE [{database_name}]"
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
 
 def remove_database(con, database_name):
     if is_duckdb_connection(con):
         raise NotImplementedError("DuckDB does not support removing separate databases")
     elif is_snowflake_connection(con):
         query = f'DROP DATABASE IF EXISTS "{database_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+    elif is_bigquery_connection(con):
+        raise NotImplementedError("BigQuery does not support removing separate projects")
     elif is_pyodbc_connection(con):
         query = f"""
         IF EXISTS (SELECT name FROM master.dbo.sysdatabases WHERE name = N'{database_name}')
@@ -787,18 +961,37 @@ def remove_database(con, database_name):
             DROP DATABASE [{database_name}];
         END
         """
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
 
 def create_schema(con, schema_name, database_name=None):
     if is_duckdb_connection(con):
         query = f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
     elif is_snowflake_connection(con):
         if database_name:
             query = f'CREATE SCHEMA IF NOT EXISTS "{database_name}"."{schema_name}"'
         else:
             query = f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+        
+    elif is_bigquery_connection(con):
+        
+        client = con
+        
+        if database_name:
+            dataset_id = f"{database_name}.{schema_name}"
+        else:
+            dataset_id = schema_name
+        
+        dataset = bigquery.Dataset(dataset_id)
+        
+        try:
+            dataset = client.create_dataset(dataset, exists_ok=True)
+        except Exception as e:
+            if cocoon_main_setting['DEBUG_MODE']:
+                raise type(e)(f"Error creating BigQuery dataset:\n{dataset_id}\n\nOriginal error: {str(e)}") from e
+            print(f"Error creating BigQuery dataset:\n{dataset_id}\n\nOriginal error: {str(e)}")
+        
     elif is_pyodbc_connection(con):
         if database_name:
             query = f"USE {database_name}; IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') EXEC('CREATE SCHEMA {schema_name}')"
@@ -809,19 +1002,32 @@ def create_schema(con, schema_name, database_name=None):
 def remove_schema(con, schema_name, database_name=None):
     if is_duckdb_connection(con):
         query = f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
     elif is_snowflake_connection(con):
         if database_name:
             query = f'DROP SCHEMA IF EXISTS "{database_name}"."{schema_name}"'
         else:
             query = f'DROP SCHEMA IF EXISTS "{schema_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+    elif is_bigquery_connection(con):
+        if database_name:
+            dataset_ref = con.dataset(schema_name, project=database_name)
+        else:
+            dataset_ref = con.dataset(schema_name)
+        
+        try:
+            con.delete_dataset(dataset_ref, delete_contents=True, not_found_ok=True)
+        except Exception as e:
+            if cocoon_main_setting['DEBUG_MODE']:
+                raise type(e)(f"Error removing dataset '{schema_name}': {str(e)}") from e
+            print(f"Error removing dataset '{schema_name}': {str(e)}")
+                    
     elif is_pyodbc_connection(con):
         if database_name:
             query = f"USE [{database_name}]; IF EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') DROP SCHEMA [{schema_name}]"
         else:
             query = f"IF EXISTS (SELECT * FROM sys.schemas WHERE name = '{schema_name}') DROP SCHEMA [{schema_name}]"
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
 
 def remove_table(con, table_name, schema_name=None, database_name=None):
     if is_duckdb_connection(con):
@@ -829,7 +1035,8 @@ def remove_table(con, table_name, schema_name=None, database_name=None):
             query = f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"'
         else:
             query = f'DROP TABLE IF EXISTS "{table_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+        
     elif is_snowflake_connection(con):
         if database_name and schema_name:
             query = f'DROP TABLE IF EXISTS "{database_name}"."{schema_name}"."{table_name}"'
@@ -837,7 +1044,23 @@ def remove_table(con, table_name, schema_name=None, database_name=None):
             query = f'DROP TABLE IF EXISTS "{schema_name}"."{table_name}"'
         else:
             query = f'DROP TABLE IF EXISTS "{table_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+        
+    elif is_bigquery_connection(con):
+        if database_name and schema_name:
+            table_ref = con.dataset(schema_name, project=database_name).table(table_name)
+        elif schema_name:
+            table_ref = con.dataset(schema_name).table(table_name)
+        else:
+            table_ref = con.table(table_name)
+
+        try:
+            con.delete_table(table_ref, not_found_ok=True)
+        except Exception as e:
+            if cocoon_main_setting['DEBUG_MODE']:
+                raise type(e)(f"Error removing table '{table_name}': {str(e)}") from e
+            print(f"Error removing table '{table_name}': {str(e)}")
+            
     elif is_pyodbc_connection(con):
         if database_name and schema_name:
             query = f"USE [{database_name}]; IF OBJECT_ID('{schema_name}.{table_name}', 'U') IS NOT NULL DROP TABLE [{schema_name}].[{table_name}]"
@@ -853,7 +1076,8 @@ def remove_view(con, view_name, schema_name=None, database_name=None):
             query = f'DROP VIEW IF EXISTS "{schema_name}"."{view_name}"'
         else:
             query = f'DROP VIEW IF EXISTS "{view_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+        
     elif is_snowflake_connection(con):
         if database_name and schema_name:
             query = f'DROP VIEW IF EXISTS "{database_name}"."{schema_name}"."{view_name}"'
@@ -861,7 +1085,20 @@ def remove_view(con, view_name, schema_name=None, database_name=None):
             query = f'DROP VIEW IF EXISTS "{schema_name}"."{view_name}"'
         else:
             query = f'DROP VIEW IF EXISTS "{view_name}"'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+        
+    elif is_bigquery_connection(con):
+        if database_name:
+            con.project = database_name
+        
+        if schema_name:
+            fully_qualified_name = f"{con.project}.{schema_name}.{view_name}"
+        else:
+            fully_qualified_name = f"{con.project}.{view_name}"
+        
+        query = f'DROP VIEW IF EXISTS `{fully_qualified_name}`'
+        run_sql_return_df(con, query, transpile=False)
+        
     elif is_pyodbc_connection(con):
         if database_name and schema_name:
             query = f"USE [{database_name}]; IF OBJECT_ID('{schema_name}.{view_name}', 'V') IS NOT NULL DROP VIEW [{schema_name}].[{view_name}]"
@@ -876,7 +1113,7 @@ def create_table(con, table_name, columns, schema_name=None, database_name=None)
     if is_duckdb_connection(con):
         columns_str = ", ".join([f"{col['name']} {col['type']}" for col in columns])
         query = f'CREATE TABLE IF NOT EXISTS {schema_name+"." if schema_name else ""}{table_name} ({columns_str})'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
     elif is_snowflake_connection(con):
         columns_str = ", ".join([f'"{col["name"]}" {col["type"]}' for col in columns])
         full_name = ''
@@ -886,7 +1123,34 @@ def create_table(con, table_name, columns, schema_name=None, database_name=None)
             full_name += f'"{schema_name}".'
         full_name += f'"{table_name}"'
         query = f'CREATE TABLE IF NOT EXISTS {full_name} ({columns_str})'
-        run_sql_return_df(con, query)
+        run_sql_return_df(con, query, transpile=False)
+        
+    elif is_bigquery_connection(con):
+        schema = [
+            bigquery.SchemaField(col['name'], col['type'].upper())
+            for col in columns
+        ]
+
+        if database_name:
+            project = database_name
+        else:
+            project = con.project
+
+        if schema_name:
+            dataset_ref = bigquery.DatasetReference(project, schema_name)
+        else:
+            dataset_ref = bigquery.DatasetReference(project, con.default_dataset_id)
+
+        table_ref = dataset_ref.table(table_name)
+
+        table = bigquery.Table(table_ref, schema=schema)
+
+        try:
+            con.create_table(table, exists_ok=True)
+            print(f"Table {table_ref} created successfully.")
+        except Exception as e:
+            raise type(e)(f"Error creating BigQuery table: {table_ref}\n\nOriginal error: {str(e)}") from e
+        
     elif is_pyodbc_connection(con):
         columns_str = ", ".join([f"[{col['name']}] {col['type']}" for col in columns])
         full_name = f"{database_name+'.' if database_name else ''}{schema_name+'.' if schema_name else ''}{table_name}"
@@ -898,6 +1162,7 @@ def create_view(con, view_name, select_statement, schema_name=None, database_nam
     if is_duckdb_connection(con):
         query = f'CREATE OR REPLACE VIEW {schema_name+"." if schema_name else ""}{view_name} AS {select_statement}'
         run_sql_return_df(con, query)
+        
     elif is_snowflake_connection(con):
         full_name = ''
         if database_name:
@@ -907,6 +1172,19 @@ def create_view(con, view_name, select_statement, schema_name=None, database_nam
         full_name += f'"{view_name}"'
         query = f'CREATE OR REPLACE VIEW {full_name} AS {select_statement}'
         run_sql_return_df(con, query)
+        
+    elif is_bigquery_connection(con):
+        if database_name:
+            con.project = database_name
+        
+        if schema_name:
+            fully_qualified_name = f"`{con.project}.{schema_name}.{view_name}`"
+        else:
+            fully_qualified_name = f"`{con.project}.{view_name}`"
+        
+        query = f'CREATE OR REPLACE VIEW {fully_qualified_name} AS {select_statement}'
+        run_sql_return_df(con, query, transpile=False)
+        
     elif is_pyodbc_connection(con):
         full_name = f"{schema_name+'.' if schema_name else ''}{view_name}"
         

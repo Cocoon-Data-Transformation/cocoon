@@ -34,6 +34,8 @@ from collections import OrderedDict
 from collections import deque
 import warnings
 import copy
+from pathlib import Path
+from ruamel.yaml import YAML
 
 from .database import *
 from .llm import *
@@ -65,15 +67,13 @@ icon_import = False
 MAX_TRIALS = 3
 LOG_MESSAGE_HISTORY = False
 
-cocoon_main_setting = {
-    'DEBUG_MODE': False,
-    'LOG_MESSAGE_HISTORY': False,
-    'MAX_TRIALS': 3,
-    'icon_import': False
-}
 
 cocoon_comment_start = "-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE\n"
 cocoon_comment_end = "-- COCOON BLOCK END\n"
+
+cocoon_lineage_start = "[COCOON_LINEAGE_START]"
+cocoon_lineage_end = "[COCOON_LINEAGE_END]"
+
 sys.setrecursionlimit(50000)
 
 if not cocoon_main_setting['DEBUG_MODE']:
@@ -12136,19 +12136,19 @@ class MultipleNode(Workflow):
             self.finish_workflow(document)
             return 
 
-        self.execute_node(self.elements[0])
+        
+        for element in self.elements:
+            self.execute_node(element)
+
+        document = self.get_global_document()
+        self.finish_workflow(document)
+
     
     def callback(self, element_name, document):
-        element_idx = self.elements.index(element_name)
         element_node = self.nodes[element_name]
 
         element_node.set_global_document(document)
 
-        if element_idx == len(self.elements) - 1:
-            document = self.get_global_document()
-            self.finish_workflow(document)
-        else:
-            self.execute_node(self.elements[element_idx + 1])
 
     def display_workflow(self):
         nodes, edges = list(self.example_node.nodes.keys()), self.example_node.edges 
@@ -15930,14 +15930,15 @@ class DataProject:
     def get_key_columns(self, table):
         keys_to_exclude = set()
         
-        table_keys = self.key[table]
+        table_keys = self.key.get(table, {})
                 
         if 'primary_key' in table_keys:
             keys_to_exclude.add(table_keys['primary_key'])
         
         if 'foreign_keys' in table_keys:
-            for fk in table_keys['foreign_keys']:
-                keys_to_exclude.add(fk['column'])
+            if table_keys['foreign_keys']:
+                for fk in table_keys['foreign_keys']:
+                    keys_to_exclude.add(fk['column'])
                 
         return keys_to_exclude
     
@@ -15975,7 +15976,10 @@ class DataProject:
             if len(attributes) > limit:
                 attribute_list.append('...')
             
-            table_info['attributes'] = attribute_list
+            if exclude_keys:
+                table_info['attribute_subset'] = attribute_list
+            else:
+                table_info['attributes'] = attribute_list
             
             if table in self.history_table:
                 history_table = self.history_table[table]
@@ -20465,7 +20469,7 @@ class DecideTrim(Node):
     def extract(self, item):
         clear_output(wait=True)
 
-        print("🔍 Deciding Trim for leading/tailing white spaces...")
+        display(HTML("🔍 Deciding Trim for leading/tailing white spaces..."))
         create_progress_bar_with_numbers(2, doc_steps)
 
         con = self.item["con"]
@@ -21765,7 +21769,19 @@ def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, t
     
     workflow_para = {"viewer": viewer, 
                      "table_name": table_name,
-                     "table_object": Table()}
+                     "table_object": Table(),
+                     "cocoon_stage_options": {'projection': False,
+                            'rename': False, 
+                            'deduplication': False, 
+                            'standardize_values': True, 
+                            'detect_disguised_missing_values': False, 
+                            'detect_regex_patterns': True, 
+                            'transform_data_type': False, 
+                            'parse_variant_types': False, 
+                            'unique_test': True, 
+                            'category_test': True, 
+                            'generate_html_report': True, 
+                            'cardinality_threshold': 0}}
     
     for key, value in para.items():
         workflow_para[key] = value
@@ -29781,7 +29797,7 @@ def read_source_file(sources_file_path):
         return None, None, None
     
     
-    
+
 def read_data_project_from_dir(directory, con=None, database=None, schema=None, source_only=False, create=True):
     data_project = DataProject()
     dbt_directory = os.path.join(directory, "models")
@@ -29909,30 +29925,32 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
         with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r", encoding="utf-8") as file:
             join_yml_content = file.read()
             
-    data_project.build_foreign_key_from_join_graph_yml(join_yml_content)
-    
-    join_graph_data = yaml.safe_load(join_yml_content)
-    
-    if 'join_graph' in join_graph_data:
-        for item in join_graph_data['join_graph']:
-            table_name = item.get('table_name')
-            primary_key = item.get('primary_key')
-            foreign_keys = item.get('foreign_keys')
-            time_keys = item.get('time_keys')
-            
-            if table_name:
-                data_project.key[table_name] = {
-                    "primary_key": primary_key,
-                    "foreign_keys": foreign_keys,
-                    "time_keys": time_keys
-                }
+    if join_yml_content:
+        data_project.build_foreign_key_from_join_graph_yml(join_yml_content)
+        
+        join_graph_data = yaml.safe_load(join_yml_content)
+        
+        if 'join_graph' in join_graph_data:
+            for item in join_graph_data['join_graph']:
+                table_name = item.get('table_name')
+                primary_key = item.get('primary_key')
+                foreign_keys = item.get('foreign_keys')
+                time_keys = item.get('time_keys')
+                
+                if table_name:
+                    data_project.key[table_name] = {
+                        "primary_key": primary_key,
+                        "foreign_keys": foreign_keys,
+                        "time_keys": time_keys
+                    }
                 
     er_yml_content = ""
     if os.path.exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
         with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r", encoding="utf-8") as file:
             er_yml_content = file.read()
-    
-    data_project.build_er_story_from_yml(er_yml_content)
+            
+    if er_yml_content:
+        data_project.build_er_story_from_yml(er_yml_content)
     
     return data_project
 
@@ -30213,18 +30231,19 @@ class SelectSchema(Node):
         output = widgets.HTML()
 
         def on_test_button_click(b):
-            database = database_input.value
-            schema = schema_input.value
-            if not database or not schema:
-                output.value = "<div style='color: red;'>Both database and schema must be specified.</div>"
-                return
-            else:
-                success, result = create_schema_and_objects(con, database, schema)
-                output.value = result
-                if success:
-                    self.para["database"] = database
-                    self.para["schema"] = schema
-                    callback({"database": database, "schema": schema})
+            with self.output_context():
+                database = database_input.value
+                schema = schema_input.value
+                if not database or not schema:
+                    output.value = "<div style='color: red;'>Both database and schema must be specified.</div>"
+                    return
+                else:
+                    success, result = create_schema_and_objects(con, database, schema)
+                    output.value = result
+                    if success:
+                        self.para["database"] = database
+                        self.para["schema"] = schema
+                        callback({"database": database, "schema": schema})
 
         test_button.on_click(on_test_button_click)
 
@@ -30685,7 +30704,6 @@ related_steps:
                 
                 if not df['Related'].any():
                     print("Error: At least one relation must be marked as related to the business question.")
-                    return
                 
                 document = {
                     'reasoning': analysis['reasoning'],                    
@@ -30893,10 +30911,10 @@ class BusinessQuestionDataSufficiency(Node):
 
         schema_description = yaml.dump(data_project.describe_project_yml(tables=tables, limit=9999))
 
-        return business_question, schema_description, tables
+        return business_question, schema_description, tables, data_project
 
     def run(self, extract_output, use_cache=True):
-        business_question, schema_description, all_related_tables = extract_output
+        business_question, schema_description, all_related_tables, data_project = extract_output
 
 
         template = f"""Given the following question:
@@ -30951,10 +30969,19 @@ related_tables: ['table1', 'table2', ...]
 
         return analysis
     
+    def run_but_fail(self, extract_output, use_cache=True):
+        default_analysis = {
+            'explanation': 'Unable to generate an explanation for the given business question and schema.',
+            'sufficient': False,
+            'sql_approach': 'Unable to generate an SQL approach due to analysis failure.',
+            'related_tables': []
+        }
+        
+        return default_analysis
+        
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         analysis = run_output
-        business_question, schema_description, all_related_tables = extract_output
-        data_project = self.para["data_project"]
+        business_question, schema_description, all_related_tables, data_project = extract_output
         
         display(HTML(f"❓ <b>Business Question:</b> {business_question}"))
         display(HTML(f"📊 <b>Data Sufficiency:</b> {'Yes' if analysis['sufficient'] else 'No'}"))
@@ -30994,7 +31021,6 @@ related_tables: ['table1', 'table2', ...]
             with self.output_context():
                 if not (related_tables and analysis['sufficient']):
                     print("Error: Cannot proceed because current data is insufficient, or no related table.")
-                    return
                 
                 document = {
                     'business_question': business_question,
@@ -32467,7 +32493,7 @@ Return in the following format:
 ```yml
 reasoning: The table contains multiple related paritions for different years
 partition_summary: >-
-    The table_summary is about the order processing system, for years 2019-2021...
+    The tables are about the order processing system, for years 2019-2021...
 new_partition_name: OrderProcessingSystem
 ```
 """
@@ -34003,6 +34029,133 @@ class DbtLineage:
         display(HTML(html_output))
         
     
+    def get_column_lineage_raw_dicts(self, model_name, column_name, lineage_df=None):
+        if lineage_df is None:
+            lineage_df = self.get_recursive_lineage_df(model_name, column_name)
+        
+        if lineage_df is None or len(lineage_df) == 0:
+            return OrderedDict(), OrderedDict()
+
+        source_lineage = OrderedDict()
+        usage_lineage = OrderedDict()
+
+        lineage_df = lineage_df.sort_values('depth')
+
+        for _, row in lineage_df.iterrows():
+            depth = row['depth']
+            input_model = row['input_model']
+            output_model = row['output_model']
+            input_column = row['input_column']
+            tags = row['tags']
+            output_columns = row['output_columns']
+
+            if depth < 0:
+                if input_model not in source_lineage:
+                    source_lineage[input_model] = OrderedDict()
+                
+                source_lineage[input_model][input_column] = OrderedDict({
+                    'tags': tags,
+                    'output_model': output_model,
+                    'output_columns': output_columns
+                })
+            elif depth > 0:
+                if output_model not in usage_lineage:
+                    usage_lineage[output_model] = OrderedDict()
+                
+                usage_lineage[output_model][column_name] = OrderedDict({
+                    'input_model': input_model,
+                    'input_column': input_column,
+                    'tags': tags,
+                    'output_columns': output_columns
+                })
+
+        return source_lineage, usage_lineage
+
+    def print_all_nodes(self, selected_indices=None):
+        nodes = self.get_nodes(selected_indices=selected_indices)
+        
+        for node in nodes:
+            print(node)
+    
+    def get_nodes(self, selected_indices=None):
+        nodes_query = self.get_ordered_nodes()
+        
+        if selected_indices:
+            nodes = [f"{idx+1}. {name}" for name, idx in nodes_query if idx + 1 in selected_indices]
+        else:
+            nodes = [f"{idx+1}. {name}" for name, idx in nodes_query]
+            
+        return nodes
+            
+    def check_table_lineage_existence(self, model_name, upstream=False):
+        if upstream:
+            query = """
+                SELECT COUNT(*) > 0 AS exists
+                FROM table_lineage
+                WHERE output_model = ?
+            """
+        else:
+            query = """
+                SELECT COUNT(*) > 0 AS exists
+                FROM table_lineage
+                WHERE input_model = ?
+            """
+        
+        result = self.conn.execute(query, [model_name]).fetchone()
+        return result[0]
+
+    def get_nodes_directory_mapping(self, directory, selected_indices = None):
+        nodes = self.get_nodes(selected_indices=selected_indices)
+        nodes_directory_mapping = explore_dbt_models(directory, nodes)
+        return nodes_directory_mapping
+        
+    def display_nodes_directory_mapping(self, directory, selected_indices=None):
+        nodes = self.get_nodes(selected_indices=selected_indices)
+        nodes_directory_mapping = explore_dbt_models(directory, nodes)
+        
+        data = []
+        
+        for model_name, yml_path in nodes_directory_mapping.items():
+            model_name_without_number = model_name.split('. ', 1)[1]
+            has_upstream = self.check_table_lineage_existence(model_name_without_number, upstream=True)
+            has_downstream = self.check_table_lineage_existence(model_name_without_number, upstream=False)
+            
+            upstream_emoji = '✔️ found' if has_upstream else '❌ not found'
+            downstream_emoji = '✔️ found' if has_downstream else '❌ not found'
+            yml_emoji = '❌ not found' if yml_path is None else yml_path
+            
+            data.append({
+                'model name': model_name,
+                'yml path': yml_emoji,
+                'upstream lineage': upstream_emoji,
+                'downstream lineage': downstream_emoji,
+            })
+        
+        df = pd.DataFrame(data)
+        
+        return df
+
+    def get_column_lineage_summary(self, model_name, column_name):
+        
+        para = {
+            'dbt_lineage': self,
+            'model_name': model_name,
+            'column_name': column_name
+        }
+
+        main_workflow = create_cocoon_dbt_lineage_explanation_workflow(para=para)
+        main_workflow.start()
+        return main_workflow.global_document['DBT Lineage Explanation Workflow']['Explain Lineage']
+
+    def append_dbt_lineage_summary_to_model(self, directory, selected_indices=None):
+        nodes_directory_mapping = self.get_nodes_directory_mapping(directory=directory, selected_indices=selected_indices)
+        
+        for node, yml_path in nodes_directory_mapping.items():
+            if yml_path:
+                model_name = node.split('. ', 1)[1].split('.')[-1]
+                full_model_name = node.split('. ', 1)[-1]
+                append_column_descriptions(yml_path, model_name, full_model_name, self)
+    
     def get_column_lineage_dict(self, model_name, column_name, lineage_df=None, display_lineage=True):
         if lineage_df is None:
             lineage_df = self.get_recursive_lineage_df(model_name, column_name)
@@ -34117,7 +34270,7 @@ class DbtLineage:
         """
         return html
 
-        
+
     def get_recursive_lineage_df(self, model_name, column_name):
         def get_direct_lineage(input_model, input_column, direction='forward'):
             if direction == 'forward':
@@ -34555,11 +34708,14 @@ class ConnectSourceDataNode(Node):
 
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        source_table_object = self.get_sibling_node("Data Stage Workflow").para["table_object"]
-        source_table_pipeline = self.get_sibling_node("Data Stage Workflow").para["table_pipeline"]
+        configure_nodes = self.get_sibling_node('DBT Project Config and Read Multiple').nodes
         
-        self.para["source_table_object"] = source_table_object
-        self.para["source_table_pipeline"] = source_table_pipeline
+        source_node = configure_nodes["source"]
+        target_node = configure_nodes["target"]
+        
+        self.para["source_data_project"] = source_node.para["data_project"]
+        self.para["target_data_project"] = target_node.para["data_project"]
+        
         callback({})
         
 class SourceTableDisplayNode(Node):
@@ -34590,43 +34746,7 @@ class SourceTableDisplayNode(Node):
 
         callback({})
 
-class TableSummaryAnalysisNode(BusinessQuestionEntityRelationNode):
-    def extract(self, item):
-        clear_output(wait=True)
 
-        display(HTML(f"🔍 Formulating question for related tables..."))
-        self.progress = show_progress(1)
-
-        data_project = self.para["data_project"]
-        source_table = self.para["source_table_object"]
-        
-        question = f"I have a source table: '{source_table.table_name}'. Its summary is: '{source_table.table_summary}'. Help me find the related tables to map to."
-        
-        return data_project, question
-
-class SourceToTargetTableAnalysisNode(BusinessQuestionDataSufficiency):
-    def extract(self, item):
-        clear_output(wait=True)
-
-        display(HTML(f"🔍 Analyzing potential target tables for transformation..."))
-        self.progress = show_progress(1)
-
-        data_project = self.para["data_project"]
-        source_table_object = self.para["source_table_object"]
-
-        question = f"Find all the target tables that the source table '{source_table_object.table_name}' can be transformed to. Here are the source table details:"
-        
-        column_dict = source_table_object.get_column_desc_yml()
-        question += yaml.dump(column_dict, default_flow_style=False)
-        
-        df = pd.read_json(self.get_sibling_document('Business Question Entity and Relation Analysis')['related_steps'], orient="split")
-        related_steps = df[df['Related'] == True]['Name'].tolist()
-
-        tables = extract_related_tables(data_project, related_steps)
-
-        schema_description = yaml.dump(data_project.describe_project_yml(tables=tables, limit=9999, exclude_keys=True))
-
-        return question, schema_description, tables
 
 
 def is_test_node(node_id, node_info):
@@ -34811,7 +34931,7 @@ class SelectStageOptions(Node):
         )
 
         cardinality_description = widgets.HTML(
-            value='<span class="option-label"><div><strong>Cardinality Threshold</strong></div><div><em>(If standardize: Cocoon inspects each value for columns whose cardinality is below threshold)</em></div></span>'
+            value='<span class="option-label"><div><strong>Standardize Cardinality Threshold</strong></div><div><em>(If standardize: Cocoon inspects each value for columns whose cardinality is below threshold)</em></div></span>'
         )
 
         cardinality_widget = widgets.VBox([
@@ -34876,7 +34996,7 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
         export_button.on_click(on_export)
 
         widget = widgets.VBox([
-            widgets.HTML(value='<h2>⚙️ Data Cleaning Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em>'),
+            widgets.HTML(value='<h2>⚙️ Data Workflow Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em>'),
             checkboxes_widget,
             cardinality_widget,
             widgets.HBox([export_button, submit_button]),
@@ -34889,3 +35009,556 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
 
         display(style)
         display(widget)
+        
+
+class ExplainLineage(ListNode):
+    default_name = 'Explain Lineage'
+    default_description = 'This node explains the lineage of a specific column in a dbt model.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        dbt_lineage = self.para['dbt_lineage']
+        model_name = self.para['model_name']
+        column_name = self.para['column_name']
+        
+        display(HTML(f"{running_spinner_html} Explaining lineage for {model_name}.{column_name}..."))
+
+        source_lineage, usage_lineage = dbt_lineage.get_column_lineage_raw_dicts(model_name, column_name)
+
+        outputs = [
+            [source_lineage, "source"],
+            [usage_lineage, "usage"]
+        ]
+        
+        return outputs
+    
+    def run(self, extract_output, use_cache=True):
+        lineage, lineage_type = extract_output
+        
+        if not lineage:
+            return [lineage_type, ""]
+        
+        lineage_yaml = yaml.dump(lineage, default_flow_style=False)
+        
+        if lineage_type == "source":
+            instruction = "Summarize where this column comes from, including any transformations applied to it."
+            example_summary = "This column comes from 'model a'['column a']. It's (1) first cast to TIME in the 'model b', (2) then featurized in 'model c'..."
+        else:
+            instruction = "Summarize how this column is used in other models or transformations."
+            example_summary = "This column is used in many ways. (1) It is joined with 'column1' in models a, b, c. The result 'column2' is then casted in model d ... (2) In model e, it's aggregated to compute..."
+
+        template = f"""You are given the following {lineage_type} lineage for a column:
+
+{lineage_yaml}
+
+{instruction}
+Provide a single, concise summary that includes specific evidence such as column names and model names. 
+Your response should be in the following format:
+
+```yml
+summary: >-
+    {example_summary}
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        result = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        return [lineage_type, result['summary']]
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        lineage, lineage_type = extract_output
+        return [lineage_type, ""]
+
+    def merge_run_output(self, run_outputs):
+        
+        merged_output = {}
+        for lineage_type, summary in run_outputs:
+            merged_output[lineage_type] = summary
+        return merged_output
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+        
+        
+def create_cocoon_dbt_lineage_explanation_workflow(output=None, para={}, viewer=False):
+
+    main_workflow = Workflow("DBT Lineage Explanation Workflow", 
+                        item = {},
+                        description="A workflow to explain DBT lineage",
+                        output=output,
+                        para=para)
+
+    main_workflow.add_to_leaf(ExplainLineage(output=output))
+
+    return main_workflow
+
+def read_dbt_models_from_yml(yml_path):
+    try:
+        with open(yml_path, 'r') as file:
+            yml_content = yaml.safe_load(file)
+        
+        if not isinstance(yml_content, dict):
+            return []
+        
+        models = yml_content.get('models', [])
+        
+        if isinstance(models, list):
+            return [model['name'] for model in models if isinstance(model, dict) and 'name' in model]
+        else:
+            return []
+    
+    except FileNotFoundError:
+        return []
+    except yaml.YAMLError as e:
+        return []
+    except Exception as e:
+        return []
+    
+read_dbt_models_from_yml("dbt_amazon_ads/compiled_amazon_ads.yml")
+
+def explore_dbt_models(directory, nodes, print_model=False):
+    directory_path = Path(directory)
+    nodes_directory_mapping = {}
+    for node in nodes:
+        nodes_directory_mapping[node] = None
+    
+    for yml_file in directory_path.glob('**/*.yml'):
+        if yml_file.is_file():
+            if print_model:            
+                print(f"YAML Path: {yml_file}")
+                
+            model_list = read_dbt_models_from_yml(yml_file)
+            
+            if print_model:
+                print(f"List of models: {model_list}")
+                print()
+            
+            for node in nodes:
+                node_name = node.split('. ', 1)[1]
+                node_parts = node_name.split('.')
+                if node_parts[-1] in model_list:
+                    nodes_directory_mapping[node] = yml_file
+                    
+    return nodes_directory_mapping
+
+
+
+def append_column_descriptions(yml_path, model_name, full_model_name, dbt_lineage):
+    dbt_yaml = YAML()
+    dbt_yaml.width = 4096
+    dbt_yaml.preserve_quotes = True
+    dbt_yaml.indent(mapping=2, sequence=4, offset=2)
+
+    with open(yml_path, 'r') as file:
+        data = dbt_yaml.load(file)
+
+    for model in data.get('models', []):
+        if model.get('name') == model_name:
+            for column in model.get('columns', []):
+                if 'description' in column:
+                    col_name = column.get('name', '')
+                    pattern = re.escape(cocoon_lineage_start) + r'.*?' + re.escape(cocoon_lineage_end)
+                    column['description'] = re.sub(pattern, '', column['description'], flags=re.DOTALL)
+                    
+                    cocoon_lineage_summary = dbt_lineage.get_column_lineage_summary(full_model_name, col_name)
+                    
+                    if not cocoon_lineage_summary['source'] and not cocoon_lineage_summary['usage']:
+                        continue
+                    
+                    column['description'] += cocoon_lineage_start + "\n"
+                    
+                    if cocoon_lineage_summary['source']:
+                        column['description'] += f"Upstream Lineage: {cocoon_lineage_summary['source']}\n"
+                        
+                    if cocoon_lineage_summary['usage']:
+                        column['description'] += f"Downstream Lineage: {cocoon_lineage_summary['usage']}\n"
+                    
+                    column['description'] += cocoon_lineage_end
+
+    with open(yml_path, 'w') as file:
+        dbt_yaml.dump(data, file)
+        
+
+
+class IdentifySchemaMatching(Node):
+    default_name = 'Identify Schema Matching'
+    default_description = 'Schema Matching for table transformation'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+        
+        print("🔍 Identifying the schema matching...")
+        self.progress = show_progress(1)
+        
+        target_table_name = self.para.get('target_table')
+        source_table_name = self.para.get('source_table_name')
+        source_data_project = self.para.get('source_data_project')
+        target_data_project = self.para.get('target_data_project')
+        
+        source_table = source_data_project.table_object[source_table_name]
+        target_table = target_data_project.table_object[target_table_name]
+        
+        source_key_columns = source_data_project.get_key_columns(source_table_name)
+        target_key_columns = target_data_project.get_key_columns(target_table_name)
+        
+        source_columns = [col for col in source_table.columns if col not in source_key_columns]
+        target_columns = [col for col in target_table.columns if col not in target_key_columns]
+        
+        source_column_dict = source_table.get_column_desc_yml(columns=source_columns, show_category=True, show_pattern=True)
+        target_column_dict = target_table.get_column_desc_yml(columns=target_columns, show_category=True, show_pattern=True)
+        
+        source_yml_desc = yaml.dump(source_column_dict, default_flow_style=False)
+        target_yml_desc = yaml.dump(target_column_dict, default_flow_style=False)
+        
+        return source_yml_desc, target_yml_desc, source_columns, target_columns, source_table_name, target_table_name
+    
+    def run(self, extract_output, use_cache=True):
+        source_yml_desc, target_yml_desc, source_columns, target_columns, source_table, target_table = extract_output
+        
+        template = f"""You have a source table '{source_table}'
+{source_yml_desc}
+
+And target table '{target_table}'
+{target_yml_desc}
+
+Identify the mapping from source columns to target columns, based on the semantic meaning.
+Also indicate if you are confident about the semantic equlity of mapping (True) or not (False).
+Also describe the rough SQL (direct copy, value mapping, aggregation, feature extraction, etc.)
+
+Respond in the following json:
+```yml
+summary: >-
+    X columns can be transformed...
+column_matching: # for all columns can be transformed
+    target_column_name_1:
+        source_columns: [source_column_name_1, source_column_name_2, ...]
+        transformation: "direct copy"
+        confidence: true/false
+    target_column_name_2:
+        ...
+```
+"""
+        messages = [{"role": "user", "content": template}]
+
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        result = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(result, dict):
+            raise ValueError("The response is not a valid yml format.")
+
+        if "summary" not in result:
+            raise ValueError("The response should have a 'summary' field.")
+
+        if "column_matching" not in result:
+            raise ValueError("The response should have a 'column_matching' field.")
+        
+        if result['column_matching']:
+            for target_col in result['column_matching']:
+                if target_col not in target_columns:
+                    raise ValueError(f"Target column '{target_col}' is not in the provided target columns.")
+                
+                source_cols = result['column_matching'][target_col]['source_columns']
+                for source_col in source_cols:
+                    if source_col not in source_columns:
+                        raise ValueError(f"Source column '{source_col}' is not in the provided source columns.")
+    
+        return result
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"summary": "No columns can be transformed", "column_matching": {}}
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        source_yml_desc, target_yml_desc, source_columns, target_columns, source_table, target_table = extract_output
+        result = run_output
+
+        nodes = {
+            "(source)" + source_table: source_columns,
+            "(target)" + target_table: target_columns
+        }
+
+        edges = []
+        highlighted_edge_indices = []
+        
+        for target_col, matching in result['column_matching'].items():
+            for source_col in matching['source_columns']:
+                edge = ("(source)" +  source_table, source_col, "(target)" +  target_table, target_col)
+                edges.append(edge)
+                
+                if matching['confidence']:
+                    highlighted_edge_indices.append(len(edges) - 1)
+                    
+        html_output = generate_schema_graph_graphviz(nodes, edges, highlighted_edge_indices=highlighted_edge_indices)      
+        
+        
+        if "chatui" in self.para:
+            highlighted_yml_content = highlight_yml_only(target_yml_desc)
+            message = f"😎 <b>RAG from Cocoon</b>: Checking out all the column details for <i>{target_table}</i> ... {highlighted_yml_content}"
+            message += f"<h3>Summary:</h3><p>{result['summary']}</p>"
+            
+            message += html_output
+            
+            result_list = "<h3>Column Matching Results:</h3><ul>"
+            for target_col, matching in result['column_matching'].items():
+                result_list += f"<li><b>{target_col}</b>:"
+                result_list += f"<ul><li>Source columns: {', '.join(matching['source_columns'])}</li>"
+                result_list += f"<li>Transformation: {matching['transformation']}</li></ul></li>"
+            result_list += "</ul>"
+            
+            message += result_list
+            
+            self.para["chatui"].add_message("GenAI", message)
+        
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+        )
+        
+        def on_next_button_clicked(b):
+            with self.output_context():
+                callback(run_output)
+        
+        next_button.on_click(on_next_button_clicked)
+
+        
+        viewer = self.para.get("viewer", False)
+        
+        if viewer:
+            on_next_button_clicked(next_button)
+        
+        display(HTML(html_output))
+        display(next_button)
+
+
+class SchemaMatchingForAll(MultipleNode):
+    default_name = 'Schema Matching For All'
+    default_description = 'This node matches the schema for all tables.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["source_table_name"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        
+        node = IdentifySchemaMatching(para=para, id_para="source_table_name")
+        node.inherit(self)
+        return node
+        
+        
+        
+
+    def extract(self, item):
+
+        previous_node_output = self.get_sibling_document('Business Question Data Sufficiency Check')
+        
+        related_tables = previous_node_output['related_tables']
+        
+        self.elements = related_tables
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+                      for idx, element in enumerate(self.elements)}
+
+
+class FindTablesAndMatchSchemaForAll(MultipleNode):
+    default_name = 'Find Tables and Match Schema For All'
+    default_description = 'This node finds tables and matches schema for all tables.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["target_table"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        workflow = Workflow("Matching Schema", 
+                        description="A workflow to match schema",
+                        para=para,
+                        id_para="target_table")
+        
+        workflow.inherit(self)
+        
+        workflow.add_to_leaf(TableSummaryAnalysisNode())
+        workflow.add_to_leaf(SourceToTargetTableAnalysisNode())
+        workflow.add_to_leaf(SchemaMatchingForAll())
+        return workflow
+
+    def extract(self, item):
+        target_tables = list(self.para['target_data_project'].tables.keys())
+        
+        self.elements = target_tables
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+                      for idx, element in enumerate(self.elements)}
+        
+        
+
+class DBTProjectConfigAndReadMultiple(MultipleNode):
+    default_name = 'DBT Project Config and Read Multiple'
+    default_description = 'This creates DBTProjectConfigAndRead nodes for source and target directories'
+    
+    def construct_node(self, element_name="", dbt_directory=""):
+        para = self.para.copy()
+        para["element_name"] = element_name
+        para["dbt_directory"] = dbt_directory
+        
+        node = DBTProjectConfigAndRead(para=para)
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        source_directory = self.para["source_dbt_directory"]
+        target_directory = self.para["target_dbt_directory"]
+        
+        self.elements = ["source", "target"]
+        self.nodes = {
+            "source": self.construct_node("source", source_directory),
+            "target": self.construct_node("target", target_directory)
+        }
+        self.item = item
+
+
+class TableSummaryAnalysisNode(BusinessQuestionEntityRelationNode):
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🔍 Formulating question for related tables..."))
+        self.progress = show_progress(1)
+
+        source_data_project = self.para["source_data_project"]
+        target_table_name = self.para["target_table"]
+        targt_table_object = self.para["target_data_project"].table_object[target_table_name]
+        
+        question = f"I have my table: '{targt_table_object.table_name}'. Its summary is: '{targt_table_object.table_summary}'. Help me find the related tables to map to."
+        
+        return source_data_project, question
+
+
+class SourceToTargetTableAnalysisNode(BusinessQuestionDataSufficiency):
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🔍 Analyzing potential target tables for transformation..."))
+        self.progress = show_progress(1)
+
+        data_project = self.para["source_data_project"]
+        
+        target_table_name = self.para["target_table"]
+        targt_table_object = self.para["target_data_project"].table_object[target_table_name]
+
+        question = f"Find all the target tables that the source table '{targt_table_object.table_name}' can be transformed to. Here are the source table details:"
+        
+        column_dict = targt_table_object.get_column_desc_yml()
+        question += yaml.dump(column_dict, default_flow_style=False)
+        
+        df = pd.read_json(self.get_sibling_document('Business Question Entity and Relation Analysis')['related_steps'], orient="split")
+        related_steps = df[df['Related'] == True]['Name'].tolist()
+
+        tables = extract_related_tables(data_project, related_steps)
+
+        schema_description = yaml.dump(data_project.describe_project_yml(tables=tables, limit=9999, exclude_keys=True))
+
+        return question, schema_description, tables, data_project
+    
+
+    def run(self, extract_output, use_cache=True):
+        business_question, schema_description, all_related_tables, data_project = extract_output
+
+
+        template = f"""Given the following question:
+'{business_question}'
+
+And the following relevant tables and a subset of their attributes:
+{schema_description}
+
+Please analyze if the subset of attributes from the tables is sufficient for the question using SQL. 
+If it is sufficient, provide a high-level explanation of what selections, aggregations, and joins might be needed, and over which columns (from the subset) and tables.
+
+Return your analysis in the following format:
+```yml
+explanation: >-
+    [Your detailed explanation here, discussing data sufficiency and potential SQL approach]
+sufficient: true/false
+sql_approach: >-
+    If sufficient, provide a detailed step-by-step instruction of the SQL approach.
+    Dictates which tables, columns, and operations to use.
+    However, don't provide codes.
+# from sql_approach, list all related target tables
+related_tables: ['table1', 'table2', ...]
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'sufficient' not in analysis or not isinstance(analysis['sufficient'], bool):
+            raise ValueError("Analysis should contain a 'sufficient' key with a boolean value")
+        
+        if 'explanation' not in analysis or not isinstance(analysis['explanation'], str):
+            raise ValueError("Analysis should contain an 'explanation' key with a string value")
+        
+        if analysis['sufficient']:
+            if 'sql_approach' not in analysis or not isinstance(analysis['sql_approach'], str):
+                raise ValueError("When data is sufficient, analysis should contain a 'sql_approach' key with a string value")
+            
+            if 'related_tables' not in analysis or not isinstance(analysis['related_tables'], list):
+                raise ValueError("When data is sufficient, analysis should contain a 'related_tables' key with a list value")
+            
+            invalid_tables = [table for table in analysis['related_tables'] if table not in all_related_tables]
+            if invalid_tables:
+                raise ValueError(f"The following tables were not identified as related during extraction: {', '.join(invalid_tables)}")
+
+        return analysis
+    
+    
+    
+def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
+    
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    source_table_object = Table()
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+    
+    workflow_para = {"viewer": viewer, "source_table_object": source_table_object}
+    
+    for key, value in para.items():
+        workflow_para[key] = value
+
+    main_workflow = Workflow("Single Table Transformation Workflow", 
+                            item = item, 
+                            description="A workflow to transform a table into another table",
+                            para = workflow_para,
+                            output=output)
+    
+    main_workflow.add_to_leaf(SelectSchema(output = output))
+    main_workflow.add_to_leaf(DBTProjectConfigAndReadMultiple(output=output))
+    
+    
+    main_workflow.add_to_leaf(ConnectSourceDataNode(output=output))
+    
+    
+    main_workflow.add_to_leaf(FindTablesAndMatchSchemaForAll(output=output))
+    
+    
+
+    return query_widget, main_workflow
