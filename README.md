@@ -30,7 +30,7 @@ pip install cocoon_data
 
 To get started, you need to connect to
 - LLMs (e.g., GPT-4, Claude-3, Gemini-Ultra, or your local LLMs) 
-- Data Warehouses (e.g., Snowflake, Duckdb...)
+- Data Warehouses (e.g., Snowflake, Big Query, Duckdb...)
 
 ```python
 from cocoon_data import *
