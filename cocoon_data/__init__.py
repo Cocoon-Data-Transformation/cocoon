@@ -211,8 +211,11 @@ class QueryWidget:
         selected_database = self.database_dropdown.value
         selected_schema = self.schema_dropdown.value
         selected_table = self.table_dropdown.value
+        
+        con = self.con
+        
         if selected_database and selected_schema and selected_table:
-            self.sql_input.value = f'SELECT * FROM "{selected_database}"."{selected_schema}"."{selected_table}"'
+            self.sql_input.value = f'SELECT * FROM {enclose_table_name(selected_database, con=con)}.{enclose_table_name(selected_schema, con=con)}.{enclose_table_name(selected_table, con=con)}'
         else:
             self.sql_input.value = 'SELECT * FROM "database_name"."schema_name"."table_name"'
    
@@ -11996,7 +11999,8 @@ class Workflow(Node):
             raise ValueError(f"Node {node_name} has multiple possible next nodes. 'next_node' must be specified in the document.")
     
     def finish_workflow(self, document=None):
-        print(f"Workflow {self.name} completed.")
+        if cocoon_main_setting['DEBUG_MODE']:
+            print(f"Workflow {self.name} completed.")
 
     def display_workflow(self):
         nodes, edges = list(self.nodes.keys()), self.edges 
@@ -12135,20 +12139,39 @@ class MultipleNode(Workflow):
             document = self.get_global_document()
             self.finish_workflow(document)
             return 
-
         
-        for element in self.elements:
-            self.execute_node(element)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            self.multi_node_viewer = True
+        else:
+            self.multi_node_viewer = False
+        
+        
+        if not self.multi_node_viewer:
+            self.execute_node(self.elements[0])
+            
+        else:
+            
+            
+            for element in self.elements:
+                self.execute_node(element)
 
-        document = self.get_global_document()
-        self.finish_workflow(document)
+            document = self.get_global_document()
+            self.finish_workflow(document)
 
     
     def callback(self, element_name, document):
+        element_idx = self.elements.index(element_name)
         element_node = self.nodes[element_name]
 
         element_node.set_global_document(document)
 
+        if not self.multi_node_viewer:
+            if element_idx == len(self.elements) - 1:
+                document = self.get_global_document()
+                self.finish_workflow(document)
+            else:
+                self.execute_node(self.elements[element_idx + 1])
 
     def display_workflow(self):
         nodes, edges = list(self.example_node.nodes.keys()), self.example_node.edges 
@@ -15238,12 +15261,13 @@ class SQLStep(TransformationStep):
         if not full:
             return self.name
         
+        con = self.con
         if self.database is not None and self.schema is not None:
-            return f'"{self.database}"."{self.schema}"."{self.name}"'
+            return f'{enclose_table_name(self.database, con=con)}.{enclose_table_name(self.schema, con=con)}.{enclose_table_name(self.name, con=con)}'
         elif self.schema is not None:
-            return f'"{self.schema}"."{self.name}"'
+            return f'{enclose_table_name(self.schema, con=con)}.{enclose_table_name(self.name, con=con)}'
         else:
-            return f'"{self.name}"'
+            return f'{enclose_table_name(self.name, con=con)}'
 
     def generate_codes(self):
         pass
@@ -15305,6 +15329,7 @@ class SQLStep(TransformationStep):
             return self.sql_code
         
         if callable(self.sql_code):
+            con = self.con
             if source_steps is None:
                 source_steps = []
             
@@ -15316,13 +15341,14 @@ class SQLStep(TransformationStep):
                     formatted_step = str(step.__repr__(full=True))
                 else:
                     formatted_step = str(step.__repr__(full=False))
-                formatted_steps.append(enclose_table_name(formatted_step))
+                formatted_steps.append(enclose_table_name(formatted_step, con=con))
             
             return self.sql_code(*formatted_steps)
         
         raise TypeError("sql_code must be either a string or a callable")
     
     def get_codes(self, target_id=0, source_ids=None, source_steps=None, mode="", full=None):
+        con = self.con
         
         if not self.sql_code:
             return ""
@@ -15333,20 +15359,21 @@ class SQLStep(TransformationStep):
         modes = ["", "TABLE", "VIEW", "AS"]
 
         if mode not in modes:
-            raise("Mode not supported")
+            raise ValueError("Mode not supported")
 
         if mode == "":
             return self.get_sql_code(source_steps, full=full)
         
+        table_name = enclose_table_name(self.name, con=con)
+        
         if mode == "TABLE":
-            return f"CREATE OR REPLACE TABLE \"{self.name}\" AS\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}"
+            return f"CREATE OR REPLACE TABLE {table_name} AS\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}"
 
         if mode == "VIEW":
-            return f"CREATE OR REPLACE VIEW \"{self.name}\" AS\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}"
+            return f"CREATE OR REPLACE VIEW {table_name} AS\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}"
         
         if mode == "AS":
-            return f"\"{self.name}\" AS (\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}\n)"
-
+            return f"{table_name} AS (\n{indent_paragraph(self.get_sql_code(source_steps, full=full))}\n)"
 
 class TransformationSQLPipeline(TransformationPipeline):
     
@@ -15435,7 +15462,8 @@ class TransformationSQLPipeline(TransformationPipeline):
             with_clauses = self.get_codes(mode="WITH", con=con)
             full= False if len(with_clauses) > 0 else True
             last_step = self.steps[sorted_step_idx[-1]]
-            last_step_name = enclose_table_name(last_step.__repr__(full=full))
+            con = last_step.con
+            last_step_name = enclose_table_name(last_step.__repr__(full=full), con=con)
             select_all_codes = with_clauses + "\n" + f"SELECT * FROM {last_step_name}"
             
             if con is not None:
@@ -15462,6 +15490,11 @@ class TransformationSQLPipeline(TransformationPipeline):
         return sorted(incoming)
 
     def get_samples(self, con, columns=None, sample_size=None):
+        if columns is not None and len(columns) == 0:
+            if cocoon_main_setting['DEBUG_MODE']:
+                raise ValueError("Columns list cannot be empty")
+            return pd.DataFrame()
+
         query = self.get_samples_query(con, columns, sample_size)
         result = run_sql_return_df(con, query)
         return result
@@ -15470,7 +15503,7 @@ class TransformationSQLPipeline(TransformationPipeline):
         if columns is None:
             selection_clause = "*"
         else:
-            selection_clause = ", ".join(f'"{col}"' for col in columns)
+            selection_clause = ", ".join(enclose_table_name(col, con=con) for col in columns)
         
         with_context_clause = self.get_codes(mode="WITH")
         
@@ -16193,14 +16226,6 @@ def display_duplicated_rows_html2(df):
     
     display(HTML(html_output))
 
-def enclose_table_name(table_name):
-    table_name = f"{table_name}"
-    if not table_name.startswith('"'):
-        table_name = '"' + table_name
-    if not table_name.endswith('"'):
-        table_name = table_name + '"'
-    return table_name
-
 def create_explore_button(query_widget, table_name=None, query="", list_description="", with_context=None, show_with_context=True, logical_to_physical=None):
     error_msg = widgets.HTML(value='')
     
@@ -16210,6 +16235,8 @@ def create_explore_button(query_widget, table_name=None, query="", list_descript
     if isinstance(table_name, tuple):
         table_name = list(table_name)
         
+    con = query_widget.con
+    
     if isinstance(table_name, list):
         dropdown = widgets.Dropdown(
             description=list_description,
@@ -16229,7 +16256,8 @@ def create_explore_button(query_widget, table_name=None, query="", list_descript
         def on_button_clicked(b):
             selected_table = dropdown.value
             selected_table = logical_to_physical.get(selected_table, selected_table)
-            selected_table = enclose_table_name(selected_table)
+            
+            selected_table = enclose_table_name(selected_table, con=con)
                 
             if selected_table:
                 query = f'SELECT * FROM {selected_table}'
@@ -16246,7 +16274,7 @@ def create_explore_button(query_widget, table_name=None, query="", list_descript
     else:
         if table_name is not None:
             physical_table_name = logical_to_physical.get(table_name, table_name)
-            physical_table_name = enclose_table_name(physical_table_name)
+            physical_table_name = enclose_table_name(physical_table_name, con=con)
             query = f'SELECT * FROM {physical_table_name}'
             
         explore_button = widgets.Button(
@@ -16418,7 +16446,7 @@ class DecideProjection(Node):
                 return
 
             clear_output(wait=True)
-            document["selected_columns"] = [f'"{column_names[i]}"' for i in selected_indices]
+            document["selected_columns"] = [enclose_table_name(column_names[i], con) for i in selected_indices]
 
             if len(selected_indices) < num_cols:
                 old_table_name = table_pipeline.__repr__(full=False)
@@ -16811,15 +16839,32 @@ class DecideDuplicate(Node):
         columns = list(schema.keys())
 
         database_name = get_database_name(con)
+        
         if database_name == "SQL Server":
             for column_name, column_type in schema.items():
                 if column_type.lower() in ['text', 'ntext', 'image']:
-                    print(f"⚠️ The column {column_name} has type {column_type} that cannot be compared or sorted in SQL Server. Skipping this node.")
+                    print(f"⚠️ The column {column_name} has type {column_type} that cannot be deduplicated. Skipping this step.")
                     document = {"duplicate_count": 0, "duplicate_removed": False}
                     callback(document)
                     return
                 
-        duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, table_pipeline, columns=columns)
+        for column_name, column_type in schema.items():
+            data_type = get_reverse_type(column_type, database_name)
+            if not is_type_comparable(data_type):
+                print(f"⚠️ The column {column_name} has type {data_type} that cannot be deduplicated. Skipping this step.")
+                document = {"duplicate_count": 0, "duplicate_removed": False}
+                callback(document)
+                return
+                
+        try:
+            duplicate_count, sample_duplicate_rows = find_duplicate_rows(con, table_pipeline, columns=columns)
+        except Exception as e:
+            if cocoon_main_setting['DEBUG_MODE']:
+                raise e
+            else:
+                write_log(f"Erorr in finding duplicate rows: {e}")
+                duplicate_count = 0
+                
 
         document = {"duplicate_count": duplicate_count, 
                     "duplicate_removed": False}
@@ -16900,7 +16945,7 @@ The error is: {e}
 
 
 def get_missing_percentage(con, table_name, column_name, with_context=""):
-    table_name_str = enclose_table_name(table_name)
+    table_name_str = enclose_table_name(table_name, con=con)
     query = f"""
     SELECT COUNT(*) as total_count, COUNT("{column_name}") as non_missing_count
     FROM {table_name_str}
@@ -17009,7 +17054,7 @@ patterns: # leave empty if free texts
                 break
             
             def clean_regex(regex):
-                regex = regex.replace("''", "'").replace("'", "''")
+                regex = to_remove_value(regex, con)
                 return regex
             
             
@@ -17098,7 +17143,7 @@ class DecideRegexForAll(MultipleNode):
         
         with_context = table_pipeline.get_codes(mode="WITH")
         
-        sql_query = generate_count_distinct_query(table_pipeline, columns, ratio=False)
+        sql_query = generate_count_distinct_query(table_pipeline, columns, con=con, ratio=False)
         sql_query = with_context + "\n" + sql_query
         distinct_count_df = run_sql_return_df(con, sql_query)
         
@@ -17107,7 +17152,7 @@ class DecideRegexForAll(MultipleNode):
         for col in columns:
             col_distinct_count = distinct_count_df[col].iloc[0]
             
-            if get_reverse_type(schema[col], database_name) == 'VARCHAR' and col_distinct_count > distinct_threshold:
+            if is_type_string(get_reverse_type(schema[col], database_name)) and col_distinct_count > distinct_threshold:
                 self.elements.append(col)
 
         self.nodes = {col: self.construct_node(col, idx, len(self.elements)) for idx, col in enumerate(self.elements)}
@@ -17139,7 +17184,7 @@ class DecideUnusual(Node):
         
         sample_size = 20
 
-        query = create_sample_distinct_query(table_pipeline, column_name, sample_size)
+        query = create_sample_distinct_query(con, table_pipeline, column_name, sample_size)
         with_context = table_pipeline.get_codes(mode="WITH")
         query = with_context + "\n" + query
         sample_values = run_sql_return_df(con,query)
@@ -17203,7 +17248,7 @@ class DecideUnusualForAll(MultipleNode):
         con = self.item["con"]
         
         schema = table_pipeline.get_schema(con)
-        columns = [col for col in schema if schema[col] in data_types['VARCHAR']]
+        columns = [col for col in schema if is_type_string(schema[col])]
         self.elements = []
         self.nodes = {}
 
@@ -17279,7 +17324,7 @@ class DecideLongitudeLatitude(Node):
         
         sample_size = 5
         con = self.item["con"]
-        all_columns = [f'"{col}"' for col in schema if schema[col] in data_types['INT'] or schema[col] in data_types['DECIMAL']]
+        all_columns = [enclose_table_name(col, con=con) for col in schema if schema[col] in data_types['INT'] or schema[col] in data_types['DECIMAL']]
         query = f'SELECT {", ".join(all_columns)} FROM {table_pipeline}'
         sample_sql_query = sample_query(con, query, sample_size)
         sample_df = run_sql_return_df(con, sample_sql_query)
@@ -17647,7 +17692,7 @@ class DecideDMV(Node):
         
         sample_size = 20
 
-        query = create_sample_distinct_query(table_pipeline, column_name, sample_size)
+        query = create_sample_distinct_query(con, table_pipeline, column_name, sample_size)
         with_context = table_pipeline.get_codes(mode="WITH")
         query = with_context + "\n" + query
         sample_values = run_sql_return_df(con,query)
@@ -17729,7 +17774,7 @@ class DecideDMVforAll(MultipleNode):
         columns = []
         for col, col_type in schema.items():
             reverse_type = get_reverse_type(col_type, database_name)
-            if reverse_type == 'VARCHAR':
+            if is_type_string(reverse_type):
                 if database_name == "SQL Server":
                     if col_type.lower() not in ['text', 'ntext', 'image']:
                         columns.append(col)
@@ -17827,7 +17872,7 @@ class DecideDMVforAll(MultipleNode):
 
                         selection_str = "CASE\n"
                         for to_remove_value in to_remove_values:
-                            to_remove_value = to_remove_value.replace("''", "'").replace("'", "''")
+                            to_remove_value = escape_value_single_quotes(to_remove_value, con)
                             selection_str += f'    WHEN "{col}" = \'{to_remove_value}\' THEN NULL\n'
 
                         comment += f"-- {col}: {to_remove_values}\n"
@@ -17836,7 +17881,7 @@ class DecideDMVforAll(MultipleNode):
                         selection_clauses.append(selection_str)
 
                     for col in columns:
-                        selection_clauses.append(f'"{col}"')
+                        selection_clauses.append(enclose_table_name(col, con=con))
 
                     selection_clause = ',\n'.join(selection_clauses)
                     sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
@@ -17904,6 +17949,7 @@ class DecideUnique(ListNode):
         con = self.item["con"]
 
         schema = table_pipeline.get_schema(con)
+        
         columns = []
         database_name = get_database_name(con)
         for col, col_type in schema.items():
@@ -17911,7 +17957,9 @@ class DecideUnique(ListNode):
                 if col_type.lower() not in ['text', 'ntext', 'image']:
                     columns.append(col)
             else:
-                columns.append(col)
+                data_type = get_reverse_type(col_type, database_name)
+                if is_type_comparable(data_type):
+                    columns.append(col)
         
         sample_size = 5
 
@@ -17933,9 +17981,12 @@ class DecideUnique(ListNode):
         
         table_desc = table_object.table_summary
         
-        sample_df = table_pipeline.get_samples(con, columns=columns, sample_size=sample_size)
-        sample_df = sample_df.applymap(truncate_cell)
-        sample_df_str = sample_df.to_csv(index=False, quoting=1)    
+        if len(columns) > 0:
+            sample_df = table_pipeline.get_samples(con, columns=columns, sample_size=sample_size)
+            sample_df = sample_df.applymap(truncate_cell)
+            sample_df_str = sample_df.to_csv(index=False, quoting=1)
+        else:
+            sample_df_str = ""
 
         outputs = []
         
@@ -19440,14 +19491,14 @@ class CleanUnusual(ListNode):
             'cardinality_threshold' in self.para['cocoon_stage_options']):
             sample_size = self.para['cocoon_stage_options']['cardinality_threshold']
 
-        query = create_sample_distinct_query(table_pipeline, column_name, sample_size)
+        query = create_sample_distinct_query(con, table_pipeline, column_name, sample_size)
         with_context = table_pipeline.get_codes(mode="WITH")
         query = with_context + "\n" + query
         
         sample_values = run_sql_return_df(con,query)
         sample_values = sample_values[sample_values[column_name].str.len() < 200]
         
-        query =  construct_distinct_count_query(table_pipeline, column_name)
+        query =  construct_distinct_count_query(con, table_pipeline, column_name)
         query = with_context + "\n" + query
         total_distinct_count = run_sql_return_df(con,query).iloc[0, 0]
         
@@ -19539,7 +19590,8 @@ mapping: # just the values need to be changed;
         if icon_import:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
         
-
+        con = self.item["con"]
+        
         html_content = f"⚠️ <b>We've found errors in</b>: {column_name} <br><i>{unusual_reason}</i>"
         display(HTML(html_content))
         
@@ -19550,7 +19602,7 @@ mapping: # just the values need to be changed;
         table_pipeline = self.para["table_pipeline"]
         with_context = table_pipeline.get_codes(mode="WITH")
 
-        query = create_sample_distinct_query(table_name=table_pipeline, column_name=column_name)
+        query = create_sample_distinct_query(con, table_name=table_pipeline, column_name=column_name)
         create_explore_button(query_widget=query_widget, query=query, with_context=with_context)
 
         json_code["unusual_reason"] = unusual_reason
@@ -19744,7 +19796,7 @@ class CleanUnusualForAll(MultipleNode):
         
         for col in columns:
             if col not in clean_unusual:
-                selections.append(f'"{col}"')
+                selections.append(enclose_table_name(col, con=con))
                 continue
                 
             clean_unusual_col = clean_unusual[col]
@@ -19753,29 +19805,29 @@ class CleanUnusualForAll(MultipleNode):
             comment += f"-- {col}: {remove_newline(explanation_value)}\n"
 
             if not clean_unusual_col["could_clean"]:
-                selections.append(f'"{col}"')
+                selections.append(enclose_table_name(col, con=con))
             else:
                 if clean_unusual_col["projection"]:
-                    selections.append(clean_unusual_col["projection_clause"] + f' AS "{col}"')
+                    selections.append(clean_unusual_col["projection_clause"] + f' AS {enclose_table_name(col, con=con)}')
                         
                 else:
                     mapping = clean_unusual_col["mapping"]
                     old_values_to_remove = clean_unusual_col.get("old_values_to_remove", [])
                     remove_list_str = "(" + ", ".join([f"'{val}'" for val in old_values_to_remove]) + ")"
                     if old_values_to_remove:
-                        filters.append(f'"{col}" NOT IN {remove_list_str}')
+                        filters.append(f'{enclose_table_name(col, con=con)} NOT IN {remove_list_str}')
 
                     selection_str = "CASE\n"
                     for old_value, new_value in mapping.items():
-                        old_value = old_value.replace("''", "'").replace("'", "''")
-                        new_value = new_value.replace("''", "'").replace("'", "''")
+                        old_value = escape_value_single_quotes(old_value, con)
+                        new_value = escape_value_single_quotes(new_value, con)
                         if new_value != "":
                             new_value = f"'{new_value}'"
                         else:
                             new_value = "NULL"
-                        selection_str += f'    WHEN "{col}" = \'{old_value}\' THEN {new_value}\n'
-                    selection_str += f'    ELSE "{col}"\n'
-                    selection_str += f'END AS "{col}"'
+                        selection_str += f'    WHEN {enclose_table_name(col, con=con)} = \'{old_value}\' THEN {new_value}\n'
+                    selection_str += f'    ELSE {enclose_table_name(col, con=con)}\n'
+                    selection_str += f'END AS {enclose_table_name(col, con=con)}'
                     selections.append(selection_str)
 
         selection_sql = indent_paragraph(",\n".join(selections))
@@ -19891,13 +19943,14 @@ class HandleMissing(Node):
             if len(remove_rows) == 0 and len(drop_columns) == 0:
                 return ""
 
-            select_columns = [f'"{col}"' for col in schema if col not in drop_columns]
+            con = self.item["con"]
+            select_columns = [enclose_table_name(col, con=con) for col in schema if col not in drop_columns]
             selection_sql = indent_paragraph(',\n'.join(select_columns))
             sql_query = f"""SELECT
 {selection_sql}
 FROM {table_name}"""
 
-            where_clause = " AND\n".join([f'"{col}" IS NOT NULL' for col in remove_rows])
+            where_clause = " AND\n".join([f'{enclose_table_name(col, con=con)} IS NOT NULL' for col in remove_rows])
 
             if where_clause:
                 sql_query += f"\nWHERE \n{indent_paragraph(where_clause)}"
@@ -20104,11 +20157,15 @@ class TransformType(ListNode):
         patterns = table_object.patterns.get(column_name, [])
         with_context = table_pipeline.get_codes(mode="WITH")
         
+        
+        if not is_type_comparable(current_type):
+            return [(column_name, None, current_type, target_type, database_name, table_pipeline, con, hint, None, [], with_context)]
+        
         if len(patterns) == 0:
-            query = create_sample_distinct_query(table_pipeline, column_name, sample_size)
+            query = create_sample_distinct_query(con, table_pipeline, column_name, sample_size)
             
             query = with_context + "\n" + query
-            sample_values = run_sql_return_df(con,query)
+            sample_values = run_sql_return_df(con, query)
             return [(column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint, None, [], with_context)]
         
         else:
@@ -20123,6 +20180,10 @@ class TransformType(ListNode):
         
     def run(self, extract_output, use_cache=True):
         column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint, regex, except_regex, with_context= extract_output
+        
+        if not is_type_comparable(current_type):
+            return self.run_but_fail(extract_output, use_cache)
+        
         max_iterations = 5
         
         value_list = sample_values[column_name].tolist()
@@ -20160,13 +20221,13 @@ cast_clause: |
                 clause = clause[6:].strip()
 
             
-            if database_name == "DuckDB" and current_type == "VARCHAR":
+            if database_name == "DuckDB" and is_type_string(current_type):
                 clause = unescape_regex(clause)
             
             if clause.lower().endswith(f"as {column_name}"):
                 clause = clause[:-(len(column_name) + 3)].strip()
                 
-            clause = clause.replace(f'"{column_name}"', column_name).replace(column_name, f'"{column_name}"')
+            clause = clause.replace(enclose_table_name(column_name, con=con), column_name).replace(column_name, enclose_table_name(column_name, con=con))
             return clause
 
         summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
@@ -20227,8 +20288,8 @@ cast_clause: |
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        column_name = self.para["column_name"]
-        return {"reasoning": "Fail to cast", "cast_clause": f'"{column_name}"'}
+        column_name, sample_values, current_type, target_type, database_name, table_pipeline, con, hint, regex, except_regex, with_context= extract_output
+        return {"reasoning": "Fail to cast", "cast_clause": enclose_table_name(column_name, con=con)}
     
     def merge_run_output(self, run_outputs):
         if len(run_outputs) == 1:
@@ -20260,7 +20321,7 @@ cast_clause: |
                 sql = with_context + "\n" + sql
                 df = run_sql_return_df(con, sql)
             except Exception: 
-                return {"reasoning": "Fail to cast", "cast_clause": f'"{column_name}"'}
+                return {"reasoning": "Fail to cast", "cast_clause": enclose_table_name(column_name, con=con)}
             
         return {"reasoning": merged_explanation, "cast_clause": merged_clause}
     
@@ -20395,7 +20456,7 @@ class TransformTypeForAll(MultipleNode):
                 con = self.item["con"]
                 schema = table_pipeline.get_schema(con)
                 columns = list(schema.keys())
-                non_affected_columns = [f'"{col}"' for col in columns if col not in affected_columns]
+                non_affected_columns = [enclose_table_name(col, con=con) for col in columns if col not in affected_columns]
 
                 sql_query = "SELECT\n"
                 sql_query += indent_paragraph(",\n".join(non_affected_columns + [f"{row['Clause']} \nAS \"{row['Column Name']}\"" for i, row in new_df.iterrows()]))
@@ -20489,8 +20550,11 @@ class DecideTrim(Node):
                     print(f"⚠️ The column {column} has type {schema[column]} that cannot be compared or sorted in SQL Server. Skipping this node.")
                     continue
 
-            if current_type == "VARCHAR":
-                where_clause = where_clause_for_space(column)
+            if is_type_string(current_type):
+                def where_clause_for_space(column_name, con):
+                    return f'{enclose_table_name(column_name, con=con)} <> TRIM({enclose_table_name(column_name, con=con)})'
+
+                where_clause = where_clause_for_space(column, con)
                 count = run_sql_return_df(con, f'{with_context} \n SELECT COUNT(*) FROM {table_pipeline} WHERE {where_clause}').iloc[0, 0]
                 if count > 0:
                     columns.append(column)
@@ -20569,7 +20633,8 @@ Return in the following format:
         query_widget = self.item["query_widget"]
         table_pipeline = self.para["table_pipeline"]
 
-        columns = [enclose_table_name(column) for column in columns]
+        con = self.item["con"]
+        columns = [enclose_table_name(column, con=con) for column in columns]
         columns_str = ", ".join(columns)
 
         explore_button = widgets.Button(
@@ -20627,7 +20692,7 @@ Return in the following format:
                     con = self.item["con"]
                     schema = self.para["table_pipeline"].get_schema(con)
                     all_columns = list(schema.keys())
-                    non_affected_columns = [f'"{col}"' for col in all_columns if col not in new_df["Column Name"].tolist()]
+                    non_affected_columns = [enclose_table_name(col, con=con) for col in all_columns if col not in new_df["Column Name"].tolist()]
                     sql_query = "SELECT\n"
 
                     columns_to_trim = []
@@ -20637,9 +20702,9 @@ Return in the following format:
                         column_name = row["Column Name"]
                         trim = row["Trim?"]
                         if trim:
-                            columns_to_trim.append(f'"{column_name}"')
+                            columns_to_trim.append(enclose_table_name(column_name, con=con))
                         else:
-                            columns_not_to_trim.append(f'"{column_name}"')
+                            columns_not_to_trim.append(enclose_table_name(column_name, con=con))
 
                     sql_query += indent_paragraph(",\n".join(non_affected_columns + \
                                                             columns_not_to_trim +\
@@ -20702,7 +20767,7 @@ class DecideStringUnusual(Node):
         
         sample_size = self.class_para.get("sample_size", self.default_sample_size)
 
-        query = create_sample_distinct_query(table_pipeline, column_name, sample_size)
+        query = create_sample_distinct_query(con, table_pipeline, column_name, sample_size)
         with_context = table_pipeline.get_codes(mode="WITH")
         query = with_context + "\n" + query
         sample_values = run_sql_return_df(con,query)
@@ -20789,7 +20854,7 @@ class DecideStringUnusualForAll(MultipleNode):
         columns = []
         for col, col_type in schema.items():
             reverse_type = get_reverse_type(col_type, database_name)
-            if reverse_type == 'VARCHAR':
+            if is_type_string(reverse_type):
                 if database_name == "SQL Server":
                     if col_type.lower() not in ['text', 'ntext', 'image']:
                         columns.append(col)
@@ -21012,7 +21077,8 @@ class WriteStageYMLCode(Node):
                         
                         after_columns = [col for col in final_columns]
                         after_df = table_pipeline.get_samples(con, columns=after_columns, sample_size=sample_size)
-                        before_selection = ", ".join([f'"{column_mapping[col]}"' for col in final_columns])
+                        before_selection = ", ".join([enclose_table_name(column_mapping[col], con=con) for col in final_columns])
+                        
                         before_query = f'SELECT {before_selection} FROM {before_table_name}'
                         before_sample_query = sample_query(con, before_query, sample_size)
                         before_df = run_sql_return_df(con, before_sample_query)
@@ -22109,15 +22175,15 @@ Return in the following format:
                         
                         if old_name != new_name:
                             comment += f"-- {old_name} -> {new_name}\n"
-                            selection_clauses.append(f'"{old_name}" AS "{new_name}"')
+                            selection_clauses.append(f'{enclose_table_name(old_name, con=con)} AS {enclose_table_name(new_name, con=con)}')
                         else:
-                            selection_clauses.append(f'"{old_name}"')
+                            selection_clauses.append(f'{enclose_table_name(old_name, con=con)}')
                     
                     selection_clause = ',\n'.join(selection_clauses)
                     sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
                     sql_query = comment + sql_query
                     sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}"
-                    con = self.item["con"]
+                    
                     step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                     table_pipeline.add_step_to_final(step)
                 
@@ -22843,7 +22909,7 @@ class DecideColumnsPattern(Node):
                 if len(columns_to_remove) > 0:
                     old_table_name = table_pipeline.__repr__(full=False)
                     new_table_name = old_table_name + "_removeWideColumns"
-                    selected_columns = [f'"{col}"' for col in columns if col not in columns_to_remove]
+                    selected_columns = [{enclose_table_name(col, con=con)} for col in columns if col not in columns_to_remove]
 
                     selection_clause = ',\n'.join(selected_columns)
                     sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
@@ -23579,7 +23645,7 @@ class WriteCode(Node):
         source_sample_df = source_sample_df.applymap(truncate_cell)
         source_table_sample = source_sample_df.to_csv(index=False, quoting=1)
         
-        target_sample_df = run_sql_return_df(con, f"""SELECT {', '.join(f'"{col}"' for col in target_columns)} FROM "{target_table}" LIMIT {sample_size}""")
+        target_sample_df = run_sql_return_df(con, f"""SELECT {', '.join({enclose_table_name(col, con=con)} for col in target_columns)} FROM "{target_table}" LIMIT {sample_size}""")
         target_sample_df = target_sample_df.applymap(truncate_cell)
         target_table_sample = target_sample_df.to_csv(index=False, quoting=1)    
         
@@ -23810,7 +23876,7 @@ class DecideStringCategoricalForAll(MultipleNode):
         columns = []
         for col, col_type in schema.items():
             reverse_type = get_reverse_type(col_type, database_name)
-            if reverse_type == 'VARCHAR':
+            if is_type_string(reverse_type):
                 if database_name == "SQL Server":
                     if col_type.lower() not in ['text', 'ntext', 'image']:
                         columns.append(col)
@@ -24064,12 +24130,12 @@ class DecideStringCategorical(Node):
         
         sample_size = self.class_para.get("sample_size", self.default_sample_size)
 
-        query = create_sample_distinct_query(table_pipeline, column_name, sample_size)
+        query = create_sample_distinct_query(con, table_pipeline, column_name, sample_size)
         with_context = table_pipeline.get_codes(mode="WITH")
         query = with_context + "\n" + query
         sample_values = run_sql_return_df(con,query)
         
-        query =  construct_distinct_count_query(table_pipeline, column_name)
+        query =  construct_distinct_count_query(con, table_pipeline, column_name)
         query = with_context + "\n" + query
         total_distinct_count = run_sql_return_df(con,query).iloc[0, 0]
         
@@ -24267,14 +24333,8 @@ class SelectTables(Node):
         display(widgets.HBox([database_label, database_dropdown, schema_label, schema_dropdown]))
         
         tables = get_tables(default_database, default_schema)
-        display(HTML(f"🧐 There are {len(tables)} tables. You can explore them:"))
         
-        logical_to_physical = {
-                table_name: f'{enclose_table_name(default_database)}.{enclose_table_name(default_schema)}.{enclose_table_name(table_name)}'
-                for table_name in tables
-            }
         
-        dropdown = create_explore_button(query_widget, table_name=tables, logical_to_physical=logical_to_physical)
         
         display(HTML(f"🤓 Please select the tables:"))
         multi_select = create_column_selector_(columns=tables, default=True, selected=selected_tables)
@@ -25357,7 +25417,7 @@ class DecideFunctionalDependencyForAll(MultipleNode):
         all_columns = list(schema.keys())
         
         with_context = table_pipeline.get_codes(mode="WITH")
-        sql_query = generate_count_distinct_query(table_name, all_columns)
+        sql_query = generate_count_distinct_query(table_name, all_columns, con)
         sql_query = with_context + "\n" + sql_query
         distinct_count_df = run_sql_return_df(con, sql_query)
 
@@ -25529,7 +25589,7 @@ HAVING count(distinct(coalesce({decide_col}, 'NULL'))) > 1"""
                         if isinstance(value, (int, float)):
                             return value
                         elif isinstance(value, str):
-                            return value.replace("''", "'").replace("'", "''")
+                            return escape_value_single_quotes(value, con)
                         else:
                             return str(value)
 
@@ -27077,7 +27137,7 @@ class DecideFK(Node):
                 pk_type = data_project.tables[pk_table][pk]
                 pk_type = get_reverse_type(pk_type, database_name)
                 
-                if fk.lower() == pk.lower() and ((is_type_numeric(fk_type) and is_type_numeric(pk_type)) or (fk_type=="VARCHAR" and pk_type=="VARCHAR")):
+                if fk.lower() == pk.lower() and ((is_type_numeric(fk_type) and is_type_numeric(pk_type)) or (is_type_string(fk_type) and is_type_string(pk_type))):
                     only1, only2, overlap = generate_queries_for_overlap(pk_table, [fk], table_name, [fk], con)
                     if only2 + overlap == 0:
                         continue
@@ -27926,7 +27986,7 @@ class DecideDataTypeSingle(Node):
         schema = table_pipeline.get_schema(con)
         column_type = get_reverse_type(schema[column_name], database_name)
         
-        query = create_sample_distinct_query(table_pipeline, column_name, sample_size)
+        query = create_sample_distinct_query(con, table_pipeline, column_name, sample_size)
         with_context = table_pipeline.get_codes(mode="WITH")
         query = with_context + "\n" + query
         sample_values = run_sql_return_df(con,query)
@@ -28187,8 +28247,8 @@ new_summary: The table is about ... It tracks the most recent version of ...
         data_project = self.para["data_project"]
         columns = table_object.columns
         
-        id_column_string = ", ".join([f'"{col}"' for col in id_columns])
-        columns_except_version_string = ",\n".join([f'"{col}"' for col in columns if col not in version_columns])
+        id_column_string = ", ".join([enclose_table_name(col, con=con) for col in id_columns])
+        columns_except_version_string = ",\n".join([enclose_table_name(col, con=con) for col in columns if col not in version_columns])
         
         comment = f"""-- Slowly Changing Dimension: Dimension keys are {id_column_string}
 -- Version columns are {', '.join(version_columns)}
@@ -28197,7 +28257,7 @@ new_summary: The table is about ... It tracks the most recent version of ...
         sql_query = f"""
 SELECT 
 {indent_paragraph(columns_except_version_string)}
-FROM {enclose_table_name(table_name)}
+FROM {enclose_table_name(table_name, con)}
 QUALIFY ROW_NUMBER() OVER ( 
     PARTITION BY {id_column_string}
     ORDER BY
@@ -28213,7 +28273,7 @@ QUALIFY ROW_NUMBER() OVER (
         sql_query = f"""
 SELECT 
 {indent_paragraph(columns_except_version_string)}
-FROM {enclose_table_name(table_pipeline)}
+FROM {enclose_table_name(table_pipeline, con)}
 QUALIFY ROW_NUMBER() OVER ( 
     PARTITION BY {id_column_string}
     ORDER BY
@@ -28817,6 +28877,7 @@ class ConnectPKFKTable(ListNode):
         
         tables_to_process = []
         database_desc = ""
+        pk_to_column = {}
         
         for idx, row in key_df.iterrows():
             table_name = row["Table"]
@@ -28832,6 +28893,8 @@ class ConnectPKFKTable(ListNode):
                                                              show_pattern=True))
                 table_desc += indent_paragraph(column_desc) + "\n"
                 database_desc += table_desc + "\n"
+                
+                pk_to_column[table_name] = pk
 
         if database_desc == "":
             return tables_to_process
@@ -28858,13 +28921,13 @@ class ConnectPKFKTable(ListNode):
             
             full_desc = database_desc + current_table_desc
             
-            tables_to_process.append((table_name, keys, pk, full_desc))
+            tables_to_process.append((table_name, keys, pk, full_desc, pk_to_column))
         
         self.progress = show_progress(max_value=len(tables_to_process), value=0)
         return tables_to_process
 
     def run(self, extract_output, use_cache=True):
-        table_name, keys, pk, database_desc = extract_output
+        table_name, keys, pk, database_desc, pk_to_column = extract_output
         
         template = f"""You have a database, with the following tables and their keys:
 {database_desc}
@@ -28914,18 +28977,28 @@ fks:
             if not isinstance(fk['key'], str) or fk['key'] == '':
                 raise ValueError(f"'key' must be a non-empty string: {fk}")
             
+            if fk['key'] not in keys:
+                raise ValueError(f"Foreign key '{fk['key']}' is not in the keys list for table '{table_name}'")
+                       
             for pk_key in ['pk_table', 'pk_column']:
                 if fk[pk_key] == '':
                     fk[pk_key] = None
                 elif not isinstance(fk[pk_key], (str, type(None))):
                     raise TypeError(f"'{pk_key}' must be a string or None: {fk}")
-        
+            
+            if fk['pk_table'] is not None:
+                if fk['pk_table'] not in pk_to_column:
+                    raise ValueError(f"Primary key table '{fk['pk_table']}' is not in pk_to_column dictionary")
+                
+                if fk['pk_column'] != pk_to_column[fk['pk_table']]:
+                    fk['pk_column'] = pk_to_column[fk['pk_table']]
+            
         self.progress.value += 1
         
         return {table_name: summary}
 
     def run_but_fail(self, extract_output, use_cache=True):
-        table_name, _, _, _ = extract_output
+        table_name, _, _, _, _ = extract_output
         return {table_name: {"reasoning": "Failed to run", "fks": []}}
 
     def merge_run_output(self, run_outputs):
@@ -29207,7 +29280,7 @@ class DocumentProject(Node):
                     
                     if database is not None and schema is not None:
                         source_tables = [
-                            (f'{enclose_table_name(database)}.{enclose_table_name(schema)}.{enclose_table_name(table_name)}', table_name)
+                            (f'{enclose_table_name(database, con)}.{enclose_table_name(schema, con)}.{enclose_table_name(table_name, con)}', table_name)
                             for table_name in table_names
                         ]
                     
@@ -29220,7 +29293,7 @@ class DocumentProject(Node):
         if len(source_tables) > 0:
             for table_full, table_short in source_tables:
                 try:
-                    df_html = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table_full)} LIMIT 100').to_html()
+                    df_html = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table_full, con)} LIMIT 100').to_html()
                     
                     source_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_source_{table_short}">{table_short}</a>'
                     
@@ -30193,9 +30266,14 @@ clusters:
         display(next_button)
         
 def truncate_cell(value, max_length=200):
-    if isinstance(value, str) and len(value) > max_length:
-        return value[:max_length] + '...'
+    if pd.api.types.is_numeric_dtype(value):
+        return value
+    
+    str_value = str(value)
+    if len(str_value) > max_length:
+        return str_value[:max_length] + '...'
     return value
+    
 
 def truncate_value(value, max_length=200):
     str_value = str(value)
@@ -33253,14 +33331,20 @@ class DescribeSQLList(ListNode):
         """
 
         df = dbt_lineage.conn.execute(sql_query).df()
-        outputs = list(df.itertuples(index=False, name=None))
+        
+        total = len(df)
+        
+        outputs = [(idx, total, row.model_name, row.sql_text) for idx, row in enumerate(df.itertuples(index=False))]
         
         self.progress = show_progress(len(outputs))
 
         return outputs
     
     def run(self, extract_output, use_cache=True):
-        model_name, sql_query = extract_output
+        idx, total, model_name, sql_query = extract_output
+        
+        clear_output(wait=True)
+        display(HTML(f"({idx}/{total}) Understanding the SQL for '{model_name}'..."))
         
         template = f"""You are given the following SQL query for the model '{model_name}':
 {sql_query}
@@ -33315,7 +33399,7 @@ tags:
         return {model_name: result}
 
     def run_but_fail(self, extract_output, use_cache=True):
-        model_name, _ = extract_output
+        _, _, model_name, _ = extract_output
         return {model_name: {"summary": "Failed to run", "tags": []}}
 
     def merge_run_output(self, run_outputs):
@@ -33449,6 +33533,8 @@ class ColumnLineageForModel(ListNode):
 
         model_name = self.para['model_name']
         dbt_lineage = self.para['dbt_lineage']
+        model_idx = self.para["model_idx"]
+        total_models = self.para["total_models"]
         
         def get_model_info(conn, model_name):
             sql_query = conn.execute("""
@@ -33490,11 +33576,11 @@ class ColumnLineageForModel(ListNode):
 
             return sql_query, sql_info, columns, parent_nodes, parent_columns
 
-        display(HTML(f"{running_spinner_html} Building column lineage for <i>{model_name}</i>..."))
+        display(HTML(f"{running_spinner_html} ({model_idx+1}/{total_models}) Building column lineage for <i>{model_name}</i>..."))
 
         sql_query, sql_info, columns, parent_nodes, parent_columns = get_model_info(dbt_lineage.conn, model_name)
         
-        chunk_size = 10
+        chunk_size = 20
         outputs = []
         
         for parent, parent_cols in parent_columns.items():
@@ -34149,11 +34235,16 @@ class DbtLineage:
 
     def append_dbt_lineage_summary_to_model(self, directory, selected_indices=None):
         nodes_directory_mapping = self.get_nodes_directory_mapping(directory=directory, selected_indices=selected_indices)
+        total_models = len(nodes_directory_mapping)
         
-        for node, yml_path in nodes_directory_mapping.items():
+        for current_idx, (node, yml_path) in enumerate(nodes_directory_mapping.items(), start=1):
             if yml_path:
                 model_name = node.split('. ', 1)[1].split('.')[-1]
                 full_model_name = node.split('. ', 1)[-1]
+                
+                clear_output(wait=True)
+                display(HTML(f"{running_spinner_html} ({current_idx}/{total_models}) Explaining lineage for {model_name}..."))
+                
                 append_column_descriptions(yml_path, model_name, full_model_name, self)
     
     def get_column_lineage_dict(self, model_name, column_name, lineage_df=None, display_lineage=True):
@@ -35016,14 +35107,12 @@ class ExplainLineage(ListNode):
     default_description = 'This node explains the lineage of a specific column in a dbt model.'
 
     def extract(self, item):
-        clear_output(wait=True)
+        
 
         dbt_lineage = self.para['dbt_lineage']
         model_name = self.para['model_name']
         column_name = self.para['column_name']
         
-        display(HTML(f"{running_spinner_html} Explaining lineage for {model_name}.{column_name}..."))
-
         source_lineage, usage_lineage = dbt_lineage.get_column_lineage_raw_dicts(model_name, column_name)
 
         outputs = [
@@ -35181,6 +35270,8 @@ def append_column_descriptions(yml_path, model_name, full_model_name, dbt_lineag
                         column['description'] += f"Downstream Lineage: {cocoon_lineage_summary['usage']}\n"
                     
                     column['description'] += cocoon_lineage_end
+                    
+                    print(f"Updated description for '{col_name}'")
 
     with open(yml_path, 'w') as file:
         dbt_yaml.dump(data, file)

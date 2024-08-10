@@ -70,6 +70,7 @@ def get_database_name(con):
 cocoon_query_logs = []
 
 
+
 def transpile_query(sql_query, read, write):
     try:
         sql_query = sqlglot.transpile(sql_query, read=read, write=write, comments=False)[0]
@@ -166,12 +167,17 @@ def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True
     else:
         raise ValueError(f"Connection type {type(con)} not supported")
 
-def enclose_table_name(table_name):
+def enclose_table_name(table_name, con=None):
     table_name = f"{table_name}"
-    if not table_name.startswith('"'):
-        table_name = '"' + table_name
-    if not table_name.endswith('"'):
-        table_name = table_name + '"'
+    
+    symbol = '"'
+    if con and is_bigquery_connection(con):
+        symbol = '`'
+        
+    if not table_name.startswith(symbol):
+        table_name = symbol + table_name
+    if not table_name.endswith(symbol):
+        table_name = table_name + symbol
     return table_name
 
 def get_schema_sqlserver(con):
@@ -333,8 +339,10 @@ def get_query_schema(con, query, transpile=True):
 
         schema_dict = {}
         for field in schema:
-            bq_type = field.field_type
-            schema_dict[field.name] = bq_type
+            if field.mode == 'REPEATED':
+                schema_dict[field.name] = f'ARRAY'
+            else:
+                schema_dict[field.name] = field.field_type
 
         return schema_dict
     
@@ -387,7 +395,10 @@ def get_table_schema(conn, table_name, schema=None, database=None):
 
         schema = {}
         for field in table.schema:
-            schema[field.name] = field.field_type
+            if field.mode == 'REPEATED':
+                schema[field.name] = f'ARRAY'
+            else:
+                schema[field.name] = field.field_type
 
         return schema
 
@@ -473,15 +484,16 @@ def get_table_names(conn):
     
 
 
-def generate_count_distinct_query(table_name, attributes, ratio=True):
+def generate_count_distinct_query(table_name, attributes, con, ratio=True):
     select_clauses = []
-    table_name = enclose_table_name(table_name)
+    table_name = enclose_table_name(table_name, con=con)
     
     for attribute in attributes:
+        enclosed_attribute = enclose_table_name(attribute, con=con)
         if ratio:
-            select_clause = f'COUNT(DISTINCT "{attribute}")/COUNT(*) AS "{attribute}"'
+            select_clause = f'COUNT(DISTINCT {enclosed_attribute})/COUNT(*) AS {enclosed_attribute}'
         else:
-            select_clause = f'COUNT(DISTINCT "{attribute}") AS "{attribute}"'
+            select_clause = f'COUNT(DISTINCT {enclosed_attribute}) AS {enclosed_attribute}'
         select_clauses.append(select_clause)
     
     query = f'SELECT {", ".join(select_clauses)} \nFROM {table_name}'
@@ -521,11 +533,11 @@ def generate_group_ratio_query(table_name, group_by, attributes):
 
 
 def generate_queries_for_overlap(table1, attributes1, table2, attributes2, con):
-    table1 = enclose_table_name(table1)
-    table2 = enclose_table_name(table2)
+    table1 = enclose_table_name(table1, con=con)
+    table2 = enclose_table_name(table2, con=con)
     
-    select_clause1 = ", ".join(f"{table1}.\"{attr}\"" for attr in attributes1)
-    select_clause2 = ", ".join(f"{table2}.\"{attr}\"" for attr in attributes2)
+    select_clause1 = ", ".join(f"{table1}.{enclose_table_name(attr, con=con)}" for attr in attributes1)
+    select_clause2 = ", ".join(f"{table2}.{enclose_table_name(attr, con=con)}" for attr in attributes2)
 
     query1 = f"""
         SELECT COUNT(*)
@@ -535,10 +547,10 @@ def generate_queries_for_overlap(table1, attributes1, table2, attributes2, con):
             LEFT JOIN (
                 SELECT DISTINCT {select_clause2}
                 FROM {table2}
-                WHERE {' OR '.join(f'{table2}."{attr2}" IS NOT NULL' for attr2 in attributes2)}
-            ) T2 ON {' AND '.join(f'{table1}."{attr1}" = T2."{attr2}"' for attr1, attr2 in zip(attributes1, attributes2))}
-            WHERE {' AND '.join(f'T2."{attr2}" IS NULL' for attr2 in attributes2)}
-                AND {' OR '.join(f'{table1}."{attr1}" IS NOT NULL' for attr1 in attributes1)}
+                WHERE {' OR '.join(f'{table2}.{enclose_table_name(attr2, con=con)} IS NOT NULL' for attr2 in attributes2)}
+            ) T2 ON {' AND '.join(f'{table1}.{enclose_table_name(attr1, con=con)} = T2.{enclose_table_name(attr2, con=con)}' for attr1, attr2 in zip(attributes1, attributes2))}
+            WHERE {' AND '.join(f'T2.{enclose_table_name(attr2, con=con)} IS NULL' for attr2 in attributes2)}
+                AND {' OR '.join(f'{table1}.{enclose_table_name(attr1, con=con)} IS NOT NULL' for attr1 in attributes1)}
         )
     """
     only1 = run_sql_return_df(con, query1).iloc[0, 0]
@@ -551,10 +563,10 @@ def generate_queries_for_overlap(table1, attributes1, table2, attributes2, con):
             LEFT JOIN (
                 SELECT DISTINCT {select_clause1}
                 FROM {table1}
-                WHERE {' OR '.join(f'{table1}."{attr1}" IS NOT NULL' for attr1 in attributes1)}
-            ) T1 ON {' AND '.join(f'{table2}."{attr2}" = T1."{attr1}"' for attr1, attr2 in zip(attributes1, attributes2))}
-            WHERE {' AND '.join(f'T1."{attr1}" IS NULL' for attr1 in attributes1)}
-                AND {' OR '.join(f'{table2}."{attr2}" IS NOT NULL' for attr2 in attributes2)}
+                WHERE {' OR '.join(f'{table1}.{enclose_table_name(attr1, con=con)} IS NOT NULL' for attr1 in attributes1)}
+            ) T1 ON {' AND '.join(f'{table2}.{enclose_table_name(attr2, con=con)} = T1.{enclose_table_name(attr1, con=con)}' for attr1, attr2 in zip(attributes1, attributes2))}
+            WHERE {' AND '.join(f'T1.{enclose_table_name(attr1, con=con)} IS NULL' for attr1 in attributes1)}
+                AND {' OR '.join(f'{table2}.{enclose_table_name(attr2, con=con)} IS NOT NULL' for attr2 in attributes2)}
         )
     """
     only2 = run_sql_return_df(con, query2).iloc[0, 0]
@@ -567,9 +579,9 @@ def generate_queries_for_overlap(table1, attributes1, table2, attributes2, con):
             INNER JOIN (
                 SELECT DISTINCT {select_clause2}
                 FROM {table2}
-                WHERE {' OR '.join(f'{table2}."{attr2}" IS NOT NULL' for attr2 in attributes2)}
-            ) T3 ON {' AND '.join(f'{table1}."{attr1}" = T3."{attr2}"' for attr1, attr2 in zip(attributes1, attributes2))}
-            WHERE {' OR '.join(f'{table1}."{attr1}" IS NOT NULL' for attr1 in attributes1)}
+                WHERE {' OR '.join(f'{table2}.{enclose_table_name(attr2, con=con)} IS NOT NULL' for attr2 in attributes2)}
+            ) T3 ON {' AND '.join(f'{table1}.{enclose_table_name(attr1, con=con)} = T3.{enclose_table_name(attr2, con=con)}' for attr1, attr2 in zip(attributes1, attributes2))}
+            WHERE {' OR '.join(f'{table1}.{enclose_table_name(attr1, con=con)} IS NOT NULL' for attr1 in attributes1)}
         )
     """
     overlap = run_sql_return_df(con, query3).iloc[0, 0]
@@ -578,16 +590,16 @@ def generate_queries_for_overlap(table1, attributes1, table2, attributes2, con):
 
 
 
-def create_sample_distinct_query(table_name, column_name, sample_size=None):
-    table_name = enclose_table_name(table_name)
-    query =  f'SELECT "{column_name}" \nFROM {table_name} \nWHERE "{column_name}" IS NOT NULL \nGROUP BY "{column_name}" \nORDER BY COUNT(*) DESC, "{column_name}"\n'
+def create_sample_distinct_query(con, table_name, column_name, sample_size=None):
+    table_name = enclose_table_name(table_name, con=con)
+    query =  f'SELECT {enclose_table_name(column_name, con=con)} \nFROM {table_name} \nWHERE {enclose_table_name(column_name, con=con)} IS NOT NULL \nGROUP BY {enclose_table_name(column_name, con=con)} \nORDER BY COUNT(*) DESC, {enclose_table_name(column_name, con=con)}\n'
     if sample_size is not None:
         query += f" LIMIT {sample_size}"
     return query
 
 def create_sample_distinct(con, table_name, column_name, sample_size):
 
-    query = create_sample_distinct_query(table_name, column_name, sample_size)
+    query = create_sample_distinct_query(con, table_name, column_name, sample_size)
     sample_values = run_sql_return_df(con,query)
 
     return sample_values
@@ -601,7 +613,7 @@ def create_sample_distinct_query_regex(con, table_name, column_name, sample_size
         
     table_name = enclose_table_name(table_name)
         
-    query =  f'SELECT "{column_name}" \nFROM {table_name} \nWHERE "{column_name}" IS NOT NULL \n'
+    query =  f'SELECT {enclose_table_name(column_name, con=con)} \nFROM {table_name} \nWHERE {enclose_table_name(column_name, con=con)} IS NOT NULL \n'
     
     for regex in regex_list:
         regex_match_clause = create_regex_match_clause(con, column_name, regex)
@@ -611,7 +623,7 @@ def create_sample_distinct_query_regex(con, table_name, column_name, sample_size
         regex_match_clause = create_regex_match_clause(con, column_name, regex)
         query += f"AND NOT {regex_match_clause} \n"
     
-    query += f'GROUP BY "{column_name}" \nORDER BY COUNT(*) DESC, "{column_name}"\n'
+    query += f'GROUP BY {enclose_table_name(column_name, con=con)} \nORDER BY COUNT(*) DESC, {enclose_table_name(column_name, con=con)}\n'
     
     if sample_size is not None:
         query += f" LIMIT {sample_size}"
@@ -623,13 +635,13 @@ def create_sample_distinct_query_regex(con, table_name, column_name, sample_size
 
 def create_regex_match_clause(con, column_name, regex):
     if is_duckdb_connection(con):
-        return f'regexp_full_match("{column_name}", \'{regex}\')'
+        return f'regexp_full_match({enclose_table_name(column_name, con=con)}, \'{regex}\')'
     elif is_snowflake_connection(con):
         regex = regex.replace('\\', '\\\\')
-        return f'REGEXP_LIKE("{column_name}", \'{regex}\')'
+        return f'REGEXP_LIKE({enclose_table_name(column_name, con=con)}, \'{regex}\')'
     elif is_pyodbc_connection(con):
         like_pattern = regex_to_like_pattern(regex)
-        return f'"{column_name}" LIKE \'{like_pattern}\''
+        return f'{enclose_table_name(column_name, con=con)} LIKE \'{like_pattern}\''
     elif isinstance(con, bigquery.Client):
         return f'REGEXP_CONTAINS({column_name}, r\'{regex}\')'
     else:
@@ -662,11 +674,11 @@ def regex_to_like_pattern(regex):
 
 def find_duplicate_rows_result(con, table_name, sample_size=0, with_context = "", columns=None):
     
-    table_name = enclose_table_name(table_name)
+    table_name = enclose_table_name(table_name, con=con)
 
     group_by_clause = "ALL"
     if columns is not None:
-        group_by_clause = ", ".join(f'{enclose_table_name(column)}' for column in columns)
+        group_by_clause = ", ".join(f'{enclose_table_name(column, con=con)}' for column in columns)
     
     sql_query = f'''
 SELECT *, COUNT(*) as cocoon_count
@@ -687,35 +699,32 @@ HAVING COUNT(*) > 1'''
     sample_duplicate_rows = run_sql_return_df(con, sample_sql)
     return duplicate_count, sample_duplicate_rows
 
-def where_clause_for_space(column_name):
-    return f'"{column_name}" <> TRIM("{column_name}")'
 
-def construct_distinct_count_query(table_name, column_name):
+
+def construct_distinct_count_query(con, table_name, column_name):
     
-    table_name = enclose_table_name(table_name)
-    
-    query = f'SELECT COUNT(DISTINCT "{column_name}") FROM {table_name} WHERE "{column_name}" IS NOT NULL'
+    query = f'SELECT COUNT(DISTINCT {enclose_table_name(column_name, con=con)}) FROM {enclose_table_name(table_name, con=con)} WHERE {enclose_table_name(column_name, con=con)} IS NOT NULL'
     return query
 
 def count_total_distinct(con, table_name, column_name):
-    query = construct_distinct_count_query(table_name, column_name)
+    query = construct_distinct_count_query(con, table_name, column_name)
     result_df = run_sql_return_df(con, query)
     total_distinct_count = result_df.iloc[0, 0]
     return total_distinct_count
 
 def compute_unique_ratio(con, table_name, column_name, allow_null=False, with_context=""):
-    table_name = enclose_table_name(table_name)
+    table_name = enclose_table_name(table_name, con=con)
     
     if not allow_null:
         query = f"""
-        SELECT COUNT(DISTINCT "{column_name}") AS DISTINCT_COUNT,
+        SELECT COUNT(DISTINCT {enclose_table_name(column_name, con=con)}) AS DISTINCT_COUNT,
                COUNT(*) AS TOTAL_COUNT
         FROM {table_name}
         """
     else:
         query = f"""
-        SELECT COUNT(DISTINCT "{column_name}") AS DISTINCT_COUNT,
-               COUNT("{column_name}") AS NON_NULL_COUNT
+        SELECT COUNT(DISTINCT {enclose_table_name(column_name, con=con)}) AS DISTINCT_COUNT,
+               COUNT({enclose_table_name(column_name, con=con)}) AS NON_NULL_COUNT
         FROM {table_name}
         """
 
@@ -1147,7 +1156,6 @@ def create_table(con, table_name, columns, schema_name=None, database_name=None)
 
         try:
             con.create_table(table, exists_ok=True)
-            print(f"Table {table_ref} created successfully.")
         except Exception as e:
             raise type(e)(f"Error creating BigQuery table: {table_ref}\n\nOriginal error: {str(e)}") from e
         
@@ -1280,6 +1288,7 @@ def insert_df_to_table(con, table_name, df):
         cursor.execute(insert_sql, tuple(row))
     con.commit()
 
+
 def create_table_from_df(df: pd.DataFrame, con, table_name: str, database: str = None, schema: str = None):
 
     if is_duckdb_connection(con):
@@ -1310,6 +1319,26 @@ def create_table_from_df(df: pd.DataFrame, con, table_name: str, database: str =
         create_table_from_df_sql_server(con, full_table_name, df)
         
         insert_df_to_table(con, full_table_name, df)
+        
+    elif is_bigquery_connection(con):
+        
+        if database and schema:
+            full_table_name = f"{database}.{schema}.{table_name}"
+        elif schema:
+            full_table_name = f"{schema}.{table_name}"
+        else:
+            raise ValueError("Both project (database) and dataset (schema) must be provided for BigQuery.")
+
+        job_config = bigquery.LoadJobConfig(
+            autodetect=True,
+            write_disposition="WRITE_TRUNCATE",
+        )
+
+        job = con.load_table_from_dataframe(
+            df, full_table_name, job_config=job_config
+        )
+
+        job.result()
 
     else:
         raise ValueError("Unsupported connection type. Use either DuckDB or Snowflake connection.")
@@ -1327,3 +1356,16 @@ def format_value(value):
         return str(value)
     else:
         return f"""N'{value.replace("'", "''")}'"""
+    
+def escape_value_single_quotes(value, con):
+    
+    if is_duckdb_connection(con):
+        return value.replace("''", "'").replace("'", "''")
+    elif is_snowflake_connection(con):
+        return value.replace(r"\'", "'").replace("'", r"\'")
+    elif is_bigquery_connection(con):
+        return value.replace(r"\'", "'").replace("'", r"\'")
+    elif is_pyodbc_connection(con):
+        return value.replace("''", "'").replace("'", "''")
+    else:
+        return value 
