@@ -20530,7 +20530,7 @@ class DecideTrim(Node):
     def extract(self, item):
         clear_output(wait=True)
 
-        display(HTML("🔍 Deciding Trim for leading/tailing white spaces..."))
+        display(HTML("🔍 Deciding Trim for leading/trailing white spaces..."))
         create_progress_bar_with_numbers(2, doc_steps)
 
         con = self.item["con"]
@@ -30522,6 +30522,7 @@ def get_tags(input_string):
 class DBTProjectConfigAndRead(Node):
     default_name = 'DBT Project Configuration and Read'
     default_description = 'This step allows you to specify an existing DBT project directory and read the project.'
+    create = True
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         clear_output(wait=True)
@@ -30538,6 +30539,8 @@ class DBTProjectConfigAndRead(Node):
 
         output = widgets.Output()
 
+        create = self.class_para.get("create", self.create)
+        
         def on_button_click(b):
             with self.output_context():
                 directory = dbt_directory_input.value
@@ -30552,7 +30555,7 @@ class DBTProjectConfigAndRead(Node):
                 database = self.para.get("database", None)
                 schema = self.para.get("schema", None)
                 
-                data_project = read_data_project_from_dir(directory, con, database=database, schema=schema)
+                data_project = read_data_project_from_dir(directory, con, database=database, schema=schema, create=create)
                                 
                 self.para["data_project"] = data_project
                 self.para["dbt_directory"] = directory
@@ -35497,12 +35500,12 @@ class DBTProjectConfigAndReadMultiple(MultipleNode):
     default_name = 'DBT Project Config and Read Multiple'
     default_description = 'This creates DBTProjectConfigAndRead nodes for source and target directories'
     
-    def construct_node(self, element_name="", dbt_directory=""):
+    def construct_node(self, element_name="", dbt_directory="", create=True):
         para = self.para.copy()
         para["element_name"] = element_name
         para["dbt_directory"] = dbt_directory
         
-        node = DBTProjectConfigAndRead(para=para)
+        node = DBTProjectConfigAndRead(para=para, class_para={"create": create})
         node.inherit(self)
         return node
     
@@ -35512,8 +35515,8 @@ class DBTProjectConfigAndReadMultiple(MultipleNode):
         
         self.elements = ["source", "target"]
         self.nodes = {
-            "source": self.construct_node("source", source_directory),
-            "target": self.construct_node("target", target_directory)
+            "source": self.construct_node("source", source_directory, create=True),
+            "target": self.construct_node("target", target_directory, create=False)
         }
         self.item = item
 
@@ -35653,3 +35656,366 @@ def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=F
     
 
     return query_widget, main_workflow
+
+
+
+class PauseWorkflow(Node):
+    default_name = 'Pause Workflow'
+    default_description = 'Pauses the workflow and sets a callback function'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        if 'pause' not in self.item:
+            self.item['pause'] = {}
+        
+        
+        
+        self.item['pause'][str(self.path)] = callback
+        
+        display(HTML('⏸️ Workflow paused...'))
+        
+
+
+class RefineSchemaMatching(Node):
+    default_name = 'Refine Schema Matching'
+    default_description = 'This node refines the schema matching by removing low confidence mappings and building a description.'
+
+    def extract(self, input_item):
+        clear_output(wait=True)
+        
+        print("🔍 Refining the schema matching...")
+        self.progress = show_progress(1)
+
+        target_table_name = self.para.get('target_table')
+        source_data_project = self.para.get('source_data_project')
+        target_data_project = self.para.get('target_data_project')
+
+        target_table = target_data_project.table_object[target_table_name]
+
+        document = self.get_sibling_document('Schema Matching For All').get('Identify Schema Matching', {})
+
+        refined_matching = {}
+        mapping_description = []
+        database_description = [f"Target Table: {target_table_name}\n{target_table.table_summary}"]
+
+        for source_table_name, matching_info in document.items():
+            column_matching = matching_info.get('column_matching', {})
+            refined_column_matching = {}
+
+            for target_column, details in column_matching.items():
+                if details.get('confidence', False):
+                    refined_column_matching[target_column] = details
+
+            if refined_column_matching:
+                refined_matching[source_table_name] = {
+                    'summary': matching_info.get('summary', ''),
+                    'column_matching': refined_column_matching
+                }
+                
+                source_table = source_data_project.table_object[source_table_name]
+                database_description.append(f"Source Table: {source_table_name}\n{source_table.table_summary}")
+
+        for target_column in set(col for matching in refined_matching.values() for col in matching['column_matching']):
+            mappings = []
+            for source_table, matching_info in refined_matching.items():
+                if target_column in matching_info['column_matching']:
+                    source_columns = matching_info['column_matching'][target_column]['source_columns']
+                    transformation = matching_info['column_matching'][target_column]['transformation']
+                    mappings.append(f"{source_table} ({', '.join(source_columns)}) - {transformation}")
+            
+            if mappings:
+                mapping_description.append(f"Target column '{target_column}' can be mapped from:\n" + "\n".join(f"- {m}" for m in mappings))
+
+        mapping_description_text = "\n\n".join(mapping_description)
+        database_description_text = "\n\n".join(database_description)
+        
+        
+
+        return  mapping_description_text, database_description_text
+    
+    def run(self, extract_output, use_cache=True):
+        mapping_description_text, database_description_text = extract_output
+        
+        if not mapping_description_text:
+            return self.run_but_fail(extract_output)
+        
+        template = f"""You have a database with target table and source tables:
+{database_description_text}
+
+Here are the potential column mappings:
+{mapping_description_text}
+
+Refine the schema matching:
+Some target column have mappings from multiple source tables. 
+Unless the target column is a derived from multiple source columns, it should only be mapped from one source table.
+Propose a refined schema matching in the following format:
+```yml
+summary: >-
+    X columns can be transformed...
+column_matching: # for all columns can be transformed
+    target_column_name_1:
+        source_columns: 
+            - table_name: source_table_name_1
+              column_name: source_column_name_1
+            - table_name: source_table_name_2
+              column_name: source_column_name_2
+              ...
+        transformation: "direct copy"
+    target_column_name_2:
+        ...
+```"""
+        messages = [{"role": "user", "content": template}]
+
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        result = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        return result
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"summary": "Unable to generate a refined schema matching.", "column_matching": {}}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+        
+class JoinGraphFromMatchingBuilder(Node):
+    default_name = 'Join Graph Fro Matching Builder'
+    default_description = 'This node builds a join graph based on the schema matching.'
+    
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        display(HTML(f"🔗 Building join graph for the SQL query..."))
+        self.progress = show_progress(1)
+        
+        source_data_project = self.para.get('source_data_project')
+        
+        previous_node_output = self.get_sibling_document('Refine Schema Matching')
+        
+        column_matching = previous_node_output.get('column_matching', {})
+        
+        related_tables = set()
+        for col in column_matching.values():
+            for source_col in col['source_columns']:
+                related_tables.add(source_col['table_name'])
+        related_tables = list(related_tables)
+        
+        key_info = source_data_project.get_key_info(related_tables)
+        
+        return related_tables, key_info
+    
+    def run(self, extract_output, use_cache=True):
+        related_tables, key_info = extract_output
+        
+        if not related_tables:
+            return self.run_but_fail(extract_output)
+            
+        key_info_str = yaml.dump(key_info, default_flow_style=False)
+        
+        template = f"""Given the following related tables with primary key and foreign key information:
+{key_info_str}
+
+Please provide a pk-fk join description. Your response should be in the following format:
+```yml
+reasoning: >-
+    Explain how to join {", ".join(related_tables)}
+join_graph:
+    - [foreign_table1, foreign_key1, primary_table1, primary_key1]
+    - [foreign_table2, foreign_key2, primary_table2, primary_key2]
+    # Add more joins to connect all tables
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
+            raise ValueError("Analysis should contain a 'reasoning' key with a string value")
+        
+        if 'join_graph' not in analysis or not isinstance(analysis['join_graph'], list):
+            raise ValueError("Analysis should contain a 'join_graph' key with a list value")
+        
+        for join in analysis['join_graph']:
+            if not isinstance(join, list) or len(join) != 4:
+                raise ValueError("Each join in the join_graph should be a list with exactly 4 elements")
+        
+        return analysis
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"reasoning": "Unable to generate reasoning for the join graph.", "join_graph": []}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+
+class SQLQueryMatchingConstructor(Node):
+    default_name = 'SQL Query Constructor'
+    default_description = 'This node constructs the SQL query based on refined schema matching and join graph.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🛠️ Constructing the SQL query..."))
+        self.progress = show_progress(1)
+
+        refined_schema_output = self.get_sibling_document('Refine Schema Matching')
+        join_graph_output = self.get_sibling_document('Join Graph Fro Matching Builder')
+        
+        con = self.item["con"]
+        
+        database_hint = ""
+        if con:
+            database_name = get_database_name(con)
+            database_hint = f"Note that we use {database_name} syntax. {database_general_hint.get(database_name, '')}"
+        
+        column_matching = refined_schema_output['column_matching']
+        join_graph = join_graph_output['join_graph']
+        
+        database = self.para.get("database", None)
+        schema = self.para.get("schema", None)
+        
+        identify_instruction = ""
+        if database is not None and schema is not None:
+            identify_instruction = f"Note that the database is '{database}' and the schema is '{schema}'."
+            identify_instruction += f"Identify each table. E.g., {enclose_table_name(database, con=con)}.{enclose_table_name(schema, con=con)}.{enclose_table_name('table_name', con=con)}"
+            
+            
+        return column_matching, join_graph, database_hint, identify_instruction
+
+    def run(self, extract_output, use_cache=True):
+        column_matching, join_graph, database_hint, identify_instruction = extract_output
+
+        column_matching_str = yaml.dump(column_matching, default_flow_style=False)
+        join_graph_str = yaml.dump(join_graph, default_flow_style=False)
+        
+        if not column_matching:
+            return self.run_but_fail(extract_output)
+            
+        template = f"""Given the following refined column matching:
+{column_matching_str}
+
+And the following join graph:
+{join_graph_str}
+
+Please construct a complete SQL query that selects all mapped columns from the source tables and joins them according to the join graph. 
+{database_hint}
+{identify_instruction}
+Your response should be in the following format:
+```yml
+reasoning: >-
+    [Explain the structure of the SQL query and any important considerations]
+sql_query: |
+    SELECT 
+        [list all mapped columns with appropriate table aliases]
+    FROM 
+        [start with the main table]
+    JOIN 
+        [list all necessary joins based on the join graph]
+    WHERE 
+        [add any necessary conditions]
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
+            raise ValueError("Analysis should contain a 'reasoning' key with a string value")
+        
+        if 'sql_query' not in analysis or not isinstance(analysis['sql_query'], str):
+            raise ValueError("Analysis should contain a 'sql_query' key with a string value")
+        
+        return analysis
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"reasoning": "Unable to generate reasoning for the SQL query.", "sql_query": ""}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(run_output)
+        
+
+        
+def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
+    
+    if query_widget is None:
+        query_widget = QueryWidget(con)
+
+    source_table_object = Table()
+    item = {
+        "con": con,
+        "query_widget": query_widget
+    }
+    
+    workflow_para = {"viewer": viewer, "source_table_object": source_table_object}
+    
+    for key, value in para.items():
+        workflow_para[key] = value
+
+    main_workflow = Workflow("Single Table Transformation Workflow", 
+                            item = item, 
+                            description="A workflow to transform a table into another table",
+                            para = workflow_para,
+                            output=output)
+    
+    main_workflow.add_to_leaf(SelectSchema(output = output))
+    main_workflow.add_to_leaf(DBTProjectConfigAndReadMultiple(output=output))
+    
+    
+    main_workflow.add_to_leaf(ConnectSourceDataNode(output=output))
+    main_workflow.add_to_leaf(FindTablesAndMatchSchemaForAll(output=output))
+    
+    
+    
+
+    return query_widget, main_workflow
+
+
+        
+class FindTablesAndMatchSchemaForAll(MultipleNode):
+    default_name = 'Find Tables and Match Schema For All'
+    default_description = 'This node finds tables and matches schema for all tables.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["target_table"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        workflow = Workflow("Matching Schema", 
+                        description="A workflow to match schema",
+                        para=para,
+                        id_para="target_table")
+        
+        workflow.inherit(self)
+        
+        workflow.add_to_leaf(TableSummaryAnalysisNode())
+        workflow.add_to_leaf(SourceToTargetTableAnalysisNode())
+        workflow.add_to_leaf(SchemaMatchingForAll())
+        workflow.add_to_leaf(RefineSchemaMatching())
+        workflow.add_to_leaf(JoinGraphFromMatchingBuilder())
+        workflow.add_to_leaf(SQLQueryMatchingConstructor())
+        
+        return workflow
+
+    def extract(self, item):
+        target_tables = list(self.para['target_data_project'].tables.keys())
+        
+        self.elements = target_tables
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+                      for idx, element in enumerate(self.elements)}
+        
