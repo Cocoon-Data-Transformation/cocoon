@@ -86,11 +86,12 @@ def run_sql_return_df(con, sql_query, database=None, schema=None, transpile=True
     if log:
         cocoon_query_logs.append(sql_query)
     if is_duckdb_connection(con):
+        
         context_queries = []
-        if database:
-            context_queries.append(f"SET CURRENT_CATALOG = '{database}';")
-        if schema:
-            context_queries.append(f"SET CURRENT_SCHEMA = '{schema}';")
+        if database and schema:
+            context_queries.append(f"USE {enclose_table_name(database)}.{enclose_table_name(schema)};")
+        elif schema:
+            context_queries.append(f"USE {enclose_table_name(schema)};")
         
         full_query = "\n".join(context_queries + [sql_query])
         

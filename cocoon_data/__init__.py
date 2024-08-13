@@ -45,6 +45,7 @@ from .viz import *
 from .constant import *
 from .data_type import *
 from .widgets import *
+from .file_sys import *
 
 try:
     import rasterio
@@ -2667,7 +2668,7 @@ And more to come! 🚀""")
 
             file_name = f"{data_name}_cocoon_data.json".replace(" ", "_")
 
-            if os.path.exists(file_name):
+            if file_exists(file_name):
                 print(f"🤔 There is a document file ./{file_name} Do you want to load it?")
 
 
@@ -5169,7 +5170,7 @@ Now, please provide the top 3 most likely reasons, order by likelihood (use your
             updated_file_name = file_name_input.value
             allow_overwrite = overwrite_checkbox.value
 
-            if os.path.exists(updated_file_name) and not allow_overwrite:
+            if file_exists(updated_file_name) and not allow_overwrite:
                 print("\x1b[31m" + "Warning: Failed to save. File already exists." + "\x1b[0m")
             else:
                 self.write_document_to_disk(updated_file_name)
@@ -10971,7 +10972,7 @@ class GeoDataCleaning(DataCleaning):
         def save_file(b):
             updated_file_name = file_name_input.value
 
-            if os.path.exists(updated_file_name):
+            if file_exists(updated_file_name):
                 print("Failed to save: File already exists.")
             else:
                 self.final_shape.save_file(updated_file_name)
@@ -12394,7 +12395,7 @@ class DataSource(Node):
         idx = 1
         html_content = ""
 
-        files = os.listdir(directory)
+        files = list_files_in(directory)
 
         print("🧐 Scanning the data source ...")
 
@@ -15527,9 +15528,9 @@ class TransformationSQLPipeline(TransformationPipeline):
         final_step = self.get_final_step()
         return final_step.get_schema(con)
 
-    def run_codes(self, con, mode="dbt"):
+    def run_codes(self, con, mode="dbt", database=None, schema=None):
         sql_code = self.get_codes(mode=mode, con=con)
-        run_sql_return_df(con, sql_code)
+        run_sql_return_df(con, sql_code, database=database, schema=schema)
     
     def materialize(self, con, mode="WITH_TABLE", database=None, schema=None):
         if mode not in ["WITH_TABLE", "WITH_VIEW"]:
@@ -15542,7 +15543,7 @@ class TransformationSQLPipeline(TransformationPipeline):
             final_step.schema = schema
 
         final_step.remove_from_database(con)
-        self.run_codes(con=con, mode=mode)
+        self.run_codes(con=con, mode=mode, database=database, schema=schema)
         final_step.set_materialized()
     
     def __repr__(self, full=True):
@@ -15589,14 +15590,20 @@ class DataProject:
         
         self.partition_mapping = {}
     
-    def get_key_info(self, tables=None):
+    def get_key_info(self, tables=None, include_ri=True):
         if not tables:
             return self.key
         
         key_info = {}
         for table in self.key:
             if table in tables:
-                key_info[table] = self.key[table]
+                table_info = copy.deepcopy(self.key[table])
+                
+                if not include_ri:
+                    for fk in table_info.get('foreign_keys', []):
+                        fk.pop('referential_integrity', None)
+                
+                key_info[table] = table_info
                 
             if table in self.partition_mapping:
                 partitions = self.partition_mapping[table]
@@ -19292,14 +19299,13 @@ def ask_save_files(labels, file_names, contents):
             file_path = file_path_input.value
             allow_overwrite = overwrite_checkbox.value
 
-            if os.path.exists(file_path) and not allow_overwrite:
+            if file_exists(file_path) and not allow_overwrite:
                 error_msg.value += f"<div style='color: orange;'>⚠️ Warning: Failed to save {label}. File already exists.</div>"
             else:
                 try:
-                    with open(file_path, "w", encoding="utf-8") as file:
-                        file.write(content)
+                    write_to(file_path, content)
                     error_msg.value += f"<div style='color: green;'>🎉 File saved successfully as {file_path}</div>"
-                except IOError as e:
+                except Exception as e:
                     error_msg.value += f"<div style='color: red;'>❌ Error saving {label}: {str(e)}</div>"
 
     save_button = Button(
@@ -19323,11 +19329,10 @@ def ask_save_file(file_name, content):
         updated_file_name = file_name_input.value
         allow_overwrite = overwrite_checkbox.value
 
-        if os.path.exists(updated_file_name) and not allow_overwrite:
+        if file_exists(updated_file_name) and not allow_overwrite:
             print("\x1b[31m" + "Warning: Failed to save. File already exists." + "\x1b[0m")
         else:
-            with open(updated_file_name, "w") as file:
-                file.write(content)
+            write_to(updated_file_name, content)
             print(f"🎉 File saved successfully as {updated_file_name}")
 
     file_name_input = Text(value=file_name, description='File Name:')
@@ -21321,8 +21326,8 @@ class WriteStageYMLCode(Node):
     
         
         if "dbt_directory" in self.para:
-            if not os.path.exists(os.path.join(self.para["dbt_directory"], "stage")):
-                os.makedirs(os.path.join(self.para["dbt_directory"], "stage"))
+            if not file_exists(os.path.join(self.para["dbt_directory"], "stage")):
+                create_directory(os.path.join(self.para["dbt_directory"], "stage"))
             file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
        
         create_progress_bar_with_numbers(4, doc_steps)
@@ -22579,30 +22584,12 @@ Return in the following format:
         display(HBox([reject_button, next_button]))
         
 
-def create_cocoon_table_transform_workflow(con, query_widget=None, viewer=True, output=None):
-
-    if query_widget is None:
-        query_widget = QueryWidget(con)
 
 
-    item = {
-        "con": con,
-        "query_widget": query_widget
-    }
 
-    main_workflow = Workflow("Single Table Transformation Workflow", 
-                            item = item, 
-                            description="A workflow to transform a table into another table",
-                            output = output)
 
-    main_workflow.add_to_leaf(SelectSourceTargetTable(output = output))
-    main_workflow.add_to_leaf(CreateShortSourceTableSummary(output = output))
-    main_workflow.add_to_leaf(CreateShortTargetTableSummary(output = output))
-    main_workflow.add_to_leaf(UnderstandSourceToTargetTransform(output = output))
-    main_workflow.add_to_leaf(WriteCode(output = output))
-    main_workflow.add_to_leaf(DebugCode(output = output))
+
         
-    return query_widget, main_workflow
 
 def create_cocoon_profile_workflow(con, query_widget=None, viewer=False, output=None):
 
@@ -22666,11 +22653,11 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
-        "✨ <b>Format:</b> Give us a table, we'll format and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🧩 <b>Model:</b> Give us a set of tables, we'll format, integrate and model them.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🧩 <b>Catalog:</b> Give us a set of tables, we'll clean, integrate and model them.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
         "🔍 <b>Profile:</b> Give us a table, we'll identify anomalies.<br> <i>🛡️ Access Control: <u>read-only</u></i>",
-        "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables.",
-        "🔧 <b>(Preview) Transform:</b> Give us source/target tables, we will transform.",
+        "🔧 <b>(Preview) Transform:</b> Give us a catalog and target schema, we will transform.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables. <br>",
         "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a Pipeline, we'll interpret it.",
         ]
         coming_labels = [
@@ -22683,8 +22670,8 @@ class CocoonBranchStep(Node):
             "Data Format Workflow",
             "Data Vault Workflow",
             "Data Profiling Workflow",
-            "Fuzzy Join Workflow",
             "Single Table Transformation Workflow",
+            "Fuzzy Join Workflow",
             "DBT Project Explore Workflow",
         ]
 
@@ -22980,7 +22967,7 @@ class SpecifyDirectory(Node):
             with self.output_context():
                 directory = directory_widget.value
                 
-                if not os.path.exists(directory):
+                if not file_exists(directory):
                     print(f"❌ The directory {directory} does not exist.")
                     return
                 
@@ -23731,8 +23718,7 @@ class DebugCode(Node):
 
     def extract(self, input_item):
         clear_output(wait=True)
-        create_progress_bar_with_numbers(1, transform_steps)
-        display(HTML(f"{running_spinner_html} Debugging the code..."))
+        display(HTML(f"{running_spinner_html} Verifying the codes..."))
         self.progress = show_progress(1)
         
         con = self.item["con"]
@@ -24396,8 +24382,8 @@ class SelectTables(Node):
                     file_names = [os.path.join(self.para["dbt_directory"], "sources.yml")]
                     contents = [yml_content]
                     
-                    if not os.path.exists(self.para["dbt_directory"]):
-                        os.makedirs(self.para["dbt_directory"])
+                    if not file_exists(self.para["dbt_directory"]):
+                        create_directory(self.para["dbt_directory"])
                     
                     overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
                     overwrite_checkbox.value = True
@@ -26548,23 +26534,21 @@ class StageProgress(Node):
 
                 file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
             
-            if all([os.path.exists(file_name) for file_name in file_names]):
-                with open(file_names[0], "r", encoding="utf-8") as f:
-                    sql_query = f.read()
-                    con = self.item["con"]
-                    source_step = SQLStep(table_name=table_name, con=con)
-                    database = self.para.get("database", None)
-                    schema = self.para.get("schema", None)
-                    sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
-                    table_pipeline = TransformationSQLPipeline(steps = [source_step], edges=[])
-                    table_pipeline.add_step_to_final(sql_step)
-                    self.para["table_pipeline"] = table_pipeline
+            if all([file_exists(file_name) for file_name in file_names]):
+                sql_query = read_from(file_names[0])
+                con = self.item["con"]
+                source_step = SQLStep(table_name=table_name, con=con)
+                database = self.para.get("database", None)
+                schema = self.para.get("schema", None)
+                sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
+                table_pipeline = TransformationSQLPipeline(steps = [source_step], edges=[])
+                table_pipeline.add_step_to_final(sql_step)
+                self.para["table_pipeline"] = table_pipeline
                     
                 
-                with open(file_names[1], "r", encoding="utf-8") as f:
-                    yml_data = f.read()
-                    table_object = self.para["table_object"]
-                    table_object.read_attributes_from_dbt_schema_yml(yml_data)
+                yml_data = read_from(file_names[1])
+                table_object = self.para["table_object"]
+                table_object.read_attributes_from_dbt_schema_yml(yml_data)
                     
                 callback({"next_node": "COCOON_END_WORKFLOW"})
                 
@@ -26671,19 +26655,17 @@ class StageSourceTargetProgress(Node):
             if "dbt_directory" in self.para:
                 file_names = [os.path.join(self.para["dbt_directory"], "stage", file_name) for file_name in file_names]
             
-            if all([os.path.exists(file_name) for file_name in file_names]):
-                with open(file_names[0], "r", encoding="utf-8") as f:
-                    sql_query = f.read()
-                    con = self.item["con"]
-                    sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
-                    table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
-                    self.para["table_pipeline"] = table_pipeline
+            if all([file_exists(file_name) for file_name in file_names]):
+                sql_query = read_from(file_names[0])
+                con = self.item["con"]
+                sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+                self.para["table_pipeline"] = table_pipeline
                     
                 
-                with open(file_names[1], "r", encoding="utf-8") as f:
-                    yml_data = f.read()
-                    table_object = self.para["table_object"]
-                    table_object.read_attributes_from_dbt_schema_yml(yml_data)
+                yml_data = read_from(file_names[1])
+                table_object = self.para["table_object"]
+                table_object.read_attributes_from_dbt_schema_yml(yml_data)
                     
                 callback({"next_node": "COCOON_END_WORKFLOW"})
                 
@@ -27232,8 +27214,8 @@ class DisplayJoinGraph(Node):
         contents = [yml_content]
         
         if "dbt_directory" in self.para:
-            if not os.path.exists(os.path.join(self.para["dbt_directory"], "join")):
-                os.makedirs(os.path.join(self.para["dbt_directory"], "join"))
+            if not file_exists(os.path.join(self.para["dbt_directory"], "join")):
+                create_directory(os.path.join(self.para["dbt_directory"], "join"))
             file_names = [os.path.join(self.para["dbt_directory"], "join", file_name) for file_name in file_names]
        
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
@@ -27826,8 +27808,8 @@ class BuildERStory(Node):
         contents = [yml_content]
         
         if "dbt_directory" in self.para:
-            if not os.path.exists(os.path.join(self.para["dbt_directory"], "er")):
-                os.makedirs(os.path.join(self.para["dbt_directory"], "er"))
+            if not file_exists(os.path.join(self.para["dbt_directory"], "er")):
+                create_directory(os.path.join(self.para["dbt_directory"], "er"))
             file_names = [os.path.join(self.para["dbt_directory"], "er", file_name) for file_name in file_names]
        
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
@@ -28314,8 +28296,8 @@ QUALIFY ROW_NUMBER() OVER (
         contents.append(yml_content)
 
         if "dbt_directory" in self.para:
-            if not os.path.exists(os.path.join(self.para["dbt_directory"], "snapshot")):
-                os.makedirs(os.path.join(self.para["dbt_directory"], "snapshot"))
+            if not file_exists(os.path.join(self.para["dbt_directory"], "snapshot")):
+                create_directory(os.path.join(self.para["dbt_directory"], "snapshot"))
             file_names = [os.path.join(self.para["dbt_directory"], "snapshot", file_name) for file_name in file_names]
        
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
@@ -29262,9 +29244,10 @@ class DocumentProject(Node):
         tab_content_html = ""
         
         source_tables = []
-        if os.path.exists(os.path.join(dbt_directory, "sources.yml")):
-            with open(os.path.join(dbt_directory, "sources.yml"), "r", encoding="utf-8") as file:
-                sources_yml = yaml.load(file, Loader=yaml.FullLoader)
+        if file_exists(os.path.join(dbt_directory, "sources.yml")):
+            sources_file_path = os.path.join(dbt_directory, "sources.yml")
+            sources_content = read_from(sources_file_path)
+            sources_yml = yaml.load(sources_content, Loader=yaml.FullLoader)
             
             sources = sources_yml["sources"]
             for source in sources:
@@ -29348,8 +29331,8 @@ class DocumentProject(Node):
 """
         partition_tables = []
 
-        if os.path.exists(os.path.join(dbt_directory, "partition")):
-            for file_name in os.listdir(os.path.join(dbt_directory, "partition")):
+        if file_exists(os.path.join(dbt_directory, "partition")):
+            for file_name in list_files_in(os.path.join(dbt_directory, "partition")):
                 if file_name.endswith(".yml"):
                     partition_tables.append(file_name[:-4])
 
@@ -29360,9 +29343,9 @@ class DocumentProject(Node):
         if len(partition_tables) > 0:
             for table in partition_tables:
                 try:
-                    with open(os.path.join(dbt_directory, "partition", f"{table}.yml"), "r", encoding="utf-8") as file:
-                        yml_content = file.read()
-                    
+                    file_path = os.path.join(dbt_directory, "partition", f"{table}.yml")
+                    yml_content = read_from(file_path)
+                                        
                     partition_yml_dict = yaml.safe_load(yml_content)
                     
                     nodes = [partition_yml_dict['models'][0]['name']] + partition_yml_dict['cocoon_meta']['partitions']
@@ -29428,10 +29411,11 @@ class DocumentProject(Node):
 
         stage_tables = []
         
-        if os.path.exists(os.path.join(dbt_directory, "stage")):
-            for file_name in os.listdir(os.path.join(dbt_directory, "stage")):
+        partition_directory = os.path.join(dbt_directory, "partition")
+        if file_exists(partition_directory):
+            for file_name in list_files_in(partition_directory):
                 if file_name.endswith(".yml"):
-                    stage_tables.append(file_name[:-4])
+                    partition_tables.append(file_name[:-4])
 
         stage_choice_html = ""
         stage_div_html = ""
@@ -29440,11 +29424,11 @@ class DocumentProject(Node):
         if len(stage_tables) > 0:
             for table in stage_tables:
                 try:
-                    with open(os.path.join(dbt_directory, "stage", f"{table}.yml"), "r", encoding="utf-8") as file:
-                        yml_content = file.read()
-                    
-                    with open(os.path.join(dbt_directory, "stage", f"{table}.sql"), "r", encoding="utf-8") as file:
-                        sql_content = file.read()
+                    yml_file_path = os.path.join(dbt_directory, "stage", f"{table}.yml")
+                    yml_content = read_from(yml_file_path)
+
+                    sql_file_path = os.path.join(dbt_directory, "stage", f"{table}.sql")
+                    sql_content = read_from(sql_file_path)
                     
                     table_pipeline = data_project.table_pipelines[table]
                     df_html = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT 100').to_html()
@@ -29512,8 +29496,8 @@ class DocumentProject(Node):
 
 
         snapshot_tables = []
-        if os.path.exists(os.path.join(dbt_directory, "snapshot")):
-            for file_name in os.listdir(os.path.join(dbt_directory, "snapshot")):
+        if file_exists(os.path.join(dbt_directory, "snapshot")):
+            for file_name in list_files_in(os.path.join(dbt_directory, "snapshot")):
                 if file_name.endswith(".yml"):
                     snapshot_tables.append(file_name[:-4])
 
@@ -29524,11 +29508,11 @@ class DocumentProject(Node):
         if len(snapshot_tables) > 0:
             for table in snapshot_tables:
                 try:
-                    with open(os.path.join(dbt_directory, "snapshot", f"{table}.yml"), "r", encoding="utf-8") as file:
-                        yml_content = file.read()
-                    
-                    with open(os.path.join(dbt_directory, "snapshot", f"{table}.sql"), "r", encoding="utf-8") as file:
-                        sql_content = file.read()
+                    yml_file_path = os.path.join(dbt_directory, "snapshot", f"{table}.yml")
+                    yml_content = read_from(yml_file_path)
+
+                    sql_file_path = os.path.join(dbt_directory, "snapshot", f"{table}.sql")
+                    sql_content = read_from(sql_file_path)
                     
                     table_pipeline = data_project.table_pipelines[table]
                     df_html = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT 100').to_html()
@@ -29599,9 +29583,9 @@ class DocumentProject(Node):
 
         join_yml_content = ""
         integration_div_html = ""
-        if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
-            with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r", encoding="utf-8") as file:
-                join_yml_content = file.read()
+        if file_exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
+            file_path = os.path.join(dbt_directory, "join", "cocoon_join.yml")
+            join_yml_content = read_from(file_path)
 
             join_yml_dict = yaml.load(join_yml_content, Loader=yaml.FullLoader)
             foreign_key = reverse_join_graph(join_yml_dict)
@@ -29648,10 +29632,10 @@ class DocumentProject(Node):
 
         er_yml_content = ""
         er_div_html = ""
-        if os.path.exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
-            with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r", encoding="utf-8") as file:
-                er_yml_content = file.read()
-
+        if file_exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
+            er_file_path = os.path.join(dbt_directory, "er", "cocoon_er.yml")
+            er_yml_content = read_from(er_file_path)
+            
             er_yml_dict = yaml.load(er_yml_content, Loader=yaml.FullLoader)
             relation_map = {entry['relation_name']: entry['entities'] for entry in er_yml_dict['relations'] if 'relation_name' in entry}
             relation_details = [{'Name': entry['name'], 'Description': entry['description'], 'Type': entry['type']} for entry in er_yml_dict['story']]
@@ -29841,15 +29825,12 @@ class DocumentProject(Node):
         
 
         
-        
 def read_source_file(sources_file_path):
-    
-    if not os.path.exists(sources_file_path):
+    if not file_exists(sources_file_path):
         return None, None, None
     
     try:
-        with open(sources_file_path, 'r', encoding="utf-8") as file:
-            yml_content = yaml.safe_load(file)
+        yml_content = yaml.safe_load(read_from(sources_file_path))
         
         if not yml_content or 'sources' not in yml_content:
             return None, None, None
@@ -29868,8 +29849,6 @@ def read_source_file(sources_file_path):
     
     except Exception as e:
         return None, None, None
-    
-    
 
 def read_data_project_from_dir(directory, con=None, database=None, schema=None, source_only=False, create=True):
     data_project = DataProject()
@@ -29879,8 +29858,8 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
     
     seeds_directory = os.path.join(directory, "seeds") 
     
-    if os.path.exists(seeds_directory):
-        files = os.listdir(seeds_directory)
+    if file_exists(seeds_directory):
+        files = list_files_in(seeds_directory)
         tables = []
 
         for file in files:
@@ -29905,98 +29884,98 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
     
     
     partitions = []
-    if os.path.exists(os.path.join(dbt_directory, "partition")):
-        for file_name in os.listdir(os.path.join(dbt_directory, "partition")):
+    if file_exists(os.path.join(dbt_directory, "partition")):
+        for file_name in list_files_in(os.path.join(dbt_directory, "partition")):
             if file_name.endswith(".yml"):
                 partitions.append(file_name[:-4])
                 
     for partition in partitions:
-        with open(os.path.join(dbt_directory, "partition", f"{partition}.yml"), "r", encoding="utf-8") as f:
-            table_object = PartitionTable()
-            yml_data = yaml.safe_load(f)
-            table_object.read_attributes_from_dbt_schema_yml(yml_data)
-            table_name = table_object.table_name
-            data_project.add_table_project(table_object)
-            data_project.add_table(table_name, table_object.columns)
-            updated_partitions = [rename_for_stg(table_name) for table_name in table_object.partitions]
-            data_project.partition_mapping[table_name] = updated_partitions
+        file_path = os.path.join(dbt_directory, "partition", f"{partition}.yml")
+        yml_data = yaml.safe_load(read_from(file_path))
+        table_object = PartitionTable()
+        table_object.read_attributes_from_dbt_schema_yml(yml_data)
+        table_name = table_object.table_name
+        data_project.add_table_project(table_object)
+        data_project.add_table(table_name, table_object.columns)
+        updated_partitions = [rename_for_stg(table_name) for table_name in table_object.partitions]
+        data_project.partition_mapping[table_name] = updated_partitions
 
     stage_tables = []
-    if os.path.exists(os.path.join(dbt_directory, "stage")):
-        for file_name in os.listdir(os.path.join(dbt_directory, "stage")):
+    if file_exists(os.path.join(dbt_directory, "stage")):
+        for file_name in list_files_in(os.path.join(dbt_directory, "stage")):
             if file_name.endswith(".sql"):
                 stage_tables.append(file_name[:-4])
                 
     for stage_table in stage_tables:
         new_table_name = stage_table
-        with open(os.path.join(dbt_directory, "stage", f"{stage_table}.sql"), "r", encoding="utf-8") as f:
-            sql_query = f.read()
-            sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
-            table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
-            
-            if create and con:
-                table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
-            data_project.table_pipelines[new_table_name] = table_pipeline
+        file_path = os.path.join(dbt_directory, "stage", f"{stage_table}.sql")
+        sql_query = read_from(file_path)
+        sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
+        table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
+        
+        if create and con:
+            table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
+        data_project.table_pipelines[new_table_name] = table_pipeline
                     
-        with open(os.path.join(dbt_directory, "stage", f"{stage_table}.yml"), "r", encoding="utf-8") as f:
-            table_object = Table()
-            yml_data = yaml.safe_load(f)
-            table_object.read_attributes_from_dbt_schema_yml(yml_data)
-            data_project.add_table_project(table_object)
-            
-            skip_table = False
-            for partition, tables in data_project.partition_mapping.items():
-                if new_table_name in tables:
-                    skip_table = True
-                    break
-            
-            if not skip_table:
-                data_project.add_table(new_table_name, table_object.columns)
+        file_path = os.path.join(dbt_directory, "stage", f"{stage_table}.yml")
+        yml_data = yaml.safe_load(read_from(file_path))
+        table_object = Table()
+        table_object.read_attributes_from_dbt_schema_yml(yml_data)
+        data_project.add_table_project(table_object)
+        
+        skip_table = False
+        for partition, tables in data_project.partition_mapping.items():
+            if new_table_name in tables:
+                skip_table = True
+                break
+        
+        if not skip_table:
+            data_project.add_table(new_table_name, table_object.columns)
             
     snapshot_tables = []
-    if os.path.exists(os.path.join(dbt_directory, "snapshot")):
-        for file_name in os.listdir(os.path.join(dbt_directory, "snapshot")):
+    if file_exists(os.path.join(dbt_directory, "snapshot")):
+        for file_name in list_files_in(os.path.join(dbt_directory, "snapshot")):
             if file_name.endswith(".yml"):
                 snapshot_tables.append(file_name[:-4])
                 
     for snapshot_table in snapshot_tables:
         new_table_name = snapshot_table
-        with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.sql"), "r", encoding="utf-8") as f:
-            sql_query = f.read()
-            sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
-            table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
-            
-            if create and con:
-                table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
-            data_project.table_pipelines[new_table_name] = table_pipeline
+        file_path = os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.sql")
+        sql_query = read_from(file_path)
+        sql_step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
+        table_pipeline = TransformationSQLPipeline(steps = [sql_step], edges=[])
         
-        with open(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.yml"), "r", encoding="utf-8") as f:
-            table_object = Table()
-            yml_data = yaml.safe_load(f)
-            table_object.read_attributes_from_dbt_schema_yml(yml_data)
-            data_project.add_table_project(table_object)
-            
-            old_table_name = yml_data.get("cocoon_meta", {}).get("scd_base_table", None)
-            data_project.history_table[new_table_name] = old_table_name
-            scd_columns = yml_data.get("cocoon_meta", {}).get("scd_columns", [])
-            data_project.scd_columns[old_table_name] = scd_columns
-            
-            if old_table_name:
-                del data_project.tables[old_table_name]
-            
-            skip_table = False
-            for partition, tables in data_project.partition_mapping.items():
-                if new_table_name in tables:
-                    skip_table = True
-                    break
-            
-            if not skip_table:
-                data_project.add_table(new_table_name, table_object.columns)
+        if create and con:
+            table_pipeline.materialize(con=con, database=database, schema=schema, mode=mode)
+        data_project.table_pipelines[new_table_name] = table_pipeline
+           
+        yml_data = yaml.safe_load(read_from(os.path.join(dbt_directory, "snapshot", f"{snapshot_table}.yml")))
+        
+        table_object = Table()
+        table_object.read_attributes_from_dbt_schema_yml(yml_data)
+        data_project.add_table_project(table_object)
+        
+        old_table_name = yml_data.get("cocoon_meta", {}).get("scd_base_table", None)
+        data_project.history_table[new_table_name] = old_table_name
+        scd_columns = yml_data.get("cocoon_meta", {}).get("scd_columns", [])
+        data_project.scd_columns[old_table_name] = scd_columns
+        
+        if old_table_name:
+            del data_project.tables[old_table_name]
+        
+        skip_table = False
+        for partition, tables in data_project.partition_mapping.items():
+            if new_table_name in tables:
+                skip_table = True
+                break
+        
+        if not skip_table:
+            data_project.add_table(new_table_name, table_object.columns)
 
     join_yml_content = ""
-    if os.path.exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
-        with open(os.path.join(dbt_directory, "join", "cocoon_join.yml"), "r", encoding="utf-8") as file:
-            join_yml_content = file.read()
+    if file_exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
+        join_yml_path = os.path.join(dbt_directory, "join", "cocoon_join.yml")
+        join_yml_content = read_from(join_yml_path)
             
     if join_yml_content:
         data_project.build_foreign_key_from_join_graph_yml(join_yml_content)
@@ -30018,9 +29997,9 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
                     }
                 
     er_yml_content = ""
-    if os.path.exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
-        with open(os.path.join(dbt_directory, "er", "cocoon_er.yml"), "r", encoding="utf-8") as file:
-            er_yml_content = file.read()
+    if file_exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
+        er_file_path = os.path.join(dbt_directory, "er", "cocoon_er.yml")
+        er_yml_content = read_from(er_file_path)
             
     if er_yml_content:
         data_project.build_er_story_from_yml(er_yml_content)
@@ -30517,11 +30496,9 @@ def get_tags(input_string):
     
     return set(tag for key, tag in tag_map.items() if key in input_string)
 
-
-
 class DBTProjectConfigAndRead(Node):
     default_name = 'DBT Project Configuration and Read'
-    default_description = 'This step allows you to specify an existing DBT project directory and read the project.'
+    default_description = 'This step allows you to specify an existing DBT project directory, preview, and read the project.'
     create = True
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
@@ -30535,53 +30512,70 @@ class DBTProjectConfigAndRead(Node):
             layout={'width': '50%'}
         )
 
-        submit_button = widgets.Button(description="Read Project", button_style='success')
+        preview_button = widgets.Button(description="Preview Project", button_style='info', icon='eye')
+        submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
+        submit_button.layout.display = 'none'
 
         output = widgets.Output()
 
         create = self.class_para.get("create", self.create)
         
-        def on_button_click(b):
+        def read_project(directory):
             with self.output_context():
-                directory = dbt_directory_input.value
-                
                 if not directory:
                     print("Please specify a directory.")
-                    return
+                    return None
                 
                 display(HTML(f"{running_spinner_html} Creating temp views ..."))
                 
-                con = self.item["con"]
-                database = self.para.get("database", None)
-                schema = self.para.get("schema", None)
-                
-                data_project = read_data_project_from_dir(directory, con, database=database, schema=schema, create=create)
-                                
-                self.para["data_project"] = data_project
-                self.para["dbt_directory"] = directory
-                
-                print(f"Successfully read project from {directory}")
-                
-                callback({"dbt_directory": directory})
-                
+                try:
+                    con = self.item["con"]
+                    database = self.para.get("database", None)
+                    schema = self.para.get("schema", None)
+                    
+                    data_project = read_data_project_from_dir(directory, con, database=database, schema=schema, create=create)
+                    
+                    self.para["data_project"] = data_project
+                    self.para["dbt_directory"] = directory
+                    
+                    return data_project
+                except Exception as e:
+                    print(f"Error reading project: {str(e)}")
+                    return None
 
-        submit_button.on_click(on_button_click)
+        def on_preview_click(b):
+            with self.output_context():
+                directory = dbt_directory_input.value
+                data_project = read_project(directory)
+                if data_project:
+                    data_project.display_story_multiple_page()
+                    submit_button.layout.display = 'block'
+
+        def on_submit_click(b):
+            with self.output_context():
+                directory = dbt_directory_input.value
+                callback({"dbt_directory": directory})
+
+        preview_button.on_click(on_preview_click)
+        submit_button.on_click(on_submit_click)
 
         if viewer or ("viewer" in self.para and self.para["viewer"]):
             if "dbt_directory" in self.para:
                 dbt_directory_input.value = self.para["dbt_directory"]
-                on_button_click(submit_button)
+                on_preview_click(preview_button)
+                
+                if submit_button.layout.display != 'none':
+                    on_submit_click(submit_button)
                 return
 
-        create_progress_bar_with_numbers(1, model_steps)
-        display(HTML("<h3>📂 Specify DBT Directory</h3>Preferably built by Cocoon"))
+        create_progress_bar_with_numbers(0, model_steps)
+        display(HTML("<h3>📂 Specify Catalog Directory</h3><em>Built by Cocoon</em>"))
         display(dbt_directory_input)
+        display(preview_button)
         display(submit_button)
         display(output)
-            
-            
-            
-            
+        
+        
 class SimpleBusinessQuestionNode(Node):
     default_name = 'Business Question Input'
     default_description = 'This step allows you to explore the data and input a business question.'
@@ -30644,6 +30638,8 @@ class SimpleBusinessQuestionNode(Node):
         display(VBox([question_input]))
         display(submit_button)
         
+
+    
 class BusinessQuestionEntityRelationNode(Node):
     default_name = 'Business Question Entity and Relation Analysis'
     default_description = 'This node analyzes the entities and relations related to the business questions.'
@@ -30744,10 +30740,6 @@ related_steps:
         reset = True
         grid = create_dataframe_grid(df, editable_columns, reset=reset)
         
-        display(HTML(f"❓ <b>Question:</b> {business_question}"))
-        display(HTML(f"🧠 <b>Analysis Reasoning:</b> {analysis['reasoning']}"))
-        display(grid)
-        
         relation_story = data_project.story
         relation_to_entities = {}
         for relation_info in data_project.relations.values():
@@ -30758,7 +30750,6 @@ related_steps:
         highlight_indices = [i for i, item in enumerate(relation_story) if item['Name'] in related_steps]
         
         html_content = generate_er_diagram_html(relation_to_entities, relation_story, highlight_indices)
-        display(HTML(html_content))
         
         if "chatui" in self.para:
             
@@ -30798,6 +30789,13 @@ related_steps:
         if viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_click(next_button)
             return
+
+        display(HTML("<h2>🤓 Cocoon Analysis:</h2>" +\
+                    f"❓ <b>Question:</b> {business_question}<br>" + \
+                    f"🙂 <b>Analysis:</b> {analysis['reasoning']}<br>"+\
+                    html_content + f"<h2>😎 Your feedback:</h2>"))
+        display(grid)
+        display(next_button)
         
 class BusinessQuestionSQLFeasibility(Node):
     default_name = 'Business Question SQL Feasibility Check'
@@ -31064,19 +31062,31 @@ related_tables: ['table1', 'table2', ...]
         analysis = run_output
         business_question, schema_description, all_related_tables, data_project = extract_output
         
-        display(HTML(f"❓ <b>Business Question:</b> {business_question}"))
-        display(HTML(f"📊 <b>Data Sufficiency:</b> {'Yes' if analysis['sufficient'] else 'No'}"))
-        display(HTML(f"🧠 <b>Explanation:</b> {analysis['explanation']}"))
+        display(HTML(f"❓ <b>SQL Feasible?:</b> {'✔️ Yes' if analysis['sufficient'] else '❌ No'}"))
+       
         
         related_tables = analysis.get('related_tables', []) if analysis['sufficient'] else []
-
-        if analysis['sufficient']:
-            display(HTML(f"💡 <b>SQL Approach:</b> {analysis['sql_approach']}"))
         
-        if related_tables:
-            display(HTML(f"📚 <b>Related Tables:</b> {', '.join(related_tables)}"))
-            html_content = data_project.generate_html_graph_static(highlight_nodes=related_tables)
-            display(HTML(html_content))
+        if not analysis['sufficient']:
+            display(HTML(f"🤔 <b>Explanation:</b> {analysis['explanation']}"))
+        
+        
+        display(HTML(f"📚 <b>Related Tables:</b>"))
+        html_content = data_project.generate_html_graph_static(highlight_nodes=related_tables)
+        display(HTML(html_content))
+        
+        display(HTML(f"<h2>😎 Your feedback:</h2>"))
+        
+        text_area = None
+        if analysis['sufficient']:
+            display(HTML(f"🧐 <b>SQL Instruction:</b>"))
+            text_area, char_count_label = create_text_area_with_char_count(analysis['sql_approach'], max_chars=1000)
+            layout = Layout(display='flex', justify_content='space-between', width='100%')
+            
+            display(HBox([text_area, char_count_label], layout=layout))
+            display(HTML(f"🔗 <b>Related Tables:</b>"))
+            
+        multi_select = create_column_selector(all_related_tables, default=False, except_columns = related_tables)
         
         if "chatui" in self.para:
             yml_dict = data_project.describe_project_yml(tables=all_related_tables, limit=9999)
@@ -31103,12 +31113,14 @@ related_tables: ['table1', 'table2', ...]
                 if not (related_tables and analysis['sufficient']):
                     print("Error: Cannot proceed because current data is insufficient, or no related table.")
                 
+                selected_indices = multi_select.value
+                selected_tables = [all_related_tables[i] for i in selected_indices]
                 document = {
                     'business_question': business_question,
                     'data_sufficient': analysis['sufficient'],
                     'explanation': analysis['explanation'],
-                    'sql_approach': analysis.get('sql_approach', 'N/A'),
-                    'related_tables': related_tables
+                    'sql_approach': text_area.value if text_area else analysis.get('sql_approach', 'N/A'),
+                    'related_tables': selected_tables
                 }
                 callback(document)
         
@@ -31119,8 +31131,6 @@ related_tables: ['table1', 'table2', ...]
             on_button_click(next_button)
             return
         
-        
-        
 class JoinGraphBuilder(Node):
     default_name = 'Join Graph Builder'
     default_description = 'This node builds a join graph based on the SQL approach and related tables.'
@@ -31128,7 +31138,7 @@ class JoinGraphBuilder(Node):
     def extract(self, item):
         clear_output(wait=True)
 
-        display(HTML(f"🔗 Building join graph for the SQL query..."))
+        display(HTML(f"🔗 Connecting the source tables based on join..."))
         self.progress = show_progress(1)
 
         data_project = self.para["data_project"]
@@ -31508,8 +31518,7 @@ class DebugSQLQuery(Node):
 
     def extract(self, input_item):
         clear_output(wait=True)
-        create_progress_bar_with_numbers(1, transform_steps)
-        display(HTML(f"{running_spinner_html} Debugging the code..."))
+        display(HTML(f"{running_spinner_html} Verifying the codes..."))
         self.progress = show_progress(1)
         
         con = self.item["con"]
@@ -31589,14 +31598,21 @@ new_sql_query: |
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         code_clauses = run_output
         
-        display(HTML(f"🐞 <b>SQL Debugging Complete</b>"))
+        display(HTML(f"🎉 <b>The codes are ready!</b>"))
         if "debug_reasoning" in code_clauses:
             display(HTML(f"🤔 <b>Debug Reasoning:</b> {code_clauses['debug_reasoning']}"))
-        display(HTML("<b>Final SQL Query:</b>"))
-        display(HTML(f"<pre><code>{code_clauses['sql_query']}</code></pre>"))
+        
+        sql_query = code_clauses['sql_query']
+        highlighted_html = highlight_sql(sql_query)
+        display(HTML(highlighted_html))
+        
+        labels = ["SQL"]
+        file_names = ["cocoon_result.sql"]
+        contents = [sql_query]
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
         
         if "sample_output" in code_clauses:
-            display(HTML("<b>Sample Output:</b>"))
+            display(HTML("<b>🎊 Sample Output:</b>"))
             display(pd.DataFrame(code_clauses["sample_output"]))
             
         if "chatui" in self.para:
@@ -31608,7 +31624,7 @@ new_sql_query: |
                 message += pd.DataFrame(code_clauses["sample_output"]).head(5).to_html()
                 self.para["chatui"].add_message("GenAI", message)
         
-        next_button = widgets.Button(description="Finalize Debugged Query", button_style='success', icon='check')
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
         
         def on_button_click(b):
             with self.output_context():
@@ -32716,8 +32732,8 @@ class WritePartitionYMLCode(Node):
         tabs = create_dropdown_with_content(tab_data) 
         
         if "dbt_directory" in self.para:
-            if not os.path.exists(os.path.join(self.para["dbt_directory"], "partition")):
-                os.makedirs(os.path.join(self.para["dbt_directory"], "partition"))
+            if not file_exists(os.path.join(self.para["dbt_directory"], "partition")):
+                create_directory(os.path.join(self.para["dbt_directory"], "partition"))
             file_names = [os.path.join(self.para["dbt_directory"], "partition", file_name) for file_name in file_names]
        
         create_progress_bar_with_numbers(4, doc_steps)
@@ -32725,7 +32741,7 @@ class WritePartitionYMLCode(Node):
         display(tabs)
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
         save_files_click(save_button)  
-        
+        WW
         def on_button_clicked(b):
             with self.output_context():
                 clear_output(wait=True)
@@ -32760,16 +32776,16 @@ class WritePartitionYMLCode(Node):
 def read_partition_ymls_and_update_project(data_project, dbt_directory):
     partition_dir = os.path.join(dbt_directory, "partition")
     
-    if not os.path.exists(partition_dir):
+    if not file_exists(partition_dir):
         print(f"Partition directory not found: {partition_dir}")
         return
 
-    for filename in os.listdir(partition_dir):
+    for filename in list_files_in(partition_dir):
         if filename.endswith(".yml"):
             file_path = os.path.join(partition_dir, filename)
             
-            with open(file_path, 'r', encoding="utf-8") as file:
-                yml_content = yaml.safe_load(file)
+            file_content = read_from(file_path)
+            yml_content = yaml.safe_load(file_content)
 
             table_object = PartitionTable()
             table_object.read_attributes_from_dbt_schema_yml(yml_content)
@@ -32866,7 +32882,7 @@ class DecidePartition(Node):
             print("✅ Express load completed. Partitions have been updated.")
             callback([])
         
-        if dbt_directory and os.path.exists(os.path.join(dbt_directory, "partition")):
+        if dbt_directory and file_exists(os.path.join(dbt_directory, "partition")):
             print("🚀 Found existing partitions. You can express load them.")
             express_button = widgets.Button(description="Express Load", button_style='info', icon='fast-forward')
             express_button.on_click(on_express)
@@ -34858,13 +34874,13 @@ def build_lineage_graph(dbt_path, manifest_path=None, catalog_path=None):
     if catalog_path is None:
         catalog_path = os.path.join(dbt_path, 'target', 'catalog.json')
     
-    if not os.path.exists(manifest_path):
+    if not file_exists(manifest_path):
         raise FileNotFoundError(f"Manifest file not found at {manifest_path}. Please specify the path to the manifest file using the 'manifest_path' argument.")
         
     with open(manifest_path, 'r') as f:
         manifest = json.load(f)
      
-    if not os.path.exists(catalog_path):
+    if not file_exists(catalog_path):
         print(f"Catalog file not found at {catalog_path}. Proceeding without catalog data.")
         catalog = None
     else:
@@ -34891,7 +34907,7 @@ def build_lineage_graph(dbt_path, manifest_path=None, catalog_path=None):
             compiled_path = node_info.get('compiled_path')
             if compiled_path:
                 full_sql_path = os.path.join(dbt_path, compiled_path)
-                if os.path.exists(full_sql_path):
+                if file_exists(full_sql_path):
                     try:
                         with open(full_sql_path, 'r') as sql_file:
                             sql_content = sql_file.read()
@@ -35090,7 +35106,7 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
         export_button.on_click(on_export)
 
         widget = widgets.VBox([
-            widgets.HTML(value='<h2>⚙️ Data Workflow Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em>'),
+            widgets.HTML(value='<h2>⚙️ Data Cleaning Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em>'),
             checkboxes_widget,
             cardinality_widget,
             widgets.HBox([export_button, submit_button]),
@@ -35102,6 +35118,7 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
             return
 
         display(style)
+        create_progress_bar_with_numbers(1, model_steps)
         display(widget)
         
 
@@ -35358,15 +35375,16 @@ column_matching: # for all columns can be transformed
             raise ValueError("The response should have a 'column_matching' field.")
         
         if result['column_matching']:
-            for target_col in result['column_matching']:
-                if target_col not in target_columns:
-                    raise ValueError(f"Target column '{target_col}' is not in the provided target columns.")
-                
-                source_cols = result['column_matching'][target_col]['source_columns']
-                for source_col in source_cols:
-                    if source_col not in source_columns:
-                        raise ValueError(f"Source column '{source_col}' is not in the provided source columns.")
-    
+            valid_target_columns = {}
+            for target_col, mapping in result['column_matching'].items():
+                if target_col in target_columns:
+                    source_cols = mapping['source_columns']
+                    valid_source_cols = [col for col in source_cols if col in source_columns]
+                    if valid_source_cols:
+                        mapping['source_columns'] = valid_source_cols
+                        valid_target_columns[target_col] = mapping
+            result['column_matching'] = valid_target_columns
+            
         return result
     
     def run_but_fail(self, extract_output, use_cache=True):
@@ -35377,10 +35395,13 @@ column_matching: # for all columns can be transformed
         
         source_yml_desc, target_yml_desc, source_columns, target_columns, source_table, target_table = extract_output
         result = run_output
+        
+        callback(run_output)
+        return
 
         nodes = {
-            "(source)" + source_table: source_columns,
-            "(target)" + target_table: target_columns
+            "(source) " + source_table: source_columns,
+            "(target) " + target_table: target_columns
         }
 
         edges = []
@@ -35388,7 +35409,7 @@ column_matching: # for all columns can be transformed
         
         for target_col, matching in result['column_matching'].items():
             for source_col in matching['source_columns']:
-                edge = ("(source)" +  source_table, source_col, "(target)" +  target_table, target_col)
+                edge = ("(source) " +  source_table, source_col, "(target) " +  target_table, target_col)
                 edges.append(edge)
                 
                 if matching['confidence']:
@@ -35525,14 +35546,14 @@ class TableSummaryAnalysisNode(BusinessQuestionEntityRelationNode):
     def extract(self, item):
         clear_output(wait=True)
 
-        display(HTML(f"🔍 Formulating question for related tables..."))
+        display(HTML(f"🔍 Finding the relavant entities/relations..."))
         self.progress = show_progress(1)
 
         source_data_project = self.para["source_data_project"]
         target_table_name = self.para["target_table"]
         targt_table_object = self.para["target_data_project"].table_object[target_table_name]
         
-        question = f"I have my table: '{targt_table_object.table_name}'. Its summary is: '{targt_table_object.table_summary}'. Help me find the related tables to map to."
+        question = f"Transform to target table: '{targt_table_object.table_name}': {targt_table_object.table_summary}."
         
         return source_data_project, question
 
@@ -35541,7 +35562,7 @@ class SourceToTargetTableAnalysisNode(BusinessQuestionDataSufficiency):
     def extract(self, item):
         clear_output(wait=True)
 
-        display(HTML(f"🔍 Analyzing potential target tables for transformation..."))
+        display(HTML(f"🔍 Analyzing potential tables for transformation..."))
         self.progress = show_progress(1)
 
         data_project = self.para["source_data_project"]
@@ -35549,7 +35570,7 @@ class SourceToTargetTableAnalysisNode(BusinessQuestionDataSufficiency):
         target_table_name = self.para["target_table"]
         targt_table_object = self.para["target_data_project"].table_object[target_table_name]
 
-        question = f"Find all the target tables that the source table '{targt_table_object.table_name}' can be transformed to. Here are the source table details:"
+        question = f"Find all the source tables that can be used transformed to '{targt_table_object.table_name}'. Here are its column details:"
         
         column_dict = targt_table_object.get_column_desc_yml()
         question += yaml.dump(column_dict, default_flow_style=False)
@@ -35568,13 +35589,13 @@ class SourceToTargetTableAnalysisNode(BusinessQuestionDataSufficiency):
         business_question, schema_description, all_related_tables, data_project = extract_output
 
 
-        template = f"""Given the following question:
+        template = f"""
 '{business_question}'
 
-And the following relevant tables and a subset of their attributes:
+And the following source tables and a subset of their attributes:
 {schema_description}
 
-Please analyze if the subset of attributes from the tables is sufficient for the question using SQL. 
+First decide if the source tables are sufficient to transform to the target table  (partially is fine).
 If it is sufficient, provide a high-level explanation of what selections, aggregations, and joins might be needed, and over which columns (from the subset) and tables.
 
 Return your analysis in the following format:
@@ -35586,7 +35607,7 @@ sql_approach: >-
     If sufficient, provide a detailed step-by-step instruction of the SQL approach.
     Dictates which tables, columns, and operations to use.
     However, don't provide codes.
-# from sql_approach, list all related target tables
+# from sql_approach, list all related source tables
 related_tables: ['table1', 'table2', ...]
 ```"""
 
@@ -35622,40 +35643,6 @@ related_tables: ['table1', 'table2', ...]
     
     
     
-def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
-    
-    if query_widget is None:
-        query_widget = QueryWidget(con)
-
-    source_table_object = Table()
-    item = {
-        "con": con,
-        "query_widget": query_widget
-    }
-    
-    workflow_para = {"viewer": viewer, "source_table_object": source_table_object}
-    
-    for key, value in para.items():
-        workflow_para[key] = value
-
-    main_workflow = Workflow("Single Table Transformation Workflow", 
-                            item = item, 
-                            description="A workflow to transform a table into another table",
-                            para = workflow_para,
-                            output=output)
-    
-    main_workflow.add_to_leaf(SelectSchema(output = output))
-    main_workflow.add_to_leaf(DBTProjectConfigAndReadMultiple(output=output))
-    
-    
-    main_workflow.add_to_leaf(ConnectSourceDataNode(output=output))
-    
-    
-    main_workflow.add_to_leaf(FindTablesAndMatchSchemaForAll(output=output))
-    
-    
-
-    return query_widget, main_workflow
 
 
 
@@ -35675,6 +35662,10 @@ class PauseWorkflow(Node):
         
         display(HTML('⏸️ Workflow paused...'))
         
+        
+
+
+       
 
 
 class RefineSchemaMatching(Node):
@@ -35779,52 +35770,144 @@ column_matching: # for all columns can be transformed
         return {"summary": "Unable to generate a refined schema matching.", "column_matching": {}}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        callback(run_output)
+        result = run_output
+        target_table_name = self.para.get('target_table')
+
+        nodes = {}
+        target_table = f"(target) {target_table_name}"
+        nodes[target_table] = []
+
+        for target_col, matching in result['column_matching'].items():
+            nodes[target_table].append(target_col)
+            
+            for source_col in matching['source_columns']:
+                source_table = f"(source) {source_col['table_name']}"
+                if source_table not in nodes:
+                    nodes[source_table] = []
+                if source_col['column_name'] not in nodes[source_table]:
+                    nodes[source_table].append(source_col['column_name'])
+
+        edges = []
+        
+        for target_col, matching in result['column_matching'].items():
+            for source_col in matching['source_columns']:
+                source_table = f"(source) {source_col['table_name']}"
+                edge = (source_table, source_col['column_name'], target_table, target_col)
+                edges.append(edge)
+
+        html_output = generate_schema_graph_graphviz(nodes, edges)      
+
+        data = []
+        for target_col, matching in result['column_matching'].items():
+            data.append({
+                'Target Column': target_col,
+                'Sources': matching['source_columns'],
+                'Instruction': matching.get('transformation', '')
+            })
+
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, True, True]
+        reset = True
+        editable_list = {
+            'Sources': {},
+        }
+        
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, editable_list=editable_list)
+    
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+        )
+        
+        def on_next_button_clicked(b):
+            with self.output_context():
+                updated_df = grid_to_updated_dataframe(grid)
+                document = updated_df.to_json(orient="split")
+                callback(document)
+        
+        next_button.on_click(on_next_button_clicked)
+
+        
+        viewer = self.para.get("viewer", False)
+        
+        if viewer:
+            on_next_button_clicked(next_button)
+        
+        display(HTML(html_output))
+        display(HTML(f"<h2>😎 Your feedback:</h2>"))
+        display(grid)
+        display(next_button)
+
         
 class JoinGraphFromMatchingBuilder(Node):
-    default_name = 'Join Graph Fro Matching Builder'
+    default_name = 'Join Graph From Matching Builder'
     default_description = 'This node builds a join graph based on the schema matching.'
     
     def extract(self, item):
         clear_output(wait=True)
         
-        display(HTML(f"🔗 Building join graph for the SQL query..."))
+        display(HTML(f"🔗 Joining the source tables..."))
         self.progress = show_progress(1)
         
         source_data_project = self.para.get('source_data_project')
         
-        previous_node_output = self.get_sibling_document('Refine Schema Matching')
-        
-        column_matching = previous_node_output.get('column_matching', {})
+        schema_matching_df = pd.read_json(self.get_sibling_document('Refine Schema Matching'), orient="split")
+        document = self.get_sibling_document("Business Question Data Sufficiency Check")
+        question = document["business_question"]
+        sql_approach = document["sql_approach"]
         
         related_tables = set()
-        for col in column_matching.values():
-            for source_col in col['source_columns']:
-                related_tables.add(source_col['table_name'])
+        for _, row in schema_matching_df.iterrows():
+            sources = row['Sources']
+            if isinstance(sources, str):
+                try:
+                    sources = eval(sources)
+                except:
+                    continue
+            if isinstance(sources, list):
+                for source in sources:
+                    if isinstance(source, dict) and 'table_name' in source:
+                        related_tables.add(source['table_name'])
+        
         related_tables = list(related_tables)
+        related_tables = sorted(related_tables)
         
-        key_info = source_data_project.get_key_info(related_tables)
+        key_info = source_data_project.get_key_info(related_tables, include_ri=False)
         
-        return related_tables, key_info
+        return related_tables, key_info, question, sql_approach
     
     def run(self, extract_output, use_cache=True):
-        related_tables, key_info = extract_output
+        related_tables, key_info, question, sql_approach = extract_output
         
         if not related_tables:
             return self.run_but_fail(extract_output)
             
         key_info_str = yaml.dump(key_info, default_flow_style=False)
         
-        template = f"""Given the following related tables with primary key and foreign key information:
+        template = f"""Given the task:
+{question}
+
+The high-level instruction:
+{sql_approach}
+        
+The following related tables with primary key and foreign key information:
 {key_info_str}
 
-Please provide a pk-fk join description. Your response should be in the following format:
+Please explain how these tables shall be join to finish the tasks.
+Choose the most sensiable join path.
 ```yml
 reasoning: >-
     Explain how to join {", ".join(related_tables)}
 join_graph:
-    - [foreign_table1, foreign_key1, primary_table1, primary_key1]
-    - [foreign_table2, foreign_key2, primary_table2, primary_key2]
+    - ['foreign_table1', 'foreign_key1', 'primary_table1', 'primary_key1']
+    - ['foreign_table2', 'foreign_key2', 'primary_table2', 'primary_key2']
     # Add more joins to connect all tables
 ```"""
         
@@ -35855,7 +35938,52 @@ join_graph:
         return {"reasoning": "Unable to generate reasoning for the join graph.", "join_graph": []}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        callback(run_output)
+        result = run_output
+        
+        nodes = {}
+        edges = []
+        
+        for join in result['join_graph']:
+            foreign_table, foreign_key, primary_table, primary_key = join
+            
+            foreign_table = f"(source) {foreign_table}"
+            primary_table = f"(source) {primary_table}"
+            
+            if foreign_table not in nodes:
+                nodes[foreign_table] = []
+            if foreign_key not in nodes[foreign_table]:
+                nodes[foreign_table].append(foreign_key)
+            
+            if primary_table not in nodes:
+                nodes[primary_table] = []
+            if primary_key not in nodes[primary_table]:
+                nodes[primary_table].append(primary_key)
+            
+            edge = (foreign_table, foreign_key, primary_table, primary_key)
+            edges.append(edge)
+        
+        html_output = generate_schema_graph_graphviz(nodes, edges)
+        
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+        )
+        
+        def on_next_button_clicked(b):
+            with self.output_context():
+                callback(run_output)
+        
+        next_button.on_click(on_next_button_clicked)
+        
+        viewer = self.para.get("viewer", False)
+        
+        if viewer:
+            on_next_button_clicked(next_button)
+        
+        display(HTML(html_output))
+        display(next_button)
 
 class SQLQueryMatchingConstructor(Node):
     default_name = 'SQL Query Constructor'
@@ -35867,8 +35995,8 @@ class SQLQueryMatchingConstructor(Node):
         display(HTML(f"🛠️ Constructing the SQL query..."))
         self.progress = show_progress(1)
 
-        refined_schema_output = self.get_sibling_document('Refine Schema Matching')
-        join_graph_output = self.get_sibling_document('Join Graph Fro Matching Builder')
+        schema_matching_df = pd.read_json(self.get_sibling_document('Refine Schema Matching'), orient="split")
+        join_graph_output = self.get_sibling_document('Join Graph From Matching Builder')
         
         con = self.item["con"]
         
@@ -35877,7 +36005,7 @@ class SQLQueryMatchingConstructor(Node):
             database_name = get_database_name(con)
             database_hint = f"Note that we use {database_name} syntax. {database_general_hint.get(database_name, '')}"
         
-        column_matching = refined_schema_output['column_matching']
+        column_matching = schema_matching_df
         join_graph = join_graph_output['join_graph']
         
         database = self.para.get("database", None)
@@ -35894,13 +36022,13 @@ class SQLQueryMatchingConstructor(Node):
     def run(self, extract_output, use_cache=True):
         column_matching, join_graph, database_hint, identify_instruction = extract_output
 
-        column_matching_str = yaml.dump(column_matching, default_flow_style=False)
+        column_matching_str = column_matching.to_csv(index=False) 
         join_graph_str = yaml.dump(join_graph, default_flow_style=False)
         
-        if not column_matching:
+        if len(column_matching) == 0:
             return self.run_but_fail(extract_output)
             
-        template = f"""Given the following refined column matching:
+        template = f"""Given the following Column Matching:
 {column_matching_str}
 
 And the following join graph:
