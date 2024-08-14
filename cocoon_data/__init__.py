@@ -100,6 +100,17 @@ class QueryWidget:
         
         system_label = widgets.HTML(value=f"<b>Engine</b>: {self.database_system}")
         
+        self.include_view_checkbox = widgets.Checkbox(
+            value=True,
+            disabled=False,
+            indent=False
+        )
+        self.include_view_checkbox.observe(self.on_include_view_change, names='value')
+        
+        include_view_label = widgets.HTML(value="<b>Include Views</b>:")
+        
+        first_line = widgets.HBox([system_label, include_view_label, self.include_view_checkbox])
+        
         database_label = widgets.HTML(value="<b>Database</b>:")
         self.database_dropdown = widgets.Dropdown(
             options=self.get_databases(),
@@ -123,9 +134,11 @@ class QueryWidget:
         )
         self.table_dropdown.observe(self.on_table_change, names='value')
         
-        self.dropdown_label = HBox([system_label, database_label, self.database_dropdown, 
+        second_line = widgets.HBox([database_label, self.database_dropdown, 
                                     schema_label, self.schema_dropdown, 
                                     table_label, self.table_dropdown])
+        
+        self.dropdown_label = widgets.VBox([first_line, second_line])
         
         self.sql_input = widgets.Textarea(
             value='SELECT * FROM "database_name"."schema_name"."table_name"',
@@ -168,12 +181,18 @@ class QueryWidget:
         return list_schemas(self.con, self.database_dropdown.value)
     
     def get_tables(self):
-        return list_tables(self.con, self.schema_dropdown.value, self.database_dropdown.value)
+        tables = list_tables(self.con, self.schema_dropdown.value, self.database_dropdown.value)
+        if self.include_view_checkbox.value:
+            tables += list_views(self.con, self.schema_dropdown.value, self.database_dropdown.value)
+        return tables
     
     def update_context_value(self, context_value=""):
         self.with_context.value = context_value
         self.update_context_visibility()
     
+    def on_include_view_change(self, change):
+        self.table_dropdown.options = self.get_tables()
+        
     def update_context_visibility(self):
         if self.with_context.value.strip() == '':
             self.context_label.layout.display = 'none'
@@ -17880,11 +17899,11 @@ class DecideDMVforAll(MultipleNode):
                         selection_str = "CASE\n"
                         for to_remove_value in to_remove_values:
                             to_remove_value = escape_value_single_quotes(to_remove_value, con)
-                            selection_str += f'    WHEN "{col}" = \'{to_remove_value}\' THEN NULL\n'
+                            selection_str += f'    WHEN {enclose_table_name(col, con=con)} = \'{to_remove_value}\' THEN NULL\n'
 
                         comment += f"-- {col}: {to_remove_values}\n"
-                        selection_str += f'    ELSE "{col}"\n'
-                        selection_str += f'END AS "{col}"'
+                        selection_str += f'    ELSE {enclose_table_name(col, con=con)}\n'
+                        selection_str += f'END AS {enclose_table_name(col, con=con)}'
                         selection_clauses.append(selection_str)
 
                     for col in columns:
@@ -20238,7 +20257,7 @@ cast_clause: |
         summary["cast_clause"] = clean_clause(summary["cast_clause"]) 
         
         for i in range(max_iterations):
-            sql = f'SELECT {summary["cast_clause"]} AS "{column_name}"'
+            sql = f'SELECT {summary["cast_clause"]} AS {enclose_table_name(column_name, con=con)}'
             sql += f'\nFROM {table_pipeline}'
             if regex:
                 sql += f'\nWHERE {create_regex_match_clause(con, column_name, regex)}'
@@ -20321,7 +20340,7 @@ cast_clause: |
                 table_pipeline = self.para["table_pipeline"]
                 with_context = table_pipeline.get_codes(mode="WITH")
             
-                sql = f'SELECT {merged_clause} AS "{column_name}"'
+                sql = f'SELECT {merged_clause} AS {enclose_table_name(column_name, con=con)}'
                 sql += f'\nFROM {table_pipeline}'
                 sql = with_context + "\n" + sql
                 df = run_sql_return_df(con, sql)
@@ -20430,8 +20449,8 @@ class TransformTypeForAll(MultipleNode):
                 query = "SELECT\n"
                 for i, row in new_df.iterrows():
                     column_name = row["Column Name"]
-                    clause = row["Clause"] + f' AS "{column_name}",'
-                    query += f'    "{column_name}" AS "{column_name}",\n'
+                    clause = row["Clause"] + f' AS {enclose_table_name(column_name, con=con)},'
+                    query += f'    {enclose_table_name(column_name, con=con)} AS {enclose_table_name(column_name, con=con)},\n'
                     query += indent_paragraph(clause) + "\n"
                 query = query[:-2] + f'\nFROM {self.para["table_pipeline"]}'
                 query_widget.update_context_value(with_context_clause)
@@ -21714,8 +21733,12 @@ class SelectTable(Node):
         def get_schemas(database):
             return list_schemas(con, database)
         
-        def get_tables(database, schema):
-            return list_tables(con, schema, database)
+        def get_tables(database, schema, include_views=False):
+            tables = list_tables(con, schema, database)
+            if include_views:
+                views = list_views(con, schema, database)
+                return tables + views
+            return tables
 
         all_databases = get_databases()
         all_schemas = None
@@ -21757,6 +21780,29 @@ class SelectTable(Node):
             layout=widgets.Layout(width='150px')
         )
 
+        include_views_toggle = widgets.Checkbox(
+            value=False,
+            description='',
+            indent=False,
+            layout=widgets.Layout(width='auto', margin='3px 0 0 0')
+        )
+        
+        view_warning = widgets.HTML(
+            value='''
+            <div style="line-height: 1.2; margin-left: 5px;">
+                <div><b>Include Views</b></div>
+                <div style="color: orange; font-style: italic; font-size: 0.9em;">
+                    ⚠️ Views can be slow to query. We recommend materializing them to tables.
+                </div>
+            </div>
+            '''
+        )
+
+        checkbox_with_label = widgets.HBox(
+            [include_views_toggle, view_warning], 
+            layout=widgets.Layout(align_items='center')
+        )
+
         def on_database_change(change):
             schemas = get_schemas(change['new'])
             schema_dropdown.options = schemas
@@ -21766,16 +21812,21 @@ class SelectTable(Node):
         def on_schema_change(change):
             update_tables()
 
+        def on_views_toggle(change):
+            update_tables()
+
         def update_tables():
-            tables = get_tables(database_dropdown.value, schema_dropdown.value)
+            tables = get_tables(database_dropdown.value, schema_dropdown.value, include_views_toggle.value)
             table_dropdown.options = tables
             table_dropdown.value = tables[0] if tables else None
 
         database_dropdown.observe(on_database_change, names='value')
         schema_dropdown.observe(on_schema_change, names='value')
+        include_views_toggle.observe(on_views_toggle, names='value')
 
         display(HTML(f"🤓 Please select the table:"))
         display(widgets.HBox([database_label, database_dropdown, schema_label, schema_dropdown, table_label, table_dropdown]))
+        display(checkbox_with_label)
 
         hint_html = widgets.HTML(
                 value='''
@@ -21788,9 +21839,6 @@ class SelectTable(Node):
         )
         display(hint_html)
         
-        
-        
-
         mode_selector = widgets.RadioButtons(
             options=[
                 ('💬 Interactive: Interactively provide your feedback for each step', 'Table Provider'),        
@@ -21826,7 +21874,6 @@ class SelectTable(Node):
         display(HTML(f"🤓 Please select the mode:"))
         display(mode_selector)
         display(next_button)
-        
         
 def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, table_name = None, para={}, output=None):
     if query_widget is None:
@@ -24248,8 +24295,11 @@ class SelectTables(Node):
         def get_schemas(database):
             return list_schemas(con, database)
         
-        def get_tables(database, schema):
-            return list_tables(con, schema, database)
+        def get_tables(database, schema, include_views):
+            tables = list_tables(con, schema, database)
+            if include_views:
+                tables += list_views(con, schema, database)
+            return tables
         
         def read_from_sources_yml():
             if "dbt_directory" in self.para:
@@ -24304,6 +24354,24 @@ class SelectTables(Node):
             layout=widgets.Layout(width='150px')
         )
         
+        include_views_toggle = widgets.Checkbox(
+            value=False,
+            description='',
+            indent=False,
+            layout=widgets.Layout(width='auto', margin='3px 0 0 0')
+        )
+        
+        view_warning = widgets.HTML(
+    value='''
+    <div style="line-height: 1.2; margin-left: 5px;">
+        <div><b>Include Views</b></div>
+        <div style="color: orange; font-style: italic; font-size: 0.9em;">
+            ⚠️ Views can be slow to query. We recommend materializing them to tables.
+        </div>
+    </div>
+    '''
+)
+        
         def on_database_change(change):
             schemas = get_schemas(change['new'])
             schema_dropdown.options = schemas
@@ -24313,32 +24381,31 @@ class SelectTables(Node):
         def on_schema_change(change):
             update_tables()
         
+        def on_include_views_change(change):
+            update_tables()
+            
         database_dropdown.observe(on_database_change, names='value')
         schema_dropdown.observe(on_schema_change, names='value')
+        include_views_toggle.observe(on_include_views_change, names='value')
         
         display(widgets.HBox([database_label, database_dropdown, schema_label, schema_dropdown]))
+        checkbox_with_label = widgets.HBox(
+            [include_views_toggle, view_warning], 
+            layout=widgets.Layout(align_items='center')
+        )
         
-        tables = get_tables(default_database, default_schema)
         
-        
-        
+        tables = get_tables(default_database, default_schema, include_views_toggle.value)
+
         display(HTML(f"🤓 Please select the tables:"))
         multi_select = create_column_selector_(columns=tables, default=True, selected=selected_tables)
         
-        hint_html = widgets.HTML(
-                value='''
-    <p style="margin-top: 10px; font-style: italic; color: #666;">
-        Unable to find your tables? They might be defined as views.<br>
-        Cocoon uses SQL for data exploration, but querying views can be expensive.<br>
-        We recommend materializing them to tables for better performance.
-    </p>
-    '''
-        )
-        display(hint_html)
+    
+        display(checkbox_with_label)
         
         def update_tables():
             nonlocal tables
-            tables = get_tables(database_dropdown.value, schema_dropdown.value)
+            tables = get_tables(database_dropdown.value, schema_dropdown.value, include_views_toggle.value)
             multi_select.options = [(table, i) for i, table in enumerate(tables)]
         
         next_button = widgets.Button(description="Next", button_style='success')

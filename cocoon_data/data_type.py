@@ -91,10 +91,11 @@ database_general_hint = {
 def is_type_time(data_type):
     return data_type in ["TIME", "DATE", "TIMESTAMP", "DATETIME"]
 
+def is_type_boolean(data_type):
+    return data_type in ["BOOLEAN"]
 
 def is_type_string(data_type):
     return data_type in ["VARCHAR", "STRING"]
-
 
 def is_type_numeric(data_type):
     return data_type in ["INT", "DECIMAL", "FLOAT"]
@@ -103,7 +104,8 @@ def is_type_id(data_type):
     return data_type in ["UUID", "UNIQUEIDENTIFIER"]
 
 def is_type_comparable(data_type):
-    return is_type_time(data_type) or is_type_string(data_type) or is_type_numeric(data_type) or is_type_id(data_type)
+    return is_type_time(data_type) or is_type_string(data_type) or \
+        is_type_numeric(data_type) or is_type_id(data_type) or is_type_boolean(data_type)
 
 transform_hints = {
     'VARCHAR':{
