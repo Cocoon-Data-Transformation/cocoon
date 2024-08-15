@@ -21774,18 +21774,20 @@ class SelectTable(Node):
             layout=widgets.Layout(width='150px')
         )
 
-        table_label = widgets.HTML(value="<b>Table</b>:")
-        table_dropdown = widgets.Dropdown(
-            options=get_tables(default_database, default_schema),
-            layout=widgets.Layout(width='150px')
-        )
-
         include_views_toggle = widgets.Checkbox(
-            value=False,
+            value=True,
             description='',
             indent=False,
             layout=widgets.Layout(width='auto', margin='3px 0 0 0')
         )
+        
+        table_label = widgets.HTML(value="<b>Table</b>:")
+        table_dropdown = widgets.Dropdown(
+            options=get_tables(default_database, default_schema, include_views_toggle.value),
+            layout=widgets.Layout(width='150px')
+        )
+
+
         
         view_warning = widgets.HTML(
             value='''
@@ -21828,17 +21830,6 @@ class SelectTable(Node):
         display(widgets.HBox([database_label, database_dropdown, schema_label, schema_dropdown, table_label, table_dropdown]))
         display(checkbox_with_label)
 
-        hint_html = widgets.HTML(
-                value='''
-    <p style="margin-top: 10px; font-style: italic; color: #666;">
-        Unable to find your tables? They might be defined as views.<br>
-        Cocoon uses SQL for data exploration, but querying views can be expensive.<br>
-        We recommend materializing them to tables for better performance.
-    </p>
-    '''
-        )
-        display(hint_html)
-        
         mode_selector = widgets.RadioButtons(
             options=[
                 ('💬 Interactive: Interactively provide your feedback for each step', 'Table Provider'),        
@@ -36214,3 +36205,68 @@ class FindTablesAndMatchSchemaForAll(MultipleNode):
         self.nodes = {element: self.construct_node(element, idx, len(self.elements))
                       for idx, element in enumerate(self.elements)}
         
+        
+class DetectPIIColumns(ListNode):
+    default_name = 'Detect PII Columns'
+    default_description = 'This node identifies potential PII columns based on column names.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        table_pipeline = self.para["table_pipeline"]
+        table_name = table_pipeline.__repr__(full=False)
+        display(HTML(f"{running_spinner_html} Analyzing columns for PII in <i>{table_name}</i>..."))
+        create_progress_bar_with_numbers(1, doc_steps)
+        self.progress = show_progress(1)
+
+        schema = table_pipeline.get_schema(self.item["con"])
+        columns = list(schema.keys())
+        columns = sorted(columns)
+        
+        column_chunks = [columns[i:i+50] for i in range(0, len(columns), 50)]
+        
+        return column_chunks
+
+    def run(self, extract_output, use_cache=True):
+        columns = extract_output
+
+        template = f"""You are an expert in data privacy and security. Analyze the following column names and identify any that might contain Personally Identifiable Information (PII).
+
+Column names:
+{', '.join(columns)}
+
+For each column that potentially contains PII, explain what type of information it might hold.
+
+Return your analysis in the following JSON format:
+```json
+{{
+    "column_name": "Explanation of potential PII content",
+    ...
+}}
+```
+
+Only include columns that you believe contain PII. If no columns appear to contain PII, return an empty JSON object."""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        processed_string = extract_json_code_safe(response['choices'][0]['message']['content'])
+        json_code = json.loads(processed_string)
+
+        if not isinstance(json_code, dict):
+            raise ValueError("Validation failed: The returned JSON code is not a dictionary.")
+
+        invalid_columns = set(json_code.keys()) - set(columns)
+        if invalid_columns:
+            raise ValueError(f"Validation failed: One or more column names in the result "
+                             f"are not present in the input columns. "
+                             f"Invalid columns: {invalid_columns}")
+
+        return json_code
+
+    def merge_run_output(self, run_outputs):
+        merged_output = {}
+        for run_output in run_outputs:
+            merged_output.update(run_output)
+        return merged_output
