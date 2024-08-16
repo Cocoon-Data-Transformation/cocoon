@@ -434,9 +434,11 @@ def collect_updated_dict_from_grid(grid):
 
 
 
-def create_text_area_with_char_count(initial_value, max_chars=300):
-    text_area = Textarea(layout=Layout(height='100px', width='80%'),
+def create_text_area_with_char_count(initial_value, max_chars=300, height='100px'):
+    text_area = Textarea(layout=Layout(height=height, width='80%'),
                          value=initial_value)
+    
+    text_area.add_class('modern-textarea')
     
     char_count_label = ipywidgets.HTML()
     
@@ -457,7 +459,12 @@ def create_text_area_with_char_count(initial_value, max_chars=300):
     
     update_char_count(None)
     
-    return text_area, VBox([reset_button, char_count_label])
+    centered_widgets = VBox([
+        reset_button, 
+        char_count_label
+    ], layout=Layout(align_items='center', margin='20px 10px 0 0'))
+    
+    return text_area, centered_widgets
 
 
 
@@ -584,7 +591,7 @@ def create_column_selector(columns, default=False, except_columns=None):
     multi_select = widgets.SelectMultiple(
         options=[(column, i) for i, column in enumerate(columns)],
         disabled=False,
-        layout={'width': '600px', 'height': '200px'}
+        layout={'width': '80%', 'height': '200px'}
     )
     
     instructions_text = "Tip: Hold Ctrl (or Cmd on Mac) to select multiple options. Currently, 0 are selected."
@@ -820,4 +827,3 @@ def create_df_strings(initial_df, can_be_empty=[]):
 
 
 running_spinner_html = '<i class="fa fa-spinner fa-spin" style="font-size:24px"></i>'
-

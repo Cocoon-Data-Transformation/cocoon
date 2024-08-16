@@ -28,7 +28,6 @@ except:
     pass
 
 
-
 def call_embed(input_string):
 
     if openai.api_type == 'azure':
@@ -144,7 +143,28 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
             )
 
         response = convert_anthropicvertex_to_openai(responses)
+    
+            
+    elif api_type == 'Llama3Vertex':
         
+        import openai
+        from google.auth import default
+        from google.auth.transport import requests
+
+        MODEL_LOCATION = "us-central1"
+        PROJECT_ID=cocoon_llm_setting['vertex_project_id'] or os.environ.get("AnthropicVertex_project_id")
+        client = openai.OpenAI(
+            base_url=f"https://{MODEL_LOCATION}-aiplatform.googleapis.com/v1beta1/projects/{PROJECT_ID}/locations/{MODEL_LOCATION}/endpoints/openapi/chat/completions?",
+            api_key=credentials.token,
+        )
+        
+        MODEL_ID = "meta/llama3-405b-instruct-maas" 
+        response = client.chat.completions.create(
+            model=MODEL_ID, messages=messages
+        )
+        
+        response = convert_new_to_old_openai(response)
+                
     elif api_type == 'gemini':
         messages = convert_openai_to_gemini(messages)
 
@@ -170,6 +190,7 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
 
         response = convert_gemini_to_openai(responses)
 
+        
     elif api_type == 'azure':
         engine_name = cocoon_llm_setting['azure_engine'] or os.environ.get("AZURE_ENGINE") or openai.gpt4_engine
         if engine_name is None:

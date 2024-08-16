@@ -82,7 +82,7 @@ def list_files_in_local(directory):
     return files
 
 def file_exists_in_local(file_name):
-    return os.path.isfile(file_name)
+    return os.path.exists(file_name)
 
 def get_file_system():
     return cocoon_main_setting.get('file_system', 'local')

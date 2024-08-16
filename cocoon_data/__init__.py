@@ -15608,7 +15608,7 @@ class DataProject:
         self.story = []
         
         self.partition_mapping = {}
-    
+         
     def get_key_info(self, tables=None, include_ri=True):
         if not tables:
             return self.key
@@ -16455,7 +16455,7 @@ class DecideProjection(Node):
         con = self.item["con"]
         table_pipeline = self.para["table_pipeline"]
         table_name = table_pipeline.__repr__(full=False)
-        schema = table_pipeline.get_schema_dict(con)
+        schema = table_pipeline.get_schema(con)
 
         display(HTML(f"{running_spinner_html} Exploring table <i>{table_name}</i>..."))
         query_widget = self.item["query_widget"]
@@ -16492,7 +16492,7 @@ class DecideProjection(Node):
             callback(document)
             return
             
-        display(HTML(f"🧐 Please select the columns to <b>include</b>.<br> 😊 Cocoon is currently not robust for >50 columns. Support for wide table is under development."))
+        display(HTML(f"🧐 Please select the columns to <b>include</b>."))
         except_columns = ["_fivetran_synced", "fivetran_synced"]
         multi_select = create_column_selector(column_names, default=True, except_columns = except_columns)
 
@@ -16538,7 +16538,7 @@ class CreateColumnGrouping(Node):
         sample_size = 5
 
         table_summary = self.get_sibling_document("Create Table Summary")
-        schema = table_pipeline.get_schema_dict(con)
+        schema = table_pipeline.get_schema(con)
         columns = list(schema.keys())
 
         sample_df = table_pipeline.get_samples(con, columns=columns, sample_size=sample_size)
@@ -20566,22 +20566,30 @@ class DecideTrim(Node):
 
         with_context = table_pipeline.get_codes(mode="WITH")
         
-        for column in schema:
-            current_type = get_reverse_type(schema[column], database_name)
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('trim') is False):
+            
+            pass
+        
+        else:
+            for column in schema:
+                current_type = get_reverse_type(schema[column], database_name)
 
-            if database_name == "SQL Server":
-                if schema[column].lower() in ['text', 'ntext', 'image']:
-                    print(f"⚠️ The column {column} has type {schema[column]} that cannot be compared or sorted in SQL Server. Skipping this node.")
-                    continue
+                if database_name == "SQL Server":
+                    if schema[column].lower() in ['text', 'ntext', 'image']:
+                        print(f"⚠️ The column {column} has type {schema[column]} that cannot be compared or sorted in SQL Server. Skipping this node.")
+                        continue
 
-            if is_type_string(current_type):
-                def where_clause_for_space(column_name, con):
-                    return f'{enclose_table_name(column_name, con=con)} <> TRIM({enclose_table_name(column_name, con=con)})'
+                if is_type_string(current_type):
+                    def where_clause_for_space(column_name, con):
+                        return f'{enclose_table_name(column_name, con=con)} <> TRIM({enclose_table_name(column_name, con=con)})'
 
-                where_clause = where_clause_for_space(column, con)
-                count = run_sql_return_df(con, f'{with_context} \n SELECT COUNT(*) FROM {table_pipeline} WHERE {where_clause}').iloc[0, 0]
-                if count > 0:
-                    columns.append(column)
+                    where_clause = where_clause_for_space(column, con)
+                    count = run_sql_return_df(con, f'{with_context} \n SELECT COUNT(*) FROM {table_pipeline} WHERE {where_clause}').iloc[0, 0]
+                    if count > 0:
+                        columns.append(column)
 
         sample_size = 2
         sample_df = None
@@ -20950,7 +20958,7 @@ models:
         if unusual_df is not None:
             unusual_reason  = unusual_df.loc[unusual_df['Column'].str.lower() == column.lower(), 'Explanation'].values
             if unusual_reason.size != 0:
-                cocoon_meta["unusal_values"] = unusual_reason[0]
+                cocoon_meta["unusual_values"] = unusual_reason[0]
                       
         if unique_df is not None:
             is_unique = unique_df.loc[unique_df['Column'].str.lower() == column.lower(), 'Is Unique?'].values
@@ -21254,8 +21262,8 @@ class WriteStageYMLCode(Node):
                             single_column_html += "<b>❓ Missing:</b> " + str(cocoon_meta['missing_reason']) + "<br>"
                         else:
                             single_column_html += "<b>❓ Missing:</b> Reason unknown <br>"
-                    if 'unusal_values' in cocoon_meta:
-                        single_column_html += "<b>🚧 Erroneous:</b> " + str(cocoon_meta['unusal_values']) + "<br>"
+                    if 'unusual_values' in cocoon_meta:
+                        single_column_html += "<b>🚧 Erroneous:</b> " + str(cocoon_meta['unusual_values']) + "<br>"
                     if 'uniqueness' in cocoon_meta:
                         single_column_html += "<b>🦄 Unique:</b> " + str(cocoon_meta['uniqueness']) + "<br>"
                     if 'patterns' in cocoon_meta:
@@ -21940,6 +21948,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
                             output=output)
     
     main_workflow.add_to_leaf(SelectTable(output=output))
+    main_workflow.add_to_leaf(DetectPIIColumns(output=output))
     main_workflow.add_to_leaf(DecideProjection(output=output))
     main_workflow.add_to_leaf(CreateShortTableSummary(output=output))
     main_workflow.add_to_leaf(DescribeColumnsList(output=output))
@@ -21958,6 +21967,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
     main_workflow.add_to_leaf(HandleMissing(output=output))
     main_workflow.add_to_leaf(DecideUnique(output=output))
     main_workflow.add_to_leaf(DecideStringCategoricalForAll(output=output))
+    main_workflow.add_to_leaf(WriteAcrossColumnTests(output=output))
     main_workflow.add_to_leaf(WriteStageYMLCode(output=output))
     return query_widget, main_workflow
 
@@ -22014,7 +22024,7 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
 
     main_workflow.add_to_leaf(GroupSimilarTables(output = output))
 
-    main_workflow.add_to_leaf(EntityUnderstanding(output = output))
+    main_workflow.add_to_leaf(EntityUnderstandingList(output = output))
     main_workflow.add_to_leaf(RelationUnderstandingForAll(output = output))
     main_workflow.add_to_leaf(RefineRelations(output = output))
     
@@ -22464,6 +22474,12 @@ class DecideDataTypeList(ListNode):
         all_data_types = list(data_types_database[database_name].keys())
         
         outputs = []
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('transform_data_type') is False):
+            return outputs
                 
         for i in range(0, len(columns), 30):
             chunk_columns = columns[i:i + 30]
@@ -22538,6 +22554,14 @@ Return in the following format:
             display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
 
         json_code = run_output
+        
+        if len(extract_output) == 0:
+            with self.output_context():
+                clear_output(wait=True)
+                df = pd.DataFrame(columns=["Column", "Current Type", "Target Type", "Matched?"])
+                callback(df.to_json(orient="split"))
+                return
+        
         _, _, all_data_types, database_name, _ = extract_output[0]
         
         schema = {}
@@ -22551,19 +22575,22 @@ Return in the following format:
 
         create_explore_button(query_widget, table_pipeline)
         
-        rows_list = []
+        columns = []
+        current_types = []
+        target_types = []
 
         for col in schema:
-            current_type = get_reverse_type(schema[col], database_name)
-            target_type = json_code[col]
-    
-            rows_list.append({
-                "column_name": col,
-                "current_type": current_type,
-                "target_type": target_type,
-            })
+            columns.append(col)
+            current_types.append(get_reverse_type(schema[col], database_name))
+            target_types.append(json_code[col])
 
-        df = pd.DataFrame(rows_list)
+        data = {
+            'column_name': columns,
+            'current_type': current_types,
+            'target_type': target_types
+        }
+
+        df = pd.DataFrame(data)
         
         grid = create_data_type_grid(df, all_data_types = all_data_types)
 
@@ -24374,7 +24401,8 @@ class SelectTables(Node):
         
         def on_include_views_change(change):
             update_tables()
-            
+        
+        
         database_dropdown.observe(on_database_change, names='value')
         schema_dropdown.observe(on_schema_change, names='value')
         include_views_toggle.observe(on_include_views_change, names='value')
@@ -24387,17 +24415,23 @@ class SelectTables(Node):
         
         
         tables = get_tables(default_database, default_schema, include_views_toggle.value)
-
-        display(HTML(f"🤓 Please select the tables:"))
-        multi_select = create_column_selector_(columns=tables, default=True, selected=selected_tables)
-        
-    
-        display(checkbox_with_label)
         
         def update_tables():
             nonlocal tables
             tables = get_tables(database_dropdown.value, schema_dropdown.value, include_views_toggle.value)
             multi_select.options = [(table, i) for i, table in enumerate(tables)]
+
+        display(HTML(f"🤓 Please select the tables:"))
+        multi_select = create_column_selector_(columns=tables, default=True, selected=selected_tables)
+        
+        if selected_tables and not set(selected_tables).issubset(set(tables)):
+            include_views_toggle.value = True
+            multi_select.value = [option[1] for option in multi_select.options if option[0] in selected_tables]
+        
+    
+        display(checkbox_with_label)
+        
+
         
         next_button = widgets.Button(description="Next", button_style='success')
         
@@ -25965,7 +25999,8 @@ class Table:
         self.uniqueness = uniqueness or {}
         self.patterns = patterns or {}
         self.variant = variant or {}
-    
+        self.true_expressions = []
+        
     def deep_copy(self):
         return copy.deepcopy(self)
     
@@ -26068,7 +26103,8 @@ class Table:
                 OrderedDict([
                     ("name", self.table_name),
                     ("description", self.table_summary),
-                    ("columns", [])
+                    ("columns", []),
+                    ("tests", []) 
                 ])
             ]),
         ])
@@ -26077,6 +26113,16 @@ class Table:
             data["cocoon_meta"] = table_cocoon_meta
             
 
+        for expression in self.true_expressions:
+            test = OrderedDict([
+                ("dbt_utils.expression_is_true", OrderedDict([
+                    ("test_name", expression["test_name"]),
+                    ("test_description", expression["explanation"]),
+                    ("expression", expression["where_clause"])
+                ]))
+            ])
+            data["models"][0]["tests"].append(test)
+        
         for column in self.columns:
             columndesc_key = next((key for key in self.column_desc if key.lower() == column.lower()), None)
             description = self.column_desc[columndesc_key] if columndesc_key else ""
@@ -26096,7 +26142,7 @@ class Table:
             if unusualness_key:
                 unusual_reason = self.unusualness[unusualness_key]
                 if unusual_reason:
-                    cocoon_meta["unusal_values"] = unusual_reason
+                    cocoon_meta["unusual_values"] = unusual_reason
 
             uniqueness_key = next((key for key in self.uniqueness if key.lower() == column.lower()), None)
             if uniqueness_key:
@@ -26174,6 +26220,15 @@ class Table:
             self.table_name = model.get('name', '')
             self.table_summary = model.get('description', '')
 
+            for test in model.get('tests', []):
+                if isinstance(test, dict) and 'dbt_utils.expression_is_true' in test:
+                    expression = test['dbt_utils.expression_is_true']
+                    self.true_expressions.append({
+                        "test_name": expression.get('test_name', ''),
+                        "explanation": expression.get('test_description', ''),
+                        "where_clause": expression.get('expression', '')
+                    })
+                    
             for column in model.get('columns', []):
                 column_name = column.get('name', '')
                 self.columns.append(column_name)
@@ -26199,8 +26254,8 @@ class Table:
                 cocoon_meta = column.get('cocoon_meta', {})
                 if 'missing_reason' in cocoon_meta:
                     self.missing_reason[column_name] = cocoon_meta['missing_reason']
-                if 'unusal_values' in cocoon_meta:
-                    self.unusualness[column_name] = cocoon_meta['unusal_values']
+                if 'unusual_values' in cocoon_meta:
+                    self.unusualness[column_name] = cocoon_meta['unusual_values']
                 if 'uniqueness' in cocoon_meta:
                     if column_name not in self.uniqueness:
                         self.uniqueness[column_name] = {}
@@ -26900,7 +26955,7 @@ class StageForAll(MultipleNode):
                             
                             if partition_name not in data_project.tables or partition_name not in data_project.table_pipelines:
                                 try:
-                                    table_schema = table_pipeline.get_schema_dict(con)
+                                    table_schema = table_pipeline.get_schema(con)
                                     
                                     if not table_schema:
                                         print(f"⚠️ Can't read {partition_name}; Is it materialized?")
@@ -26917,7 +26972,7 @@ class StageForAll(MultipleNode):
                     
                     if not old_table_found:
                         try:
-                            table_schema = table_pipeline.get_schema_dict(con)
+                            table_schema = table_pipeline.get_schema(con)
                             
                             if not table_schema:
                                 print(f"⚠️ Can't read {new_table_name}; Is it materialized?")
@@ -27476,9 +27531,9 @@ Return in the following format:
         
  
         
-class EntityUnderstanding(Node):
+class EntityUnderstandingList(ListNode):
     default_name = 'Entity Understand'
-    default_description = 'This understands the entity of the tables'
+    default_description = 'This node understands the entities of the tables in batches.'
 
     def extract(self, item):
         clear_output(wait=True)
@@ -27490,14 +27545,22 @@ class EntityUnderstanding(Node):
         data_project = self.para["data_project"]
         pk_table_column_pairs = list(data_project.foreign_key.keys())
         
-        pk_table_description = ""
-        for pk_table, pk in pk_table_column_pairs:
-            table_object = data_project.table_object[pk_table]
-            table_summary = table_object.table_summary
-            pk_summary = table_object.print_column_desc(columns=[pk])
-            pk_table_description += f"{pk_table}: {table_summary}\n   Its primary key is '{pk}': {pk_summary}\n"
+        outputs = []
+        batch_size = 50
 
-        return pk_table_column_pairs, pk_table_description
+        for i in range(0, len(pk_table_column_pairs), batch_size):
+            batch_pairs = pk_table_column_pairs[i:i + batch_size]
+            
+            pk_table_description = ""
+            for pk_table, pk in batch_pairs:
+                table_object = data_project.table_object[pk_table]
+                table_summary = table_object.table_summary
+                pk_summary = table_object.print_column_desc(columns=[pk])
+                pk_table_description += f"{pk_table}: {table_summary}\n   Its primary key is '{pk}': {pk_summary}\n"
+
+            outputs.append((batch_pairs, pk_table_description))
+
+        return outputs
 
     def run(self, extract_output, use_cache=True):
         pk_table_column_pairs, pk_table_description = extract_output
@@ -27517,13 +27580,12 @@ Return in the following format:
 ...
 ```"""
         messages = [{"role": "user", "content": template}]
-        response =  call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
         self.messages.append(messages)
 
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.load(yml_code, Loader=yaml.SafeLoader)
-        
         
         if not isinstance(summary, dict):
             raise TypeError("summary must be a dictionary")
@@ -27540,6 +27602,10 @@ Return in the following format:
         if missing_tables:
             raise ValueError(f"The following tables are missing from the LLM response: {missing_tables}")
         
+        unexpected_tables = set(summary.keys()) - set(pair[0] for pair in pk_table_column_pairs)
+        if unexpected_tables:
+            raise ValueError(f"The following tables in the LLM response were not in the input: {unexpected_tables}")
+        
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
@@ -27548,7 +27614,13 @@ Return in the following format:
         result = {}
         for pk_table, pk in pk_table_column_pairs:
             result[pk_table] = {"entity_name": pk, "entity_description": pk}
-        return result        
+        return result
+
+    def merge_run_output(self, run_outputs):
+        merged_output = {}
+        for run_output in run_outputs:
+            merged_output.update(run_output)
+        return merged_output
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         pk_table_column_pairs, pk_table_description = extract_output
@@ -28121,18 +28193,18 @@ class DBTProjectConfig(Node):
         clear_output(wait=True)
 
         dbt_name_input = widgets.Text(
-            description='Project Name:',
+            description='Name:',
             value=self.para.get("dbt_name", "My Project"),
             style={'description_width': 'initial'}
         )
 
         dbt_directory_input = widgets.Text(
-            description='Project Directory:',
+            description='Directory:',
             value=self.para.get("dbt_directory", "./dbt_project"),
             style={'description_width': 'initial'}
         )
 
-        next_button = widgets.Button(description="Next", button_style='success')
+        next_button = widgets.Button(description="Next", button_style='success', icon='check')
 
         def on_button_click(b):
             with self.output_context():
@@ -28155,9 +28227,8 @@ class DBTProjectConfig(Node):
                 return
         
         create_progress_bar_with_numbers(0, model_steps)
-        display(HTML("<h3>🛠️ Configure your project</h3>"))
-        display(VBox([dbt_name_input, dbt_directory_input]))
-        display(next_button)
+        display(HTML("<div style='line-height: 1.2;'><h2>🛠️ Configure the project</h2>😎 <em>You will find the results in the project directory</em></div>"))
+        display(VBox([dbt_name_input, dbt_directory_input]), next_button)
             
 class WriteSCDForAll(MultipleNode):
     default_name = 'Write SCD For All'
@@ -28642,6 +28713,15 @@ class DecideSCDForAll(MultipleNode):
         
         candidate_elements = set(data_project.tables.keys())
         candidate_elements -= set(data_project.partition_mapping.keys())
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_catalog_options'), dict) and 
+            self.para['cocoon_catalog_options'].get('scd') is False):
+            self.elements = []
+            self.nodes = {}
+            return
+        
         self.elements = list(candidate_elements)
         
         self.nodes = {element: self.construct_node(element, idx, len(self.elements))
@@ -28919,6 +28999,8 @@ class ConnectPKFKTable(ListNode):
         database_desc = ""
         pk_to_column = {}
         
+        key_df = key_df.sort_values(by='Table')
+        
         for idx, row in key_df.iterrows():
             table_name = row["Table"]
             pk = row["Primary Key"]
@@ -28945,6 +29027,7 @@ class ConnectPKFKTable(ListNode):
             pk = row["Primary Key"]
             
             keys = [key for key in keys if key != pk]
+            keys.sort()
             
             if len(keys) == 0:
                 continue
@@ -29898,6 +29981,7 @@ def read_source_file(sources_file_path):
         schema = source.get('schema')
         tables = source.get('tables', [])
         
+        
         if len(tables) > 0 and isinstance(tables[0], dict):
             table_names = [table['name'] for table in tables]
         else:
@@ -30156,8 +30240,6 @@ def rename_for_stg(old_table_name):
     return "stg_" + old_table_name.replace("src_", "")
 
 
-
-
 class RefinePK(Node):
     default_name = 'Refine Primary Key'
     default_description = 'This node refines the primary key for the given table and clusters related tables'
@@ -30171,7 +30253,7 @@ class RefinePK(Node):
         key_df = pd.read_json(self.get_sibling_document('Decide Keys For All'), orient="split")
         
         pk_df = key_df[key_df['Primary Key'] != ""]
-        pk_df = pk_df.sort_values(by='Primary Key')
+        pk_df = pk_df.sort_values(by=['Primary Key', 'Table'])
 
         data_project = self.para["data_project"]
         
@@ -30179,9 +30261,12 @@ class RefinePK(Node):
         for idx, row in pk_df.iterrows():
             table = row['Table']
             pk = row['Primary Key']
+            keys = row['Keys']
+            fks = [key for key in keys if key != pk]
             table_object = data_project.table_object[table]
             table_summary = table_object.table_summary
-            pk_table_description += f"{table}: {table_summary}\n   Primary key: '{pk}'\n"
+            
+            pk_table_description += f"{table}: {table_summary}\n   Primary key: {pk}\n  Foreign keys: {','.join(fks)}\n"
         
         return pk_df, pk_table_description
     
@@ -30194,14 +30279,13 @@ class RefinePK(Node):
         template = f"""You have the following tables with primary keys:
 {pk_table_description}
 
-Your task is to cluster tables that share the same primary key (but maybe with different names/representations) and choose one representative table for each cluster.
-For example, 'UserInformation' has pk 'userid' and 'UserAddress' has pk 'UserIdentifier'. They are the same and 'UserInformation' is more representative.
+Your task is to cluster tables that share the same primary key:
+1. These tables are joinable on the primary key (but could need some transformation).
+2. These table names and primary key names shall be similar.
+For example, 'UserInformation' has pk 'userid' and 'UserAddress' has pk 'UserIdentifier'. 
+They are joinable on 'userid' and 'UserIdentifier'. After join, they show a comprehensive user profile.
 
-Please analyze the tables's primary keys, then provide the following output:
-1. Identify clusters of primary key shared by tables.
-2. Choose a representative table for each cluster.
-3. Provide a brief explanation for each cluster.
-
+Now, identify clusters of tables that are joinable on the their primary key.
 Return your analysis in the following YAML format:
 
 ```yml
@@ -30211,11 +30295,10 @@ reasoning: >-
 # only for clusters with > 1 table
 clusters:
   - cluster_name: name_of_cluster
-    explanation: Brief explanation of what the primary key is for
+    explanation: They are joinable on the primary key, and together they form a comprehensive view of ...
     tables: 
       - table1
       - table2
-    representative_table: most_important_table
   - cluster_name: another_cluster
     ...
 ```"""
@@ -30245,16 +30328,13 @@ clusters:
         for cluster in summary.get("clusters", []):
             cluster_name = cluster['cluster_name']
             tables = cluster['tables']
-            representative_table = cluster['representative_table']
             explanation = cluster['explanation']
-            
-            tables.remove(representative_table)
-            tables.insert(0, representative_table)
             
             cluster_data.append({
                 'Cluster Name': cluster_name,
                 'Tables': tables,
-                'Explanation': explanation
+                'Explanation': explanation,
+                'Endorsed': True
             })
         
         df = pd.DataFrame(cluster_data)
@@ -30263,7 +30343,7 @@ clusters:
             callback(original_df.to_json(orient="split"))
             return
         
-        editable_columns = [True, False, True]
+        editable_columns = [True, False, True, True]
         reset = True
         editable_list = {
             'Tables': {}
@@ -30276,6 +30356,8 @@ clusters:
         def on_button_click(b):
             with self.output_context():
                 updated_df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+                
+                updated_df = updated_df[updated_df['Endorsed']]
                 
                 table_positions = {}
                 for _, row in updated_df.iterrows():
@@ -30391,9 +30473,10 @@ class SelectSchema(Node):
             return 
         
         display(HTML("""
+        <div style='line-height: 1.2;'>             
             <h2>🛡️ Access Control</h2>
-            <p>🫡 Cocoon <b>only</b> writes temp tables/views under the schema you specify</p>
-            <p>Please specify the schema for Cocoon to write:</p>
+            🫡 <em>Cocoon <b>only</b> writes under the database and schema you specify:</em><br>
+        </div>
         """))
         
         display(VBox([database_input, schema_input]), VBox([test_button, output]))
@@ -32799,7 +32882,7 @@ class WritePartitionYMLCode(Node):
         display(tabs)
         overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
         save_files_click(save_button)  
-        WW
+        
         def on_button_clicked(b):
             with self.output_context():
                 clear_output(wait=True)
@@ -35031,21 +35114,20 @@ class SelectStageOptions(Node):
         style = HTML("""
         <style>
         .widget-checkbox { margin-right: 10px; }
-        .option-label { font-size: 14px; }
+        .option-label { 
+            font-size: 14px; 
+        }
         em { 
             font-size: 12px; 
             color: #666; 
             display: block;
             margin-top: -5px;
         }
-        /* Base styles for all code blocks */
         code {
             font-family: 'Fira Code', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
             font-size: 14px;
             line-height: 1.4;
         }
-
-        /* Styles for multi-line code blocks */
         pre.command-line {
             background-color: #f0f0f0;
             border-radius: 5px;
@@ -35056,7 +35138,6 @@ class SelectStageOptions(Node):
             color: #333;
             border: 1px solid #e1e4e8;
         }
-
         pre.command-line code {
             background-color: transparent;
             padding: 0;
@@ -35066,30 +35147,33 @@ class SelectStageOptions(Node):
         """)
         display(style)
 
-        def create_html_checkboxes(html_labels, disabled=False):
-            labels_html = [widgets.HTML(value=label) for label in html_labels]
+        def create_html_checkboxes(options):
+            labels_html = [widgets.HTML(value=option[0]) for option in options]
             checkbox_style = {'description_width': '0px'}
-            checkboxes = [widgets.Checkbox(value=True, description='', disabled=disabled, style=checkbox_style, layout={'width': 'initial'}) for _ in html_labels]
+            checkboxes = [widgets.Checkbox(value=option[2], description='', disabled=not option[3], style=checkbox_style, layout={'width': 'initial'}) for option in options]
             checkboxes_widget = widgets.VBox([widgets.HBox([cb, label], layout=widgets.Layout(align_items='center', margin='0')) for cb, label in zip(checkboxes, labels_html)])
             return checkboxes_widget, checkboxes
 
         options = [
-            '<span class="option-label"><div><strong>Projection</strong></div><div><em>Cocoon projects out some columns like fivetran sync time, or index</em></div></span>',
-            '<span class="option-label"><div><strong>Column rename</strong></div><div><em>Cocoon renames columns to be descriptive</em></div></span>',
-            '<span class="option-label"><div><strong>Deduplicate</strong></div><div><em>Cocoon removes duplicated rows</em></div></span>',
-            '<span class="option-label"><div><strong>Standardize values</strong></div><div><em>Cocoon standardizes inconsistent values and fix typos</em></div></span>',
-            '<span class="option-label"><div><strong>Detect disguised missing values</strong></div><div><em>Cocoon detects and fixes missing values not already as NULL</em></div></span>',
-            '<span class="option-label"><div><strong>Detect Regex Patterns</strong></div><div><em>Cocoon detects regular patterns for string</em></div></span>',
-            '<span class="option-label"><div><strong>Transform data type</strong></div><div><em>Cocoon casts column with wrong data type</em></div></span>',
-            '<span class="option-label"><div><strong>Parse Variant Types (Snowflake)</strong></div><div><em>Cocoon identifies the data type for Variant type</em></div></span>',
-            '<span class="option-label"><div><strong>Unique test</strong></div><div><em>Cocoon writes tests for columns shall be unique</em></div></span>',
-            '<span class="option-label"><div><strong>Accepted Values test</strong></div><div><em>Cocoon writes tests for columns shall have fixed accepted values</em></div></span>',
-            '<span class="option-label"><div><strong>Generate HTML report</strong></div><div><em>Cocoon generates HTML report to help visualize the results</em></div></span>'
+            ['<span class="option-label"><div><strong>Table Description</strong></div><div><em><b>🔬 (Schema-Only) Read Access:</b> Cocoon describes the table</em></div></span>', 'table_desc', True, False],
+            ['<span class="option-label"><div><strong>Column Description</strong></div><div><em><b>🔬 (Schema-Only) Read Access:</b> Cocoon describes each column</em></div></span>', 'col_desc', True, False],
+            ['<span class="option-label"><div><strong>Remove PII</strong></div><div><em><b>🔬 (Schema-Only) Read Access:</b> Cocoon removes columns with Personal Identifiable Information</em></div></span>', 'pii', False, True],
+            ['<span class="option-label"><div><strong>Detect Regex Patterns</strong></div><div><em><b>📖 Read Access:</b> Cocoon detects regular patterns for string</em></div></span>', 'detect_regex_patterns', True, True],
+            ['<span class="option-label"><div><strong>Parse Variant Types (Snowflake-only)</strong></div><div><em><b>📖 Read Access:</b> Cocoon identifies the data type for Variant type</em></div></span>', 'parse_variant_types', True, True],
+            ['<span class="option-label"><div><strong>Unique test</strong></div><div><em><b>📖 Read Access:</b> Cocoon writes tests for columns shall be unique</em></div></span>', 'unique_test', True, True],
+            ['<span class="option-label"><div><strong>Accepted Values test</strong></div><div><em><b>📖 Read Access:</b> Cocoon writes tests for columns shall have fixed accepted values</em></div></span>', 'category_test', True, True],
+            ['<span class="option-label"><div><strong>Cross column tests</strong></div><div><em><b>📖 Read Access:</b> Cocoon performs tests that involve multiple columns</em></div></span>', 'expression_tests', False, True],
+            ['<span class="option-label"><div><strong>Projection</strong></div><div><em><b>✍️ Write Access:</b> Cocoon projects out some columns like fivetran sync time, or index</em></div></span>', 'projection', True, True],
+            ['<span class="option-label"><div><strong>Column rename</strong></div><div><em><b>✍️ Write Access:</b> Cocoon renames columns to be descriptive</em></div></span>', 'rename', True, True],
+            ['<span class="option-label"><div><strong>Deduplicate</strong></div><div><em><b>✍️ Write Access:</b> Cocoon removes duplicated rows</em></div></span>', 'deduplication', True, True],
+            ['<span class="option-label"><div><strong>Standardize values</strong></div><div><em><b>✍️ Write Access:</b> Cocoon standardizes inconsistent values and fix typos</em></div></span>', 'standardize_values', True, True],
+            ['<span class="option-label"><div><strong>Detect disguised missing values</strong></div><div><em><b>✍️ Write Access:</b> Cocoon detects and fixes missing values not already as NULL</em></div></span>', 'detect_disguised_missing_values', True, True],
+            ['<span class="option-label"><div><strong>Transform data type</strong></div><div><em><b>✍️ Write Access:</b> Cocoon casts column with wrong data type</em></div></span>', 'transform_data_type', True, True],
+            ['<span class="option-label"><div><strong>Trim whitespaces</strong></div><div><em><b>✍️ Write Access:</b> Cocoon trims leading and trailing whitespaces</em></div></span>', 'trim', True, True],
+            ['<span class="option-label"><div><strong>Generate HTML report</strong></div><div><em>Cocoon generates HTML report to summarize the results</em></div></span>', 'generate_html_report', False, True]
         ]
 
         checkboxes_widget, checkboxes = create_html_checkboxes(options)
-
-        checkboxes[-1].value = False
 
         cardinality_threshold = widgets.IntText(
             value=300,
@@ -35122,17 +35206,13 @@ class SelectStageOptions(Node):
         output = widgets.Output()
         
         if hasattr(self, 'para') and 'cocoon_stage_options' in self.para:
-            options = self.para['cocoon_stage_options']
-            option_names = ['projection', 'rename', 'deduplication', 'standardize_values', 'detect_disguised_missing_values',
-                            'detect_regex_patterns', 'transform_data_type', 'parse_variant_types',
-                            'unique_test', 'category_test', 'generate_html_report']
+            stored_options = self.para['cocoon_stage_options']
+            for option, checkbox in zip(options, checkboxes):
+                if option[1] in stored_options:
+                    checkbox.value = stored_options[option[1]]
             
-            for name, checkbox in zip(option_names, checkboxes):
-                if name in options:
-                    checkbox.value = options[name]
-            
-            if 'cardinality_threshold' in options:
-                cardinality_threshold.value = options['cardinality_threshold']
+            if 'cardinality_threshold' in stored_options:
+                cardinality_threshold.value = stored_options['cardinality_threshold']
 
         def on_submit(b):
             with self.output_context():
@@ -35144,16 +35224,12 @@ class SelectStageOptions(Node):
             with output:
                 output.clear_output()
                 selected_options = get_selected_options()
-                code_snippet = f"""para = {{"cocoon_stage_options": {json.dumps(selected_options, indent=2)}}}
+                code_snippet = f"""para = {{"cocoon_stage_options": {{{', '.join(f"{repr(k)}: {repr(v)}" for k, v in selected_options.items())}}}}}
 create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
                 display(HTML(f'To reuse the options in the future run:<pre class="command-line"><code>{code_snippet}</code></pre>'))
                 
         def get_selected_options():
-            option_names = ['projection', 'rename', 'deduplication', 'standardize_values', 'detect_disguised_missing_values',
-                            'detect_regex_patterns', 'transform_data_type', 'parse_variant_types',
-                            'unique_test', 'category_test', 'generate_html_report']
-            
-            selected_options = {name: checkbox.value for name, checkbox in zip(option_names, checkboxes)}
+            selected_options = {option[1]: checkbox.value for option, checkbox in zip(options, checkboxes)}
             
             if selected_options['standardize_values']:
                 selected_options['cardinality_threshold'] = cardinality_threshold.value
@@ -35164,9 +35240,8 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
         export_button.on_click(on_export)
 
         widget = widgets.VBox([
-            widgets.HTML(value='<h2>⚙️ Data Cleaning Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em>'),
-            checkboxes_widget,
-            cardinality_widget,
+            widgets.HTML(value="<div style='line-height: 1.2;'><h2>⚙️ Data Cleaning Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em></div>"),
+            widgets.VBox([checkboxes_widget, cardinality_widget], layout=widgets.Layout(border='1px solid #ddd', padding='10px')),
             widgets.HBox([export_button, submit_button]),
             output
         ])
@@ -35179,7 +35254,7 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
         create_progress_bar_with_numbers(1, model_steps)
         display(widget)
         
-
+        
 class ExplainLineage(ListNode):
     default_name = 'Explain Lineage'
     default_description = 'This node explains the lineage of a specific column in a dbt model.'
@@ -36229,6 +36304,12 @@ class DetectPIIColumns(ListNode):
 
     def run(self, extract_output, use_cache=True):
         columns = extract_output
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('pii') is False):
+            return self.run_but_fail({})
 
         template = f"""You are an expert in data privacy and security. Analyze the following column names and identify any that might contain Personally Identifiable Information (PII).
 
@@ -36238,35 +36319,337 @@ Column names:
 For each column that potentially contains PII, explain what type of information it might hold.
 
 Return your analysis in the following JSON format:
-```json
-{{
-    "column_name": "Explanation of potential PII content",
+```yml
+reasoning: >-
+    Your reasoning for identifying PII columns.
+pii_columns:
+    column_name_1: reason for identifying PII
     ...
-}}
-```
-
-Only include columns that you believe contain PII. If no columns appear to contain PII, return an empty JSON object."""
+```"""
 
         messages = [{"role": "user", "content": template}]
         response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
         messages.append(response['choices'][0]['message'])
         self.messages.append(messages)
-        processed_string = extract_json_code_safe(response['choices'][0]['message']['content'])
-        json_code = json.loads(processed_string)
 
-        if not isinstance(json_code, dict):
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+
+        if not isinstance(analysis, dict):
             raise ValueError("Validation failed: The returned JSON code is not a dictionary.")
 
-        invalid_columns = set(json_code.keys()) - set(columns)
-        if invalid_columns:
-            raise ValueError(f"Validation failed: One or more column names in the result "
-                             f"are not present in the input columns. "
-                             f"Invalid columns: {invalid_columns}")
+        if analysis.get("pii_columns", None):
+            invalid_columns = set(analysis["pii_columns"].keys()) - set(columns)
+            if invalid_columns:
+                raise ValueError(f"Validation failed: One or more column names in the result "
+                                f"are not present in the input columns. "
+                                f"Invalid columns: {invalid_columns}")
 
-        return json_code
-
+        return analysis
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"reasoning": "Unable to generate reasoning for the PII detection.", "pii_columns": {}}
+    
     def merge_run_output(self, run_outputs):
         merged_output = {}
         for run_output in run_outputs:
-            merged_output.update(run_output)
+            merged_output.update(run_output.get('pii_columns', {}))
         return merged_output
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        create_progress_bar_with_numbers(0, doc_steps)
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+        create_explore_button(query_widget, table_pipeline)
+        
+        data = {
+            'Column Name': [],
+            'Is PII': [],
+            'Explanation': [],
+        }
+
+        all_columns = [col for chunk in extract_output for col in chunk]
+
+        for column in all_columns:
+            is_pii = column in run_output
+            explanation = run_output.get(column, '')
+
+            data['Column Name'].append(column)
+            data['Is PII'].append(is_pii)
+            data['Explanation'].append(explanation)
+
+        df = pd.DataFrame(data)
+
+        df = df.sort_values('Is PII', ascending=False).reset_index(drop=True)
+
+        editable_columns = [False, True, True]
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset)
+
+        display(grid)
+
+        display(HTML(f"🧐 We've identified PII to remove."))
+
+        submit_button = widgets.Button(description="Accept Remove", button_style='success', icon='check')
+        reject_button = widgets.Button(description="Reject Remove", button_style='danger', icon='times')
+        
+        def submit(b):
+            with self.output_context():
+                df = grid_to_updated_dataframe(grid, reset=reset)
+                old_table_name = table_pipeline.__repr__(full=False)
+                new_table_name = old_table_name + "_pii"
+                
+                non_pii_columns = df[df['Is PII'] == False]['Column Name'].tolist()
+                
+                if len(non_pii_columns) < len(all_columns):
+                    con = self.item["con"]
+                    selection_clause = ',\n'.join(non_pii_columns)
+                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
+                    comment = f"-- PII: remove columns with PII information\n"
+                    removed_columns = [col for col in all_columns if col not in non_pii_columns]
+                    if len(removed_columns) < 10:
+                        comment += f"-- Columns removed: {', '.join(removed_columns)}\n"
+                        
+                    sql_query = lambda *args, comment=comment, sql_query=sql_query: f"{comment}{sql_query}\nFROM {args[0]}"
+                        
+                    step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
+                    table_pipeline.add_step_to_final(step)
+                
+                callback(df.to_json(orient="split"))
+                return 
+        
+        def reject(b):
+            with self.output_context():
+                df = grid_to_updated_dataframe(grid, reset=reset)
+                callback(df.to_json(orient="split"))
+                return
+
+        submit_button.on_click(submit)
+        reject_button.on_click(reject)
+        
+        if self.viewer or ("viewer" in self.para and self.para["viewer"]):
+            submit(submit_button)
+            return
+        
+        button_box = widgets.HBox([reject_button, submit_button])
+        display(button_box)
+
+class WriteAcrossColumnTests(Node):
+    default_name = 'Write Across-Column Tests'
+    default_description = 'This node generates test cases for across-column comparisons and calculations.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+        display(HTML(f"{running_spinner_html} Writing more advanced expression tests..."))
+        create_progress_bar_with_numbers(3, doc_steps)
+        con = self.item["con"]
+        database_name = get_database_name(con)
+        table_pipeline = self.para["table_pipeline"]
+        
+        sample_size = 5
+        sample_df = table_pipeline.get_samples(con, sample_size=sample_size)
+        sample_df = sample_df.applymap(truncate_cell)
+        
+        return sample_df
+
+    def run(self, extract_output, use_cache=True):
+        sample_df = extract_output
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('expression_tests') is False):
+            return self.run_but_fail({})
+        
+        if len(sample_df.columns) <= 1:
+            return self.run_but_fail()
+
+        template = f"""Given the following table sample data:
+
+Sample data:
+{sample_df.to_csv(index=False, quoting=1)}
+
+Task: Generate a list of across-column test cases. Focus on comparisons, sums, or other relationships between columns. 
+Do not create tests for single column range/domain checks.
+Do not create tests just for NULL checks.
+
+Examples of good test cases:
+1. If there are "volume 1", "volume 2", and "total volume" columns, create a test like "volume 1 + volume 2 = total volume".
+2. If there are "start date" and "end date" columns, create a test like "start date < end date" (when these columns are not null).
+
+For each test case, provide:
+1. Test name
+2. Short explanation (about 10 words)
+3. SQL where clause that selects violations
+
+Return the results in the following JSON format:
+```yml
+- test_name: >-
+    Volume Sum Check
+  explanation: >-
+    Ensures total volume equals sum of individual volumes
+  where_clause: >-
+    volume_1 + volume_2 = total_volume
+- test_name: >-
+    Date Range Check
+  explanation: >-
+    Verifies start date is before end date
+  where_clause: >-
+    start_date < end_date
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        test_cases = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(test_cases, list):
+            raise ValueError("The returned JSON should be a list of test cases.")
+        
+        for test_case in test_cases:
+            if not all(key in test_case for key in ["test_name", "explanation", "where_clause"]):
+                raise ValueError("Each test case should have 'test_name', 'explanation', and 'where_clause'.")
+            
+        
+        valid_test_cases = []
+        con = self.item["con"]
+        table_pipeline = self.para['table_pipeline']
+        with_context = table_pipeline.get_codes(mode="WITH")
+        
+        for test_case in test_cases:
+            if not all(key in test_case for key in ["test_name", "explanation", "where_clause"]):
+                if cocoon_main_setting['DEBUG_MODE']:
+                    print(f"Skipping invalid test case: {test_case}")
+                continue
+            
+            query = f"SELECT COUNT(*) AS CNT FROM {table_pipeline} WHERE NOT({test_case['where_clause']})"
+            query = with_context + "\n" + query
+            try:
+                df = run_sql_return_df(con, query)
+                violation_count = df['CNT'].iloc[0]
+                test_case['violation_count'] = int(violation_count)
+                valid_test_cases.append(test_case)
+            except Exception as e:
+                if cocoon_main_setting['DEBUG_MODE']:
+                    print(f"Error running test '{test_case['test_name']}': {str(e)}")
+                
+        
+        return valid_test_cases
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        return []
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+        
+        table_pipeline = self.para["table_pipeline"]
+        query_widget = self.item["query_widget"]
+        with_context_clause = table_pipeline.get_codes(mode="WITH")
+        
+        tests = run_output
+        
+        if len(tests) == 0:
+            callback(tests)
+            return
+        
+        
+        
+        def create_test_widget(test):
+            result_text = (
+                f"<div style='color: red;'>❌ {test['violation_count']} rows don't satisfy the expressions</div>"
+                if test['violation_count'] > 0
+                else "<div style='color: green;'>✔️ All rows satisfy the expressions</div>"
+            )
+            
+            html_content = f"""
+            <div style='line-height: 1.2;'>
+                <h3 style='margin-bottom: 5px;'>{test['test_name']}</h3>
+                <em style='display: block; margin-bottom: 5px;'>{test['explanation']}</em>
+                <pre style='margin: 5px 0;'><code>{test['where_clause']}</code></pre>
+                {result_text}
+            </div>
+            """
+            content_widget = widgets.HTML(html_content)
+            
+            run_button = widgets.Button(description="Run SQL", button_style='info', icon='play')
+            
+            endorse_checkbox = widgets.Checkbox(description="Endorse Test", value=True)
+            
+            def on_run_button_click(b):
+                with self.output_context():
+                    query = "SELECT *"
+                    query += f'\nFROM {table_pipeline}'
+                    query += f'\nWHERE NOT ({test["where_clause"]})'
+                    query_widget.update_context_value(with_context_clause)
+                    query_widget.run_query(query)
+                    print("😎 Query submitted. Check out the data widget!")
+            
+            run_button.on_click(on_run_button_click)
+            
+            return widgets.VBox([
+                content_widget, 
+                widgets.HBox([run_button, endorse_checkbox])
+            ])
+
+        def create_all_tests_widget():
+            test_widgets = [create_test_widget(test) for test in tests]
+            return widgets.VBox(test_widgets, layout=widgets.Layout(border='1px solid #ddd', padding='10px'))
+
+        custom_css = """
+        <style>
+        .widget-html h3 { margin-top: 0; }
+        .widget-vbox { margin-bottom: 10px; }
+        </style>
+        """
+        display(HTML(custom_css))
+
+        main_widget = create_all_tests_widget()
+        display(main_widget)
+
+        def get_checkbox_values(widget):
+            checkbox_values = []
+            for child in widget.children:
+                if isinstance(child, widgets.VBox):
+                    checkbox = child.children[1].children[1]
+                    if isinstance(checkbox, widgets.Checkbox):
+                        checkbox_values.append(checkbox.value)
+            return checkbox_values
+        
+        next_button = widgets.Button(description='Accept Tests',  button_style='success', icon='check')
+        reject_button = widgets.Button(description="Reject Tests", button_style='danger', icon='times')
+        
+        def on_next_button_clicked(b):
+            with self.output_context():
+                checkbox_values = get_checkbox_values(main_widget)
+                tests = [test for test, endorse in zip(run_output, checkbox_values) if endorse]
+                table_object = self.para["table_object"]
+                table_object.true_expressions.append(tests)
+                callback(tests)
+                return
+        
+        def reject(b):
+            with self.output_context():
+                callback([])
+                return
+        
+        next_button.on_click(on_next_button_clicked)
+        reject_button.on_click(reject)
+        
+        next_button.on_click(on_next_button_clicked)
+        
+        viewer = self.para.get("viewer", False)
+        
+        if viewer:
+            on_next_button_clicked(next_button)
+        
+        button_box = widgets.HBox([reject_button, next_button])
+        display(button_box)

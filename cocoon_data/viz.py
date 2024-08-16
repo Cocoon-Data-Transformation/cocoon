@@ -1337,9 +1337,18 @@ def create_schema_graph(nodes, edges, highlighted_node=None, highlighted_edge_in
     return image
 
 def generate_schema_graph_graphviz(nodes, edges, height=None, format="svg", highlighted_node=None, highlighted_edge_indices=None):
-    image_data = create_schema_graph(nodes, edges, highlighted_node=highlighted_node, highlighted_edge_indices=highlighted_edge_indices)
-    return wrap_image_in_html(image_data, height=height, format=format)
+    try:
+        image_data = create_schema_graph(nodes, edges, highlighted_node=highlighted_node, highlighted_edge_indices=highlighted_edge_indices)
+        return wrap_image_in_html(image_data, height=height, format=format)
 
+    except:
+        return """
+<div style="font-family: sans-serif; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; color: #721c24;">
+    <p style="margin: 0 0 10px 0; line-height: 1.4;">⚠️ <strong>Error:</strong> Cocoon needs graphviz installed to generate visualizations.</p>
+    <p style="margin: 0 0 10px 0; line-height: 1.4;">To install, visit the <a href="https://graphviz.org/download/" target="_blank">Graphviz website</a>.</p>
+    <p style="margin: 0; line-height: 1.4;">Alternatively, run: <code>set_image_mode("mermaid")</code></p>
+</div>
+"""
 
 
 
