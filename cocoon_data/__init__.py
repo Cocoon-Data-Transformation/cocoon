@@ -17192,7 +17192,7 @@ patterns: # leave empty if free texts
                 break
             
             def clean_regex(regex):
-                regex = to_remove_value(regex, con)
+                regex = escape_value_single_quotes(regex, con)
                 return regex
             
             
