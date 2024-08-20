@@ -748,22 +748,22 @@ def generate_workflow_image(nodes, edges, edge_labels=None, highlight_nodes_indi
         if node_shape and i < len(node_shape):
             node_style['shape'] = node_shape[i]
         if i in highlight_nodes_indices:
-            dot.node(node, node, **{**node_style, **highlighted_node_style})
+            dot.node(node + f"_{i}", node, **{**node_style, **highlighted_node_style})
         else:
-            dot.node(node, node, **node_style)
+            dot.node(node + f"_{i}", node, **node_style)
 
     for i, (tail, head) in enumerate(edges):
         label = edge_labels[i] if edge_labels and i < len(edge_labels) else ''
         if i in highlight_edges_indices:
             if directional:
-                dot.edge(nodes[tail], nodes[head], label=label, **{**edge_style, **highlighted_edge_style})
+                dot.edge(nodes[tail] + f"_{tail}", nodes[head] + f"_{head}", label=label, **{**edge_style, **highlighted_edge_style})
             else:
-                dot.edge(nodes[tail], nodes[head], label=label, dir='none', **{**edge_style, **highlighted_edge_style})
+                dot.edge(nodes[tail] + f"_{tail}", nodes[head] + f"_{head}", label=label, dir='none', **{**edge_style, **highlighted_edge_style})
         else:
             if directional:
-                dot.edge(nodes[tail], nodes[head], label=label, **edge_style)
+                dot.edge(nodes[tail] + f"_{tail}", nodes[head] + f"_{head}", label=label, **edge_style)
             else:
-                dot.edge(nodes[tail], nodes[head], label=label, dir='none', **edge_style)
+                dot.edge(nodes[tail] + f"_{tail}", nodes[head] + f"_{head}", label=label, dir='none', **edge_style)
 
 
     image = dot.pipe()
@@ -1420,3 +1420,42 @@ def wrap_in_card(header=None, body=None):
     </div>
 </div>
 """
+
+
+def generate_html_tree(data, parent_id='root'):
+    if not isinstance(data, dict):
+        return f'<li><span>{html.escape(str(data))}</span></li>'
+
+    result = '<ul class="tree">\n' if parent_id == 'root' else '<ul>\n'
+    for key, value in data.items():
+        current_id = f"{parent_id}_{key}".replace(' ', '_').lower()
+        result += '<li>\n'
+        
+        if isinstance(value, dict) and ('children' in value or 'description' in value):
+            result += f'    <input type="checkbox" id="{current_id}">\n'
+            result += f'    <label for="{current_id}"><span><b>{html.escape(key)}</b>'
+
+            if 'description' in value:
+                result += f' <em>{html.escape(value["description"])}</em>'
+            result += '</span></label>\n'
+            
+            if 'children' in value:
+                if isinstance(value['children'], dict):
+                    result += generate_html_tree(value['children'], current_id)
+                elif isinstance(value['children'], list):
+                    result += '    <ul>\n'
+                    for item in value['children']:
+                        result += f'        <li><span>{html.escape(item)}</span></li>\n'
+                    result += '    </ul>\n'
+        else:
+            result += f'<span><b>{html.escape(key)}</b>'
+            if isinstance(value, str):
+                result += f' <em>{html.escape(value)}</em>'
+            result += '</span>\n'
+        
+        result += '</li>\n'
+    
+    result += '</ul>\n'
+    return result
+
+

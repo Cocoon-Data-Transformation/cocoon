@@ -992,7 +992,7 @@ doc_steps = ["Table", "Column", "Missing", "Tests"]
 geo_integration_steps = ["Process", "CRS", "Integration"] 
 model_steps = ["DW conn", "Clean", "Integration", "Model"]
 transform_steps = ["Table Understand", "Table Transform"]
-
+migration_steps = ["DW conn", "Model", "Match", "Execute"]
 
 
 
@@ -1033,6 +1033,7 @@ def create_dropdown_with_content(tab_data):
     dropdown.observe(on_dropdown_change, names='value')
 
     return VBox([dropdown, display_area])
+
 
 
 def transform_string(s):
@@ -15729,14 +15730,7 @@ class DataProject:
             })
         self.groups = pd.DataFrame(groups_data)
         
-        self.story = [
-            {
-                'Name': item.get('name'),
-                'Type': item.get('type'),
-                'Description': item.get('description')
-            }
-            for item in er_yml.get('story', [])
-        ]
+        self.story = er_yml.get('story', [])
         
     def add_table_project(self, table_project):
         table_name = table_project.table_name
@@ -16168,7 +16162,7 @@ class DataProject:
         display(HTML(html_output))
             
     def display_story_multiple_page(self):
-        relation_story = self.story
+        relation_story = self.get_story_list()
 
         relation_to_entities = {}
 
@@ -16180,6 +16174,124 @@ class DataProject:
         display_pages(total_page=len(relation_story), 
             create_html_content=partial(create_html_content_er_story, relation_to_entities, relation_story, None))
 
+    def get_story_list(self, exclude_categories=None):
+        
+        if exclude_categories is None:
+            exclude_categories = []
+            
+        filtered_data = filter_categories(self.story, exclude_categories)
+        collected_list = collect_list(filtered_data)
+        
+        return collected_list
+
+    def display_tree(self, exclude_categories=None):
+        
+        filtered_data = self.story
+        
+        if exclude_categories is None:
+            exclude_categories = []
+        else:
+            filtered_data = filter_categories(filtered_data, exclude_categories)
+        
+        tree_data = {"root":{
+            'description': '',
+            'children': filtered_data
+        }}
+        
+        def process_hierarchy(data, func):
+            if isinstance(data, dict):
+                return {key: process_hierarchy(value, func) for key, value in data.items()}
+            elif isinstance(data, list):
+                return [func(item) for item in data]
+            else:
+                return data
+            
+        def extract_name(s):
+            return s['name']
+
+        processed_hierarchy = process_hierarchy(tree_data, extract_name)
+        
+        html_output = generate_html_tree(processed_hierarchy)
+        html_content = f"""
+<style>
+{tree_hierarchy_css}
+</style>
+<body>
+{html_output}
+</body>
+"""
+        display(HTML(html_content))
+    
+    def get_lowest_categories(self, exclude_categories=None):
+        
+        filtered_data = self.story
+        
+        if exclude_categories is None:
+            exclude_categories = []
+        else:
+            filtered_data = filter_categories(filtered_data, exclude_categories)
+        
+        return extract_lowest_categories(filtered_data)
+    
+    def extract_tables_from_stories(self, related_steps): 
+        return extract_related_tables(self, related_steps)
+            
+def filter_categories(data, exclude_categories):
+    if isinstance(data, list):
+        return data
+    
+    if isinstance(data, dict):
+        result = {}
+        for key, value in data.items():
+            if key not in exclude_categories:
+                if isinstance(value, dict) and 'children' in value:
+                    filtered_children = filter_categories(value['children'], exclude_categories)
+                    if filtered_children:
+                        result[key] = value.copy()
+                        result[key]['children'] = filtered_children
+                else:
+                    result[key] = filter_categories(value, exclude_categories)
+        return result
+    
+    return data
+
+def collect_list(data):
+    if isinstance(data, list):
+        return data
+    
+    if isinstance(data, dict):
+        result = []
+        for value in data.values():
+            if 'children' in value:
+                result.extend(collect_list(value['children']))
+            elif isinstance(value, list):
+                result.extend(value)
+            elif isinstance(value, dict):
+                result.extend(collect_list(value))
+        return result
+    
+    return []
+
+
+def extract_lowest_categories(data):
+    result = {}
+
+    def traverse(node, current_path):
+        if isinstance(node, dict):
+            if 'children' in node:
+                if isinstance(node['children'], list):
+                    category = current_path[-1]
+                    result[category] = node.get('description', '')
+                else:
+                    for key, value in node['children'].items():
+                        traverse(value, current_path + [key])
+        elif isinstance(node, list):
+            return
+
+    for key, value in data.items():
+        traverse(value, [key])
+
+    return result
 
 def generate_nodes_edges(foreign_key):
     table_names = set()
@@ -21979,6 +22091,7 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
 
     
 
+
 def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_directory="./dbt_directory", para={}, output=None):
 
     if query_widget is None:
@@ -22007,6 +22120,7 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
     main_workflow.add_to_leaf(DBTProjectConfig(output = output))
     main_workflow.add_to_leaf(SelectTables(output = output))
     main_workflow.add_to_leaf(SelectStageOptions(output = output))
+    
     main_workflow.add_to_leaf(DecidePartition(output = output))
     main_workflow.add_to_leaf(DescribePartitionForAll(output = output))
     
@@ -22028,9 +22142,11 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
     main_workflow.add_to_leaf(RelationUnderstandingForAll(output = output))
     main_workflow.add_to_leaf(RefineRelations(output = output))
     
-    main_workflow.add_to_leaf(ReorderRelationToStory(output = output))
+    main_workflow.add_to_leaf(ExtractTableGroups(output = output))
+    main_workflow.add_to_leaf(BuildTableHierarchy(output = output))
+    main_workflow.add_to_leaf(ReorderRelationToStoryForAll(output = output))
+    
     main_workflow.add_to_leaf(BuildERStory(output = output))
-    main_workflow.add_to_leaf(DocumentProject(output = output))
 
     return query_widget, main_workflow
 
@@ -22720,8 +22836,7 @@ class CocoonBranchStep(Node):
         html_labels = [
         "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
         "🧩 <b>Catalog:</b> Give us a set of tables, we'll clean, integrate and model them.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🔍 <b>Profile:</b> Give us a table, we'll identify anomalies.<br> <i>🛡️ Access Control: <u>read-only</u></i>",
-        "🔧 <b>(Preview) Transform:</b> Give us a catalog and target schema, we will transform.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🔧 <b>Transform:</b> Give us the catalogs of source + target database, we transform.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
         "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables. <br>",
         "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a Pipeline, we'll interpret it.",
         ]
@@ -22734,7 +22849,6 @@ class CocoonBranchStep(Node):
         next_nodes = [
             "Data Format Workflow",
             "Data Vault Workflow",
-            "Data Profiling Workflow",
             "Single Table Transformation Workflow",
             "Fuzzy Join Workflow",
             "DBT Project Explore Workflow",
@@ -22793,7 +22907,7 @@ def create_cocoon_workflow(con, para = {}, output=None):
     _, profile_workflow = create_cocoon_documentation_workflow(con=con, query_widget=query_widget, output=output)
     _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget, output=output)    
     dbt_explore_workflow = create_cocoon_dbt_explore_workflow()
-    _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget, output=output)
+    _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget, para=para, output=output)
     _, data_vault_workflow = create_cocoon_data_vault_workflow(con=con, query_widget=query_widget, para=para, output=output)
     
     main_workflow.register(stage_workflow, parent=branch_node)
@@ -27530,7 +27644,6 @@ Return in the following format:
         display(next_button)
         
  
-        
 class EntityUnderstandingList(ListNode):
     default_name = 'Entity Understand'
     default_description = 'This node understands the entities of the tables in batches.'
@@ -27540,7 +27653,7 @@ class EntityUnderstandingList(ListNode):
 
         create_progress_bar_with_numbers(3, model_steps)
         display(HTML(f"🤓 Identifying the entities..."))
-        self.progress = show_progress(1)
+        
 
         data_project = self.para["data_project"]
         pk_table_column_pairs = list(data_project.foreign_key.keys())
@@ -27560,6 +27673,8 @@ class EntityUnderstandingList(ListNode):
 
             outputs.append((batch_pairs, pk_table_description))
 
+        self.progress = show_progress(len(outputs))
+        
         return outputs
 
     def run(self, extract_output, use_cache=True):
@@ -27606,6 +27721,8 @@ Return in the following format:
         if unexpected_tables:
             raise ValueError(f"The following tables in the LLM response were not in the input: {unexpected_tables}")
         
+        self.progress.value += 1
+        
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
@@ -27623,7 +27740,10 @@ Return in the following format:
         return merged_output
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        pk_table_column_pairs, pk_table_description = extract_output
+        pk_table_column_pairs = []
+        for single_extract_output in extract_output:
+            pk_table_column_pairs.extend(single_extract_output[0])
+            
         summary = run_output
         
         data = {
@@ -27798,35 +27918,46 @@ class RelationUnderstandingForAll(MultipleNode):
 
 
 def generate_workflow_graph(relation_map, relation_details, highlight_indices=None):
+    class Node:
+        def __init__(self, name, node_type):
+            self.name = name
+            self.type = node_type
+            self.id = f"{name}_{node_type}"
+
     nodes = []
     edges = []
-    node_shapes = []
-    
+
     for item in relation_details:
-        if item['Type'] == 'Relation':
-            if item['Name'] not in nodes:
-                nodes.append(item['Name'])
-                node_shapes.append("box")
-        elif item['Type'] == 'Entity':
-            if item['Name'] not in nodes:
-                nodes.append(item['Name'])
-                node_shapes.append("oval")
-        elif item['Type'] == 'Group':
-            if item['Name'] not in nodes:
-                nodes.append(item['Name'])
-                node_shapes.append("octagon")
-            
-    
+        name = item.get('Name') or item.get('name')
+        node_type = item.get('Type') or item.get('type')
+
+        new_node = Node(name, node_type.lower())
+
+        if not any(node.id == new_node.id for node in nodes):
+            nodes.append(new_node)
+
     for relation, entities in relation_map.items():
-        if relation in nodes:
-            relation_index = nodes.index(relation)
+        relation_node = next((node for node in nodes if node.name == relation and node.type == 'relation'), None)
+        if relation_node:
+            relation_index = nodes.index(relation_node)
             for entity in entities:
-                if entity not in nodes:
-                    nodes.append(entity)
-                    node_shapes.append("oval")
-                entity_index = nodes.index(entity)
+                entity_node = next((node for node in nodes if node.name == entity and node.type == 'entity'), None)
+                if not entity_node:
+                    entity_node = Node(entity, 'entity')
+                    nodes.append(entity_node)
+                entity_index = nodes.index(entity_node)
                 edges.append((relation_index, entity_index))
-    
+
+    node_shapes = [
+        "box" if node.type == 'relation' else
+        "oval" if node.type == 'entity' else
+        "octagon" if node.type == 'group' else
+        "ellipse"
+        for node in nodes
+    ]
+
+    nodes = [node.name for node in nodes]
+
     highlight_nodes_indices = []
     highlight_edges_indices = []
     
@@ -27836,12 +27967,16 @@ def generate_workflow_graph(relation_map, relation_details, highlight_indices=No
     for index in highlight_indices:
         if 0 <= index < len(relation_details):
             highlight_item = relation_details[index]
-            highlight_item_name = highlight_item['Name']
+            highlight_item_name = highlight_item.get('Name') or highlight_item.get('name')
             
             if highlight_item_name in nodes:
                 highlight_nodes_indices.append(nodes.index(highlight_item_name))
             
-            if highlight_item['Type'] == 'Relation' and highlight_item_name in relation_map:
+            is_relation = (
+                highlight_item.get('Type', '').lower() == 'relation' or
+                highlight_item.get('type', '').lower() == 'relation'
+            )
+            if is_relation and highlight_item_name in relation_map:
                 related_entities = relation_map[highlight_item_name]
                 for entity in related_entities:
                     if entity in nodes:
@@ -27863,22 +27998,27 @@ def generate_workflow_graph(relation_map, relation_details, highlight_indices=No
 
 
 def create_html_content_er_story(relation_map, relation_details, df_display=None, page_no=0):
-
     list_of_descriptions = '<p>Story behind the relationships <small class="text-muted"> (only for those connect >= 2 entities)</small></p><ol class="small">'
+
+    def get_name(entry):
+        return entry.get('Name') or entry.get('name')
+
+    def get_description(entry):
+        return entry.get('Description') or entry.get('description')
 
     for i in range(page_no):
         entry = relation_details[i]
-        relation_name, relation_desc = entry['Name'], entry['Description']
+        relation_name, relation_desc = get_name(entry), get_description(entry)
         list_of_descriptions += f"<li>[{relation_name}]: {relation_desc}</li>"
     
     entry = relation_details[page_no]
-    relation_name, relation_desc = entry['Name'], entry['Description']
+    relation_name, relation_desc = get_name(entry), get_description(entry)
     list_of_descriptions += f"<li><b>[{relation_name}]: {relation_desc}</b></li>"
     list_of_descriptions += "</ol>"
 
     relation_details = relation_details[:page_no+1]
 
-    included_relations = [detail['Name'] for detail in relation_details]
+    included_relations = [get_name(detail) for detail in relation_details]
 
     graph_html = generate_workflow_graph(relation_map, relation_details)
     
@@ -27910,19 +28050,30 @@ class BuildERStory(Node):
         
         relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
         entity_df = pd.read_json(self.get_sibling_document('Entity Understand'), orient="split")
-        story_summary = self.get_sibling_document('Reorder Relation To Story')
         group_df = data_project.groups
         
-        relation_to_entities = {}
-        for idx, row in relation_df.iterrows():
-            relation_to_entities[row['Relation Name']] = row['Entities']
+        document = self.get_sibling_document('Reorder Relation to Story for All').get('Reorder Relation To Story', {})
         
-        relation_story = story_summary
-        
-        display(HTML(f"🥳 We have modeled your data warehouse (oval for entity, box for relation, octagon for table group):"))
+        extracted_category = self.get_sibling_document('Build Table Hierarchy')
+        extracted_category = copy.deepcopy(extracted_category)
 
-        display_pages(total_page=len(relation_story), 
-                      create_html_content=partial(create_html_content_er_story, relation_to_entities, relation_story, None))
+        for path, content in document.items():
+            path = ast.literal_eval(path)
+            current = extracted_category
+            
+            for i, key in enumerate(path):
+                if i == len(path) - 1:
+                    current[key]["children"] = content
+                else:
+                    current = current[key]["children"]
+
+        first_key = next(iter(extracted_category))
+
+        story_summary = extracted_category[first_key]["children"]
+        
+        display(HTML(f"🥳 We have modeled your data:"))
+        
+        
         
         
         
@@ -28227,7 +28378,7 @@ class DBTProjectConfig(Node):
                 return
         
         create_progress_bar_with_numbers(0, model_steps)
-        display(HTML("<div style='line-height: 1.2;'><h2>🛠️ Configure the project</h2>😎 <em>You will find the results in the project directory</em></div>"))
+        display(HTML("<div style='line-height: 1.2;'><h2>🛠️ Configure the project</h2>😎 <em>You will find the results in the directory as a dbt project</em></div>"))
         display(VBox([dbt_name_input, dbt_directory_input]), next_button)
             
 class WriteSCDForAll(MultipleNode):
@@ -28997,6 +29148,7 @@ class ConnectPKFKTable(ListNode):
         
         tables_to_process = []
         database_desc = ""
+        
         pk_to_column = {}
         
         key_df = key_df.sort_values(by='Table')
@@ -29353,14 +29505,7 @@ def build_story_yml_dict(relation_df, entity_df, story_summary, group_df):
         for _, row in relation_df.iterrows()
     ]
 
-    yml_dict['story'] = [
-        OrderedDict([
-            ('name', item['Name']),
-            ('description', item['Description']),
-            ('type', item['Type'])
-        ])
-        for item in story_summary
-    ]
+    yml_dict['story'] = story_summary
 
     return yml_dict
 
@@ -30276,6 +30421,12 @@ class RefinePK(Node):
         if pk_df.empty:
             return self.run_but_fail(extract_output)
         
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_catalog_options'), dict) and 
+            self.para['cocoon_catalog_options'].get('cluster_pk') is False):
+            return self.run_but_fail(extract_output)
+        
         template = f"""You have the following tables with primary keys:
 {pk_table_description}
 
@@ -30793,14 +30944,15 @@ class BusinessQuestionEntityRelationNode(Node):
 
         data_project = self.para["data_project"]
         business_question = self.para["business_question"]
+        story_list = data_project.get_story_list()
         
-        return data_project, business_question
+        return data_project, business_question, story_list
 
     def run(self, extract_output, use_cache=True):
-        data_project, business_question = extract_output
+        data_project, business_question, story_list = extract_output
         
-        story_desc = "\n".join([f"{i+1}. '{item['Name']}': {item['Description']}" 
-                        for i, item in enumerate(data_project.story)])
+        story_desc = "\n".join([f"{i+1}. '{item.get('Name') or item.get('name')}': {item.get('Description') or item.get('description')}" 
+                        for i, item in enumerate(story_list)])
 
         template = f"""Given the following question:
 '{business_question}'
@@ -30846,7 +30998,7 @@ related_steps:
         return analysis
 
     def run_but_fail(self, extract_output, use_cache=True):
-        data_project, business_question = extract_output
+        data_project, business_question, story_list = extract_output
         
         default_analysis = {
             'reasoning': 'Unable to analyze the business question in relation to the story.',
@@ -30857,7 +31009,7 @@ related_steps:
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         analysis = run_output
-        data_project, business_question = extract_output
+        data_project, business_question, story_list = extract_output
         
         data = {
             'Name': [],
@@ -30866,8 +31018,8 @@ related_steps:
         }
         
         related_steps = {relation['name'] for relation in analysis['related_steps']}
-        for item in data_project.story:
-            name = item['Name']
+        for item in story_list:
+            name = item.get('Name') or item.get('name')
             is_related = name in related_steps
             explanation = next((relation['explanation'] for relation in analysis['related_steps'] if relation['name'] == name), '')
             
@@ -30881,20 +31033,19 @@ related_steps:
         reset = True
         grid = create_dataframe_grid(df, editable_columns, reset=reset)
         
-        relation_story = data_project.story
         relation_to_entities = {}
         for relation_info in data_project.relations.values():
             relation_name = relation_info['relation_name']
             if relation_name is not None:
                 relation_to_entities[relation_name] = relation_info['entities']
         
-        highlight_indices = [i for i, item in enumerate(relation_story) if item['Name'] in related_steps]
+        highlight_indices = [i for i, item in enumerate(story_list) if (item.get('Name') or item.get('name')) in related_steps]
         
-        html_content = generate_er_diagram_html(relation_to_entities, relation_story, highlight_indices)
+        html_content = generate_er_diagram_html(relation_to_entities, story_list, highlight_indices)
         
         if "chatui" in self.para:
             
-            yml_content = yaml.dump(data_project.story, default_flow_style=False)
+            yml_content = yaml.dump(story_list, default_flow_style=False)
             highlighted_yml_content = highlight_yml_only(yml_content)
             message = f"😎 <b>RAG from Cocoon</b>: Putting the question in context using Cocoon's ER story... {highlighted_yml_content}"
             
@@ -30925,16 +31076,13 @@ related_steps:
                 callback(document)
                 
         next_button.on_click(on_button_click)
-        display(next_button)
         
         if viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_click(next_button)
             return
 
-        display(HTML("<h2>🤓 Cocoon Analysis:</h2>" +\
-                    f"❓ <b>Question:</b> {business_question}<br>" + \
-                    f"🙂 <b>Analysis:</b> {analysis['reasoning']}<br>"+\
-                    html_content + f"<h2>😎 Your feedback:</h2>"))
+        display(HTML(f"🙂 <b>Analysis:</b> {analysis['reasoning']}<br>"+\
+                    html_content + f"<b>😎 Your feedback</b>"))
         display(grid)
         display(next_button)
         
@@ -31040,8 +31188,8 @@ def generate_er_diagram_html(relation_map, relation_details, highlight_indices):
     descriptions_html = '<p>Story behind the relationships <small class="text-muted">(oval for entity, box for relation, octagon for table group))</small></p><ol class="small">'
     
     for index, detail in enumerate(relation_details):
-        relation_name = detail['Name']
-        relation_desc = detail['Description']
+        relation_name = (detail.get('Name') or detail.get('name'))
+        relation_desc = (detail.get('Description') or detail.get('description'))
         if index in highlight_indices:
             descriptions_html += f"<li><b>[{relation_name}]: {relation_desc}</b></li>"
         else:
@@ -31056,20 +31204,22 @@ def generate_er_diagram_html(relation_map, relation_details, highlight_indices):
     return html_content   
 
 def extract_related_tables(data_project, related_steps):
-    story = data_project.story
+    story = data_project.get_story_list()
     related_relations = []
     related_groups = []
     related_entities = []
-
+    
     for element in story:
-        if element['Name'] in related_steps:
-            if element['Type'] == 'Relation':
-                related_relations.append(element['Name'])
-            elif element['Type'] == 'Group':
-                related_groups.append(element['Name'])
-            elif element['Type'] == 'Entity':
-                related_entities.append(element['Name'])
-
+        element_name = next((element[key] for key in element if key.lower() == 'name'), '')
+        if element_name in  related_steps:
+            element_type = next((element[key] for key in element if key.lower() == 'type'), '').lower()
+            if element_type == 'relation':
+                related_relations.append(element_name)
+            elif element_type == 'group':
+                related_groups.append(element_name)
+            elif element_type == 'entity':
+                related_entities.append(element_name)
+    
     tables = set()
 
     for relation_name in related_relations:
@@ -31082,7 +31232,7 @@ def extract_related_tables(data_project, related_steps):
                             tables.add(entity_table)
                     if entity not in related_entities:
                         related_entities.append(entity)
-                            
+             
     for entity in related_entities:
         for entity_table, entity_data in data_project.entities.items():
             if entity_data['entity_name'] == entity:
@@ -31109,7 +31259,7 @@ def extract_related_tables(data_project, related_steps):
         else:
             new_tables.add(table)
 
-    return list(new_tables)      
+    return list(new_tables)    
  
 class BusinessQuestionDataSufficiency(Node):
     default_name = 'Business Question Data Sufficiency Check'
@@ -31203,7 +31353,7 @@ related_tables: ['table1', 'table2', ...]
         analysis = run_output
         business_question, schema_description, all_related_tables, data_project = extract_output
         
-        display(HTML(f"❓ <b>SQL Feasible?:</b> {'✔️ Yes' if analysis['sufficient'] else '❌ No'}"))
+        display(HTML(f"❓ <b>Feasible in SQL?</b> {'✔️ Yes' if analysis['sufficient'] else '❌ No'}"))
        
         
         related_tables = analysis.get('related_tables', []) if analysis['sufficient'] else []
@@ -31216,7 +31366,6 @@ related_tables: ['table1', 'table2', ...]
         html_content = data_project.generate_html_graph_static(highlight_nodes=related_tables)
         display(HTML(html_content))
         
-        display(HTML(f"<h2>😎 Your feedback:</h2>"))
         
         text_area = None
         if analysis['sufficient']:
@@ -33254,66 +33403,43 @@ groups:
         display(grid)
         display(next_button)
         
+
+
 class ReorderRelationToStory(Node):
     default_name = 'Reorder Relation To Story'
     default_description = 'This reorders the relation to story'
 
     def extract(self, item):
         clear_output(wait=True)
-
-        display(HTML("📖 Telling the story..."))
+        
+        path = self.para["path"]
+        display(HTML(f"📖 Understanding the process for <i>{'>'.join(path)}</i>..."))
         create_progress_bar_with_numbers(3, model_steps)
+        
+        relation_df = self.para["relation_df"]
+        group_df = self.para["group_df"] 
+        single_entity_result = self.para["single_entity_result"]
 
-        self.input_item = item
+        desc_list = self.para["content"]
+        group_desc = self.para["group_desc"]
         
-        relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
-        
-        
-        entity_df = pd.read_json(self.get_sibling_document('Entity Understand'), orient="split")
-        
-        
-        single_entity_relations = relation_df[relation_df['Entities'].apply(len) == 1]
+        combined_desc_list = []
 
-        unique_entities = set(entity for entities in single_entity_relations['Entities'] for entity in entities)
-
-        exclusive_entities = []
-        for entity in unique_entities:
-            entity_relations = relation_df[relation_df['Entities'].apply(lambda x: entity in x)]
-            if all(entity_relations['Entities'].apply(len) == 1):
-                exclusive_entities.append(entity)
-
-        single_entity_result = entity_df[entity_df['Entity Name'].isin(exclusive_entities)][['Entity Name', 'Entity Description']]
-
-        data_project = self.para["data_project"]
-        group_df = data_project.groups
-
-        desc_list = []
+        for i, name in enumerate(desc_list, start=1):
+            if name in group_desc:
+                description = group_desc[name]["Description"]
+                combined_desc_list.append(f"{i}. '{name}': {description}")
+            else:
+                combined_desc_list.append(f"{i}. '{name}': No description available")
         
+        combined_desc = "\n".join(combined_desc_list)
         
-        relation_df = relation_df[relation_df['Relation Name'] != ""]
-        for idx, row in relation_df.iterrows():
-            name = row['Relation Name']
-            desc = f"it involves {', '.join(row['Entities'])}, {row['Relation Description']}"
-            desc_list.append(f"{len(desc_list) + 1}. '{name}': {desc}")
-        
-        for idx, row in single_entity_result.iterrows():
-            name = row['Entity Name']
-            desc = row['Entity Description']
-            desc_list.append(f"{len(desc_list) + 1}. '{name}': this entity is only involved in single-entity relations, {desc}")
-                
-        for idx, row in group_df.iterrows():
-            name = row['Group Name']
-            desc = row['Group Summary']
-            desc_list.append(f"{len(desc_list) + 1}. '{name}': {desc}")
-        
-        combined_desc = "\n".join(desc_list)
-        
-        return relation_df, group_df, single_entity_result, combined_desc
+        return relation_df, group_df, single_entity_result, combined_desc, desc_list
 
     def run(self, extract_output, use_cache=True):
-        relation_df, group_df, single_entity_result, combined_desc = extract_output
+        relation_df, group_df, single_entity_result, combined_desc, all_names = extract_output
         
-        if len(relation_df) + len(group_df) + len(single_entity_result) == 1:
+        if len(all_names) == 1:
             return self.run_but_fail(extract_output, use_cache) 
 
         template = f"""For a database, you have the following 'Name': 'Description'
@@ -33330,8 +33456,8 @@ Return in the following format:
 reasoning: >
     The elements are ... The sequence should be ...
 story:
-    -   Name: Element Name
-        Description: short and simple in < 10 words
+    -   name: Element Name
+        description: short and simple in < 10 words
     -   ...
 ```"""
         messages = [{"role": "user", "content": template}]
@@ -33362,58 +33488,102 @@ story:
         for i, item in enumerate(summary['story']):
             if not isinstance(item, dict):
                 raise TypeError(f"Item {i} in summary['story'] must be a dictionary")
-            if 'Name' not in item or 'Description' not in item:
-                raise KeyError(f"Item {i} in summary['story'] is missing 'Name' or 'Description'")
-            if not isinstance(item['Name'], str) or not isinstance(item['Description'], str):
-                raise TypeError(f"'Name' and 'Description' in item {i} of summary['story'] must be strings")
+            if 'name' not in item or 'description' not in item:
+                raise KeyError(f"Item {i} in summary['story'] is missing 'name' or 'description'")
+            if not isinstance(item['name'], str) or not isinstance(item['description'], str):
+                raise TypeError(f"'name' and 'description' in item {i} of summary['story'] must be strings")
             
-            if item['Name'] in relation_names:
-                item['Type'] = 'Relation'
-            elif item['Name'] in group_names:
-                item['Type'] = 'Group'
-            elif item['Name'] in single_entity_names:
-                item['Type'] = 'Entity'
+            if item['name'] in relation_names:
+                item['type'] = 'relation'
+            elif item['name'] in group_names:
+                item['type'] = 'group'
+            elif item['name'] in single_entity_names:
+                item['type'] = 'entity'
             else:
-                raise ValueError(f"Name '{item['Name']}' in story does not exist in the original relation, group, or single entity DataFrames")
+                raise ValueError(f"Name '{item['name']}' in story does not exist in the original relation, group, or single entity DataFrames")
 
-        story_names = [item['Name'] for item in summary['story']]
-        all_names = relation_names.union(group_names).union(single_entity_names)
+        story_names = [item['name'] for item in summary['story']]
+        all_names_set = set(all_names)
         
         if len(story_names) != len(set(story_names)):
             raise ValueError("Some names appear more than once in the story")
         
-        if set(story_names) != all_names:
-            missing_names = all_names - set(story_names)
+        if set(story_names) != all_names_set:
+            missing_names = all_names_set - set(story_names)
             raise ValueError(f"The following names are missing from the story: {missing_names}")
+        
+        summary['story'] = [OrderedDict([('name', item['name']), ('description', item['description']), ('type', item['type'])]) for item in summary['story']]
         
         return summary
     
     def run_but_fail(self, extract_output, use_cache=True):
-        relation_df, group_df, single_entity_result, _ = extract_output
+        relation_df, group_df, single_entity_result, _, all_names = extract_output
         story_list = []
-        for idx, row in relation_df.iterrows():
-            story_list.append({
-                "Name": row['Relation Name'], 
-                "Description": row['Relation Description'],
-                "Type": "Relation"
-            })
-        for idx, row in group_df.iterrows():
-            story_list.append({
-                "Name": row['Group Name'], 
-                "Description": row['Group Summary'],
-                "Type": "Group"
-            })
-        for idx, row in single_entity_result.iterrows():
-            story_list.append({
-                "Name": row['Entity Name'], 
-                "Description": row['Entity Description'],
-                "Type": "Entity"
-            })
-        return {"reasoning": "Fail to run", "story": story_list}
-                
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        callback(run_output["story"])
         
+        for name in all_names:
+            if name in relation_df['Relation Name'].values:
+                row = relation_df[relation_df['Relation Name'] == name].iloc[0]
+                story_list.append(OrderedDict([
+                    ("name", name),
+                    ("description", row['Relation Description']),
+                    ("type", "relation")
+                ]))
+            elif name in group_df['Group Name'].values:
+                row = group_df[group_df['Group Name'] == name].iloc[0]
+                story_list.append(OrderedDict([
+                    ("name", name),
+                    ("description", row['Group Summary']),
+                    ("type", "group")
+                ]))
+            elif name in single_entity_result['Entity Name'].values:
+                row = single_entity_result[single_entity_result['Entity Name'] == name].iloc[0]
+                story_list.append(OrderedDict([
+                    ("name", name),
+                    ("description", row['Entity Description']),
+                    ("type", "entity")
+                ]))
+            else:
+                story_list.append(OrderedDict([
+                    ("name", name),
+                    ("description", "No description available"),
+                    ("type", "unknown")
+                ]))
+        
+        return {"reasoning": "Fail to run", "story": story_list}
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        relation_df, group_df, single_entity_result, _, _ = extract_output
+        story_summary = run_output["story"]
+        
+        
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check' 
+        )
+        
+        def on_next_button_clicked(b):
+            with self.output_context():
+                callback(story_summary)
+        
+        next_button.on_click(on_next_button_clicked)
+
+        viewer = self.para.get("viewer", False)
+        
+        if viewer:
+            on_next_button_clicked(next_button)
+            return 
+        
+        relation_to_entities = {}
+        for idx, row in relation_df.iterrows():
+            relation_to_entities[row['Relation Name']] = row['Entities']
+            
+        display_pages(total_page=len(story_summary), 
+                      create_html_content=partial(create_html_content_er_story, relation_to_entities, story_summary, None))
+        
+        display(next_button)
         
         
 class DBTLineageConfig(Node):
@@ -35240,7 +35410,7 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
         export_button.on_click(on_export)
 
         widget = widgets.VBox([
-            widgets.HTML(value="<div style='line-height: 1.2;'><h2>⚙️ Data Cleaning Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em></div>"),
+            widgets.HTML(value="<div style='line-height: 1.2;'><h2>⚙️ Data Workflow Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em></div>"),
             widgets.VBox([checkboxes_widget, cardinality_widget], layout=widgets.Layout(border='1px solid #ddd', padding='10px')),
             widgets.HBox([export_button, submit_button]),
             output
@@ -35587,6 +35757,7 @@ column_matching: # for all columns can be transformed
         
         if viewer:
             on_next_button_clicked(next_button)
+            return
         
         display(HTML(html_output))
         display(next_button)
@@ -35679,34 +35850,86 @@ class TableSummaryAnalysisNode(BusinessQuestionEntityRelationNode):
     def extract(self, item):
         clear_output(wait=True)
 
-        display(HTML(f"🔍 Finding the relavant entities/relations..."))
-        self.progress = show_progress(1)
-
         source_data_project = self.para["source_data_project"]
         target_table_name = self.para["target_table"]
         targt_table_object = self.para["target_data_project"].table_object[target_table_name]
         
-        question = f"Transform to target table: '{targt_table_object.table_name}': {targt_table_object.table_summary}."
+        create_progress_bar_with_numbers(2, migration_steps)
+        display(HTML(f"🔍 Finding the source business process for target table <i>{target_table_name}</i>"))
+        self.progress = show_progress(1)
         
-        return source_data_project, question
+        question = f"Transform to target table: '{targt_table_object.table_name}': {targt_table_object.table_summary}."
+        story_list = source_data_project.get_story_list()
+        
+        return source_data_project, question, story_list
 
 
+    def run(self, extract_output, use_cache=True):
+        data_project, business_question, story_list = extract_output
+        
+        story_desc = "\n".join([f"{i+1}. '{item.get('Name') or item.get('name')}': {item.get('Description') or item.get('description')}" 
+                        for i, item in enumerate(story_list)])
+
+        template = f"""{business_question}
+
+You have the source steps and descriptions:
+{story_desc}
+
+First reason about how the target table relates to the source steps.
+Then provide the source step names that contains information for the target table.
+
+Now respond in thefollowing format:
+```yml
+reasoning: >-
+    The tagret table means ... In the context of source table ...
+# leave it empty [] if no related steps
+related_steps:
+    - name: xx
+      explanation: This is related because ...
+    - name: xx
+      ...
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
+            raise ValueError("Analysis should contain a 'reasoning' key with a string value")
+        
+        if 'related_steps' not in analysis or not isinstance(analysis['related_steps'], list):
+            raise ValueError("Analysis should contain a 'related_steps' key with a list value")
+        
+        for relation in analysis['related_steps']:
+            if not isinstance(relation, dict) or 'name' not in relation or 'explanation' not in relation:
+                raise ValueError("Each related relation should be a dictionary with 'name' and 'explanation' keys")
+        
+        return analysis
+    
 class SourceToTargetTableAnalysisNode(BusinessQuestionDataSufficiency):
     def extract(self, item):
         clear_output(wait=True)
 
-        display(HTML(f"🔍 Analyzing potential tables for transformation..."))
-        self.progress = show_progress(1)
-
-        data_project = self.para["source_data_project"]
-        
+        data_project = self.para["source_data_project"]        
         target_table_name = self.para["target_table"]
         targt_table_object = self.para["target_data_project"].table_object[target_table_name]
 
-        question = f"Find all the source tables that can be used transformed to '{targt_table_object.table_name}'. Here are its column details:"
+        create_progress_bar_with_numbers(2, migration_steps)
+        display(HTML(f"🔍 Analyzing source tables for <i>{target_table_name}</i>..."))
+        self.progress = show_progress(1)
+        
+        question = f"'{targt_table_object.table_name}' has columns:"
         
         column_dict = targt_table_object.get_column_desc_yml()
         question += yaml.dump(column_dict, default_flow_style=False)
+        question += f"Goal: find all the source tables transformable to '{targt_table_object.table_name}'"
         
         df = pd.read_json(self.get_sibling_document('Business Question Entity and Relation Analysis')['related_steps'], orient="split")
         related_steps = df[df['Related'] == True]['Name'].tolist()
@@ -35721,23 +35944,23 @@ class SourceToTargetTableAnalysisNode(BusinessQuestionDataSufficiency):
     def run(self, extract_output, use_cache=True):
         business_question, schema_description, all_related_tables, data_project = extract_output
 
+        template = f"""{business_question}
 
-        template = f"""
-'{business_question}'
-
-And the following source tables and a subset of their attributes:
+You have source tables and their columns:
 {schema_description}
 
-First decide if the source tables are sufficient to transform to the target table  (partially is fine).
-If it is sufficient, provide a high-level explanation of what selections, aggregations, and joins might be needed, and over which columns (from the subset) and tables.
+First find source tables with columns that are semantically transformable to columns in target tables.
+E.g., Customer birthdate can be transformed to Client birthyear, because Customer is equivalent to Client.
+However, Employee birthdate can't be transformed to Client birthyear due to semantic difference.
+If transformable, provide a high-level explanation of what selections, aggregations, and joins might be needed, and over which columns and tables.
 
 Return your analysis in the following format:
 ```yml
 explanation: >-
-    [Your detailed explanation here, discussing data sufficiency and potential SQL approach]
-sufficient: true/false
+    The target table means ... Some semantically relavant tables are ... Among these, X can be transformed...
+transformable: true/false
 sql_approach: >-
-    If sufficient, provide a detailed step-by-step instruction of the SQL approach.
+    If transformable, provide a detailed step-by-step instruction of the SQL approach.
     Dictates which tables, columns, and operations to use.
     However, don't provide codes.
 # from sql_approach, list all related source tables
@@ -35755,23 +35978,24 @@ related_tables: ['table1', 'table2', ...]
         if not isinstance(analysis, dict):
             raise ValueError("Analysis should be a dictionary")
         
-        if 'sufficient' not in analysis or not isinstance(analysis['sufficient'], bool):
-            raise ValueError("Analysis should contain a 'sufficient' key with a boolean value")
+        if 'transformable' not in analysis or not isinstance(analysis['transformable'], bool):
+            raise ValueError("Analysis should contain a 'transformable' key with a boolean value")
         
         if 'explanation' not in analysis or not isinstance(analysis['explanation'], str):
             raise ValueError("Analysis should contain an 'explanation' key with a string value")
         
-        if analysis['sufficient']:
+        if analysis['transformable']:
             if 'sql_approach' not in analysis or not isinstance(analysis['sql_approach'], str):
-                raise ValueError("When data is sufficient, analysis should contain a 'sql_approach' key with a string value")
+                raise ValueError("When data is transformable, analysis should contain a 'sql_approach' key with a string value")
             
             if 'related_tables' not in analysis or not isinstance(analysis['related_tables'], list):
-                raise ValueError("When data is sufficient, analysis should contain a 'related_tables' key with a list value")
+                raise ValueError("When data is transformable, analysis should contain a 'related_tables' key with a list value")
             
             invalid_tables = [table for table in analysis['related_tables'] if table not in all_related_tables]
             if invalid_tables:
                 raise ValueError(f"The following tables were not identified as related during extraction: {', '.join(invalid_tables)}")
 
+        analysis['sufficient'] = analysis['transformable']
         return analysis
     
     
@@ -35807,14 +36031,14 @@ class RefineSchemaMatching(Node):
 
     def extract(self, input_item):
         clear_output(wait=True)
-        
-        print("🔍 Refining the schema matching...")
-        self.progress = show_progress(1)
 
         target_table_name = self.para.get('target_table')
         source_data_project = self.para.get('source_data_project')
         target_data_project = self.para.get('target_data_project')
-
+        create_progress_bar_with_numbers(2, migration_steps)
+        display(HTML(f"🔍 Refining the schema matching for <i>{target_table_name}</i>..."))
+        self.progress = show_progress(1)
+        
         target_table = target_data_project.table_object[target_table_name]
 
         document = self.get_sibling_document('Schema Matching For All').get('Identify Schema Matching', {})
@@ -35840,7 +36064,10 @@ class RefineSchemaMatching(Node):
                 source_table = source_data_project.table_object[source_table_name]
                 database_description.append(f"Source Table: {source_table_name}\n{source_table.table_summary}")
 
-        for target_column in set(col for matching in refined_matching.values() for col in matching['column_matching']):
+        target_columns = set(col for matching in refined_matching.values() for col in matching['column_matching'])
+        target_columns = list(target_columns)
+        target_columns.sort()
+        for target_column in target_columns:
             mappings = []
             for source_table, matching_info in refined_matching.items():
                 if target_column in matching_info['column_matching']:
@@ -35972,9 +36199,10 @@ column_matching: # for all columns can be transformed
         
         if viewer:
             on_next_button_clicked(next_button)
+            return
         
         display(HTML(html_output))
-        display(HTML(f"<h2>😎 Your feedback:</h2>"))
+        display(HTML(f"<h3>😎 Your feedback:</h3>"))
         display(grid)
         display(next_button)
 
@@ -36073,6 +36301,10 @@ join_graph:
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         result = run_output
         
+        if len(result["join_graph"]) == 0:
+            callback(run_output)
+            return
+        
         nodes = {}
         edges = []
         
@@ -36114,6 +36346,7 @@ join_graph:
         
         if viewer:
             on_next_button_clicked(next_button)
+            return
         
         display(HTML(html_output))
         display(next_button)
@@ -36124,7 +36357,7 @@ class SQLQueryMatchingConstructor(Node):
 
     def extract(self, item):
         clear_output(wait=True)
-
+        create_progress_bar_with_numbers(2, migration_steps)
         display(HTML(f"🛠️ Constructing the SQL query..."))
         self.progress = show_progress(1)
 
@@ -36208,10 +36441,39 @@ sql_query: |
         return {"reasoning": "Unable to generate reasoning for the SQL query.", "sql_query": ""}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        callback(run_output)
         
+        if not run_output["sql_query"]:
+            callback(run_output)
+            return
+        
+        display(HTML(f"<b>Summary:</b> <i>{run_output['reasoning']}</i>"))
 
+        highlighted_html = highlight_sql(run_output['sql_query'])
+        display(HTML(highlighted_html + f"""<div style="color: orange; font-style: italic; font-size: 0.9em;">
+            ⚠️ SQL query is just for reference based on schema. To ensure correctness, data access is required.
+        </div>"""))
         
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+        )
+        
+        def on_next_button_clicked(b):
+            clear_output(wait=True)
+            callback(run_output)
+        
+        next_button.on_click(on_next_button_clicked)
+        display(next_button)
+        
+        viewer = self.para.get("viewer", False)
+        
+        if viewer:
+            on_next_button_clicked(next_button)
+            return
+
+
 def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
     
     if query_widget is None:
@@ -36235,12 +36497,15 @@ def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=F
                             output=output)
     
     main_workflow.add_to_leaf(SelectSchema(output = output))
+
     main_workflow.add_to_leaf(DBTProjectConfigAndReadMultiple(output=output))
-    
-    
     main_workflow.add_to_leaf(ConnectSourceDataNode(output=output))
-    main_workflow.add_to_leaf(FindTablesAndMatchSchemaForAll(output=output))
+
+    main_workflow.add_to_leaf(RelatedCategoriesFinder(output=output)) 
+    main_workflow.add_to_leaf(MapBusinessConcepts(output=output))
+    main_workflow.add_to_leaf(RelatedStepsFinder(output=output))
     
+    main_workflow.add_to_leaf(FindTablesAndMatchSchemaForAll(output=output))
     
     
 
@@ -36274,12 +36539,15 @@ class FindTablesAndMatchSchemaForAll(MultipleNode):
         return workflow
 
     def extract(self, item):
-        target_tables = list(self.para['target_data_project'].tables.keys())
+        
+        related_steps = self.get_sibling_document('Related Steps Finder').get('related_steps', [])
+        target_data_project = self.para['target_data_project']
+        target_tables = extract_related_tables(target_data_project, related_steps)
+        target_tables.sort()
         
         self.elements = target_tables
         self.nodes = {element: self.construct_node(element, idx, len(self.elements))
                       for idx, element in enumerate(self.elements)}
-        
         
 class DetectPIIColumns(ListNode):
     default_name = 'Detect PII Columns'
@@ -36391,10 +36659,6 @@ pii_columns:
         reset = True
         grid = create_dataframe_grid(df, editable_columns, reset=reset)
 
-        display(grid)
-
-        display(HTML(f"🧐 We've identified PII to remove."))
-
         submit_button = widgets.Button(description="Accept Remove", button_style='success', icon='check')
         reject_button = widgets.Button(description="Reject Remove", button_style='danger', icon='times')
         
@@ -36436,6 +36700,15 @@ pii_columns:
             submit(submit_button)
             return
         
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('pii') is False):
+            submit(submit_button)
+            return
+        
+        display(grid)
+        display(HTML(f"🧐 We've identified PII to remove."))
         button_box = widgets.HBox([reject_button, submit_button])
         display(button_box)
 
@@ -36470,37 +36743,32 @@ class WriteAcrossColumnTests(Node):
             return self.run_but_fail()
 
         template = f"""Given the following table sample data:
-
-Sample data:
 {sample_df.to_csv(index=False, quoting=1)}
 
-Task: Generate a list of across-column test cases. Focus on comparisons, sums, or other relationships between columns. 
-Do not create tests for single column range/domain checks.
-Do not create tests just for NULL checks.
+Task: Generate a list of meaningful multi-column comparisons relations. 
 
 Examples of good test cases:
-1. If there are "volume 1", "volume 2", and "total volume" columns, create a test like "volume 1 + volume 2 = total volume".
-2. If there are "start date" and "end date" columns, create a test like "start date < end date" (when these columns are not null).
+1. For "volume 1", "volume 2", and "total volume",  "volume 1 + volume 2 = total volume" because "total volumne" is defined as sum.
+2. For "start date", "end date" columns, "start date < end date" because "end" is after "start".
 
-For each test case, provide:
-1. Test name
-2. Short explanation (about 10 words)
-3. SQL where clause that selects violations
+Focus on COMPARISON, NOT domain/regular pattern/NULL checks.
+Should be MULTI-column, NOT SINGLE column range.
+Use common sense for obvious relations. Don't infer strange. Remeber you only see a sample.
+
+For each test case, provide: Test name, Short explanation, and SQL expression
 
 Return the results in the following JSON format:
 ```yml
-- test_name: >-
-    Volume Sum Check
-  explanation: >-
-    Ensures total volume equals sum of individual volumes
-  where_clause: >-
-    volume_1 + volume_2 = total_volume
-- test_name: >-
-    Date Range Check
-  explanation: >-
-    Verifies start date is before end date
-  where_clause: >-
-    start_date < end_date
+summary: >-
+    There exist obvious comparison relations across multiple columns...
+# if not exist, leave tests as []
+tests:
+  - test_name: Volume Sum Check
+    explanation: The total volumne should be the sum of two
+    where_clause: volume_1 + volume_2 = total_volume
+  - test_name: Date Range Check
+    explanation: The end date should be after start.
+    where_clause: start_date < end_date
 ```"""
 
         messages = [{"role": "user", "content": template}]
@@ -36511,10 +36779,10 @@ Return the results in the following JSON format:
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         test_cases = yaml.load(yml_code, Loader=yaml.SafeLoader)
         
-        if not isinstance(test_cases, list):
-            raise ValueError("The returned JSON should be a list of test cases.")
+        if not isinstance(test_cases, dict) or 'tests' not in test_cases:
+            raise ValueError("The returned YAML should be a dictionary with a 'tests' key containing a list of test cases.")
         
-        for test_case in test_cases:
+        for test_case in test_cases['tests']:
             if not all(key in test_case for key in ["test_name", "explanation", "where_clause"]):
                 raise ValueError("Each test case should have 'test_name', 'explanation', and 'where_clause'.")
             
@@ -36524,13 +36792,8 @@ Return the results in the following JSON format:
         table_pipeline = self.para['table_pipeline']
         with_context = table_pipeline.get_codes(mode="WITH")
         
-        for test_case in test_cases:
-            if not all(key in test_case for key in ["test_name", "explanation", "where_clause"]):
-                if cocoon_main_setting['DEBUG_MODE']:
-                    print(f"Skipping invalid test case: {test_case}")
-                continue
-            
-            query = f"SELECT COUNT(*) AS CNT FROM {table_pipeline} WHERE NOT({test_case['where_clause']})"
+        for test_case in test_cases['tests']:
+            query = f"SELECT COUNT(*) AS CNT FROM {table_pipeline} WHERE ({test_case['where_clause']})"
             query = with_context + "\n" + query
             try:
                 df = run_sql_return_df(con, query)
@@ -36540,12 +36803,14 @@ Return the results in the following JSON format:
             except Exception as e:
                 if cocoon_main_setting['DEBUG_MODE']:
                     print(f"Error running test '{test_case['test_name']}': {str(e)}")
-                
         
-        return valid_test_cases
+        return {
+            'summary': test_cases.get('summary', 'Across-column comparison tests'),
+            'tests': valid_test_cases
+        }
 
     def run_but_fail(self, extract_output, use_cache=True):
-        return []
+        return {"summary": "No across-column comparison tests found", "tests": []}
     
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         if icon_import:
@@ -36555,7 +36820,7 @@ Return the results in the following JSON format:
         query_widget = self.item["query_widget"]
         with_context_clause = table_pipeline.get_codes(mode="WITH")
         
-        tests = run_output
+        tests = run_output['tests']
         
         if len(tests) == 0:
             callback(tests)
@@ -36588,7 +36853,7 @@ Return the results in the following JSON format:
                 with self.output_context():
                     query = "SELECT *"
                     query += f'\nFROM {table_pipeline}'
-                    query += f'\nWHERE NOT ({test["where_clause"]})'
+                    query += f'\nWHERE ({test["where_clause"]})'
                     query_widget.update_context_value(with_context_clause)
                     query_widget.run_query(query)
                     print("😎 Query submitted. Check out the data widget!")
@@ -36630,10 +36895,10 @@ Return the results in the following JSON format:
         def on_next_button_clicked(b):
             with self.output_context():
                 checkbox_values = get_checkbox_values(main_widget)
-                tests = [test for test, endorse in zip(run_output, checkbox_values) if endorse]
+                endorsed_tests = [test for test, endorse in zip(tests, checkbox_values) if endorse]
                 table_object = self.para["table_object"]
-                table_object.true_expressions.append(tests)
-                callback(tests)
+                table_object.true_expressions += endorsed_tests
+                callback(endorsed_tests)
                 return
         
         def reject(b):
@@ -36650,6 +36915,1118 @@ Return the results in the following JSON format:
         
         if viewer:
             on_next_button_clicked(next_button)
+            return
         
         button_box = widgets.HBox([reject_button, next_button])
         display(button_box)
+
+
+
+def distribute_groups(total, target_size):
+    if total <= target_size:
+        return [total]
+    
+    num_groups = total // target_size
+    remainder = total % target_size
+    
+    groups = [target_size] * num_groups
+    
+    if remainder > 0:
+        for i in range(remainder):
+            groups[i % len(groups)] += 1
+    
+    return groups
+
+
+
+
+
+class GetColumnCategoriesList(ListNode):
+    default_name = 'Get Column Descriptions'
+    default_description = 'This node provides summaries of columns.'
+
+    def extract(self, item):
+        self.input_item = item
+        columns = self.para.get("columns", [])
+        unit = self.para.get("unit", "columns")
+        target_group_size = self.para.get("target_group_size", 100)
+
+        group_sizes = distribute_groups(len(columns), target_group_size)
+        
+        outputs = []
+        start = 0
+        
+        for group_size in group_sizes:
+            end = start + group_size
+            outputs.append((columns[start:end], unit))
+            start = end
+        
+        return outputs
+
+    def run(self, extract_output, use_cache=True):
+        columns, unit = extract_output
+
+        template = f"""You have the following {unit}:
+{columns}
+Please provide a high-level summary of the {unit}, in < 100 words.
+Now, respond in yml format:
+```yml
+Summary: >-
+    These {unit} are about ...
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        return summary['Summary']
+
+    def merge_run_output(self, run_outputs):
+        return "\n".join([f"{i+1}. {summary}" for i, summary in enumerate(run_outputs)])
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+    
+class ColumnCategorizerNode(Node):
+    default_name = 'Column Categorizer'
+    default_description = 'This node categorizes columns into groups based on their descriptions.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML(f"🔍 Categorizing columns into groups..."))
+        self.progress = show_progress(1)
+
+        self.input_item = item
+        unit = self.para.get("unit", "columns")
+        summary_str = self.get_sibling_document('Get Column Descriptions')
+
+        return summary_str, unit
+
+    def run(self, extract_output, use_cache=True):
+        summary_str, unit = extract_output
+
+        template = f"""You have the following column summary:
+{summary_str}
+Please categorize the {unit} into at most 5 but preferably fewer groups, and a short description (<100 words) for each. 
+The groups should be mutually exclusive, and collectively exhaustive for all {unit}.
+Now, respond in yml format:
+```yml
+groups: 
+    Customer Information: >-
+        This group contains {unit} related to customer information, such as name, address, and email.
+    ...
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        if not isinstance(summary, dict):
+            raise ValueError("Summary should be a dictionary")
+        
+        if 'groups' not in summary or not isinstance(summary['groups'], dict):
+            raise ValueError("Summary should contain a 'groups' key with a dictionary value")
+        
+        groups = summary["groups"]
+        
+        for group_name, description in groups.items():
+            if not isinstance(description, str):
+                raise ValueError(f"Description for group '{group_name}' should be a string")
+        
+        return [(group_name, description.strip()) for group_name, description in groups.items()]
+
+    def run_but_fail(self, extract_output, use_cache=True):
+        unit = extract_output[1]
+        default_groups = [
+            ("All", f"This group contains all {unit} that could not be categorized due to an error in the categorization process."),
+        ]
+        return default_groups
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+
+class ClassifyColumnsList(ListNode):
+    default_name = 'Classify Columns'
+    default_description = 'This node classifies columns into groups and suggests new groups if necessary.'
+
+    def extract(self, item):
+        self.input_item = item
+        columns = self.para.get("columns", [])
+        unit = self.para.get("unit", "columns")
+        target_group_size = self.para.get("target_group_size", 50)
+
+        groups = self.get_sibling_document("Column Categorizer")
+        self.groups = groups.copy()
+
+        group_sizes = distribute_groups(len(columns), target_group_size)
+        
+        outputs = []
+        start = 0
+        
+        for group_size in group_sizes:
+            end = start + group_size
+            outputs.append((columns[start:end], self.groups, unit))
+            start = end
+        
+        return outputs
+
+    def run(self, extract_output, use_cache=True):
+        columns, groups, unit = extract_output
+
+        group_str = "\n".join([f"{i+1}. {group}: {description}" for i, (group, description) in enumerate(groups)])
+        column_str = "\n".join([f"{i+1}. {col}" for i, col in enumerate(columns)])
+
+        template = f"""You have the following {unit}:
+{column_str}
+
+You have the following {unit} groups:
+{group_str}
+
+First, provide a summary of whether the current groups are sufficient to categorize all the {unit}.
+Most of the time it is sufficient.
+In rare cases, the current groups are not sufficient.
+Then suggest 1 or 2 groups with short descriptions.
+
+If you suggest new groups, their indices should be incremental to the existing ones.
+For example, if there are 5 existing groups, the new groups should start from index 6.
+
+Then, categorize the {unit}. For each {unit}, give the group index it belongs to.
+Please make sure each {unit} is in exactly one group.
+
+Create a new category if there are {unit} that don't fit into any existing category.
+Do not use an "Other" category. Instead, create specific new categories as needed.
+
+Respond in yml format:
+```yml
+summary:
+    assessment: These groups are sufficient / insufficient and new groups are desperately needed
+    sufficient: true/false
+    # only include the following if 'sufficient' is false
+    new_groups:
+        6. New Group Name: Short description of the new group
+        7. Another New Group: Short description of another new group
+        ...
+
+Category:
+    1: group_index
+    2: group_index
+    ...
+```"""
+
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        summary = yaml.safe_load(yml_code)
+        
+        if 'summary' in summary:
+            if not summary['summary']['sufficient'] and 'new_groups' in summary['summary']:
+                for new_group_entry, description in summary['summary']['new_groups'].items():
+                    index, new_group = new_group_entry.split('. ', 1)
+                    if new_group not in [group for group, _ in self.groups]:
+                        self.groups.append((new_group, description))
+
+        categories = summary["Category"]
+        
+        self.validate_categories(categories, len(columns), len(self.groups), unit)
+        
+        final_categories = {}
+        for index, group_index in categories.items():
+            column_index = int(index) - 1
+            final_categories[columns[column_index]] = group_index - 1
+
+        return final_categories
+
+    def validate_categories(self, categories, size, num_groups, unit):
+        all_indices = set(range(1, size+1))
+        seen_indices = set(map(int, categories.keys()))
+
+        if not seen_indices.issubset(all_indices):
+            extra_indices = seen_indices - all_indices
+            raise ValueError(f"Some categorized {unit} indices are out of range: {extra_indices}")
+
+        if seen_indices != all_indices:
+            unseen_indices = all_indices - seen_indices
+            print(f"Warning: Not all {unit} were categorized. Uncategorized {unit} indices: {unseen_indices}")
+        
+        for index, group_index in categories.items():
+            if not isinstance(group_index, int):
+                raise ValueError(f"{unit.capitalize()} can only belong to one group. {unit.capitalize()} {index} is assigned an invalid group type.")
+            if group_index < 1 or group_index > num_groups:
+                raise ValueError(f"Invalid group index {group_index} for {unit} {index}. Group index should be between 1 and {num_groups}.")
+
+    def merge_run_output(self, run_outputs):
+        merged_categories = {}
+        for output in run_outputs:
+            merged_categories.update(output)
+        return merged_categories, self.groups
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        return callback(run_output)
+    
+    
+def create_category_workflow(para=None, output=None):
+
+    if para is None:
+        para = {}
+    main_workflow = Workflow("Category Workflow", 
+                            item = {}, 
+                            description="A workflow to category values",
+                            para = para,
+                            output=output)
+    
+    main_workflow.add_to_leaf(GetColumnCategoriesList(output=output))
+    main_workflow.add_to_leaf(ColumnCategorizerNode(output=output))
+    main_workflow.add_to_leaf(ClassifyColumnsList(output=output))
+    
+    return main_workflow
+
+
+def build_hierarchy(columns, initial_category, size_threshold=30, unit="columns"):
+    if len(columns) < size_threshold:
+        return {initial_category: {"description": "", "children": columns}}
+        
+    def recurse(columns, current_category):
+        if len(columns) < size_threshold:
+            return columns
+
+        category_hierarchy = {}
+
+        main_workflow = create_category_workflow(para={"columns":columns, "unit": unit})
+        main_workflow.start()
+        classified_columns, updated_categories = main_workflow.global_document["Category Workflow"].get("Classify Columns")
+        
+        for i, (sub_cat, sub_cat_desc) in enumerate(updated_categories):
+            sub_cat_columns = [col for col, cat_index in classified_columns.items() if cat_index == i]
+            category_hierarchy[sub_cat] = {
+                "description": sub_cat_desc,
+                "children": recurse(sub_cat_columns, (sub_cat, sub_cat_desc))
+            }
+
+        return category_hierarchy
+
+    return {initial_category: {
+        "description": "",
+        "children": recurse(columns, (initial_category, "Top-level category"))
+    }}
+
+
+
+def get_grouped_dfs(self):
+    relation_df = pd.read_json(self.get_sibling_document('Refine Relations'), orient="split")
+    entity_df = pd.read_json(self.get_sibling_document('Entity Understand'), orient="split")
+
+    single_entity_relations = relation_df[relation_df['Entities'].apply(len) == 1]
+
+    unique_entities = set(entity for entities in single_entity_relations['Entities'] for entity in entities)
+
+    exclusive_entities = []
+    for entity in unique_entities:
+        entity_relations = relation_df[relation_df['Entities'].apply(lambda x: entity in x)]
+        if all(entity_relations['Entities'].apply(len) == 1):
+            exclusive_entities.append(entity)
+
+    single_entity_result = entity_df[entity_df['Entity Name'].isin(exclusive_entities)][['Entity Name', 'Entity Description']]
+
+    data_project = self.para["data_project"]
+    group_df = data_project.groups
+
+    relation_df = relation_df[relation_df['Relation Name'] != ""]
+
+    return relation_df, group_df, single_entity_result
+
+
+
+
+class ExtractTableGroups(Node):
+    default_name = 'Extract Table Groups'
+    default_description = 'This node extracts table groups from the data project.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        
+        relation_df, group_df, single_entity_result = get_grouped_dfs(self)
+
+        combined_desc = {}
+        
+        relation_df = relation_df[relation_df['Relation Name'] != ""]
+        for idx, row in relation_df.iterrows():
+            name = row['Relation Name']
+            desc = f"it involves {', '.join(row['Entities'])}, {row['Relation Description']}"
+            combined_desc[name] = {
+                'Type': 'Relation',
+                'Description': desc
+            }
+        
+        for idx, row in single_entity_result.iterrows():
+            name = row['Entity Name']
+            desc = row['Entity Description']
+            combined_desc[name] = {
+                'Type': 'Entity',
+                'Description': desc
+            }
+        
+        for idx, row in group_df.iterrows():
+            name = row['Group Name']
+            desc = row['Group Summary']
+            combined_desc[name] = {
+                'Type': 'Group',
+                'Description': desc
+            }
+        
+        return combined_desc
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        callback(extract_output)
+        
+def extract_titles(data):
+    if isinstance(data, dict):
+        for key, value in data.items():
+            data[key] = extract_titles(value)
+        return data
+    elif isinstance(data, list):
+        return [extract_title(item) for item in data]
+    elif isinstance(data, str):
+        return extract_title(data)
+    else:
+        return data
+
+def extract_title(s):
+    if s.startswith("'") and "'" in s[1:]:
+        return s[1:s.index("'", 1)]
+    return s
+
+
+
+class BuildTableHierarchy(Node):
+    default_name = 'Build Table Hierarchy'
+    default_description = 'This node builds a hierarchy of tables based on the extracted table groups.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        display(HTML("🌳 Clustering the core relations and groups..."))
+        create_progress_bar_with_numbers(3, model_steps)
+
+        combined_desc = self.get_sibling_document('Extract Table Groups')
+
+        tables = [f"'{name}': {details['Description']}" for name, details in combined_desc.items()]
+
+        dbt_project_name = self.para["dbt_name"]
+
+        category_hierarchy = build_hierarchy(tables, dbt_project_name, unit="tables")
+        extracted_category = extract_titles(category_hierarchy)
+        
+        return extracted_category
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        extracted_category = extract_output
+        
+        def clean_category(category):
+            if isinstance(category, dict):
+                for key, value in list(category.items()):
+                    if isinstance(value, dict) and 'children' in value:
+                        clean_category(value['children'])
+                        
+                        if not value['children']:
+                            del category[key]
+                    elif isinstance(value, dict):
+                        clean_category(value)
+                        
+                        if not value:
+                            del category[key]
+                
+                if 'children' in category:
+                    category['children'] = {k: v for k, v in category['children'].items() if v}
+                    
+                    if isinstance(category['children'], dict):
+                        category['children'] = {k: v for k, v in category['children'].items() if v}
+                    
+                    if not category['children']:
+                        del category['children']
+            
+            return category
+
+
+        cleaned_category = clean_category(extracted_category)
+        
+        clear_output(wait=True)
+        display(HTML("😎 We have clustered the relations based on the concepts..."))
+        
+        html_output = generate_html_tree(cleaned_category)
+        html_content = f"""
+<style>
+{tree_hierarchy_css}
+</style>
+<body>
+{html_output}
+</body>
+"""
+
+        next_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check' 
+        )
+        
+        def on_next_button_clicked(b):
+            with self.output_context():
+                callback(cleaned_category)
+        
+        next_button.on_click(on_next_button_clicked)
+
+        viewer = self.para.get("viewer", False)
+        
+        if viewer:
+            on_next_button_clicked(next_button)
+            return
+        
+        display(HTML(html_content))
+        display(next_button)
+
+
+def extract_category_paths(data, current_path=None):
+    if current_path is None:
+        current_path = []
+    
+    result = []
+    
+    if isinstance(data, dict):
+        for key, value in data.items():
+            new_path = current_path + [key]
+            if isinstance(value, dict):
+                if 'children' in value:
+                    if isinstance(value['children'], list):
+                        result.append((new_path, value['children']))
+                    elif isinstance(value['children'], dict):
+                        result.extend(extract_category_paths(value['children'], new_path))
+            elif isinstance(value, list):
+                result.append((new_path, value))
+    
+    return result
+
+
+class ReorderRelationToStoryForAll(MultipleNode):
+    default_name = 'Reorder Relation to Story for All'
+    default_description = 'This node allows users to reorder relations for all paths in the story.'
+
+    def construct_node(self, element_name, content=None, group_desc=None, 
+                       relation_df=None, group_df=None, single_entity_result=None,
+                       idx=0, total=0):
+        para = self.para.copy()
+        para["path_name"] = str(element_name)
+        para["path"] = element_name
+        para["content"] = content
+        para["group_desc"] = group_desc
+        para["path_idx"] = idx
+        para["total_paths"] = total
+        para["relation_df"] = relation_df
+        para["group_df"] = group_df
+        para["single_entity_result"] = single_entity_result
+        node = ReorderRelationToStory(para=para, id_para="path_name")
+        node.inherit(self)
+        return node
+    
+    def extract(self, item):
+        extracted_category = self.get_sibling_document('Build Table Hierarchy')
+        group_desc = self.get_sibling_document('Extract Table Groups')
+        paths = extract_category_paths(extracted_category)
+        
+        relation_df, group_df, single_entity_result = get_grouped_dfs(self)
+        
+        self.elements = [str(path) for path, _ in paths]
+        self.nodes = {str(path): self.construct_node(path, content, group_desc, relation_df, group_df, single_entity_result, idx, len(paths)) 
+                      for idx, (path, content) in enumerate(paths)}
+
+
+class DocumentUploadNode(Node):
+    default_name = 'Relevant Document Upload'
+    default_description = 'Upload relevant documents or code to help understand the data.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        next_button = widgets.Button(description="Skip", button_style='success', icon='check')
+
+        def on_button_click(b):
+            with self.output_context():
+                callback({})
+
+        next_button.on_click(on_button_click)
+
+        button_style = '''<style>
+.modern-button {
+    background-color: white;
+    border: 1px solid black;
+    color: #333;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease 0s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    height: 20px;
+    width: 50px;
+}
+
+.modern-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.modern-button:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+}
+
+.modern-button svg {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+}
+</style>
+        '''
+
+        def create_button(img, text):
+            return f'''<div class="modern-button">
+        {img}  <span>&nbsp;{text}</span>
+        </div>
+        '''
+
+        buttons_html = f'''
+        {button_style}
+        {create_button(dbt_img, "dbt")}
+        {create_button(air_flow_img, "Airflow")}
+        {create_button(looker_img, "Looker")}
+        {create_button(tableau_img, "Tableau")}
+        {create_button(powerbi_img, "PowerBI")}
+        {create_button(document_img, "Files")}
+        '''
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            on_button_click(next_button)
+        
+        create_progress_bar_with_numbers(1, model_steps)
+        display(HTML("<div style='line-height: 1.2;'><h3>📁 Upload Relevant Documents</h3><em>Add any documents or code that will help understand the data</em></div>"))
+        display(HTML(buttons_html))
+        display(next_button)
+        
+
+class RelatedCategoriesFinder(Node):
+    default_name = 'Related Categories Finder'
+    default_description = 'This node finds related target categories given a source story.'
+    
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        create_progress_bar_with_numbers(1, migration_steps)
+        display(HTML(f"🔍 Identifying relavant categories ..."))
+        self.progress = show_progress(1)
+        
+        source_data_project = self.para.get('source_data_project')
+        target_data_project = self.para.get('target_data_project')
+        
+        source_story_list = source_data_project.get_story_list()
+        source_story_str = "\n".join([f"'{item['name']}': {item['description']}" for item in source_story_list])
+        
+        target_categories = target_data_project.get_lowest_categories()
+        
+        return source_story_str, target_categories
+    
+    def run(self, extract_output, use_cache=True):
+        source_story_str, target_categories = extract_output
+        
+        if not source_story_str or not target_categories:
+            return self.run_but_fail(extract_output)
+        
+        target_categories_str = "\n".join(f"'{name}': {description}" for name, description in target_categories.items())
+        
+        template = f"""Given the following source stories:
+
+{source_story_str}
+
+And the following target categories:
+
+{target_categories_str}
+
+Please analyze the source stories and find the most relevant target categories. Only select categories from the provided list. Return your response in the following format:
+
+```yml
+reasoning: >-
+    Explain your thought process in determining the related categories
+related_categories:
+    - category1
+    - category2
+    # Add more categories as needed, ensuring they are from the provided list
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict):
+            raise ValueError("Analysis should be a dictionary")
+        
+        if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
+            raise ValueError("Analysis should contain a 'reasoning' key with a string value")
+        
+        if 'related_categories' not in analysis or not isinstance(analysis['related_categories'], list):
+            raise ValueError("Analysis should contain a 'related_categories' key with a list value")
+        
+        invalid_categories = [cat for cat in analysis['related_categories'] if cat not in target_categories]
+        if invalid_categories:
+            raise ValueError(f"The following categories are not in the target categories: {', '.join(invalid_categories)}")
+        
+        return analysis
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        source_story_str, target_categories = extract_output
+        if not targte_categories:
+            return {"reasoning": "Unable to determine related categories.", "related_categories": []}
+        return {"reasoning": "Unable to determine related categories.", "related_categories": list(target_categories.keys())}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        source_story_str, target_categories = extract_output
+        analysis = run_output
+
+        if not analysis['related_categories']:
+            callback([])
+            return
+
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        self.progress.value += 1
+
+
+        display(HTML(f"<b>Summary:</b> <i>{analysis['reasoning']}</i>"))
+
+        related_categories = analysis['related_categories']
+        display(HTML(f"<b>Relavant Categories in Target Data Model:</b>"))
+
+        excluded_categories = list(set(target_categories.keys()) - set(related_categories))
+        
+        target_data_project = self.para['target_data_project']
+        target_data_project.display_tree(exclude_categories=excluded_categories)
+
+        def on_button_clicked(b):
+            with self.output_context():
+                clear_output(wait=True)
+                callback(excluded_categories)
+
+        submit_button = widgets.Button(
+            description='Next',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+
+        display(submit_button)
+        
+        viewer = self.para.get("viewer", False)
+        if self.viewer or viewer:
+            on_button_clicked(submit_button)
+            return
+
+class MapBusinessConcepts(Node):
+    default_name = 'Map Business Concepts'
+    default_description = 'This node maps business concepts between source and target stories.'
+    
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        create_progress_bar_with_numbers(1, migration_steps)
+        display(HTML(f"🔗 Mapping business concepts..."))
+        self.progress = show_progress(1)
+        
+        source_data_project = self.para.get('source_data_project')
+        target_data_project = self.para.get('target_data_project')
+        
+        excluded_categories = self.get_sibling_document('Related Categories Finder')
+        source_story_list = source_data_project.get_story_list()
+        target_story_list = target_data_project.get_story_list(exclude_categories=excluded_categories)
+        
+        return source_story_list, target_story_list
+    
+    def run(self, extract_output, use_cache=True):
+        source_story_list, target_story_list = extract_output
+        
+        source_stories = "\n".join([f"{item['description']}" for item in source_story_list])
+        target_stories = "\n".join([f"{item['description']}" for item in target_story_list])
+        
+        template = f"""Given the following source stories:
+{source_stories}
+
+And the following target stories:
+{target_stories}
+
+Please map the terminology between source and target stories. 
+Identify key business concepts that might be referred to differently in the source and target. 
+For each mapping, provide a brief summary of what the concept means or any nuanced differences.
+
+Return your response in the following format:
+
+```yml
+summary: >-
+    Brief explanation of the source and target concept mapping
+concept_mappings:
+  - source_term: customer
+    target_term: client
+    summary: both refer to those who purchase goods or services
+  # Add more mappings as needed
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict) or 'concept_mappings' not in analysis:
+            raise ValueError("Analysis should be a dictionary with a 'concept_mappings' key")
+        
+        if not isinstance(analysis['concept_mappings'], list):
+            raise ValueError("concept_mappings should be a list")
+        
+        for mapping in analysis['concept_mappings']:
+            if not all(key in mapping for key in ['source_term', 'target_term', 'summary']):
+                raise ValueError("Each mapping should have 'source_term', 'target_term', and 'summary' keys")
+        
+        
+        filtered_mappings = [
+            mapping for mapping in analysis['concept_mappings']
+            if mapping.get('source_term') and mapping.get('target_term')
+        ]
+
+        analysis['concept_mappings'] = filtered_mappings
+
+        return analysis
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"summary": "Unable to determine business concept mappings", "concept_mappings": []}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+
+        data = {
+            'Source Term': [],
+            'Target Term': [],
+            'Explanation': [],
+            'Endorse': []
+        }
+        
+        for mapping in run_output['concept_mappings']:
+            data['Source Term'].append(mapping['source_term'])
+            data['Target Term'].append(mapping['target_term'])
+            data['Explanation'].append(mapping['summary'])
+            data['Endorse'].append(True)
+        
+        df = pd.DataFrame(data)
+        
+        if len(df) == 0:
+            callback(df.to_json(orient="split"))
+            return
+        
+        editable_columns = [False, False, False, True]
+        reset = True
+        long_text = ['Explanation']
+        grid = create_dataframe_grid(df, editable_columns, reset=reset, long_text=long_text)
+        
+        display(HTML(f"<b>Summary</b>: <i>{run_output['summary']}</i>"))
+        
+        display(grid)
+        
+        submit_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+        
+        def on_button_click(b):
+            with self.output_context():
+                clear_output(wait=True)
+                
+                updated_df = grid_to_updated_dataframe(grid, reset=reset, long_text=long_text)
+        
+                callback(updated_df.to_json(orient="split"))
+        
+        submit_button.on_click(on_button_click)
+        display(submit_button)
+        
+        viewer = self.para.get("viewer", False)
+        if self.viewer or viewer:
+            on_button_click(submit_button)
+            return
+
+class RelatedStepsFinder(Node):
+    default_name = 'Related Steps Finder'
+    default_description = 'This node finds related steps in target stories given a source story and business concept mapping.'
+    
+    def extract(self, item):
+        clear_output(wait=True)
+        
+        create_progress_bar_with_numbers(1, migration_steps)
+        display(HTML(f"🔍 Finding related steps..."))
+        self.progress = show_progress(1)
+        
+        source_data_project = self.para.get('source_data_project')
+        target_data_project = self.para.get('target_data_project')
+        
+        excluded_categories = self.get_sibling_document('Related Categories Finder')
+        concept_mappings_df = pd.read_json(self.get_sibling_document('Map Business Concepts'), orient="split")
+
+        endorsed_df = concept_mappings_df[concept_mappings_df['Endorse'] == True]
+            
+        concept_mappings_str = "Business concept mapping:\n"
+
+        for _, row in endorsed_df.iterrows():
+            source = row['Source Term']
+            target = row['Target Term']
+            explanation = row['Explanation']
+            
+            concept_mappings_str += f"'{source}' -> '{target}'\n"
+            concept_mappings_str += f"{explanation}\n"
+
+        source_story_list = source_data_project.get_story_list()
+        target_story_list = target_data_project.get_story_list(exclude_categories=excluded_categories)
+        
+        return source_story_list, target_story_list, concept_mappings_str
+    
+    def run(self, extract_output, use_cache=True):
+        source_story_list, target_story_list, concept_mappings_str = extract_output
+        
+        source_stories = "\n".join([f"'{item['name']}': {item['description']}" for item in source_story_list])
+        target_stories = "\n".join([f"'{item['name']}': {item['description']}" for item in target_story_list])
+                
+        template = f"""Given the following source story steps:
+{source_stories}
+
+And the following target story steps:
+{target_stories}
+
+Consider the following business concept mappings:
+{concept_mappings_str}
+
+From the target list, identify the names of related steps to the source story. 
+Consider the business concept mappings when making these connections. 
+Return your response in the following format:
+
+```yml
+summary: >-
+    The related steps are ...
+related_steps:
+    - step_name 1
+    - step_name 2
+    # Add more related steps here
+```"""
+        
+        messages = [{"role": "user", "content": template}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+        
+        yml_code = extract_yml_code(response['choices'][0]['message']["content"])
+        analysis = yaml.load(yml_code, Loader=yaml.SafeLoader)
+        
+        if not isinstance(analysis, dict) or 'summary' not in analysis or 'related_steps' not in analysis:
+            raise ValueError("Analysis should be a dictionary with 'summary' and 'related_steps' keys")
+        
+        if not isinstance(analysis['related_steps'], list):
+            raise ValueError("related_steps should be a list")
+        
+        target_story_names = [item['name'] for item in target_story_list]
+        invalid_steps = [step for step in analysis['related_steps'] if step not in target_story_names]
+        if invalid_steps:
+            raise ValueError(f"The following steps are not in the target story list: {', '.join(invalid_steps)}")
+        
+        return analysis
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {"summary": "Unable to find related steps.", "related_steps": []}
+    
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        analysis = run_output
+
+        if not analysis['related_steps']:
+            callback(analysis)
+            return
+
+        if icon_import:
+            display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        self.progress.value += 1
+
+        display(HTML(f"<b>Summary:</b> <i>{analysis['summary']}</i>"))
+
+        display(HTML(f"<b>Related Steps:</b> {', '.join(analysis['related_steps'])}"))
+
+
+        def on_button_clicked(b):
+            with self.output_context():
+                clear_output(wait=True)
+                callback(analysis)
+
+        submit_button = widgets.Button(
+            description='Submit',
+            disabled=False,
+            button_style='success',
+            tooltip='Click to submit',
+            icon='check'
+        )
+
+        submit_button.on_click(on_button_clicked)
+
+        display(submit_button)
+        
+        viewer = self.para.get("viewer", False)
+        if self.viewer or viewer:
+            on_button_clicked(submit_button)
+            return
+        
+class SummarizeSchemaMatching(Node):
+    default_name = 'Summarize Schema Matching'
+    default_description = 'Summarizes the results of schema matching'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        
+        create_progress_bar_with_numbers(2, migration_steps)
+        display(HTML("🎉 We have matched all the tables and drafted the SQL"))
+        document = self.get_sibling_document('Find Tables and Match Schema For All').get('Matching Schema', {})
+
+        tab_data = []
+
+        nodes = {}
+
+        edges = []
+                
+        for target_table_name in document:
+            schema_matching_df = pd.read_json(document[target_table_name]['Refine Schema Matching'], orient="split")
+            result_match = {}
+
+            for _, row in schema_matching_df.iterrows():
+                target_col = row['Target Column']
+                sources = row['Sources']
+                instruction = row['Instruction']
+                
+                result_match[target_col] = {
+                    'source_columns': ast.literal_eval(sources),
+                    'transformation': instruction if instruction else None
+                }
+
+
+            target_table = f"(target) {target_table_name}"
+            nodes[target_table] = []
+
+            for target_col, matching in result_match.items():
+                if target_col not in nodes[target_table]:
+                    nodes[target_table].append(target_col)
+                
+                for source_col in matching['source_columns']:
+                    source_table = f"(source) {source_col['table_name']}"
+                    if source_table not in nodes:
+                        nodes[source_table] = []
+                    if source_col['column_name'] not in nodes[source_table]:
+                        nodes[source_table].append(source_col['column_name'])
+
+
+
+            for target_col, matching in result_match.items():
+                for source_col in matching['source_columns']:
+                    source_table = f"(source) {source_col['table_name']}"
+                    edge = (source_table, source_col['column_name'], target_table, target_col)
+                    edges.append(edge)
+
+        html_output = generate_schema_graph_graphviz(nodes, edges)
+
+        tab_data.append(["All Column Matching", html_output]) 
+        
+        for target_table_name in document:
+            result_match = {}
+
+            schema_matching_df = pd.read_json(document[target_table_name]['Refine Schema Matching'], orient="split")
+
+            for _, row in schema_matching_df.iterrows():
+                target_col = row['Target Column']
+                sources = row['Sources']
+                instruction = row['Instruction']
+                
+                result_match[target_col] = {
+                    'source_columns': ast.literal_eval(sources),
+                    'transformation': instruction if instruction else None
+                }
+
+            edges = []
+
+            nodes = {}
+
+            target_table = f"(target) {target_table_name}"
+            nodes[target_table] = []
+
+            for target_col, matching in result_match.items():
+                if target_col not in nodes[target_table]:
+                    nodes[target_table].append(target_col)
+                
+                for source_col in matching['source_columns']:
+                    source_table = f"(source) {source_col['table_name']}"
+                    if source_table not in nodes:
+                        nodes[source_table] = []
+                    if source_col['column_name'] not in nodes[source_table]:
+                        nodes[source_table].append(source_col['column_name'])
+
+
+            for target_col, matching in result_match.items():
+                for source_col in matching['source_columns']:
+                    source_table = f"(source) {source_col['table_name']}"
+                    edge = (source_table, source_col['column_name'], target_table, target_col)
+                    edges.append(edge)
+                    
+                    
+                
+                
+                
+                
+
+            html_output = generate_schema_graph_graphviz(nodes, edges)
+
+            run_output = document[target_table_name]['SQL Query Constructor']
+            highlighted_html = highlight_sql(run_output['sql_query'])
+            
+            final_html = html_output + highlighted_html + f"""<div style="color: orange; font-style: italic; font-size: 0.9em;">
+            ⚠️ SQL query is just for reference based on schema. To ensure correctness, data access is required.
+        </div>"""
+            tab_data.append([target_table_name, final_html]) 
+            
+        
+        tabs = create_dropdown_with_content(tab_data)
+        display(tabs)
