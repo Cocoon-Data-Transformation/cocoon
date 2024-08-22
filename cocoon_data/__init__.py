@@ -20557,7 +20557,8 @@ class TransformTypeForAll(MultipleNode):
         
         table_pipeline = self.para["table_pipeline"]
         with_context_clause = table_pipeline.get_codes(mode="WITH")
-
+        con = self.item["con"]
+        
         def on_button_clicked(b):
             with self.output_context():
                 new_df =  grid_to_updated_dataframe(grid, long_text=long_text)
@@ -20592,7 +20593,7 @@ class TransformTypeForAll(MultipleNode):
                 old_table_name = table_pipeline.__repr__(full=False)
 
                 new_table_name = old_table_name + "_casted"
-                con = self.item["con"]
+                
                 schema = table_pipeline.get_schema(con)
                 columns = list(schema.keys())
                 non_affected_columns = [enclose_table_name(col, con=con) for col in columns if col not in affected_columns]
