@@ -16274,6 +16274,9 @@ def collect_list(data):
 
 
 def extract_lowest_categories(data):
+    if isinstance(data, list):
+        return {}
+    
     result = {}
 
     def traverse(node, current_path):
@@ -24448,12 +24451,15 @@ class SelectTables(Node):
 
         all_databases = get_databases()
 
-        if default_database not in all_databases:
+        if default_database and default_database not in all_databases:
+            print(f"⚠️ Can't find the database '{default_database}' specified in sources.yml")
             default_database = None
+            
 
         if default_database:
             all_schemas = get_schemas(default_database)
             if default_schema not in all_schemas:
+                print(f"⚠️ Can't find the schema '{default_schema}' specified in sources.yml")
                 default_schema = None
         else:
             all_schemas = []
@@ -35327,7 +35333,6 @@ class SelectStageOptions(Node):
         options = [
             ['<span class="option-label"><div><strong>Table Description</strong></div><div><em><b>🔬 (Schema-Only) Read Access:</b> Cocoon describes the table</em></div></span>', 'table_desc', True, False],
             ['<span class="option-label"><div><strong>Column Description</strong></div><div><em><b>🔬 (Schema-Only) Read Access:</b> Cocoon describes each column</em></div></span>', 'col_desc', True, False],
-            ['<span class="option-label"><div><strong>Remove PII</strong></div><div><em><b>🔬 (Schema-Only) Read Access:</b> Cocoon removes columns with Personal Identifiable Information</em></div></span>', 'pii', False, True],
             ['<span class="option-label"><div><strong>Detect Regex Patterns</strong></div><div><em><b>📖 Read Access:</b> Cocoon detects regular patterns for string</em></div></span>', 'detect_regex_patterns', True, True],
             ['<span class="option-label"><div><strong>Parse Variant Types (Snowflake-only)</strong></div><div><em><b>📖 Read Access:</b> Cocoon identifies the data type for Variant type</em></div></span>', 'parse_variant_types', True, True],
             ['<span class="option-label"><div><strong>Unique test</strong></div><div><em><b>📖 Read Access:</b> Cocoon writes tests for columns shall be unique</em></div></span>', 'unique_test', True, True],
@@ -35361,6 +35366,60 @@ class SelectStageOptions(Node):
             cardinality_description
         ], layout=widgets.Layout(margin='0 0 0 45px'))
 
+
+        pii_description = widgets.HTML(
+            value='<span class="option-label"><div><strong>Remove PII</strong></div><div><em>Cocoon removes columns with Personal Identifiable Information</em></div></span>'
+        )
+
+        checkbox_style = {'description_width': '0px'}
+
+        remove_pii = widgets.Checkbox(
+            value=False,
+            description='',
+            disabled=False,
+            indent=False,
+            style=checkbox_style,
+            layout={'width': 'initial'}
+        )
+
+        pii_widget = widgets.HBox([remove_pii, pii_description], layout=widgets.Layout(align_items='center', margin='0'))
+
+        pii_method_description = widgets.HTML(
+            value='<span class="option-label"><strong>PII Access Control:</strong><div><em>Cocoon can only send schema to LLMs for detection</em></div></span>'
+        )
+
+        pii_method = widgets.RadioButtons(
+            options=['Schema Only', 'Read Data'],
+            description='',
+            disabled=True
+        )
+
+        pii_model_description = widgets.HTML(
+            value='<span class="option-label"><strong>PII Detection Model:</strong><div><em>Cocoon can use the specified (e.g., open-sourced) models for PII</em></div></span>'
+        )
+
+        pii_model = widgets.Dropdown(
+            options=['', 'Llama3Vertex', 'Llama3Bedrock'],
+            value=None,
+            description='',
+            disabled=True
+        )
+
+        def update_enabled(change):
+            pii_method.disabled = not change['new']
+            pii_model.disabled = not change['new']
+
+        remove_pii.observe(update_enabled, names='value')
+
+        pii_container = widgets.VBox([
+            pii_widget,
+            widgets.VBox([
+                widgets.VBox([pii_method_description, pii_method]),
+                widgets.VBox([pii_model_description, pii_model])
+            ], layout=widgets.Layout(margin='0 0 0 35px'))
+        ])
+
+        
         submit_button = widgets.Button(
             description='Submit',
             icon='check',
@@ -35383,6 +35442,19 @@ class SelectStageOptions(Node):
             
             if 'cardinality_threshold' in stored_options:
                 cardinality_threshold.value = stored_options['cardinality_threshold']
+                
+            if 'pii' in stored_options:
+                remove_pii.value = stored_options['pii']
+            
+            pii_method.disabled = not remove_pii.value
+            pii_model.disabled = not remove_pii.value
+            
+            if remove_pii.value:
+                if 'pii_schema_only' in stored_options and stored_options['pii_schema_only'] is not None:
+                    pii_method.value = 'Schema Only' if stored_options['pii_schema_only'] else 'Read Data'
+                
+                if 'pii_model' in stored_options and stored_options['pii_model'] is not None:
+                    pii_model.value = stored_options['pii_model']
 
         def on_submit(b):
             with self.output_context():
@@ -35404,6 +35476,12 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
             if selected_options['standardize_values']:
                 selected_options['cardinality_threshold'] = cardinality_threshold.value
             
+            selected_options['pii'] = remove_pii.value
+            
+            selected_options['pii_schema_only'] = pii_method.value == 'Schema Only' 
+            
+            selected_options['pii_model'] = pii_model.value
+            
             return selected_options
 
         submit_button.on_click(on_submit)
@@ -35411,7 +35489,7 @@ create_cocoon_workflow(con=con, output=widgets.Output(), para=para)"""
 
         widget = widgets.VBox([
             widgets.HTML(value="<div style='line-height: 1.2;'><h2>⚙️ Data Workflow Options</h2><em>Customizing the workflow for all tables in Express Mode. If unsure, leave it as default.</em></div>"),
-            widgets.VBox([checkboxes_widget, cardinality_widget], layout=widgets.Layout(border='1px solid #ddd', padding='10px')),
+            widgets.VBox([checkboxes_widget, cardinality_widget, pii_container], layout=widgets.Layout(border='1px solid #ddd', padding='10px')),
             widgets.HBox([export_button, submit_button]),
             output
         ])
@@ -36541,9 +36619,12 @@ class FindTablesAndMatchSchemaForAll(MultipleNode):
     def extract(self, item):
         
         related_steps = self.get_sibling_document('Related Steps Finder').get('related_steps', [])
-        target_data_project = self.para['target_data_project']
-        target_tables = extract_related_tables(target_data_project, related_steps)
-        target_tables.sort()
+        if related_steps:
+            target_data_project = self.para['target_data_project']
+            target_tables = extract_related_tables(target_data_project, related_steps)
+            target_tables.sort()
+        else:
+            target_tables = list(self.para['target_data_project'].tables.keys())
         
         self.elements = target_tables
         self.nodes = {element: self.construct_node(element, idx, len(self.elements))
@@ -36558,6 +36639,7 @@ class DetectPIIColumns(ListNode):
         
         table_pipeline = self.para["table_pipeline"]
         table_name = table_pipeline.__repr__(full=False)
+        con = self.item["con"]
         display(HTML(f"{running_spinner_html} Analyzing columns for PII in <i>{table_name}</i>..."))
         create_progress_bar_with_numbers(1, doc_steps)
         self.progress = show_progress(1)
@@ -36568,10 +36650,28 @@ class DetectPIIColumns(ListNode):
         
         column_chunks = [columns[i:i+50] for i in range(0, len(columns), 50)]
         
-        return column_chunks
+        sample_size = 5
+
+        column_chunks_with_samples = []
+
+        for chunk in column_chunks:
+            table_desc = ""
+            
+            if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('pii_schema_only') is False):
+                chunk_sample_df = table_pipeline.get_samples(con, columns=chunk, sample_size=sample_size)
+                chunk_sample_df = chunk_sample_df.applymap(truncate_cell)
+                
+                table_desc = chunk_sample_df.to_csv(index=False, quoting=1)
+            
+            column_chunks_with_samples.append([chunk, table_desc])
+
+        return column_chunks_with_samples
 
     def run(self, extract_output, use_cache=True):
-        columns = extract_output
+        columns, table_desc = extract_output
         
         if (hasattr(self, 'para') and 
             isinstance(self.para, dict) and 
@@ -36579,24 +36679,35 @@ class DetectPIIColumns(ListNode):
             self.para['cocoon_stage_options'].get('pii') is False):
             return self.run_but_fail({})
 
-        template = f"""You are an expert in data privacy and security. Analyze the following column names and identify any that might contain Personally Identifiable Information (PII).
-
+        template = f"""Analyze the following column names and identify any that might contain Personally Identifiable Information (PII).
+PII are:
+(1) any information that can be used to distinguish or trace an individual's identity, such as name, social security number, date and place of birth, mother's maiden name, or biometric records 
+(2) any other information that is linked or linkable to an individual, such as medical, educational, financial, and employment information
+ 
 Column names:
-{', '.join(columns)}
+{table_desc if table_desc else ', '.join(columns)}
 
-For each column that potentially contains PII, explain what type of information it might hold.
-
-Return your analysis in the following JSON format:
+Return your analysis in the following yml format:
 ```yml
 reasoning: >-
     Your reasoning for identifying PII columns.
 pii_columns:
-    column_name_1: reason for identifying PII
+    {columns[0]}: reason for identifying PII
     ...
 ```"""
 
         messages = [{"role": "user", "content": template}]
-        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_stage_options'), dict) and 
+            self.para['cocoon_stage_options'].get('pii_model') is not None):
+            api_type = self.para['cocoon_stage_options'].get('pii_model')
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache, api_type=api_type)
+            response['choices'][0]['message']["content"] = response['choices'][0]['message']["content"].replace("\\n", "\n")
+        else:
+            response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+            
         messages.append(response['choices'][0]['message'])
         self.messages.append(messages)
 
@@ -36641,7 +36752,7 @@ pii_columns:
             'Explanation': [],
         }
 
-        all_columns = [col for chunk in extract_output for col in chunk]
+        all_columns = [col for chunk, _ in extract_output for col in chunk]
 
         for column in all_columns:
             is_pii = column in run_output
@@ -36653,7 +36764,6 @@ pii_columns:
 
         df = pd.DataFrame(data)
 
-        df = df.sort_values('Is PII', ascending=False).reset_index(drop=True)
 
         editable_columns = [False, True, True]
         reset = True
@@ -37605,7 +37715,7 @@ related_categories:
     
     def run_but_fail(self, extract_output, use_cache=True):
         source_story_str, target_categories = extract_output
-        if not targte_categories:
+        if not target_categories:
             return {"reasoning": "Unable to determine related categories.", "related_categories": []}
         return {"reasoning": "Unable to determine related categories.", "related_categories": list(target_categories.keys())}
     
@@ -37677,6 +37787,9 @@ class MapBusinessConcepts(Node):
     
     def run(self, extract_output, use_cache=True):
         source_story_list, target_story_list = extract_output
+        
+        if len(source_story_list) == 0 or len(target_story_list) == 0:
+            return self.run_but_fail(extract_output=extract_output)
         
         source_stories = "\n".join([f"{item['description']}" for item in source_story_list])
         target_stories = "\n".join([f"{item['description']}" for item in target_story_list])
@@ -37825,6 +37938,9 @@ class RelatedStepsFinder(Node):
     def run(self, extract_output, use_cache=True):
         source_story_list, target_story_list, concept_mappings_str = extract_output
         
+        if len(source_story_list) == 0 or len(target_story_list) == 0:
+            return self.run_but_fail(extract_output = extract_output)
+        
         source_stories = "\n".join([f"'{item['name']}': {item['description']}" for item in source_story_list])
         target_stories = "\n".join([f"'{item['name']}': {item['description']}" for item in target_story_list])
                 
@@ -37861,7 +37977,7 @@ related_steps:
         if not isinstance(analysis, dict) or 'summary' not in analysis or 'related_steps' not in analysis:
             raise ValueError("Analysis should be a dictionary with 'summary' and 'related_steps' keys")
         
-        if not isinstance(analysis['related_steps'], list):
+        if ('related_steps' in analysis) and (analysis['related_steps']) and (not isinstance(analysis['related_steps'], list)):
             raise ValueError("related_steps should be a list")
         
         target_story_names = [item['name'] for item in target_story_list]

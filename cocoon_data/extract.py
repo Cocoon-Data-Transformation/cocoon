@@ -37,20 +37,20 @@ def extract_json_code(s):
     import re
     pattern = r"```json(.*?)```"
     match = re.search(pattern, s, re.DOTALL)
-    return match.group(1).strip() if match else None
+    return match.group(1).strip() if match else s
 
 def extract_python_code(s):
     import re
     pattern = r"```python(.*?)```"
     match = re.search(pattern, s, re.DOTALL)
-    return match.group(1).strip() if match else None
+    return match.group(1).strip() if match else s
 
 
 def extract_yml_code(s):
     import re
     pattern = r"```yml(.*?)```"
     match = re.search(pattern, s, re.DOTALL)
-    return match.group(1).strip() if match else None
+    return match.group(1).strip() if match else s
 
 
 def represent_ordereddict(dumper, data):

@@ -89,7 +89,7 @@ lru_cache = LRUCache(20000)
 if os.path.exists("./cached_messages.json"):
     lru_cache.load_from_disk("./cached_messages.json")
 
-def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
+def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True, api_type=None):
     global openai
     message_hash = hash_messages(messages)
 
@@ -99,7 +99,8 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
             lru_cache.save_to_disk()
             return response
         
-    api_type = cocoon_llm_setting.get('api_type', openai.api_type)
+    if api_type is None:
+        api_type = cocoon_llm_setting.get('api_type', openai.api_type)
     
     if api_type == 'Anthropic':
         messages = convert_openai_to_claude(messages)
@@ -129,6 +130,27 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
         )
 
         response = convert_anthropicvertex_to_openai(message)
+    
+    elif api_type == 'Llama3Bedrock':
+        import boto3
+        
+        conversation = convert_openai_to_bedrock_llama(messages)
+
+        client = boto3.client("bedrock-runtime", 
+            region_name=cocoon_llm_setting['aws_region'] or os.environ.get("AWS_REGION") or "us-west-2",
+            aws_access_key_id=cocoon_llm_setting['aws_access_key'] or os.environ.get("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=cocoon_llm_setting['aws_secret_key'] or os.environ.get("AWS_SECRET_ACCESS_KEY"),
+        )
+
+        response = client.converse(
+            modelId="meta.llama3-1-405b-instruct-v1:0",
+            messages=conversation,
+            inferenceConfig={"maxTokens": 512, "temperature": temperature, "topP": top_p},
+        )
+
+        response_text = response["output"]["message"]["content"][0]["text"]
+
+        response = convert_bedrockllama_to_openai(response)
         
     elif api_type == 'AnthropicVertex':
         messages = convert_openai_to_claude(messages)
@@ -150,6 +172,10 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True):
         import openai
         from google.auth import default
         from google.auth.transport import requests
+
+        credentials, _ = default()
+        auth_request = requests.Request()
+        credentials.refresh(auth_request)
 
         MODEL_LOCATION = "us-central1"
         PROJECT_ID=cocoon_llm_setting['vertex_project_id'] or os.environ.get("AnthropicVertex_project_id")
@@ -310,6 +336,21 @@ def convert_gemini_to_openai(gemini_response):
 
 
 
+def convert_bedrockllama_to_openai(bedrockllama_response):
+    openai_format = {
+        "choices": [
+            {
+                "message": {
+                    "content": bedrockllama_response["output"]["message"]["content"][0]["text"]
+                }
+            }
+        ]
+    }
+    return openai_format
+
+
+
+
 def convert_anthropicvertex_to_openai(anthropicvertex_response):
     message_text = anthropicvertex_response.content[0].text
 
@@ -326,6 +367,25 @@ def convert_anthropicvertex_to_openai(anthropicvertex_response):
 
 def convert_openai_to_claude(openai_messages):
     return openai_messages
+
+
+
+def convert_openai_to_bedrock_llama(openai_messages):
+    bedrock_llama_messages = []
+    
+    for message in openai_messages:
+        role = message["role"]
+        content = message["content"]
+        
+        bedrock_message = {
+            "role": role,
+            "content": [{"text": content}]
+        }
+        
+        bedrock_llama_messages.append(bedrock_message)
+    
+    return bedrock_llama_messages
+
 
 
 
