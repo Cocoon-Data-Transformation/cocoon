@@ -1404,7 +1404,6 @@ def generate_dropdown_html(selection_group_id, options_dict, full=True, default_
 
 
 
-
 def wrap_in_card(header=None, body=None):
     header_div = f"""
     <div class="card-header bg-secondary text-white">
@@ -1459,3 +1458,87 @@ def generate_html_tree(data, parent_id='root'):
     return result
 
 
+
+
+def generate_choice_html(id, sub_ids, placeholder="Select Table"):
+    if not sub_ids:
+        return ""
+    
+    choice_html = f"""
+    <ul class="nav">
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle active" href="#"
+                id="navbarDropdownMenuLink_{id}" data-toggle="dropdown" aria-haspopup="true"
+                aria-expanded="false">
+                {placeholder}
+            </a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink_{id}">
+    """
+    
+    if isinstance(sub_ids, dict):
+        for idx, (sub_id, display_name) in enumerate(sub_ids.items()):
+            choice_html += f'<a class="dropdown-item {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_{id}_{sub_id}">{display_name}</a>'
+    else:
+        for idx, sub_id in enumerate(sub_ids):
+            choice_html += f'<a class="dropdown-item {"active" if idx == 0 else ""}" data-toggle="tab" href="#cocoon_{id}_{sub_id}">{sub_id}</a>'
+    
+    choice_html += """
+            </div>
+        </li>
+    </ul>
+    """
+    return choice_html
+
+def generate_div_html(id, sub_id_content_map):
+    if not isinstance(sub_id_content_map, dict):
+        return f"""
+        <div class="tab-pane fade show active" id="cocoon_{id}">
+            {sub_id_content_map}
+        </div>
+        """
+    
+    div_html = ""
+    for idx, (sub_id, content) in enumerate(sub_id_content_map.items()):
+        div_html += f"""
+        <div class="tab-pane fade {"show active" if idx == 0 else ""}" id="cocoon_{id}_{sub_id}">
+            <p class="subtitle text-center mb-3">{sub_id}</p>
+            {content}
+        </div>
+        """
+    return div_html
+
+def generate_side_list_and_tab_content(items):
+    side_list_html = ""
+    tab_content_html = ""
+    
+    for idx, item in enumerate(items, start=1):
+        side_list_html += f"""
+        <a class="list-group-item list-group-item-action {"active" if idx == 1 else ""}" data-toggle="list" href="#cocoon_steps_{item['id']}">
+            <div>
+                <h6 class="mb-0">{idx}. {item['title']}</h6>
+                <small>{item['list_description']}</small>
+            </div>
+        </a>
+        """
+        
+        tab_content_html += f"""
+        <div class="tab-pane fade {"show active" if idx == 1 else ""}" id="cocoon_steps_{item['id']}">
+            <nav class="navbar navbar-light bg-light">
+                <span class="navbar-brand mb-0">
+                    <h5 class="card-title mb-0">{item['title']}</h5>
+                </span>
+                {item['nav_content']}
+            </nav>
+            <div class="container">
+                <small class="text-muted">{item['nav_description']}</small>
+            </div>
+            <hr>
+            <div class="scroll-container overflow-auto">
+                <div class="tab-content mt-3">
+                    {item['content']}
+                </div>
+            </div>
+        </div>
+        """
+    
+    return side_list_html, tab_content_html

@@ -15594,7 +15594,7 @@ class DataProject:
         
         self.foreign_key = {}
         
-        self.referential_integrity = pd.DataFrame(columns=["pk_table_name", "pk", "fk_table_name", "fk", "% Orphan", 'Explanation'])
+        self.referential_integrity = pd.DataFrame(columns=["pk_table_name", "pk", "fk_table_name", "fk", "Orphan", 'Explanation'])
         
         self.key = {}
         
@@ -15620,8 +15620,10 @@ class DataProject:
                 table_info = copy.deepcopy(self.key[table])
                 
                 if not include_ri:
-                    for fk in table_info.get('foreign_keys', []):
-                        fk.pop('referential_integrity', None)
+                    fks = table_info.get('foreign_keys', [])
+                    if fks:
+                        for fk in fks:
+                            fk.pop('referential_integrity', None)
                 
                 key_info[table] = table_info
                 
@@ -15656,7 +15658,7 @@ class DataProject:
             fk_table = row['fk_table_name']
             pk = row['pk']
             fk = row['fk']
-            orphan_percentage = row['% Orphan']
+            orphan_percentage = row['Orphan']
             
             if pk in table_attributes[pk_table] and fk in table_attributes[fk_table]:
                 alert_name = f"⚠️ Referential Integrity Violation from {fk_table} to {pk_table}"
@@ -15785,7 +15787,7 @@ class DataProject:
             for _, row in self.referential_integrity.iterrows():
                 key = (row['pk_table_name'], row['pk'], row['fk_table_name'], row['fk'])
                 integrity_lookup[key] = {
-                    '% orphan': row['% Orphan'],
+                    'Orphan': row['Orphan'],
                     'explanation': row['Explanation']
                 }
                 
@@ -15812,7 +15814,7 @@ class DataProject:
                 integrity_key = (pk_table_name, pk, fk_table_name, fk)
                 if integrity_key in integrity_lookup:
                     fk_entry['referential_integrity'] = OrderedDict({
-                        '% orphan': integrity_lookup[integrity_key]['% orphan'],
+                        'Orphan': integrity_lookup[integrity_key]['Orphan'],
                         'explanation': integrity_lookup[integrity_key]['explanation']
                     })
 
@@ -15853,7 +15855,7 @@ class DataProject:
         foreign_key = reverse_join_graph(join_graph_yml)
         self.foreign_key = foreign_key
         
-        self.referential_integrity = pd.DataFrame(columns=["pk_table_name", "pk", "fk_table_name", "fk", "% Orphan", 'Explanation'])
+        self.referential_integrity = pd.DataFrame(columns=["pk_table_name", "pk", "fk_table_name", "fk", "Orphan", 'Explanation'])
 
         for table in join_graph_yml['join_graph']:
             if 'foreign_keys' in table:
@@ -15863,7 +15865,7 @@ class DataProject:
                     pk_table_name = fk['reference']['table_name']
                     pk_column = fk['reference']['column']
 
-                    orphan_percent = fk.get('referential_integrity', {}).get('% Orphan', 0)
+                    orphan_percent = fk.get('referential_integrity', {}).get('Orphan', 0)
                     explanation = fk.get('referential_integrity', {}).get('Explanation', 0)
                     if orphan_percent == 0:
                         continue
@@ -15873,7 +15875,7 @@ class DataProject:
                         "pk": [pk_column],
                         "fk_table_name": [fk_table_name],
                         "fk": [fk_column],
-                        "% Orphan": [orphan_percent],
+                        "Orphan": [orphan_percent],
                         "Explanation": [explanation]
                     })
 
@@ -16185,7 +16187,6 @@ class DataProject:
         return collected_list
 
     def display_tree(self, exclude_categories=None):
-        
         filtered_data = self.story
         
         if exclude_categories is None:
@@ -16193,34 +16194,19 @@ class DataProject:
         else:
             filtered_data = filter_categories(filtered_data, exclude_categories)
         
-        tree_data = {"root":{
-            'description': '',
-            'children': filtered_data
-        }}
+        html_output = generate_tree_html(filtered_data)
         
-        def process_hierarchy(data, func):
-            if isinstance(data, dict):
-                return {key: process_hierarchy(value, func) for key, value in data.items()}
-            elif isinstance(data, list):
-                return [func(item) for item in data]
-            else:
-                return data
-            
-        def extract_name(s):
-            return s['name']
-
-        processed_hierarchy = process_hierarchy(tree_data, extract_name)
-        
-        html_output = generate_html_tree(processed_hierarchy)
         html_content = f"""
-<style>
-{tree_hierarchy_css}
-</style>
-<body>
-{html_output}
-</body>
-"""
+    <style>
+    {tree_hierarchy_css}
+    </style>
+    <body>
+    {html_output}
+    </body>
+    """
         display(HTML(html_content))
+
+
     
     def get_lowest_categories(self, exclude_categories=None):
         
@@ -16341,6 +16327,27 @@ def reverse_join_graph(join_graph_dict):
 
     return foreign_key
 
+def generate_tree_html(filtered_data):
+    tree_data = {"root": {
+        'description': '',
+        'children': filtered_data
+    }}
+    
+    def process_hierarchy(data, func):
+        if isinstance(data, dict):
+            return {key: process_hierarchy(value, func) for key, value in data.items()}
+        elif isinstance(data, list):
+            return [func(item) for item in data]
+        else:
+            return data
+        
+    def extract_name(s):
+        return s['name']
+
+    processed_hierarchy = process_hierarchy(tree_data, extract_name)
+    
+    html_output = generate_html_tree(processed_hierarchy)
+    return html_output
 
 
 
@@ -22188,6 +22195,7 @@ def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_
     main_workflow.add_to_leaf(ReorderRelationToStoryForAll(output = output))
     
     main_workflow.add_to_leaf(BuildERStory(output = output))
+    main_workflow.add_to_leaf(DocumentProject(output = output))
 
     return query_widget, main_workflow
 
@@ -22899,7 +22907,7 @@ class CocoonBranchStep(Node):
         
         radio_buttons_widget2, _ = create_html_radio_buttons(coming_labels, disabled=True)
 
-        display(VBox([radio_buttons_widget, radio_buttons_widget2]))
+        display(radio_buttons_widget)
 
         next_button = widgets.Button(description="Start", button_style='success', icon="check")
         
@@ -29126,7 +29134,7 @@ reasoning: >
 keys: 
     - col1
     - col2
-pk: col1 # Leave empty if no primary key
+pk: col1 # Leave empty if no single-column primary key
 ```"""
 
         messages = [{"role": "user", "content": template}]
@@ -29565,6 +29573,14 @@ class DocumentProject(Node):
     default_description = 'This documents the project'
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        
+        if (hasattr(self, 'para') and 
+            isinstance(self.para, dict) and 
+            isinstance(self.para.get('cocoon_catalog_options'), dict) and 
+            self.para['cocoon_catalog_options'].get('catalog_html') is False):
+            callback({})
+            return
+        
         clear_output(wait=True)
         
         display(HTML(f"🥳 We have generated the report!"))
@@ -29573,583 +29589,8 @@ class DocumentProject(Node):
         dbt_project_name = self.para["dbt_name"]
         data_project = self.para["data_project"]
         con = self.item["con"]
-        side_list_idx = 1
-        side_list_html = ""
         
-        tab_content_html = ""
-        
-        source_tables = []
-        if file_exists(os.path.join(dbt_directory, "sources.yml")):
-            sources_file_path = os.path.join(dbt_directory, "sources.yml")
-            sources_content = read_from(sources_file_path)
-            sources_yml = yaml.load(sources_content, Loader=yaml.FullLoader)
-            
-            sources = sources_yml["sources"]
-            for source in sources:
-                if source["name"] == "cocoon":
-                    source_tables = source["tables"]
-                    database = source.get("database", None)
-                    schema = source.get("schema", None)
-                    
-                    table_names = []
-                    for table in source_tables:
-                        if isinstance(table, dict) and "name" in table:
-                            table_names.append(table["name"])
-                    
-                    if database is not None and schema is not None:
-                        source_tables = [
-                            (f'{enclose_table_name(database, con)}.{enclose_table_name(schema, con)}.{enclose_table_name(table_name, con)}', table_name)
-                            for table_name in table_names
-                        ]
-                    
-                    break
-                
-        source_choice_html = ""
-        source_div_html = ""
-        success_idx = 0
-
-        if len(source_tables) > 0:
-            for table_full, table_short in source_tables:
-                try:
-                    df_html = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table_full, con)} LIMIT 100').to_html()
-                    
-                    source_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_source_{table_short}">{table_short}</a>'
-                    
-                    source_div_html += f"""<div class="tab-pane fade {"show active" if success_idx == 0 else ""}" id="cocoon_source_{table_short}">
-                <p class="text-center mb-0">{table_short} <small class="text-muted">(first 100 rows)</small></p>
-                <div class="code_container mb-4 mx-4">{df_html}</div>
-                </div>"""
-                    
-                    success_idx += 1
-                except Exception as e:
-                    print(f"Error processing table {table_full}: {str(e)}")
-
-            if success_idx > 0:
-                side_list_html += f"""<a class="list-group-item list-group-item-action active" data-toggle="list" href="#cocoon_steps_source">
-                    <div>
-                        <h6 class="mb-0">{side_list_idx}. Source</h6>
-                        <small>Initial tables from data warehouses</small>
-                    </div>
-                </a>"""
-                side_list_idx += 1
-
-        tab_content_html += f"""
-<div class="tab-pane fade show active" id="cocoon_steps_source">
-    <nav class="navbar navbar-light bg-light">
-        <span class="navbar-brand mb-0">
-            <h5 class="card-title mb-0">Source Table</h5>
-        </span>
-        <ul class="nav">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle active" href="#"
-                    id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
-                    aria-expanded="false">
-                    Select Table
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                    {source_choice_html}
-                </div>
-            </li>
-        </ul>
-    </nav>
-    <div class="container">
-        <small class="text-muted">We display the source tables from the data warehouses to
-            model.</small>
-    </div>
-    <hr>
-    <div class="scroll-container overflow-auto">
-        <div class="tab-content mt-3">
-            {source_div_html}
-        </div>
-    </div>
-</div>
-"""
-        partition_tables = []
-
-        if file_exists(os.path.join(dbt_directory, "partition")):
-            for file_name in list_files_in(os.path.join(dbt_directory, "partition")):
-                if file_name.endswith(".yml"):
-                    partition_tables.append(file_name[:-4])
-
-        partition_choice_html = ""
-        partition_div_html = ""
-        success_idx = 0
-
-        if len(partition_tables) > 0:
-            for table in partition_tables:
-                try:
-                    file_path = os.path.join(dbt_directory, "partition", f"{table}.yml")
-                    yml_content = read_from(file_path)
-                                        
-                    partition_yml_dict = yaml.safe_load(yml_content)
-                    
-                    nodes = [partition_yml_dict['models'][0]['name']] + partition_yml_dict['cocoon_meta']['partitions']
-                    edges = [(i, 0) for i in range(1, len(nodes))]
-                    
-                    partition_cluster_output = generate_workflow_html_multiple(nodes, edges, directional=True)
-                    
-                    partition_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_partition_{table}">{table}</a>'
-                    
-                    partition_div_html += f"""<div class="tab-pane fade {"show active" if success_idx == 0 else ""}" id="cocoon_partition_{table}">
-                <p class="text-center">Table Partitions <small class="text-muted">(Partitions to cluster)</small></p>
-                <div class="container mb-4">{partition_cluster_output}</div>
-                <p class="text-center">{table}.yml <small class="text-muted"> (Document the partitions)</small></p>
-                <div class="code_container mb-4 mx-4">
-                    <pre><code class="language-yaml">{yml_content}</code></pre>
-                </div>
-            </div>"""
-                    
-                    success_idx += 1
-                except Exception as e:
-                    print(f"Error processing partition table {table}: {str(e)}")
-
-            if success_idx > 0:
-                side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_partition">
-                <div>
-                    <h6 class="mb-0">{side_list_idx}. Partition</h6>
-                    <small>Cluster table partitions</small>
-                </div>
-            </a>"""
-                side_list_idx += 1
-
-            tab_content_html += f"""
-<div class="tab-pane fade" id="cocoon_steps_partition">
-    <nav class="navbar navbar-light bg-light">
-        <span class="navbar-brand mb-0">
-            <h5 class="card-title mb-0">Partition Table</h5>
-        </span>
-        <ul class="nav">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle active" href="#"
-                    id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
-                    aria-expanded="false">
-                    Select Table
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                    {partition_choice_html}
-                </div>
-            </li>
-        </ul>
-    </nav>
-    <div class="container">
-        <small class="text-muted">Cluster tables that are stored separately, but for a similar purpose.</small>
-    </div>
-    <hr>
-    <div class="scroll-container overflow-auto">
-        <div class="tab-content mt-3">
-        {partition_div_html}
-        </div>
-    </div>
-</div>
-"""
-
-
-        stage_tables = []
-        
-        partition_directory = os.path.join(dbt_directory, "partition")
-        if file_exists(partition_directory):
-            for file_name in list_files_in(partition_directory):
-                if file_name.endswith(".yml"):
-                    partition_tables.append(file_name[:-4])
-
-        stage_choice_html = ""
-        stage_div_html = ""
-        success_idx = 0
-
-        if len(stage_tables) > 0:
-            for table in stage_tables:
-                try:
-                    yml_file_path = os.path.join(dbt_directory, "stage", f"{table}.yml")
-                    yml_content = read_from(yml_file_path)
-
-                    sql_file_path = os.path.join(dbt_directory, "stage", f"{table}.sql")
-                    sql_content = read_from(sql_file_path)
-                    
-                    table_pipeline = data_project.table_pipelines[table]
-                    df_html = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT 100').to_html()
-                    
-                    stage_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_stage_{table}">{table}</a>'
-                    
-                    stage_div_html += f"""<div class="tab-pane fade {"show active" if success_idx == 0 else ""}" id="cocoon_stage_{table}">
-                <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
-                <div class="code_container mb-4 mx-4">{df_html}</div>
-                
-                <p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
-                <div class="code_container mb-4 mx-4">
-                    <pre><code class="language-sql">{sql_content}</code></pre>
-                </div>
-                <p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
-                <div class="code_container mb-4 mx-4">
-                    <pre><code class="language-yaml">{yml_content}</code></pre>
-                </div>
-            </div>"""
-                    
-                    success_idx += 1
-                except Exception as e:
-                    print(f"Error processing stage table {table}: {str(e)}")
-
-            if success_idx > 0:
-                side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_stage">
-                <div>
-                    <h6 class="mb-0">{side_list_idx}. Stage</h6>
-                    <small>Clean and document the tables</small>
-                </div>
-            </a>"""
-                side_list_idx += 1
-
-            tab_content_html += f"""
-<div class="tab-pane fade" id="cocoon_steps_stage">
-    <nav class="navbar navbar-light bg-light">
-        <span class="navbar-brand mb-0">
-            <h5 class="card-title mb-0">Stage Table</h5>
-        </span>
-        <ul class="nav">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle active" href="#"
-                    id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
-                    aria-expanded="false">
-                    Select Table
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                    {stage_choice_html}
-                </div>
-            </li>
-        </ul>
-    </nav>
-    <div class="container">
-        <small class="text-muted">Source tables may have typos, unclear names, incorrect
-            column types, etc. We clean these tables.</small>
-    </div>
-    <hr>
-    <div class="scroll-container overflow-auto">
-        <div class="tab-content mt-3">
-        {stage_div_html}
-        </div>
-    </div>
-</div>
-"""
-
-
-        snapshot_tables = []
-        if file_exists(os.path.join(dbt_directory, "snapshot")):
-            for file_name in list_files_in(os.path.join(dbt_directory, "snapshot")):
-                if file_name.endswith(".yml"):
-                    snapshot_tables.append(file_name[:-4])
-
-        snapshot_choice_html = ""
-        snapshot_div_html = ""
-        success_idx = 0
-
-        if len(snapshot_tables) > 0:
-            for table in snapshot_tables:
-                try:
-                    yml_file_path = os.path.join(dbt_directory, "snapshot", f"{table}.yml")
-                    yml_content = read_from(yml_file_path)
-
-                    sql_file_path = os.path.join(dbt_directory, "snapshot", f"{table}.sql")
-                    sql_content = read_from(sql_file_path)
-                    
-                    table_pipeline = data_project.table_pipelines[table]
-                    df_html = run_sql_return_df(con, f'SELECT * FROM {table_pipeline} LIMIT 100').to_html()
-                    
-                    snapshot_choice_html += f'<a class="nav-link small {"active" if success_idx == 0 else ""}" data-toggle="tab" href="#cocoon_snapshot_{table}">{table}</a>'
-                    
-                    snapshot_div_html += f"""<div class="tab-pane fade {"show active" if success_idx == 0 else ""}" id="cocoon_snapshot_{table}">
-                <p class="text-center mb-0">{table} <small class="text-muted">(first 100 rows)</small></p>
-                <div class="code_container mb-4 mx-4">{df_html}</div>
-                
-                <p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
-                <div class="code_container mb-4 mx-4">
-                    <pre><code class="language-sql">{sql_content}</code></pre>
-                </div>
-                <p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
-                <div class="code_container mb-4 mx-4">
-                    <pre><code class="language-yaml">{yml_content}</code></pre>
-                </div>
-            </div>"""
-                    
-                    success_idx += 1
-                except Exception as e:
-                    print(f"Error processing snapshot table {table}: {str(e)}")
-
-            if success_idx > 0:
-                side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_scd">
-                <div>
-                    <h6 class="mb-0">{side_list_idx}. SCD Model</h6>
-                    <small>Snapshot from the change events</small>
-                </div>
-            </a>"""
-                side_list_idx += 1
-                
-            tab_content_html += f"""
-<div class="tab-pane fade" id="cocoon_steps_scd">
-    <nav class="navbar navbar-light bg-light">
-        <span class="navbar-brand mb-0">
-            <h5 class="card-title mb-0">Slowly Changing Dimension Model</h5>
-        </span>
-        <ul class="nav">
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle active" href="#"
-                    id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true"
-                    aria-expanded="false">
-                    Select Table
-                </a>
-                <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                    {snapshot_choice_html}
-                </div>
-            </li>
-        </ul>
-    </nav>
-
-    <div class="container">
-        <small class="text-muted">Some tables log change events, which may be redundant to
-            query. Instead, we take a snapshot of the latest.</small>
-    </div>
-    <hr>
-    <div class="scroll-container overflow-auto">
-        <div class="tab-content mt-3">
-            {snapshot_div_html}
-        </div>
-    </div>
-</div>
-"""
-
-
-
-        join_yml_content = ""
-        integration_div_html = ""
-        if file_exists(os.path.join(dbt_directory, "join", "cocoon_join.yml")):
-            file_path = os.path.join(dbt_directory, "join", "cocoon_join.yml")
-            join_yml_content = read_from(file_path)
-
-            join_yml_dict = yaml.load(join_yml_content, Loader=yaml.FullLoader)
-            foreign_key = reverse_join_graph(join_yml_dict)
-            nodes, edges = generate_nodes_edges(foreign_key)
-            
-            for entry in join_yml_dict['join_graph']:
-                table = entry['table_name']
-                if table not in nodes:
-                    nodes.append(table)
-                    
-            join_graph_output = generate_workflow_html_multiple(nodes, edges, directional=True)
-
-            integration_div_html = f"""<p class="text-center">Join Graph <small class="text-muted">(FK to PK)</small></p>
-<div class="container mb-4">{join_graph_output}</div>
-<p class="text-center">cocoon_join.yml <small class="text-muted"> (Document the joins)</small></p>
-<div class="code_container mb-4 mx-4">
-    <pre><code class="language-yaml">{join_yml_content}</code></pre>
-</div>"""
-
-            side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_join">
-    <div>
-        <h6 class="mb-0">{side_list_idx}. Integration</h6>
-        <small>Join graph from PK/FK</small>
-    </div>
-</a>"""
-            side_list_idx += 1
-
-            tab_content_html += f"""
-<div class="tab-pane fade" id="cocoon_steps_join">
-<nav class="navbar navbar-light bg-light">
-<span class="navbar-brand mb-0">
-    <h5 class="card-title mb-0">Integration</h5>
-</span>
-</nav>
-
-<div class="container">
-<small class="text-muted">We identify the primary key (PK) and foreign key (FK) from
-    tables. We build a join graph that connects FK to PK.</small>
-</div>
-<hr>
-{integration_div_html}
-</div>
-        """
-
-        er_yml_content = ""
-        er_div_html = ""
-        if file_exists(os.path.join(dbt_directory, "er", "cocoon_er.yml")):
-            er_file_path = os.path.join(dbt_directory, "er", "cocoon_er.yml")
-            er_yml_content = read_from(er_file_path)
-            
-            er_yml_dict = yaml.load(er_yml_content, Loader=yaml.FullLoader)
-            relation_map = {entry['relation_name']: entry['entities'] for entry in er_yml_dict['relations'] if 'relation_name' in entry}
-            relation_details = [{'Name': entry['name'], 'Description': entry['description'], 'Type': entry['type']} for entry in er_yml_dict['story']]
-
-            er_list_html = "\n".join([f'<li data-target="#cocoon_er_story_carousel" data-slide-to="{idx}" class="{"" if idx == 0 else ""}"></li>' for idx in range(len(relation_details))])
-            er_carousel_html = "\n".join([f'<div class="carousel-item {"active" if idx == 0 else ""}" style="transition: none;">{create_html_content_er_story(relation_map, relation_details, page_no=idx)}</div>' for idx in range(len(relation_details))])
-            er_div_html = f"""<div class="container">
-                <div id="cocoon_er_story_carousel" class="carousel slide" data-interval="false">
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <a class="btn btn-secondary" href="#cocoon_er_story_carousel" role="button"
-                            data-slide="prev">
-                            Prev
-                        </a>
-                        <a class="btn btn-secondary" href="#cocoon_er_story_carousel" role="button"
-                            data-slide="next">
-                            Next
-                        </a>
-                    </div>
-                    <ol class="carousel-indicators" style="position: relative; bottom: 30px;">
-                        {er_list_html}
-                    </ol>
-                    <div class="carousel-inner">
-                        {er_carousel_html}
-                    </div>
-                </div>
-            </div>
-            <p class="text-center">cocoon_er.yml <small class="text-muted"> (Document the ER model)</small></p>
-            <div class="code_container mb-4 mx-4">
-                <pre><code class="language-yaml">{er_yml_content}</code></pre>
-            </div>"""
-
-            side_list_html += f"""<a class="list-group-item list-group-item-action" data-toggle="list" href="#cocoon_steps_er">
-                <div>
-                    <h6 class="mb-0">{side_list_idx}. ER Model</h6>
-                    <small>Tell the story behind the tables</small>
-                </div>
-            </a>"""
-            side_list_idx += 1
-            
-            tab_content_html += f"""
-                                    <div class="tab-pane fade" id="cocoon_steps_er">
-                                        <nav class="navbar navbar-light bg-light">
-                                            <span class="navbar-brand mb-0">
-                                                <h5 class="card-title mb-0">Entity–Relationship model</h5>
-                                            </span>
-                                        </nav>
-                                        <div class="container">
-                                            <small class="text-muted">We identify the entities and relationships behind the
-                                                tables, and tell the story among these relationships.</small>
-                                        </div>
-                                        <hr>
-                                        {er_div_html}
-                                    </div>
-"""
-
-
-
-        model_html = f"""<!DOCTYPE html>
-        <html lang="en">
-
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Cocoon - Data Modeling</title>
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
-                integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
-            <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
-                integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
-                crossorigin="anonymous"></script>
-            <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
-                integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx"
-                crossorigin="anonymous"></script>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-sql.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-yaml.min.js"></script>
-        </head>
-        <style>
-            /* for list-group-item highlight */
-            .list-group-item.active {{
-                background-color: #464646;
-                border-color: #f8f9fa;
-                color: #ffffff;
-            }}
-
-            .list-group-item.active:hover {{
-                background-color: #bebebe;
-                border-color: #e9ecef;
-                color: #ffffff;
-            }}
-
-            /* for nav-link highlight */
-            .nav-link {{
-                color: #6c757d !important;
-                /* Gray color for inactive links */
-            }}
-
-            .nav-link.active {{
-                color: #000 !important;
-                /* Black color for active link */
-            }}
-
-
-        {small_table_style}
-
-        {code_container_style}
-
-            .code_container {{
-                max-height: calc(60vh);
-                overflow: auto;
-            }}
-
-            .code_container pre[class*="language-"] {{
-                border-radius: 4px;
-                padding: 1em;
-                margin: .5em 0;
-                overflow: auto;
-                font-size: 12px;
-            }}
-
-
-            .carousel-indicators li {{
-                background-color: #808080;
-                /* Gray for inactive indicators */
-            }}
-
-            .carousel-indicators .active {{
-                background-color: #000000;
-                /* Black for active indicator */
-            }}
-        </style>
-
-        <body>
-
-
-            <div class="container mt-4">
-                <!-- New row for the header -->
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank"
-                            class="text-decoration-none text-dark">
-                            <div class="d-flex align-items-center">
-                                <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png"
-                                    alt="cocoon icon" width="40" class="mr-3">
-                                <div>
-                                    <h4 class="mb-0">Cocoon Data Model</h4>
-                                    <small class="mb-0">Note: Cocoon uses LLMs and can make mistakes</small>
-                                </div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-md-6 d-flex align-items-center justify-content-end">
-                        <h2>{dbt_project_name}</h2>
-                    </div>
-                </div>
-
-
-                <div class="row">
-                    <div class="col-md-9">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="tab-content">
-                                    {tab_content_html}
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                    <div class="col-md-3">
-                        <div class="list-group" id="myTab" role="tablist">
-                            {side_list_html}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </body>
-
-        </html>"""
+        model_html = get_project_html(model_directory=dbt_directory, con=con, project_name=data_project, sample_size=5)
         
         display(HTML(wrap_in_iframe(model_html, width=1200, height=1200)))
         labels = ["HTML"]
@@ -30479,11 +29920,13 @@ class RefinePK(Node):
         template = f"""You have the following tables with primary keys:
 {pk_table_description}
 
-Your task is to cluster tables that share the same primary key:
-1. These tables are joinable on the primary key (but could need some transformation).
-2. These table names and primary key names shall be similar.
+Your task is to cluster tables that share the same primary key (pk):
+Check if these tables are joinable on the primary key (NOT on any of their foreign key).
+
 For example, 'UserInformation' has pk 'userid' and 'UserAddress' has pk 'UserIdentifier'. 
 They are joinable on 'userid' and 'UserIdentifier'. After join, they show a comprehensive user profile.
+
+However, 'Order'  has pk 'orderid' and fk 'userid'. It doesn't share pk because it joins on fk.
 
 Now, identify clusters of tables that are joinable on the their primary key.
 Return your analysis in the following YAML format:
@@ -30511,6 +29954,25 @@ clusters:
         yml_code = extract_yml_code(response['choices'][0]['message']["content"])
         summary = yaml.safe_load(yml_code)
         
+        if 'clusters' not in summary or not isinstance(summary['clusters'], list):
+            summary['clusters'] = []
+        
+        all_tables = set(pk_df['Table'])
+        clustered_tables = set()
+        
+        for cluster in summary['clusters']:
+            if 'tables' not in cluster:
+                raise ValueError(f"Cluster {cluster.get('cluster_name', 'unnamed')} is missing 'tables' key")
+            
+            for table in cluster['tables']:
+                if table not in all_tables:
+                    raise ValueError(f"Table '{table}' in cluster {cluster.get('cluster_name', 'unnamed')} does not exist in the original data")
+                
+                if table in clustered_tables:
+                    raise ValueError(f"Table '{table}' appears in multiple clusters")
+                
+                clustered_tables.add(table)
+            
         return summary
     
     def run_but_fail(self, extract_output):
@@ -31876,6 +31338,9 @@ class DebugSQLQuery(Node):
             "sql_query": sql_query,
             "error_message": "Database connection not provided"
         }
+            
+        if not sql_query:
+            return self.run_but_fail(extract_output=extract_output)
         
         database_hint = ""
         if con:
@@ -31936,6 +31401,10 @@ new_sql_query: |
 
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         code_clauses = run_output
+        
+        if not code_clauses["sql_query"]:
+            callback(code_clauses)
+            return
         
         display(HTML(f"🎉 <b>The codes are ready!</b>"))
         if "debug_reasoning" in code_clauses:
@@ -32246,7 +31715,7 @@ class DetectReferentialIntegrity(Node):
                         integrity_data.append({
                             'PK': f'{pk_table}[{pk_column}]',
                             'FK': f'{fk_table}[{fk_column}]',
-                            '% Orphan': f'{orphan_percentage:.2f}%',
+                            'Orphan': f'{orphan_percentage:.2f}%',
                             'Explanation': ''
                         })
                 except Exception as e:
@@ -32287,7 +31756,7 @@ pl_table: {pk_table}, pl_column: {pk_column}, fk_table: {fk_table}, fk_column: {
                 updated_df['fk_table_name'] = updated_df['FK'].apply(lambda x: x.split('[')[0])
                 updated_df['fk'] = updated_df['FK'].apply(lambda x: x.split('[')[1].rstrip(']'))
                 
-                data_project.referential_integrity = updated_df[["pk_table_name", "pk", "fk_table_name", "fk", "% Orphan", "Explanation"]]
+                data_project.referential_integrity = updated_df[["pk_table_name", "pk", "fk_table_name", "fk", "Orphan", "Explanation"]]
                 
                 callback(document)
 
@@ -33494,11 +32963,12 @@ class ReorderRelationToStory(Node):
         template = f"""For a database, you have the following 'Name': 'Description'
 {combined_desc}
 Now, tell a story using these elements. 
-First, reorder them based on the sequence of events or logical flow. E.g., "Customer opens account" should come before "Customer deposits money".
+First, reorder them based on the sequence of events or logical flow. E.g., "Customer opens accounts" should come before "Customer deposits money".
 Then, modify the description for each element:
 (1) Make the story coherent. 
 (2) If involving entities, be clear about how they are related.
-(3) Avoid general terms (e.g., 'relates', 'has', etc)
+(3) AVOID general verbs like 'relate', 'have', 'do'
+(4) DONT make up character. E.g., "Customer *Tom* opens account" has a made up Tom.
 
 Return in the following format:
 ```yml
@@ -34194,34 +33664,7 @@ def create_cocoon_dbt_explore_workflow(output=None, para={}, dbt_directory=None,
     return main_workflow
 
 class DbtLineage:
-    tag_css = """.tag {
-    display: inline-block;
-    padding: 0.25em 0.6em;
-    font-size: 75%;
-    font-weight: 700;
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: 0.4rem;
-    margin-right: 0.5em; /* Adds space between tags */
-}"""
-    table_css = """.columns-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-.columns-table th, .columns-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
-.columns-table th {
-    background-color: #f2f2f2;
-    font-weight: bold;
-}
-.columns-table tr:nth-child(even) {
-    background-color: #f9f9f9;
-}"""
+
 
     def __init__(self, db_name=None, nodes=None, edges=None, sql_mapping=None, column_mapping=None):
         self.conn = duckdb.connect(':memory:')
@@ -34392,8 +33835,8 @@ class DbtLineage:
             font-size: 12px;
         }}
         {css_style}
-        {self.tag_css}
-        {self.table_css}
+        {tag_css}
+        {table_css}
     </style>
 </head>
 <body>
@@ -34729,8 +34172,8 @@ class DbtLineage:
                     font-size: 12px;
                 }}
                 {css_style}
-                {self.tag_css}
-                {self.table_css}
+                {tag_css}
+                {table_css}
             </style>
         </head>
         <body>
@@ -35025,8 +34468,8 @@ class DbtLineage:
             font-size: 12px;
         }}
         {css_style}
-        {self.tag_css}
-        {self.table_css}
+        {tag_css}
+        {table_css}
     </style>
 </head>
 <body>
@@ -35070,8 +34513,8 @@ class DbtLineage:
                     font-size: 12px;
                 }}
                 {css_style}
-                {self.tag_css}
-                {self.table_css}
+                {tag_css}
+                {table_css}
             </style>
         </head>
         <body>
@@ -35931,27 +35374,203 @@ class FindTablesAndMatchSchemaForAll(MultipleNode):
         workflow.add_to_leaf(TableSummaryAnalysisNode())
         workflow.add_to_leaf(SourceToTargetTableAnalysisNode())
         workflow.add_to_leaf(SchemaMatchingForAll())
+        workflow.add_to_leaf(RefineSchemaMatching())
+        workflow.add_to_leaf(JoinGraphFromMatchingBuilder())
+        workflow.add_to_leaf(SQLQueryMatchingConstructor())
+        
         return workflow
 
     def extract(self, item):
-        target_tables = list(self.para['target_data_project'].tables.keys())
+        
+        related_steps = self.get_sibling_document('Related Steps Finder').get('related_steps', [])
+        if related_steps:
+            target_data_project = self.para['target_data_project']
+            target_tables = extract_related_tables(target_data_project, related_steps)
+            target_tables.sort()
+        else:
+            target_tables = list(self.para['target_data_project'].tables.keys())
         
         self.elements = target_tables
         self.nodes = {element: self.construct_node(element, idx, len(self.elements))
                       for idx, element in enumerate(self.elements)}
         
         
+class DBTSourceProjectConfigAndRead(Node):
+    default_name = 'DBT Project Configuration and Read'
+    default_description = 'This step allows you to specify an existing DBT project directory, preview, and read the project.'
+    create = True
 
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        dbt_directory_input = widgets.Text(
+            description='Catalog Directory:',
+            value=self.para.get("dbt_directory", ""),
+            placeholder="/path/to/your/dbt/project",
+            style={'description_width': 'initial'},
+            layout={'width': '50%'}
+        )
+
+        preview_button = widgets.Button(description="Preview Catalog", button_style='info', icon='eye')
+        submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
+        submit_button.layout.display = 'none'
+
+        output = widgets.Output()
+
+        create = self.class_para.get("create", self.create)
+        
+        def read_project(directory):
+            with self.output_context():
+                if not directory:
+                    print("Please specify a directory.")
+                    return None
+                
+                display(HTML(f"{running_spinner_html} Creating temp views ..."))
+                
+                try:
+                    con = self.item["con"]
+                    database = self.para.get("database", None)
+                    schema = self.para.get("schema", None)
+                    
+                    data_project = read_data_project_from_dir(directory, con, database=database, schema=schema, create=create)
+                    
+                    self.para["data_project"] = data_project
+                    self.para["dbt_directory"] = directory
+                    
+                    return data_project
+                except Exception as e:
+                    print(f"Error reading project: {str(e)}")
+                    return None
+
+        def on_preview_click(b):
+            with self.output_context():
+                directory = dbt_directory_input.value
+                data_project = read_project(directory)
+                if data_project:
+                    data_project.display_story_multiple_page()
+                    submit_button.layout.display = 'block'
+
+        def on_submit_click(b):
+            with self.output_context():
+                directory = dbt_directory_input.value
+                callback({"dbt_directory": directory})
+
+        preview_button.on_click(on_preview_click)
+        submit_button.on_click(on_submit_click)
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if "dbt_directory" in self.para:
+                dbt_directory_input.value = self.para["dbt_directory"]
+                on_preview_click(preview_button)
+                
+                if submit_button.layout.display != 'none':
+                    on_submit_click(submit_button)
+                return
+
+        create_progress_bar_with_numbers(0, migration_steps)
+        display(HTML("<h3>📂 Specify Source Catalog Directory</h3><em>Built by Cocoon</em>"))
+        display(dbt_directory_input)
+        display(preview_button)
+        display(submit_button)
+        display(output)
+        
+class DBTTargetProjectConfigAndRead(Node):
+    default_name = 'DBT Project Configuration and Read'
+    default_description = 'This step allows you to specify an existing DBT project directory, preview, and read the project.'
+    create = True
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        dbt_directory_input = widgets.Text(
+            description='Catalog Directory:',
+            value=self.para.get("dbt_directory", ""),
+            placeholder="/path/to/your/dbt/project",
+            style={'description_width': 'initial'},
+            layout={'width': '50%'}
+        )
+
+        preview_button = widgets.Button(description="Preview Catalog", button_style='info', icon='eye')
+        submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
+        submit_button.layout.display = 'none'
+
+        output = widgets.Output()
+
+        create = self.class_para.get("create", self.create)
+        
+        def read_project(directory):
+            with self.output_context():
+                if not directory:
+                    print("Please specify a directory.")
+                    return None
+                
+                display(HTML(f"{running_spinner_html} Creating temp views ..."))
+                
+                try:
+                    con = self.item["con"]
+                    database = self.para.get("database", None)
+                    schema = self.para.get("schema", None)
+                    
+                    data_project = read_data_project_from_dir(directory, con, database=database, schema=schema, create=create)
+                    
+                    self.para["data_project"] = data_project
+                    self.para["dbt_directory"] = directory
+                    
+                    return data_project
+                except Exception as e:
+                    print(f"Error reading project: {str(e)}")
+                    return None
+
+        def on_preview_click(b):
+            with self.output_context():
+                directory = dbt_directory_input.value
+                data_project = read_project(directory)
+                if data_project:
+                    data_project.display_story_multiple_page()
+                    submit_button.layout.display = 'block'
+
+        def on_submit_click(b):
+            with self.output_context():
+                directory = dbt_directory_input.value
+                callback({"dbt_directory": directory})
+
+        preview_button.on_click(on_preview_click)
+        submit_button.on_click(on_submit_click)
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if "dbt_directory" in self.para:
+                dbt_directory_input.value = self.para["dbt_directory"]
+                on_preview_click(preview_button)
+                
+                if submit_button.layout.display != 'none':
+                    on_submit_click(submit_button)
+                return
+
+        create_progress_bar_with_numbers(0, migration_steps)
+        display(HTML("<h3>📂 Specify Target Catalog Directory</h3><em>Built by Cocoon</em>"))
+        display(dbt_directory_input)
+        display(preview_button)
+        display(submit_button)
+        display(output)
+        
+        
 class DBTProjectConfigAndReadMultiple(MultipleNode):
     default_name = 'DBT Project Config and Read Multiple'
     default_description = 'This creates DBTProjectConfigAndRead nodes for source and target directories'
+    
+        
     
     def construct_node(self, element_name="", dbt_directory="", create=True):
         para = self.para.copy()
         para["element_name"] = element_name
         para["dbt_directory"] = dbt_directory
         
-        node = DBTProjectConfigAndRead(para=para, class_para={"create": create})
+        if element_name == "source":
+            node = DBTSourceProjectConfigAndRead(para=para, class_para={"create": create})
+        elif element_name == "target":
+            node = DBTTargetProjectConfigAndRead(para=para, class_para={"create": create})
+        else:
+            node = DBTProjectConfigAndRead(para=para, class_para={"create": create})
         node.inherit(self)
         return node
     
@@ -36199,6 +35818,7 @@ class RefineSchemaMatching(Node):
             if mappings:
                 mapping_description.append(f"Target column '{target_column}' can be mapped from:\n" + "\n".join(f"- {m}" for m in mappings))
 
+        database_description.sort()
         mapping_description_text = "\n\n".join(mapping_description)
         database_description_text = "\n\n".join(database_description)
         
@@ -36384,6 +36004,8 @@ The following related tables with primary key and foreign key information:
 
 Please explain how these tables shall be join to finish the tasks.
 Choose the most sensiable join path.
+
+Now respond in the following format:
 ```yml
 reasoning: >-
     Explain how to join {", ".join(related_tables)}
@@ -36407,8 +36029,14 @@ join_graph:
         if 'reasoning' not in analysis or not isinstance(analysis['reasoning'], str):
             raise ValueError("Analysis should contain a 'reasoning' key with a string value")
         
-        if 'join_graph' not in analysis or not isinstance(analysis['join_graph'], list):
+        if 'join_graph' not in analysis:
+            raise ValueError("Analysis should contain a 'join_graph' key")
+        
+        if analysis['join_graph'] and not isinstance(analysis['join_graph'], list):
             raise ValueError("Analysis should contain a 'join_graph' key with a list value")
+        
+        if not analysis['join_graph']:
+            analysis['join_graph'] = []
         
         for join in analysis['join_graph']:
             if not isinstance(join, list) or len(join) != 4:
@@ -36570,9 +36198,13 @@ sql_query: |
         display(HTML(f"<b>Summary:</b> <i>{run_output['reasoning']}</i>"))
 
         highlighted_html = highlight_sql(run_output['sql_query'])
-        display(HTML(highlighted_html + f"""<div style="color: orange; font-style: italic; font-size: 0.9em;">
-            ⚠️ SQL query is just for reference based on schema. To ensure correctness, data access is required.
-        </div>"""))
+        con = self.item["con"]
+        if not con:
+            highlighted_html += f"""<div style="color: orange; font-style: italic; font-size: 0.9em;">
+    ⚠️ SQL query is just for reference based on schema. To ensure correctness, data access is required.
+</div>"""
+        
+        display(HTML(highlighted_html))
         
         next_button = widgets.Button(
             description='Next',
@@ -36593,7 +36225,6 @@ sql_query: |
         if viewer:
             on_next_button_clicked(next_button)
             return
-
 
 def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
     
@@ -36627,12 +36258,10 @@ def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=F
     main_workflow.add_to_leaf(RelatedStepsFinder(output=output))
     
     main_workflow.add_to_leaf(FindTablesAndMatchSchemaForAll(output=output))
-    
+    main_workflow.add_to_leaf(SummarizeSchemaMatching(output=output))
     
 
     return query_widget, main_workflow
-
-
         
 class FindTablesAndMatchSchemaForAll(MultipleNode):
     default_name = 'Find Tables and Match Schema For All'
@@ -37509,6 +37138,18 @@ class BuildTableHierarchy(Node):
 
         cleaned_category = clean_category(extracted_category)
         
+        def on_next_button_clicked(b):
+            with self.output_context():
+                callback(cleaned_category)
+                return
+            
+        if isinstance(cleaned_category, dict) and len(cleaned_category) == 1:
+            key = next(iter(cleaned_category))
+            
+            if 'children' in cleaned_category[key] and isinstance(cleaned_category[key]['children'], list):
+                on_next_button_clicked(None)
+                return
+        
         clear_output(wait=True)
         display(HTML("😎 We have clustered the relations based on the concepts..."))
         
@@ -37530,9 +37171,7 @@ class BuildTableHierarchy(Node):
             icon='check' 
         )
         
-        def on_next_button_clicked(b):
-            with self.output_context():
-                callback(cleaned_category)
+
         
         next_button.on_click(on_next_button_clicked)
 
@@ -37564,6 +37203,8 @@ def extract_category_paths(data, current_path=None):
             elif isinstance(value, list):
                 result.append((new_path, value))
     
+    if isinstance(data, list):
+        result.append((["All"], data))
     return result
 
 
@@ -37849,7 +37490,8 @@ summary: >-
 concept_mappings:
   - source_term: customer
     target_term: client
-    summary: both refer to those who purchase goods or services
+    summary: >-
+        both refer to those who purchase goods or services
   # Add more mappings as needed
 ```"""
         
@@ -37905,7 +37547,7 @@ concept_mappings:
             callback(df.to_json(orient="split"))
             return
         
-        editable_columns = [False, False, False, True]
+        editable_columns = [True, True, False, True]
         reset = True
         long_text = ['Explanation']
         grid = create_dataframe_grid(df, editable_columns, reset=reset, long_text=long_text)
@@ -38164,22 +37806,560 @@ class SummarizeSchemaMatching(Node):
                     edge = (source_table, source_col['column_name'], target_table, target_col)
                     edges.append(edge)
                     
-                    
-                
-                
-                
-                
-
             html_output = generate_schema_graph_graphviz(nodes, edges)
 
-            run_output = document[target_table_name]['SQL Query Constructor']
-            highlighted_html = highlight_sql(run_output['sql_query'])
+            con = self.item.get("con")
+
+            if con:
+                sql_query = document[target_table_name]['Debug SQL']['sql_query']
+                if 'Debug SQL' in document[target_table_name] and 'sample_output' in document[target_table_name]['Debug SQL']:
+                    sample_output_html = pd.DataFrame(document[target_table_name]['Debug SQL']['sample_output']).to_html()
+                else:
+                    sample_output_html = ""
+            else:
+                run_output = document[target_table_name]['SQL Query Constructor']
+                sql_query = run_output['sql_query']
+                sample_output_html = """<div style="color: orange; font-style: italic; font-size: 0.9em;">
+                ⚠️ SQL query is just for reference based on schema. To ensure correctness, data access is required.
+                </div>"""
+
+            if sql_query:
+                highlighted_html = highlight_sql(sql_query)
+            else:
+                highlighted_html = ""
             
-            final_html = html_output + highlighted_html + f"""<div style="color: orange; font-style: italic; font-size: 0.9em;">
-            ⚠️ SQL query is just for reference based on schema. To ensure correctness, data access is required.
-        </div>"""
-            tab_data.append([target_table_name, final_html]) 
+            final_html = html_output + highlighted_html + sample_output_html
+            tab_data.append([target_table_name, final_html])
             
         
         tabs = create_dropdown_with_content(tab_data)
         display(tabs)
+        
+        options = {element[0]: element[1] for element in tab_data}
+        model_html = generate_dropdown_html("cocoon", options, full=False)
+        
+        formatter = HtmlFormatter(style='monokai')
+        css_style = formatter.get_style_defs('.highlight')
+        transfortm_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <style>
+        pre {{ line-height: 125%; }}
+        .highlight {{
+            background: #272822;
+            color: #f8f8f2;
+            border-radius: 4px;
+            padding: 1em;
+            margin: 1em 0;
+            overflow-x: auto;
+            font-size: 12px;
+        }}
+        {css_style}
+        {tag_css}
+        {pandas_css}
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row mb-4">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank"
+                        class="text-decoration-none text-dark">
+                        <div class="d-flex align-items-center">
+                            <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png"
+                                alt="cocoon icon" width="40" class="mr-3">
+                            <div class="mx-3">
+                                <h4 class="mb-0">Cocoon Transformation</h4>
+                                <small class="mb-0 text-muted">Transform from Source to Target using LLMs</small>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-6 d-flex align-items-center justify-content-end">
+                    <h3></h3>
+                </div>
+            </div>
+            {model_html}
+        </div>
+    </div>    
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container">
+            <div style="height: 6rem;"></div>
+        </div>
+    </footer>
+</body>
+</html>
+        """
+        labels = ["HTML"]
+        file_names = [os.path.join(".", "transform.html")]
+        contents = [transfortm_html]
+        
+        overwrite_checkbox, save_button, save_files_click = ask_save_files(labels, file_names, contents)
+
+def generate_full_step_page(cocoon_title, cocoon_note, project_title, side_list_html, tab_content_html, additional_css=""):
+    model_html = f"""<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocoon - Data Modeling</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+        integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+        integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-yaml.min.js"></script>
+</head>
+<style>
+    /* for list-group-item highlight */
+    .list-group-item.active {{
+        background-color: #464646;
+        border-color: #f8f9fa;
+        color: #ffffff;
+    }}
+
+    .list-group-item.active:hover {{
+        background-color: #bebebe;
+        border-color: #e9ecef;
+        color: #ffffff;
+    }}
+
+    /* for nav-link highlight */
+    .nav-link {{
+        color: #6c757d !important;
+        /* Gray color for inactive links */
+    }}
+
+    .nav-link.active {{
+        color: #000 !important;
+        /* Black color for active link */
+    }}
+
+{small_table_style}
+{code_container_style}
+{additional_css}
+
+    .code_container {{
+        max-height: calc(60vh);
+        overflow: auto;
+    }}
+
+    .code_container pre[class*="language-"] {{
+        border-radius: 4px;
+        padding: 1em;
+        margin: .5em 0;
+        overflow: auto;
+        font-size: 12px;
+    }}
+
+
+    .carousel-indicators li {{
+        background-color: #808080;
+        /* Gray for inactive indicators */
+    }}
+
+    .carousel-indicators .active {{
+        background-color: #000000;
+        /* Black for active indicator */
+    }}
+</style>
+
+<body>
+
+
+    <div class="container mt-4">
+        <!-- New row for the header -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank"
+                    class="text-decoration-none text-dark">
+                    <div class="d-flex align-items-center">
+                        <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png"
+                            alt="cocoon icon" width="40" class="mr-3">
+                        <div>
+                            <h4 class="mb-0">{cocoon_title}</h4>
+                            <small class="mb-0">{cocoon_note}</small>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 d-flex align-items-center justify-content-end">
+                <h2>{project_title}</h2>
+            </div>
+        </div>
+
+
+        <div class="row">
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="tab-content">
+                            {tab_content_html}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="col-md-3">
+                <div class="list-group" id="myTab" role="tablist">
+                    {side_list_html}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>"""
+    return model_html
+
+
+
+
+def get_project_html(dbt_directory=None, con=None, model_directory=None, project_name="project", database = None, schema = None, sample_size=0):
+    if con is None:
+        con = duckdb.connect(database=':memory:')
+        data_project = read_data_project_from_dir(dbt_directory, con, database=database, schema=schema)
+    if model_directory is None:
+        model_directory = os.path.join(dbt_directory, "models")
+    catalog_page_items = []
+
+    source_tables = []
+    sources_file_path = os.path.join(model_directory, "sources.yml")
+
+    def create_sample_string(sample_size):
+        if sample_size == 0:
+            return "schema only"
+        elif sample_size == 1:
+            return "first 1 row"
+        else:
+            return f"first {sample_size} rows"
+    
+    if os.path.exists(sources_file_path):
+        with open(sources_file_path, 'r') as file:
+            sources_yml = yaml.safe_load(file)
+        
+        sources = sources_yml.get("sources", [])
+        for source in sources:
+            if source.get("name") == "cocoon":
+                source_tables = source.get("tables", [])
+                database = source.get("database")
+                schema = source.get("schema")
+                
+                table_names = [table["name"] for table in source_tables if isinstance(table, dict) and "name" in table]
+                
+                if database is not None and schema is not None:
+                    source_tables = [
+                        (f'{enclose_table_name(database, con)}.{enclose_table_name(schema, con)}.{enclose_table_name(table_name, con)}', table_name)
+                        for table_name in table_names
+                    ]
+                break
+
+        source_content = {}
+        for table_full, table_short in source_tables:
+            try:
+                df = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table_full, con)} LIMIT {sample_size}')
+                source_content[table_short] = f'<p class="text-center mb-0">Table Preview<small class="text-muted">({create_sample_string(sample_size)})</small></p><div class="code_container mb-4 mx-4">{df.to_html()}</div>'
+            except Exception as e:
+                print(f"Error processing table {table_full}: {str(e)}")
+
+        source_items = {
+            'id': 'source',
+            'title': 'Source',
+            'list_description': 'Initial tables from data warehouses',
+            'nav_description': 'We display the source tables from the data warehouses to model.',
+            'content': generate_div_html('source', source_content),
+            'nav_content': generate_choice_html('source', list(source_content.keys()), "Select Source Table")
+        }
+        
+        catalog_page_items.append(source_items)
+
+    partition_tables = []
+    partition_dir = os.path.join(model_directory, "partition")
+
+    if os.path.exists(partition_dir):
+        partition_tables = [f[:-4] for f in os.listdir(partition_dir) if f.endswith('.yml')]
+
+        partition_content = {}
+        for table in partition_tables:
+            try:
+                file_path = os.path.join(partition_dir, f"{table}.yml")
+                with open(file_path, 'r') as file:
+                    yml_content = file.read()
+                
+                partition_yml_dict = yaml.safe_load(yml_content)
+                
+                nodes = [partition_yml_dict['models'][0]['name']] + partition_yml_dict['cocoon_meta']['partitions']
+                edges = [(i, 0) for i in range(1, len(nodes))]
+                
+                partition_cluster_output = generate_workflow_html_multiple(nodes, edges, directional=True)
+                
+                partition_html = f"""
+<p class="text-center">Table Partitions <small class="text-muted">(Partitions to cluster)</small></p>
+<div class="container mb-4">{partition_cluster_output}</div>
+<p class="text-center">{table}.yml <small class="text-muted"> (Document the partitions)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-yaml">{yml_content}</code></pre>
+</div>
+"""
+        
+                partition_content[table] = partition_html
+            except Exception as e:
+                print(f"Error processing partition table {table}: {str(e)}")
+
+        partition_items = {
+            'id': 'partition',
+            'title': 'Partition',
+            'list_description': 'Cluster table partitions',
+            'nav_description': 'We display the partition tables and their configurations.',
+            'content': generate_div_html('partition', partition_content),
+            'nav_content': generate_choice_html('partition', list(partition_content.keys()), "Select Partition")
+        }
+        catalog_page_items.append(partition_items)
+
+    stage_dir = os.path.join(model_directory, "stage")
+    
+    if os.path.exists(stage_dir):
+        stage_tables = [f[:-4] for f in os.listdir(stage_dir) if f.endswith('.sql')]
+        stage_content = {}
+        for table in stage_tables:
+            try:
+                yml_file_path = os.path.join(stage_dir, f"{table}.yml")
+                with open(yml_file_path, 'r') as file:
+                    yml_content = file.read()
+
+                sql_file_path = os.path.join(stage_dir, f"{table}.sql")
+                with open(sql_file_path, 'r') as file:
+                    sql_content = file.read()
+                
+                df = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table, con)} LIMIT {sample_size}')
+                
+                stage_html = f"""
+<p class="text-center mb-0">Table Preview <small class="text-muted">({create_sample_string(sample_size)})</small></p>
+<div class="code_container mb-4 mx-4">{df.to_html()}</div>
+
+<p class="text-center">{table}.sql <small class="text-muted">(clean the table)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-sql">{sql_content}</code></pre>
+</div>
+<p class="text-center">{table}.yml <small class="text-muted"> (Document the table)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-yaml">{yml_content}</code></pre>
+</div>
+"""
+                stage_content[table] = stage_html
+            except Exception as e:
+                print(f"Error processing stage table {table}: {str(e)}")
+
+        stage_items = {
+            'id': 'stage',
+            'title': 'Stage',
+            'list_description': 'Clean and document the tables',
+            'nav_description': 'We display the stage tables, their SQL transformations, and their configurations.',
+            'content': generate_div_html('stage', stage_content),
+            'nav_content': generate_choice_html('stage', list(stage_content.keys()), "Select Stage Table")
+        }
+        catalog_page_items.append(stage_items)
+
+    snapshot_dir = os.path.join(model_directory, "snapshot")
+    
+    if os.path.exists(snapshot_dir):
+        snapshot_tables = [f[:-4] for f in os.listdir(snapshot_dir) if f.endswith('.sql')]
+        snapshot_content = {}
+        for table in snapshot_tables:
+            try:
+                yml_file_path = os.path.join(snapshot_dir, f"{table}.yml")
+                with open(yml_file_path, 'r') as file:
+                    yml_content = file.read()
+
+                sql_file_path = os.path.join(snapshot_dir, f"{table}.sql")
+                with open(sql_file_path, 'r') as file:
+                    sql_content = file.read()
+                
+                df = run_sql_return_df(con, f'SELECT * FROM {enclose_table_name(table, con)} LIMIT {sample_size}')
+                
+                snapshot_html = f"""
+<p class="text-center mb-0">Table Preview <small class="text-muted">({create_sample_string(sample_size)})</small></p>
+<div class="code_container mb-4 mx-4">{df.to_html()}</div>
+
+<p class="text-center">{table}.sql <small class="text-muted">(snapshot definition)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-sql">{sql_content}</code></pre>
+</div>
+<p class="text-center">{table}.yml <small class="text-muted"> (Document the snapshot)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-yaml">{yml_content}</code></pre>
+</div>
+"""
+                snapshot_content[table] = snapshot_html
+            except Exception as e:
+                print(f"Error processing snapshot table {table}: {str(e)}")
+
+        snapshot_items = {
+            'id': 'snapshot',
+            'title': 'SCD Model',
+            'list_description': 'Snapshot from the change events',
+            'nav_description': 'We display the snapshot tables, their SQL definitions, and their configurations.',
+            'content': generate_div_html('snapshot', snapshot_content),
+            'nav_content': generate_choice_html('snapshot', list(snapshot_content.keys()), "Select Snapshot Table")
+        }
+        catalog_page_items.append(snapshot_items)
+        
+    join_content = ""
+    join_file_path = os.path.join(model_directory, "join", "cocoon_join.yml")
+
+    if os.path.exists(join_file_path):
+        with open(join_file_path, 'r') as file:
+            join_yml_content = file.read()
+
+        join_yml_dict = yaml.safe_load(join_yml_content)
+        foreign_key = reverse_join_graph(join_yml_dict)
+        nodes, edges = generate_nodes_edges(foreign_key)
+        
+        for entry in join_yml_dict['join_graph']:
+            table = entry['table_name']
+            if table not in nodes:
+                nodes.append(table)
+                
+        join_graph_output = generate_workflow_html_multiple(nodes, edges, directional=True)
+
+        join_content = f"""
+<p class="text-center">Join Graph <small class="text-muted">(FK to PK)</small></p>
+<div class="container mb-4">{join_graph_output}</div>
+<p class="text-center">cocoon_join.yml <small class="text-muted"> (Document the joins)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-yaml">{join_yml_content}</code></pre>
+</div>
+"""
+
+        join_items = {
+            'id': 'join',
+            'title': 'Integration',
+            'list_description': 'Join graph from PK/FK',
+            'nav_description': 'We identify the primary key (PK) and foreign key (FK) from tables. We build a join graph that connects FK to PK.',
+            'content': join_content,
+            'nav_content': ''
+        }
+        catalog_page_items.append(join_items)
+
+    er_content = ""
+    er_file_path = os.path.join(model_directory, "er", "cocoon_er.yml")
+
+    if os.path.exists(er_file_path):
+        with open(er_file_path, 'r') as file:
+            er_yml_content = file.read()
+        
+        er_yml_dict = yaml.safe_load(er_yml_content)
+        
+        relation_map = {entry['relation_name']: entry['entities'] 
+                        for entry in er_yml_dict['relations'] 
+                        if 'relation_name' in entry}
+        
+        if 'story' in er_yml_dict and isinstance(er_yml_dict['story'], dict):
+            tree_output = generate_tree_html(er_yml_dict['story'])
+
+            cat_content = f"""
+<p class="text-center">Tree Categories</p>
+<div class="container mb-4">{tree_output}</div>
+<p class="text-center mt-4">cocoon_er.yml <small class="text-muted">(Document the entity relationships)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-yaml">{er_yml_content}</code></pre>
+</div>
+"""
+
+            cat_items = {
+                'id': 'tree',
+                'title': 'Category',
+                'list_description': 'Category of the tables',
+                'nav_description': 'We recrusively summarize the data.',
+                'content': cat_content,
+                'nav_content': ''
+            }
+            catalog_page_items.append(cat_items)
+
+    knowledge_content = {}
+    path_names = {}
+
+    if os.path.exists(er_file_path):
+        with open(er_file_path, 'r') as file:
+            er_yml_content = file.read()
+        
+        er_yml_dict = yaml.safe_load(er_yml_content)
+        
+        paths = extract_category_paths(er_yml_dict['story'])
+        
+        relation_map = {entry['relation_name']: entry['entities'] 
+                        for entry in er_yml_dict['relations'] 
+                        if 'relation_name' in entry}
+        
+        for path_idx, (path, content) in enumerate(paths):
+            
+            relation_details = content
+
+            er_list_html = "\n".join([f'<li data-target="#cocoon_er_story_carousel_{path_idx}" data-slide-to="{idx}" class="{"active" if idx == 0 else ""}"></li>' 
+                                    for idx in range(len(relation_details))])
+            
+            er_carousel_html = "\n".join([f'<div class="carousel-item {"active" if idx == 0 else ""}" style="transition: none;">{create_html_content_er_story(relation_map, relation_details, page_no=idx)}</div>' 
+                                        for idx in range(len(relation_details))])
+
+            knowledge_html = f"""
+<p class="text-center">Process Story</p>
+<div class="container">
+    <div id="cocoon_er_story_carousel_{path_idx}" class="carousel slide" data-interval="false">
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <a class="btn btn-secondary" href="#cocoon_er_story_carousel_{path_idx}" role="button"
+                data-slide="prev">
+                Prev
+            </a>
+            <a class="btn btn-secondary" href="#cocoon_er_story_carousel_{path_idx}" role="button"
+                data-slide="next">
+                Next
+            </a>
+        </div>
+        <ol class="carousel-indicators" style="position: relative; bottom: 30px;">
+            {er_list_html}
+        </ol>
+        <div class="carousel-inner">
+            {er_carousel_html}
+        </div>
+    </div>
+</div>
+"""     
+
+            if isinstance(path, list) and len(path) == 1 and path[0] == "All":
+                knowledge_html += f"""<p class="text-center mt-4">cocoon_er.yml <small class="text-muted">(Document the entity relationships)</small></p>
+<div class="code_container mb-4 mx-4">
+    <pre><code class="language-yaml">{er_yml_content}</code></pre>
+</div>"""
+            path_id = "_".join([p.replace(" ", "_") for p in path])
+            path_name = '>'.join(path)
+            knowledge_content[path_id] = knowledge_html
+            path_names[path_id] = path_name
+
+        knowledge_items = {
+            'id': 'knowledge',
+            'title': 'Process',
+            'list_description': 'Process behind the tables',
+            'nav_description': 'We illustrate the step-by-step process behind the data.',
+            'content': generate_div_html('knowledge', knowledge_content),
+            'nav_content': generate_choice_html('knowledge', path_names, "Select Category")
+        }
+        catalog_page_items.append(knowledge_items)
+
+    side_list_html, tab_content_html = generate_side_list_and_tab_content(catalog_page_items)
+
+    model_html = generate_full_step_page("Cocoon Catalog", "Verified by human, RAG by LLMs", project_name, side_list_html, tab_content_html, additional_css=tree_hierarchy_css)
+    return model_html
+

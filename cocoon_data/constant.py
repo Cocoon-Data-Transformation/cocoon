@@ -822,6 +822,36 @@ tbody tr:hover {
 }
 """
 
+tag_css = """.tag {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.4rem;
+    margin-right: 0.5em; /* Adds space between tags */
+}"""
+
+table_css = """.columns-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.columns-table th, .columns-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+.columns-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+.columns-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}"""
+
 def create_cocoon_logo(header, footer):
     cocoon_logo = f"""<a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank" style="display: flex; align-items: center; text-decoration: none; color: black;">
 <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png" alt="cocoon icon" width=50 style="margin-right: 10px;">
