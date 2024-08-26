@@ -1,5 +1,5 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
--- Generated at 2024-08-01 16:20:25.440671+00:00
+-- Generated at 2024-08-24 01:01:06.123995+00:00
 WITH 
 "imaging_studies_renamed" AS (
     -- Rename: Renaming columns
@@ -33,35 +33,7 @@ WITH
     FROM "memory"."main"."imaging_studies"
 ),
 
-"imaging_studies_renamed_cleaned" AS (
-    -- Clean unusual string values: 
-    -- bodysite_description: The problem is inconsistent use of the '(body structure)' suffix and varying levels of anatomical specificity. Some values have the suffix while others don't, and some are more specific (e.g., 'Ankle') while others are broader (e.g., 'Thoracic structure'). The correct values should maintain a consistent format and level of specificity. In this case, we'll standardize by adding '(body structure)' to all values and using more general anatomical terms where possible.
-    SELECT
-        "study_id",
-        "study_datetime",
-        "patient_id",
-        "encounter_id",
-        "series_uid",
-        "bodysite_code",
-        CASE
-            WHEN "bodysite_description" = 'Clavicle' THEN 'Upper limb structure (body structure)'
-            WHEN "bodysite_description" = 'Ankle' THEN 'Lower limb structure (body structure)'
-            WHEN "bodysite_description" = 'Arm' THEN 'Upper limb structure (body structure)'
-            WHEN "bodysite_description" = 'Entire chest and abdomen and pelvis (body structure)' THEN 'Trunk structure (body structure)'
-            WHEN "bodysite_description" = 'Knee' THEN 'Lower limb structure (body structure)'
-            WHEN "bodysite_description" = 'Wrist' THEN 'Upper limb structure (body structure)'
-            ELSE "bodysite_description"
-        END AS "bodysite_description",
-        "modality_code",
-        "modality_description",
-        "instance_uid",
-        "sop_code",
-        "sop_description",
-        "procedure_code"
-    FROM "imaging_studies_renamed"
-),
-
-"imaging_studies_renamed_cleaned_casted" AS (
+"imaging_studies_renamed_casted" AS (
     -- Column Type Casting: 
     -- bodysite_code: from INT to VARCHAR
     -- encounter_id: from VARCHAR to UUID
@@ -89,9 +61,9 @@ WITH
         AS "study_datetime",
         CAST("study_id" AS UUID) 
         AS "study_id"
-    FROM "imaging_studies_renamed_cleaned"
+    FROM "imaging_studies_renamed"
 )
 
 -- COCOON BLOCK END
 SELECT *
-FROM "imaging_studies_renamed_cleaned_casted"
+FROM "imaging_studies_renamed_casted"

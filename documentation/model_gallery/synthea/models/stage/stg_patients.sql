@@ -1,5 +1,5 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
--- Generated at 2024-08-01 16:30:58.336954+00:00
+-- Generated at 2024-08-24 01:11:16.831598+00:00
 WITH 
 "patients_renamed" AS (
     -- Rename: Renaming columns
@@ -63,14 +63,77 @@ WITH
 
 "patients_renamed_cleaned" AS (
     -- Clean unusual string values: 
-    -- first_name: The problem is that all values in the first_name column are unusual because they combine standard first names with three-digit numbers (e.g., 'Hayden835', 'Adelia946'). This is likely not the intended format for first names. The correct values should be the standard first names without the appended numbers.
-    -- last_name: The problem is that some last names contain numeric suffixes, which is unusual for real names. Additionally, there are two names with non-ASCII characters: 'Bermúdez789' and 'Roldán470'. The correct values should be the names without the numeric suffixes and with ASCII-only characters.
-    -- maiden_name: The problem is that all values in the maiden_name column are unusual because they combine surnames with three-digit numbers, which is not typical for maiden names. The correct values should be just the surnames without the numbers.
+    -- ssn: The problem is that all the SSN values begin with 999, which is invalid for U.S. Social Security Numbers. Valid SSNs never start with 999. These appear to be placeholder or dummy SSNs rather than real ones. Since we can't determine the correct SSNs from this information alone, the best approach is to map these invalid values to an empty string to indicate missing data.
+    -- first_name: The problem is that all first names have a random 3-digit number appended to them. These numbers appear to be meaningless and don't provide any useful information. The correct values should be just the first names without the numbers.
+    -- last_name: The problem is that most last names follow a pattern of a capitalized English surname followed by 3 digits, but there are two exceptions: 1. "Bermúdez789" contains a non-English character (ú). 2. "Roldán470" contains a non-English character (á). These should be normalized to use standard English characters. The correct values should maintain the same naming pattern as the majority of entries.
+    -- maiden_name: The problem is that all values in the maiden_name column are unusual because they combine surnames with three-digit numbers, which is not typical for real maiden names. This appears to be a data generation artifact rather than genuine maiden names. Since we can't determine the correct maiden names from this data, the best approach is to remove the numeric portion and keep only the surname part, which could potentially be valid maiden names.
     SELECT
         "patient_id",
         "birth_date",
         "death_date",
-        "ssn",
+        CASE
+            WHEN "ssn" = '999-10-1178' THEN NULL
+            WHEN "ssn" = '999-10-6028' THEN NULL
+            WHEN "ssn" = '999-12-9121' THEN NULL
+            WHEN "ssn" = '999-14-9380' THEN NULL
+            WHEN "ssn" = '999-14-9672' THEN NULL
+            WHEN "ssn" = '999-16-4297' THEN NULL
+            WHEN "ssn" = '999-17-2611' THEN NULL
+            WHEN "ssn" = '999-20-4271' THEN NULL
+            WHEN "ssn" = '999-20-5403' THEN NULL
+            WHEN "ssn" = '999-22-2635' THEN NULL
+            WHEN "ssn" = '999-23-4696' THEN NULL
+            WHEN "ssn" = '999-23-9351' THEN NULL
+            WHEN "ssn" = '999-26-4422' THEN NULL
+            WHEN "ssn" = '999-26-8041' THEN NULL
+            WHEN "ssn" = '999-29-2359' THEN NULL
+            WHEN "ssn" = '999-29-4844' THEN NULL
+            WHEN "ssn" = '999-29-7349' THEN NULL
+            WHEN "ssn" = '999-30-8851' THEN NULL
+            WHEN "ssn" = '999-32-4862' THEN NULL
+            WHEN "ssn" = '999-33-4589' THEN NULL
+            WHEN "ssn" = '999-35-8448' THEN NULL
+            WHEN "ssn" = '999-36-1150' THEN NULL
+            WHEN "ssn" = '999-37-8682' THEN NULL
+            WHEN "ssn" = '999-38-7473' THEN NULL
+            WHEN "ssn" = '999-41-1756' THEN NULL
+            WHEN "ssn" = '999-42-9847' THEN NULL
+            WHEN "ssn" = '999-43-4282' THEN NULL
+            WHEN "ssn" = '999-44-2795' THEN NULL
+            WHEN "ssn" = '999-44-9634' THEN NULL
+            WHEN "ssn" = '999-48-5926' THEN NULL
+            WHEN "ssn" = '999-49-9846' THEN NULL
+            WHEN "ssn" = '999-50-5586' THEN NULL
+            WHEN "ssn" = '999-50-5697' THEN NULL
+            WHEN "ssn" = '999-51-3221' THEN NULL
+            WHEN "ssn" = '999-55-3195' THEN NULL
+            WHEN "ssn" = '999-55-6098' THEN NULL
+            WHEN "ssn" = '999-56-9201' THEN NULL
+            WHEN "ssn" = '999-57-7157' THEN NULL
+            WHEN "ssn" = '999-58-7543' THEN NULL
+            WHEN "ssn" = '999-59-2568' THEN NULL
+            WHEN "ssn" = '999-61-4140' THEN NULL
+            WHEN "ssn" = '999-61-6611' THEN NULL
+            WHEN "ssn" = '999-61-6740' THEN NULL
+            WHEN "ssn" = '999-62-7937' THEN NULL
+            WHEN "ssn" = '999-70-2405' THEN NULL
+            WHEN "ssn" = '999-70-4594' THEN NULL
+            WHEN "ssn" = '999-71-8314' THEN NULL
+            WHEN "ssn" = '999-73-5643' THEN NULL
+            WHEN "ssn" = '999-77-7700' THEN NULL
+            WHEN "ssn" = '999-79-2426' THEN NULL
+            WHEN "ssn" = '999-79-3695' THEN NULL
+            WHEN "ssn" = '999-85-2178' THEN NULL
+            WHEN "ssn" = '999-88-1792' THEN NULL
+            WHEN "ssn" = '999-89-9127' THEN NULL
+            WHEN "ssn" = '999-91-9580' THEN NULL
+            WHEN "ssn" = '999-93-7263' THEN NULL
+            WHEN "ssn" = '999-95-3792' THEN NULL
+            WHEN "ssn" = '999-96-6743' THEN NULL
+            WHEN "ssn" = '999-99-2106' THEN NULL
+            WHEN "ssn" = '999-99-2436' THEN NULL
+            ELSE "ssn"
+        END AS "ssn",
         "drivers_license",
         "passport_number",
         "name_prefix",
@@ -137,56 +200,8 @@ WITH
             ELSE "first_name"
         END AS "first_name",
         CASE
-            WHEN "last_name" = 'Casper496' THEN 'Casper'
-            WHEN "last_name" = 'Hamill307' THEN 'Hamill'
-            WHEN "last_name" = 'MacGyver246' THEN 'MacGyver'
-            WHEN "last_name" = 'Nolan344' THEN 'Nolan'
-            WHEN "last_name" = 'O''Conner199' THEN 'O''Conner'
-            WHEN "last_name" = 'Schimmel440' THEN 'Schimmel'
-            WHEN "last_name" = 'Schumm995' THEN 'Schumm'
-            WHEN "last_name" = 'Anderson154' THEN 'Anderson'
-            WHEN "last_name" = 'Armstrong51' THEN 'Armstrong'
-            WHEN "last_name" = 'Bailey598' THEN 'Bailey'
-            WHEN "last_name" = 'Becker968' THEN 'Becker'
-            WHEN "last_name" = 'Bermúdez789' THEN 'Bermudez'
-            WHEN "last_name" = 'Brakus656' THEN 'Brakus'
-            WHEN "last_name" = 'Collier206' THEN 'Collier'
-            WHEN "last_name" = 'Collins926' THEN 'Collins'
-            WHEN "last_name" = 'Corwin846' THEN 'Corwin'
-            WHEN "last_name" = 'Cruickshank494' THEN 'Cruickshank'
-            WHEN "last_name" = 'Doyle959' THEN 'Doyle'
-            WHEN "last_name" = 'Ernser583' THEN 'Ernser'
-            WHEN "last_name" = 'Feest103' THEN 'Feest'
-            WHEN "last_name" = 'Gislason620' THEN 'Gislason'
-            WHEN "last_name" = 'Graham902' THEN 'Graham'
-            WHEN "last_name" = 'Hagenes547' THEN 'Hagenes'
-            WHEN "last_name" = 'Hahn503' THEN 'Hahn'
-            WHEN "last_name" = 'Hane680' THEN 'Hane'
-            WHEN "last_name" = 'Hayes766' THEN 'Hayes'
-            WHEN "last_name" = 'Heathcote539' THEN 'Heathcote'
-            WHEN "last_name" = 'Hoppe518' THEN 'Hoppe'
-            WHEN "last_name" = 'Jenkins714' THEN 'Jenkins'
-            WHEN "last_name" = 'Johnson679' THEN 'Johnson'
-            WHEN "last_name" = 'Keebler762' THEN 'Keebler'
-            WHEN "last_name" = 'Klein929' THEN 'Klein'
-            WHEN "last_name" = 'Koss676' THEN 'Koss'
-            WHEN "last_name" = 'Kreiger457' THEN 'Kreiger'
-            WHEN "last_name" = 'Kshlerin58' THEN 'Kshlerin'
-            WHEN "last_name" = 'Langworth352' THEN 'Langworth'
-            WHEN "last_name" = 'Lemke654' THEN 'Lemke'
-            WHEN "last_name" = 'Lueilwitz711' THEN 'Lueilwitz'
-            WHEN "last_name" = 'Marks830' THEN 'Marks'
-            WHEN "last_name" = 'McGlynn426' THEN 'McGlynn'
-            WHEN "last_name" = 'Mills423' THEN 'Mills'
-            WHEN "last_name" = 'Nikolaus26' THEN 'Nikolaus'
-            WHEN "last_name" = 'Orn563' THEN 'Orn'
-            WHEN "last_name" = 'Quitzon246' THEN 'Quitzon'
-            WHEN "last_name" = 'Rath779' THEN 'Rath'
-            WHEN "last_name" = 'Rico947' THEN 'Rico'
-            WHEN "last_name" = 'Roldán470' THEN 'Roldan'
-            WHEN "last_name" = 'Rutherford999' THEN 'Rutherford'
-            WHEN "last_name" = 'Stehr398' THEN 'Stehr'
-            WHEN "last_name" = 'Trantow673' THEN 'Trantow'
+            WHEN "last_name" = 'Bermúdez789' THEN 'Bermudez789'
+            WHEN "last_name" = 'Roldán470' THEN 'Roldan470'
             WHEN "last_name" = 'Wilkinson796' THEN 'Wilkinson'
             WHEN "last_name" = 'Willms744' THEN 'Willms'
             WHEN "last_name" = 'Zboncak558' THEN 'Zboncak'

@@ -1,5 +1,5 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
--- Generated at 2024-08-01 15:52:46.834653+00:00
+-- Generated at 2024-08-24 00:46:26.795976+00:00
 WITH 
 "allergies_renamed" AS (
     -- Rename: Renaming columns

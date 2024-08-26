@@ -1,12 +1,12 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
--- Generated at 2024-08-01 16:32:04.971669+00:00
+-- Generated at 2024-08-24 01:12:14.679962+00:00
 WITH 
 "payers_renamed" AS (
     -- Rename: Renaming columns
     -- Id -> payer_id
     -- NAME -> payer_name
     -- OWNERSHIP -> ownership_type
-    -- ADDRESS -> address
+    -- ADDRESS -> street_address
     -- CITY -> city
     -- STATE_HEADQUARTERED -> state
     -- ZIP -> zip_code
@@ -29,7 +29,7 @@ WITH
         "Id" AS "payer_id",
         "NAME" AS "payer_name",
         "OWNERSHIP" AS "ownership_type",
-        "ADDRESS" AS "address",
+        "ADDRESS" AS "street_address",
         "CITY" AS "city",
         "STATE_HEADQUARTERED" AS "state",
         "ZIP" AS "zip_code",
@@ -53,11 +53,11 @@ WITH
 
 "payers_renamed_casted" AS (
     -- Column Type Casting: 
-    -- address: from DECIMAL to VARCHAR
     -- city: from DECIMAL to VARCHAR
     -- payer_id: from VARCHAR to UUID
     -- phone_number: from DECIMAL to VARCHAR
     -- state: from DECIMAL to VARCHAR
+    -- street_address: from DECIMAL to VARCHAR
     -- zip_code: from DECIMAL to VARCHAR
     SELECT
         "payer_name",
@@ -76,8 +76,6 @@ WITH
         "unique_customers",
         "average_qol_score",
         "member_months",
-        CAST("address" AS VARCHAR) 
-        AS "address",
         CAST("city" AS VARCHAR) 
         AS "city",
         CAST("payer_id" AS UUID) 
@@ -86,6 +84,8 @@ WITH
         AS "phone_number",
         CAST("state" AS VARCHAR) 
         AS "state",
+        CAST("street_address" AS VARCHAR) 
+        AS "street_address",
         CAST("zip_code" AS VARCHAR) 
         AS "zip_code"
     FROM "payers_renamed"

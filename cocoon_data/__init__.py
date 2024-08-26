@@ -15580,7 +15580,7 @@ class DataProject:
     
     def __init__(self):
         self.tables = {}
-        
+                
         self.table_object = {}
 
         self.table_pipelines = {}    
@@ -16571,8 +16571,7 @@ class DecideProjection(Node):
         table_pipeline = self.para["table_pipeline"]
         table_name = table_pipeline.__repr__(full=False)
         schema = table_pipeline.get_schema(con)
-
-        display(HTML(f"{running_spinner_html} Exploring table <i>{table_name}</i>..."))
+        
         query_widget = self.item["query_widget"]
         create_explore_button(query_widget, table_pipeline)
 
@@ -16580,23 +16579,26 @@ class DecideProjection(Node):
         column_names = list(schema.keys())
         document = {"selected_columns": []}
 
-        def callback_next(selected_indices):
-
-            if len(selected_indices) == 0:
+        def remove_columns():
+            df = grid_to_updated_dataframe(grid, reset=reset)
+            
+            kept_columns = df[df['Exclude?'] == False]['Column Name'].tolist()
+             
+            if len(kept_columns) == 0:
                 print("🙁 Please keep at least one column.")
                 return
 
             clear_output(wait=True)
-            document["selected_columns"] = [enclose_table_name(column_names[i], con) for i in selected_indices]
+            document["selected_columns"] = [enclose_table_name(kept_column, con) for kept_column in kept_columns]
 
-            if len(selected_indices) < num_cols:
+            if len(kept_columns) < num_cols:
                 old_table_name = table_pipeline.__repr__(full=False)
                 new_table_name = old_table_name + "_projected"
                 selection_clause = ',\n'.join(document['selected_columns'])
                 sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
                 comment = f"-- Projection: Selecting {len(document['selected_columns'])} out of {num_cols} columns\n"
-                if num_cols - len(selected_indices) < 10:
-                    not_selected_columns = [column_names[i] for i in range(num_cols) if i not in selected_indices]
+                if num_cols - len(kept_columns) < 10:
+                    not_selected_columns = [column_names[i] for i in range(num_cols) if i not in kept_columns]
                     comment += f"-- Columns projected out: {not_selected_columns}\n"
                     
                 sql_query = lambda *args, comment=comment, sql_query=sql_query: f"{comment}{sql_query}\nFROM {args[0]}"
@@ -16604,34 +16606,71 @@ class DecideProjection(Node):
                 step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 table_pipeline.add_step_to_final(step)
                 
-            callback(document)
+            
             return
             
-        display(HTML(f"🧐 Please select the columns to <b>include</b>."))
-        except_columns = ["_fivetran_synced", "fivetran_synced"]
-        multi_select = create_column_selector(column_names, default=True, except_columns = except_columns)
+        display(HTML(f"<b>🧐 Please select the columns to <u>exclude</u>.</b><div><em>For example, you may want to remove placeholder columns or those containing PII.</em></div>"))
 
-        submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
+        except_columns = ["_fivetran_synced", "fivetran_synced"]
+        
+        table_object = self.para["table_object"]
+        
+        data = {
+            'Column Name': [],
+            'Is PII': [],
+            'Exclude?': [],
+        }
+        
+        for column in column_names:
+            is_pii = column in table_object.pii
+            exclude = is_pii or column in except_columns
+            
+            data['Column Name'].append(column)
+            data['Is PII'].append(is_pii)
+            data['Exclude?'].append(exclude)
+
+        df = pd.DataFrame(data)
+
+        editable_columns = [False, False, True]
+        reset = True
+        grid = create_dataframe_grid(df, editable_columns, reset=reset)
+        
+        display(grid)
+        
+        submit_button = widgets.Button(description="Accept Projection", button_style='success', icon='check')
         
         def submit(b):
             with self.output_context():
-                selected_indices = multi_select.value
-                callback_next(selected_indices)
+                remove_columns()
+                callback({})
                 return 
         
         submit_button.on_click(submit)
         
+        reject_button = widgets.Button(
+            description="Reject Projection", 
+            button_style='danger', 
+            icon='times'
+        )
+
+        def reject(b):
+            with self.output_context():
+                callback({})
+                return 
+
+        reject_button.on_click(reject)
+
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             if (hasattr(self, 'para') and 
                 isinstance(self.para, dict) and 
                 isinstance(self.para.get('cocoon_stage_options'), dict) and 
                 self.para['cocoon_stage_options'].get('projection') is False):
-                multi_select.value = [i for i in range(num_cols)]
-            
-            submit(submit_button)
+                reject(reject_button)
+            else:
+                submit(submit_button)
             return
         
-        display(submit_button)
+        display(HBox([reject_button, submit_button]))
 
 class CreateColumnGrouping(Node):
     default_name = 'Create Column Grouping'
@@ -18056,9 +18095,8 @@ The error is: {e}
             return
 
         create_progress_bar_with_numbers(2, doc_steps)
-        display(HTML(f"""😎 We have identified disguised missing values (DMV)!<br>
-Please review and enter the values that will be imputed to NULL.<br>
-⚠️ Empty DMV is because of empty string."""))
+        display(HTML(f"""<b>😎 We have identified disguised missing values (DMV). Please review!</b>
+<div><em>⚠️ Empty DMV is because of empty string.</em></div>"""))
         display(grid)
         display(HBox([reject_button,next_button]))
 
@@ -20613,8 +20651,7 @@ class TransformTypeForAll(MultipleNode):
                 sql_query = comment + sql_query
                 
                 sql_query = lambda *args, sql_query=sql_query: f"{sql_query}\nFROM {args[0]}" 
-                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=self.item["con"])
-                con = self.item["con"]
+                step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
                 table_pipeline.add_step_to_final(step)
                 database = self.para.get("database", None)
                 schema = self.para.get("schema", None)
@@ -26121,6 +26158,7 @@ class Table:
         self.patterns = patterns or {}
         self.variant = variant or {}
         self.true_expressions = []
+        self.pii = []
         
     def deep_copy(self):
         return copy.deepcopy(self)
@@ -26313,6 +26351,9 @@ class Table:
             if data_type_key:
                 cocoon_meta["data_type"] = self.data_type[data_type_key]
 
+            if any(pii_column.lower() == column.lower() for pii_column in self.pii):
+                cocoon_meta["contains_pii"] = True
+            
             column_data = OrderedDict([
                 ("name", column),
                 ("description", description)
@@ -26393,7 +26434,8 @@ class Table:
                     self.potential_category[column_name] = cocoon_meta['future_accepted_values']
                 if "data_type" in cocoon_meta:
                     self.data_type[column_name] = cocoon_meta["data_type"]
-
+                if "contains_pii" in cocoon_meta and cocoon_meta["contains_pii"]:
+                    self.pii.append(column_name)
 
                     
     def add_column(self, column_name, description=None, missing_desc=None, unusual_desc=None, categories=None):
@@ -35369,7 +35411,7 @@ class SelectStageOptions(Node):
 
 
         pii_description = widgets.HTML(
-            value='<span class="option-label"><div><strong>Remove PII</strong></div><div><em>Cocoon removes columns with Personal Identifiable Information</em></div></span>'
+            value='<span class="option-label"><div><strong>PII Detection</strong></div><div><em>Cocoon detects columns with Personal Identifiable Information</em></div></span>'
         )
 
         checkbox_style = {'description_width': '0px'}
@@ -36770,30 +36812,23 @@ pii_columns:
         reset = True
         grid = create_dataframe_grid(df, editable_columns, reset=reset)
 
-        submit_button = widgets.Button(description="Accept Remove", button_style='success', icon='check')
-        reject_button = widgets.Button(description="Reject Remove", button_style='danger', icon='times')
+        submit_button = widgets.Button(description="Accept PII", button_style='success', icon='check')
+        reject_button = widgets.Button(description="Reject PII", button_style='danger', icon='times')
         
         def submit(b):
             with self.output_context():
                 df = grid_to_updated_dataframe(grid, reset=reset)
-                old_table_name = table_pipeline.__repr__(full=False)
-                new_table_name = old_table_name + "_pii"
                 
-                non_pii_columns = df[df['Is PII'] == False]['Column Name'].tolist()
+                pii_columns = df[df['Is PII'] == True]['Column Name'].tolist()
                 
-                if len(non_pii_columns) < len(all_columns):
-                    con = self.item["con"]
-                    selection_clause = ',\n'.join(non_pii_columns)
-                    sql_query = f'SELECT \n{indent_paragraph(selection_clause)}'
-                    comment = f"-- PII: remove columns with PII information\n"
-                    removed_columns = [col for col in all_columns if col not in non_pii_columns]
-                    if len(removed_columns) < 10:
-                        comment += f"-- Columns removed: {', '.join(removed_columns)}\n"
+                if len(pii_columns) > 0:
+                    table_object = self.para["table_object"]
+                    for pii_column in pii_columns:
+                        if pii_column not in table_object.pii:
+                            table_object.pii.append(pii_column)
+                    
                         
-                    sql_query = lambda *args, comment=comment, sql_query=sql_query: f"{comment}{sql_query}\nFROM {args[0]}"
                         
-                    step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con)
-                    table_pipeline.add_step_to_final(step)
                 
                 callback(df.to_json(orient="split"))
                 return 
@@ -36818,8 +36853,9 @@ pii_columns:
             submit(submit_button)
             return
         
+        
+        display(HTML(f"<b>🧐 We've identified potential PII. Please verify.</b><div><em>We will flag them, and you can remove them next...</em></div>"))
         display(grid)
-        display(HTML(f"🧐 We've identified PII to remove."))
         button_box = widgets.HBox([reject_button, submit_button])
         display(button_box)
 

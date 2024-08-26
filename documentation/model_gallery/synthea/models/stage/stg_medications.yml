@@ -1,48 +1,36 @@
 version: 2
 models:
 - name: stg_medications
-  description: The table is about medications prescribed to patients. It includes
-    details such as start date, patient ID, payer ID, encounter ID, medication code
-    and description, base cost, payer coverage, number of dispenses, total cost, and
-    reason for prescription. Each row represents a specific medication prescribed
-    to a patient, with associated costs and coverage information.
+  description: The table is about medication orders. It includes patient IDs, payer
+    information, encounter IDs, and medication details. Each row represents a medication
+    prescription with its start date, code, description, cost, coverage, and quantity
+    dispensed. The table tracks both base cost and total cost for each medication.
+    Some entries have reason codes and descriptions, though these are often empty
+    in the sample data.
   columns:
   - name: medication_description
-    description: Brief description of the medication
+    description: Description of the medication
     tests:
     - not_null
     cocoon_meta:
       patterns:
-      - regex: ^[A-Za-z\s-]+\s\d+(\.\d+)?\s[A-Z]+(/[A-Z]+)?\s[A-Za-z\s]+$
-        summary: 'Basic medication pattern: Name, Strength, Form'
-      - regex: ^\d+\s(HR|ACTUAT)\s[A-Za-z\s-]+\s\d+(\.\d+)?\s[A-Z]+(/[A-Z]+)?\s(Extended
-          Release\s)?[A-Za-z\s]+$
-        summary: Medication with duration and extended release
-      - regex: ^.*\s\[.*\]$
-        summary: Medication with brand name in brackets
-      - regex: ^[A-Za-z\s-]+\s\d+(\.\d+)?\s[A-Z]+(/[A-Z]+)?\s/\s[A-Za-z\s-]+\s\d+(\.\d+)?\s[A-Z]+(/[A-Z]+)?\s[A-Za-z\s]+$
-        summary: Medication with multiple ingredients
-      - regex: ^.*\s(Injection|Inhalation Solution|Transdermal System|Metered Dose
-          Inhaler|Auto-Injector|Vaginal Ring|Drug Implant).*$
-        summary: Medication with specific delivery method
-      - regex: ^.*\s\d+\sDay\sPack$
-        summary: Birth control pack
-      - regex: ^(\d+\s+)?[\w\s-]+\s+\d+(\.\d+)?\s+[A-Z]+(/[A-Z]+)?(/\w+)?\s+(Oral|Injectable|Dry
-          Powder)\s+\w+$
-        summary: Medication descriptions with quantity, drug name, dosage, and form
-      - regex: ^[\w\s-]+\s+\d+(\.\d+)?\s+[A-Z]+(/[A-Z]+)?$
-        summary: Medication descriptions with drug name and dosage
-      - regex: ^[\w\s/-]+$
-        summary: Generic medication names
-      - regex: \d+(\.\d+)?\s+[A-Z]+\s+[A-Za-z\s]+\s+\d+(\.\d+)?\s+[A-Z]+/[A-Z]+\s+[A-Za-z\s]+
-        summary: Medication descriptions with volume, active ingredients, concentration,
-          and form
-      - regex: ^\d+\s+(?:ACTUAT\s+)?[\w\s]+\s+[\d\.]+\s+MG(?:/ACTUAT)?\s+(?:/\s+[\w\s]+\s+[\d\.]+\s+MG(?:/ACTUAT)?)*\s+[\w\s]+$
-        summary: Medication description with quantity, active ingredients, strengths,
-          and dosage form
-      - regex: ([A-Za-z]+\s?)+\s\d+(\.\d+)?\sMG\/ML(\s\/\s([A-Za-z]+\s?)+\s\d+(\.\d+)?\sMG\/ML)*\s([A-Za-z]+\s?)+
-        summary: Medication description with multiple drug names, concentrations in
-          MG/ML, and dosage form
+      - regex: ^[A-Za-z\s-]+\s\d+(\.\d+)?\s(MG|UNT|ACTUAT)(/[A-Z]+)?\s[A-Za-z\s]+(\[[\w\s]+\])?$
+        summary: Medication name followed by dosage (in MG, UNT, or ACTUAT) and form
+          (e.g., Oral Tablet, Injection)
+      - regex: ^\d+\sHR\s[A-Za-z\s-]+\s\d+(\.\d+)?\s(MG|UNT|ACTUAT)(/[A-Z]+)?\s[A-Za-z\s]+(\[[\w\s]+\])?$
+        summary: Medication with time duration (e.g., 24 HR) at the beginning
+      - regex: ^\d+\sML\s[A-Za-z\s-]+\s\d+(\.\d+)?\s(MG|UNT|ACTUAT)(/[A-Z]+)?\s[A-Za-z\s]+(\[[\w\s]+\])?$
+        summary: Medication with volume (e.g., 1 ML) at the beginning
+      - regex: ^[A-Za-z]+\s\d+\sDay\sPack$
+        summary: Birth control packs (e.g., 28 Day Pack)
+      - regex: ^.+\s\d+(\.\d+)?\s(MG|UNT|ACTUAT|ML)(/[A-Z]+)?.*$
+        summary: Looser pattern to catch most entries
+      - regex: ^[A-Za-z]+\s\d+\.\d+/\d+\.\d+\sMG\sper\s\d+HR\s\d+\sDay\s[A-Za-z]+\s[A-Za-z]+$
+        summary: Medication name followed by dosage in MG and administration method
+      - regex: ^[A-Za-z]+\s\d+\.\d+/\d+\s\d+\sDay\sPack$
+        summary: Medication name followed by dosage and pack information
+      - regex: ^[A-Za-z]+/[A-Za-z]+$
+        summary: Medication names separated by forward slash
       data_type:
         current_data_type: VARCHAR
   - name: base_cost
@@ -52,7 +40,7 @@ models:
     cocoon_meta:
       data_type:
         current_data_type: DECIMAL
-  - name: payer_coverage
+  - name: payer_coverage_amount
     description: Amount covered by the payer
     tests:
     - not_null
@@ -93,6 +81,19 @@ models:
     cocoon_meta:
       data_type:
         current_data_type: VARCHAR
+  - name: order_end_datetime
+    description: End date and time of medication order
+    cocoon_meta:
+      missing_reason: Ongoing medications don't have an end date.
+      data_type:
+        current_data_type: TIMESTAMP
+  - name: order_start_datetime
+    description: Start date and time of medication order
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: TIMESTAMP
   - name: patient_id
     description: Unique identifier for the patient
     tests:
@@ -107,22 +108,10 @@ models:
     cocoon_meta:
       data_type:
         current_data_type: UUID
-  - name: prescription_end
-    description: End date and time of medication prescription
-    cocoon_meta:
-      missing_reason: Ongoing prescriptions don't have an end date.
-      data_type:
-        current_data_type: TIMESTAMP
-  - name: prescription_start
-    description: Start date and time of medication prescription
-    tests:
-    - not_null
-    cocoon_meta:
-      data_type:
-        current_data_type: TIMESTAMP
   - name: reason_code
     description: Code for the reason of prescription
     cocoon_meta:
       missing_reason: Unknown
       data_type:
         current_data_type: VARCHAR
+  tests: []

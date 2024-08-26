@@ -1,5 +1,5 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
--- Generated at 2024-08-01 16:35:12.530950+00:00
+-- Generated at 2024-08-24 01:14:58.976415+00:00
 WITH 
 "procedures_renamed" AS (
     -- Rename: Renaming columns
@@ -37,10 +37,7 @@ WITH
         "procedure_description",
         "procedure_cost",
         "reason_description",
-        CASE
-            WHEN regexp_full_match("encounter_id", '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}') THEN CAST("encounter_id" AS UUID)
-            WHEN regexp_full_match("encounter_id", '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}') THEN CAST("encounter_id" AS UUID)
-        END 
+        CAST("encounter_id" AS UUID) 
         AS "encounter_id",
         CAST("patient_id" AS UUID) 
         AS "patient_id",

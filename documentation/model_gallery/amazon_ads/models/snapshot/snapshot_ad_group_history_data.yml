@@ -1,10 +1,11 @@
 version: 2
 models:
 - name: snapshot_ad_group_history_data
-  description: The table is about current ad group information. It contains the latest
-    details for each ad group, including ID, campaign ID, default bid, name, serving
-    status, and state. It tracks the most recent version of each ad group within advertising
-    campaigns, omitting historical data and timestamp information.
+  description: The table is about current ad group data. It tracks the most recent
+    version of each ad group. It includes details such as ad group ID, campaign ID,
+    default bid, name, serving status, and state. Each row represents the latest snapshot
+    of an ad group's state. The table provides a current view of all ad groups without
+    historical changes.
   columns:
   - name: ad_group_id
     description: Unique identifier for the ad group
@@ -12,30 +13,49 @@ models:
     - not_null
     - unique
     cocoon_meta:
-      uniqueness: Unique dimension key, derived from the slowly changing dimension
+      unique_reason: Unique dimension key, derived from the slowly changing dimension
+      data_type:
+        current_data_type: INT
   - name: campaign_id
-    description: Unique identifier for the advertising campaign
+    description: Identifier of the campaign the ad group belongs to
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: INT
   - name: default_bid
     description: Default bid amount for the ad group
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DECIMAL
   - name: ad_group_name
     description: Name of the ad group
     tests:
     - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
   - name: serving_status
     description: Current serving status of the ad group
     tests:
     - not_null
     - accepted_values:
         values:
-        - AD_GROUP_STATUS_ENABLED
-        - AD_GROUP_STATUS_PAUSED
+        - AD_STATUS_LIVE
         - CAMPAIGN_PAUSED
-        - REMOVED
-        - ENDED
+    cocoon_meta:
+      future_accepted_values:
+      - AD_GROUP_PAUSED
+      - AD_STATUS_PAUSED
+      - REMOVED
+      - PENDING_REVIEW
+      - DISAPPROVED
+      - ENDED
+      - SUSPENDED
+      data_type:
+        current_data_type: VARCHAR
   - name: ad_group_state
     description: Current state of the ad group
     tests:
@@ -43,7 +63,14 @@ models:
     - accepted_values:
         values:
         - enabled
+        - disabled
         - paused
-        - removed
+    cocoon_meta:
+      data_type:
+        current_data_type: VARCHAR
+  tests: []
 cocoon_meta:
   scd_base_table: stg_ad_group_history_data
+  scd_columns:
+  - last_updated_date
+  - creation_date

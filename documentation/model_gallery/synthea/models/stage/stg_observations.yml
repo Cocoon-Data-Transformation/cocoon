@@ -1,14 +1,14 @@
 version: 2
 models:
 - name: stg_observations
-  description: The table is about medical observations. It contains date, patient
-    ID, encounter ID, category, code, description, value, units, and type of measurement.
-    The observations include vital signs like body height, weight, and pain severity.
-    Each row represents a single measurement taken for a patient during a specific
-    encounter.
+  description: The table is about medical observations. It contains details of patient
+    health measurements. Each row represents a single observation. The table includes
+    the date, patient ID, encounter ID, category, measurement code, description, value,
+    units, and type of measurement. Observations cover vital signs like body height,
+    weight, and pain severity scores.
   columns:
-  - name: observation_category
-    description: Classification of the medical observation
+  - name: CATEGORY
+    description: Category of the medical observation
     tests:
     - accepted_values:
         values:
@@ -22,94 +22,43 @@ models:
     cocoon_meta:
       missing_reason: Unknown
       future_accepted_values:
-      - imaging
       - medication
+      - imaging
+      - diagnosis
       - allergy
       - immunization
       - family-history
-      - medical-device
       data_type:
         current_data_type: VARCHAR
   - name: observation_code
-    description: Standardized code for the observation type
+    description: Standardized code for the medical observation
     tests:
     - not_null
     cocoon_meta:
       patterns:
-      - regex: \d{4,5}-\d
-        summary: Numeric codes with dashes (e.g., 8462-4, 72514-3)
-      - regex: '[A-Z]{4}'
-        summary: Short alphabetic codes (e.g., DALY, QALY, QOLS)
-      - regex: '[A-Z0-9-]{4,8}'
-        summary: General pattern to catch most codes
+      - regex: \d{5,7}-\d
+        summary: LOINC codes (5-7 digits, hyphen, 1 digit)
+      - regex: '[A-Z]{3,4}'
+        summary: Short alphabetic codes (3-4 uppercase letters)
+      - regex: '[A-Za-z0-9-]+'
+        summary: Alphanumeric codes (mix of digits and letters)
       data_type:
         current_data_type: VARCHAR
-  - name: observation_description
-    description: Human-readable description of the observation
+  - name: DESCRIPTION
+    description: Description of the medical observation
     tests:
     - not_null
     cocoon_meta:
-      patterns:
-      - regex: (Systolic|Diastolic) Blood Pressure
-        summary: Blood pressure measurements (Systolic and Diastolic)
-      - regex: .+ \[Score\] - Reported
-        summary: Numeric scale measurements (e.g., Pain severity, PHQ-2 score)
-      - regex: Body (Weight|Height|Mass Index)
-        summary: Body measurements (Weight, Height, BMI)
-      - regex: (Heart|Respiratory) rate
-        summary: Vital signs (Heart rate, Respiratory rate)
-      - regex: (DALY|QALY|QOLS)
-        summary: Quality of life metrics
-      - regex: .+ (\[Mass/volume\]|\[Enzymatic activity/volume\]|\[#/volume\]|\[Volume
-          Fraction\]|\[Entitic (mass|volume)\]) in .+
-        summary: Lab test results
-      - regex: Total score \[.+\]
-        summary: Questionnaire total scores
-      - regex: Are you .+\?
-        summary: Yes/No questions
-      - regex: What is your .+\?
-        summary: Open-ended questions
-      data_type:
-        current_data_type: VARCHAR
-  - name: observation_value
-    description: Numeric or categorical result of the observation
-    tests:
-    - not_null
-    cocoon_meta:
-      unusal_values: Numeric values are inconsistently represented as strings ('1.0')
-        and floats (14.0). Boolean concepts use 'Yes'/'No' and '1.0'/'0.0'.
-      patterns:
-      - regex: \d+\.\d
-        summary: Numeric values with one decimal place
-      - regex: ^(Yes|No)$
-        summary: Yes/No values
-      - regex: ^(Not at all|A little bit|Somewhat|3 to 5 times a week|5 or more times
-          a week)$
-        summary: Categorical frequency responses
-      - regex: .+\s\(finding\)
-        summary: Medical findings in parentheses
-      - regex: .+\s\(qualifier value\)
-        summary: Qualifier values in parentheses
-      - regex: ^(Full-time work|Part-time or temporary work)$
-        summary: Types of work
-      - regex: ^(Private insurance|Medicare|Medicaid)$
-        summary: Types of insurance
-      - regex: ^(More than high school|High school diploma or GED)$
-        summary: Education levels
-      - regex: ^I\s.+
-        summary: Responses starting with "I"
-      - regex: ^\d+\s[A-Za-z\s]+\sUnit\s\d+$
-        summary: Street addresses
       data_type:
         current_data_type: VARCHAR
   - name: UNITS
-    description: Unit of measurement for the observation
+    description: Units of measurement for the observation
     cocoon_meta:
-      missing_reason: Not applicable for non-numeric or unitless observations.
+      missing_reason: Not all vital signs or measurements require units.
       data_type:
         current_data_type: VARCHAR
-  - name: value_type
-    description: Data type of the observation value
+  - name: data_type
+    description: Type of data for the observation
     tests:
     - not_null
     - accepted_values:
@@ -118,11 +67,11 @@ models:
         - text
     cocoon_meta:
       future_accepted_values:
+      - categorical
       - boolean
       - date
-      - time
       - datetime
-      - categorical
+      - time
       data_type:
         current_data_type: VARCHAR
   - name: encounter_id
@@ -132,12 +81,39 @@ models:
       data_type:
         current_data_type: UUID
   - name: observation_datetime
-    description: Timestamp of the medical observation
+    description: Date and time of the medical observation
     tests:
     - not_null
     cocoon_meta:
       data_type:
         current_data_type: TIMESTAMP
+  - name: observation_value
+    description: Numeric value of the medical observation
+    tests:
+    - not_null
+    cocoon_meta:
+      unusual_values: '''0.0'' and ''No'' likely represent the same concept. ''1.0''
+        and ''Yes'' might also be redundant representations.'
+      patterns:
+      - regex: ^\d+(\.\d+)?$
+        summary: Floating point numbers (including whole numbers)
+      - regex: ^(Yes|No)$
+        summary: Yes/No values
+      - regex: ^(3 to 5 times a week|5 or more times a week)$
+        summary: Frequency descriptions
+      - regex: ^(More than high school|High school diploma or GED)$
+        summary: Education levels
+      - regex: ^(Private insurance|Medicare|Medicaid)$
+        summary: Insurance types
+      - regex: ^(Full-time work|Part-time or temporary work)$
+        summary: Employment statuses
+      - regex: ^(Finding of .+|\w+.+\(finding\))$
+        summary: Medical findings (starting with "Finding of" or ending with "(finding)")
+      - regex: ^.+\(qualifier value\)$
+        summary: Qualifiers (ending with "(qualifier value)")
+      data_type:
+        current_data_type: VARCHAR
+        expected_data_type: DECIMAL
   - name: patient_id
     description: Unique identifier for the patient
     tests:
@@ -145,3 +121,4 @@ models:
     cocoon_meta:
       data_type:
         current_data_type: UUID
+  tests: []

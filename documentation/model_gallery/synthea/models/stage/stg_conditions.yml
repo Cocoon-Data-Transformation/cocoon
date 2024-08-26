@@ -2,10 +2,10 @@ version: 2
 models:
 - name: stg_conditions
   description: The table is about patient conditions and employment status. It shows
-    the start and stop dates of conditions. It includes patient and encounter IDs.
-    It lists condition codes and descriptions. The table tracks high school equivalency
-    and full-time employment status. It spans multiple years for a single patient
-    across different encounters.
+    start and end dates for conditions. Each row links a patient to an encounter and
+    a condition code. The conditions include high school equivalency and full-time
+    employment. The same patient has multiple entries over different time periods.
+    The table tracks changes in employment status for the patient across years.
   columns:
   - name: condition_description
     description: Text description of the condition or status
@@ -13,17 +13,10 @@ models:
     - not_null
     cocoon_meta:
       patterns:
-      - regex: .+\s\(finding\)$
-        summary: Medical conditions ending with "(finding)"
-      - regex: .+\s\(disorder\)$
-        summary: Medical conditions ending with "(disorder)"
-      - regex: .+\s\(situation\)$
-        summary: Medical situations ending with "(situation)"
-      - regex: ^[A-Za-z\s-]+$
-        summary: Medical conditions or findings without parentheses
-      - regex: ^[A-Za-z\s-]+(\s\([A-Za-z]+\))?$
-        summary: General pattern covering most entries (allows for conditions with
-          or without parentheses)
+      - regex: .+\s\((finding|disorder)\)$
+        summary: Entries ending with "(finding)" or "(disorder)"
+      - regex: ([A-Z][a-z]+\s?)+(\([a-z]+\))?
+        summary: Capitalized phrases (allowing for some lowercase words)
       data_type:
         current_data_type: VARCHAR
   - name: condition_code
@@ -33,6 +26,19 @@ models:
     cocoon_meta:
       data_type:
         current_data_type: VARCHAR
+  - name: condition_end_date
+    description: End date of the condition or status
+    cocoon_meta:
+      missing_reason: Ongoing conditions or one-time events don't have end dates.
+      data_type:
+        current_data_type: DATE
+  - name: condition_start_date
+    description: Start date of the condition or status
+    tests:
+    - not_null
+    cocoon_meta:
+      data_type:
+        current_data_type: DATE
   - name: encounter_id
     description: Unique identifier for the medical encounter
     tests:
@@ -40,12 +46,6 @@ models:
     cocoon_meta:
       data_type:
         current_data_type: UUID
-  - name: end_date
-    description: End date of the condition or status
-    cocoon_meta:
-      missing_reason: Ongoing conditions or statuses don't have an end date.
-      data_type:
-        current_data_type: DATE
   - name: patient_id
     description: Unique identifier for the patient
     tests:
@@ -53,10 +53,4 @@ models:
     cocoon_meta:
       data_type:
         current_data_type: UUID
-  - name: start_date
-    description: Start date of the condition or status
-    tests:
-    - not_null
-    cocoon_meta:
-      data_type:
-        current_data_type: DATE
+  tests: []

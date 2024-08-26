@@ -1,0 +1,305 @@
+-- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
+-- Generated at 2024-08-26 00:47:19.528883+00:00
+WITH 
+"customer_renamed" AS (
+    -- Rename: Renaming columns
+    -- C_CUSTKEY -> customer_id
+    -- C_NAME -> customer_name
+    -- C_ADDRESS -> street_address
+    -- C_CITY -> city
+    -- C_NATION -> country
+    -- C_REGION -> region
+    -- C_PHONE -> phone_number
+    -- C_MKTSEGMENT -> market_segment
+    SELECT 
+        "C_CUSTKEY" AS "customer_id",
+        "C_NAME" AS "customer_name",
+        "C_ADDRESS" AS "street_address",
+        "C_CITY" AS "city",
+        "C_NATION" AS "country",
+        "C_REGION" AS "region",
+        "C_PHONE" AS "phone_number",
+        "C_MKTSEGMENT" AS "market_segment"
+    FROM "memory"."main"."customer"
+),
+
+"customer_renamed_trimmed" AS (
+    -- Trim Leading and Trailing Spaces
+    SELECT
+        "customer_id",
+        "customer_name",
+        "city",
+        "country",
+        "region",
+        "phone_number",
+        "market_segment",
+        TRIM("street_address") AS "street_address"
+    FROM "customer_renamed"
+),
+
+"customer_renamed_trimmed_cleaned" AS (
+    -- Clean unusual string values: 
+    -- city: The problem is that the city column contains country names followed by numbers, with inconsistent spacing and truncation. The country names should be standardized, and the numbers (which likely represent some kind of code or index) should be separated. "UNITED ST" is truncated and should be "UNITED STATES". "UNITED KI" should be "UNITED KINGDOM". "SAUDI ARA" should be "SAUDI ARABIA". The correct values should have consistent spacing between the country name and the number, with the country name in full.
+    -- street_address: Values starting with commas are unusual. Random strings like '2z1 vZUo2qjaxg7qJouIBb' are not typical for street addresses.
+    SELECT
+        "customer_id",
+        "customer_name",
+        CASE
+            WHEN "city" = 'UNITED ST4' THEN 'UNITED STATES 4'
+            WHEN "city" = 'UNITED ST0' THEN 'UNITED STATES 0'
+            WHEN "city" = 'UNITED ST1' THEN 'UNITED STATES 1'
+            WHEN "city" = 'UNITED KI5' THEN 'UNITED KINGDOM 5'
+            WHEN "city" = 'SAUDI ARA7' THEN 'SAUDI ARABIA 7'
+            WHEN "city" = 'ARGENTINA4' THEN 'ARGENTINA 4'
+            WHEN "city" = 'ARGENTINA5' THEN 'ARGENTINA 5'
+            WHEN "city" = 'MOZAMBIQU7' THEN 'MOZAMBIQUE 7'
+            WHEN "city" = 'MOZAMBIQU9' THEN 'MOZAMBIQUE 9'
+            WHEN "city" = 'RUSSIA   5' THEN 'RUSSIA 5'
+            WHEN "city" = 'RUSSIA   6' THEN 'RUSSIA 6'
+            WHEN "city" = 'RUSSIA   3' THEN 'RUSSIA 3'
+            WHEN "city" = 'MOROCCO  5' THEN 'MOROCCO 5'
+            WHEN "city" = 'FRANCE   8' THEN 'FRANCE 8'
+            WHEN "city" = 'JAPAN    3' THEN 'JAPAN 3'
+            WHEN "city" = 'ALGERIA  8' THEN 'ALGERIA 8'
+            WHEN "city" = 'ALGERIA  0' THEN 'ALGERIA 0'
+            WHEN "city" = 'ALGERIA  5' THEN 'ALGERIA 5'
+            WHEN "city" = 'CHINA    5' THEN 'CHINA 5'
+            WHEN "city" = 'EGYPT    7' THEN 'EGYPT 7'
+            WHEN "city" = 'EGYPT    1' THEN 'EGYPT 1'
+            WHEN "city" = 'EGYPT    3' THEN 'EGYPT 3'
+            WHEN "city" = 'JORDAN   5' THEN 'JORDAN 5'
+            WHEN "city" = 'JORDAN   8' THEN 'JORDAN 8'
+            WHEN "city" = 'KENYA    2' THEN 'KENYA 2'
+            WHEN "city" = 'KENYA    9' THEN 'KENYA 9'
+            WHEN "city" = 'PERU     8' THEN 'PERU 8'
+            WHEN "city" = 'CANADA   2' THEN 'CANADA 2'
+            WHEN "city" = 'CANADA   4' THEN 'CANADA 4'
+            WHEN "city" = 'CANADA   9' THEN 'CANADA 9'
+            WHEN "city" = 'CANADA   0' THEN 'CANADA 0'
+            WHEN "city" = 'VIETNAM  0' THEN 'VIETNAM 0'
+            WHEN "city" = 'GERMANY  0' THEN 'GERMANY 0'
+            WHEN "city" = 'GERMANY  9' THEN 'GERMANY 9'
+            WHEN "city" = 'GERMANY  4' THEN 'GERMANY 4'
+            WHEN "city" = 'IRAN     4' THEN 'IRAN 4'
+            WHEN "city" = 'IRAN     6' THEN 'IRAN 6'
+            WHEN "city" = 'IRAN     7' THEN 'IRAN 7'
+            WHEN "city" = 'IRAQ     4' THEN 'IRAQ 4'
+            WHEN "city" = 'IRAQ     9' THEN 'IRAQ 9'
+            WHEN "city" = 'IRAQ     5' THEN 'IRAQ 5'
+            WHEN "city" = 'INDIA    8' THEN 'INDIA 8'
+            WHEN "city" = 'INDONESIA1' THEN 'INDONESIA 1'
+            WHEN "city" = 'INDONESIA3' THEN 'INDONESIA 3'
+            WHEN "city" = 'BRAZIL   4' THEN 'BRAZIL 4'
+            WHEN "city" = 'ROMANIA  4' THEN 'ROMANIA 4'
+            WHEN "city" = 'ROMANIA  7' THEN 'ROMANIA 7'
+            WHEN "city" = 'MOZAMBIQU2' THEN 'MOZAMBIQUE'
+            WHEN "city" = 'ROMANIA  1' THEN 'ROMANIA'
+            WHEN "city" = 'ROMANIA  3' THEN 'ROMANIA'
+            WHEN "city" = 'VIETNAM  5' THEN 'VIETNAM'
+            WHEN "city" = 'ARGENTINA2' THEN 'ARGENTINA'
+            WHEN "city" = 'CHINA    2' THEN 'CHINA'
+            WHEN "city" = 'CHINA    4' THEN 'CHINA'
+            WHEN "city" = 'FRANCE   0' THEN 'FRANCE'
+            WHEN "city" = 'JAPAN    9' THEN 'JAPAN'
+            WHEN "city" = 'UNITED KI3' THEN 'UNITED KINGDOM'
+            WHEN "city" = 'ALGERIA  2' THEN 'ALGERIA'
+            WHEN "city" = 'ARGENTINA7' THEN 'ARGENTINA'
+            WHEN "city" = 'BRAZIL   8' THEN 'BRAZIL'
+            WHEN "city" = 'ETHIOPIA 8' THEN 'ETHIOPIA'
+            WHEN "city" = 'FRANCE   6' THEN 'FRANCE'
+            WHEN "city" = 'INDONESIA2' THEN 'INDONESIA'
+            WHEN "city" = 'JORDAN   2' THEN 'JORDAN'
+            WHEN "city" = 'KENYA    3' THEN 'KENYA'
+            WHEN "city" = 'ROMANIA  5' THEN 'ROMANIA'
+            WHEN "city" = 'UNITED KI0' THEN 'UNITED KINGDOM'
+            WHEN "city" = 'ETHIOPIA 6' THEN 'ETHIOPIA'
+            WHEN "city" = 'INDONESIA7' THEN 'INDONESIA'
+            WHEN "city" = 'MOROCCO  4' THEN 'MOROCCO'
+            WHEN "city" = 'MOROCCO  8' THEN 'MOROCCO'
+            WHEN "city" = 'MOZAMBIQU1' THEN 'MOZAMBIQUE'
+            WHEN "city" = 'MOZAMBIQU3' THEN 'MOZAMBIQUE'
+            WHEN "city" = 'UNITED ST2' THEN 'UNITED STATES'
+            WHEN "city" = 'UNITED ST5' THEN 'UNITED STATES'
+            WHEN "city" = 'EGYPT    0' THEN 'EGYPT'
+            WHEN "city" = 'EGYPT    8' THEN 'EGYPT'
+            WHEN "city" = 'EGYPT    9' THEN 'EGYPT'
+            WHEN "city" = 'INDIA    9' THEN 'INDIA'
+            WHEN "city" = 'IRAN     1' THEN 'IRAN'
+            WHEN "city" = 'IRAQ     3' THEN 'IRAQ'
+            WHEN "city" = 'PERU     6' THEN 'PERU'
+            WHEN "city" = 'UNITED ST6' THEN 'UNITED STATES'
+            WHEN "city" = 'UNITED ST8' THEN 'UNITED STATES'
+            WHEN "city" = 'CANADA   6' THEN 'CANADA'
+            WHEN "city" = 'CHINA    0' THEN 'CHINA'
+            WHEN "city" = 'CHINA    1' THEN 'CHINA'
+            WHEN "city" = 'CHINA    3' THEN 'CHINA'
+            WHEN "city" = 'GERMANY  6' THEN 'GERMANY'
+            WHEN "city" = 'INDONESIA8' THEN 'INDONESIA'
+            WHEN "city" = 'IRAQ     7' THEN 'IRAQ'
+            WHEN "city" = 'JAPAN    1' THEN 'JAPAN'
+            WHEN "city" = 'JAPAN    6' THEN 'JAPAN'
+            WHEN "city" = 'ROMANIA  6' THEN 'ROMANIA'
+            WHEN "city" = 'VIETNAM  1' THEN 'VIETNAM'
+            WHEN "city" = 'ARGENTINA8' THEN 'ARGENTINA'
+            WHEN "city" = 'GERMANY  7' THEN 'GERMANY'
+            WHEN "city" = 'SAUDI ARA1' THEN 'SAUDI ARABIA 1'
+            WHEN "city" = 'SAUDI ARA2' THEN 'SAUDI ARABIA 2'
+            WHEN "city" = 'SAUDI ARA4' THEN 'SAUDI ARABIA 4'
+            WHEN "city" = 'UNITED KI2' THEN 'UNITED KINGDOM 2'
+            WHEN "city" = 'UNITED KI7' THEN 'UNITED KINGDOM 7'
+            WHEN "city" = 'MOZAMBIQU5' THEN 'MOZAMBIQUE 5'
+            WHEN "city" = 'INDONESIA6' THEN 'INDONESIA 6'
+            WHEN "city" = 'IRAN     0' THEN 'IRAN 0'
+            WHEN "city" = 'IRAQ     6' THEN 'IRAQ 6'
+            WHEN "city" = 'KENYA    1' THEN 'KENYA 1'
+            WHEN "city" = 'KENYA    7' THEN 'KENYA 7'
+            WHEN "city" = 'MOROCCO  1' THEN 'MOROCCO 1'
+            WHEN "city" = 'VIETNAM  2' THEN 'VIETNAM 2'
+            WHEN "city" = 'BRAZIL   2' THEN 'BRAZIL 2'
+            WHEN "city" = 'CANADA   3' THEN 'CANADA 3'
+            WHEN "city" = 'CHINA    6' THEN 'CHINA 6'
+            WHEN "city" = 'GERMANY  5' THEN 'GERMANY 5'
+            WHEN "city" = 'INDIA    4' THEN 'INDIA 4'
+            WHEN "city" = 'IRAN     3' THEN 'IRAN 3'
+            WHEN "city" = 'JAPAN    0' THEN 'JAPAN 0'
+            WHEN "city" = 'JORDAN   3' THEN 'JORDAN 3'
+            WHEN "city" = 'MOROCCO  9' THEN 'MOROCCO 9'
+            WHEN "city" = 'VIETNAM  8' THEN 'VIETNAM 8'
+            WHEN "city" = 'ARGENTINA3' THEN 'ARGENTINA 3'
+            WHEN "city" = 'CHINA    9' THEN 'CHINA 9'
+            WHEN "city" = 'FRANCE   2' THEN 'FRANCE 2'
+            WHEN "city" = 'GERMANY  8' THEN 'GERMANY 8'
+            WHEN "city" = 'INDIA    3' THEN 'INDIA 3'
+            WHEN "city" = 'INDIA    7' THEN 'INDIA 7'
+            WHEN "city" = 'JORDAN   1' THEN 'JORDAN 1'
+            WHEN "city" = 'JORDAN   7' THEN 'JORDAN 7'
+            WHEN "city" = 'KENYA    0' THEN 'KENYA 0'
+            WHEN "city" = 'PERU     0' THEN 'PERU 0'
+            WHEN "city" = 'BRAZIL   0' THEN 'BRAZIL 0'
+            WHEN "city" = 'BRAZIL   7' THEN 'BRAZIL 7'
+            WHEN "city" = 'FRANCE   9' THEN 'FRANCE 9'
+            WHEN "city" = 'IRAN     5' THEN 'IRAN 5'
+            WHEN "city" = 'JAPAN    5' THEN 'JAPAN 5'
+            WHEN "city" = 'KENYA    8' THEN 'KENYA 8'
+            WHEN "city" = 'MOROCCO  6' THEN 'MOROCCO 6'
+            WHEN "city" = 'RUSSIA   9' THEN 'RUSSIA 9'
+            WHEN "city" = 'CANADA   1' THEN 'CANADA 1'
+            WHEN "city" = 'EGYPT    5' THEN 'EGYPT 5'
+            WHEN "city" = 'INDIA    0' THEN 'INDIA 0'
+            WHEN "city" = 'INDONESIA5' THEN 'INDONESIA 5'
+            WHEN "city" = 'IRAN     9' THEN 'IRAN 9'
+            WHEN "city" = 'JORDAN   6' THEN 'JORDAN 6'
+            WHEN "city" = 'PERU     4' THEN 'PERU 4'
+            WHEN "city" = 'PERU     9' THEN 'PERU'
+            WHEN "city" = 'RUSSIA   4' THEN 'RUSSIA'
+            WHEN "city" = 'RUSSIA   7' THEN 'RUSSIA'
+            WHEN "city" = 'SAUDI ARA9' THEN 'SAUDI ARABIA'
+            WHEN "city" = 'UNITED KI1' THEN 'UNITED KINGDOM'
+            WHEN "city" = 'ALGERIA  1' THEN 'ALGERIA'
+            WHEN "city" = 'CHINA    8' THEN 'CHINA'
+            WHEN "city" = 'FRANCE   5' THEN 'FRANCE'
+            WHEN "city" = 'GERMANY  1' THEN 'GERMANY'
+            WHEN "city" = 'INDIA    1' THEN 'INDIA'
+            WHEN "city" = 'IRAN     8' THEN 'IRAN'
+            WHEN "city" = 'KENYA    6' THEN 'KENYA'
+            WHEN "city" = 'ROMANIA  2' THEN 'ROMANIA'
+            WHEN "city" = 'RUSSIA   8' THEN 'RUSSIA'
+            WHEN "city" = 'UNITED KI8' THEN 'UNITED KINGDOM'
+            WHEN "city" = 'VIETNAM  6' THEN 'VIETNAM'
+            WHEN "city" = 'VIETNAM  9' THEN 'VIETNAM'
+            WHEN "city" = 'ARGENTINA0' THEN 'ARGENTINA'
+            WHEN "city" = 'BRAZIL   6' THEN 'BRAZIL'
+            WHEN "city" = 'ETHIOPIA 0' THEN 'ETHIOPIA'
+            WHEN "city" = 'ETHIOPIA 1' THEN 'ETHIOPIA'
+            WHEN "city" = 'FRANCE   3' THEN 'FRANCE'
+            WHEN "city" = 'FRANCE   7' THEN 'FRANCE'
+            WHEN "city" = 'GERMANY  2' THEN 'GERMANY'
+            WHEN "city" = 'INDONESIA0' THEN 'INDONESIA'
+            WHEN "city" = 'IRAN     2' THEN 'IRAN'
+            WHEN "city" = 'IRAQ     1' THEN 'IRAQ'
+            WHEN "city" = 'IRAQ     8' THEN 'IRAQ'
+            WHEN "city" = 'KENYA    5' THEN 'KENYA'
+            WHEN "city" = 'MOZAMBIQU8' THEN 'MOZAMBIQUE'
+            WHEN "city" = 'PERU     3' THEN 'PERU'
+            WHEN "city" = 'UNITED KI4' THEN 'UNITED KINGDOM'
+            WHEN "city" = 'ALGERIA  7' THEN 'ALGERIA'
+            WHEN "city" = 'CANADA   7' THEN 'CANADA'
+            WHEN "city" = 'CANADA   8' THEN 'CANADA'
+            WHEN "city" = 'IRAQ     2' THEN 'IRAQ'
+            WHEN "city" = 'SAUDI ARA5' THEN 'SAUDI ARABIA'
+            WHEN "city" = 'UNITED ST9' THEN 'UNITED STATES'
+            WHEN "city" = 'VIETNAM  4' THEN 'VIETNAM'
+            WHEN "city" = 'GERMANY  3' THEN 'GERMANY'
+            WHEN "city" = 'IRAQ     0' THEN 'IRAQ'
+            WHEN "city" = 'JORDAN   0' THEN 'JORDAN'
+            WHEN "city" = 'MOROCCO  0' THEN 'MOROCCO'
+            WHEN "city" = 'MOROCCO  3' THEN 'MOROCCO'
+            WHEN "city" = 'ROMANIA  9' THEN 'ROMANIA'
+            WHEN "city" = 'SAUDI ARA3' THEN 'SAUDI ARABIA'
+            WHEN "city" = 'UNITED KI9' THEN 'UNITED KINGDOM'
+            WHEN "city" = 'UNITED ST7' THEN 'UNITED STATES'
+            WHEN "city" = 'BRAZIL   1' THEN 'BRAZIL'
+            WHEN "city" = 'BRAZIL   9' THEN 'BRAZIL'
+            WHEN "city" = 'EGYPT    6' THEN 'EGYPT'
+            WHEN "city" = 'FRANCE   4' THEN 'FRANCE'
+            WHEN "city" = 'JAPAN    7' THEN 'JAPAN'
+            WHEN "city" = 'JAPAN    8' THEN 'JAPAN'
+            WHEN "city" = 'MOZAMBIQU6' THEN 'MOZAMBIQUE'
+            WHEN "city" = 'PERU     5' THEN 'PERU'
+            WHEN "city" = 'PERU     7' THEN 'PERU'
+            WHEN "city" = 'RUSSIA   2' THEN 'RUSSIA'
+            WHEN "city" = 'UNITED KI6' THEN 'UNITED KINGDOM'
+            WHEN "city" = 'ARGENTINA1' THEN 'ARGENTINA'
+            WHEN "city" = 'BRAZIL   5' THEN 'BRAZIL'
+            WHEN "city" = 'CHINA    7' THEN 'CHINA'
+            WHEN "city" = 'FRANCE   1' THEN 'FRANCE'
+            WHEN "city" = 'INDIA    5' THEN 'INDIA'
+            WHEN "city" = 'JAPAN    2' THEN 'JAPAN'
+            WHEN "city" = 'JORDAN   9' THEN 'JORDAN'
+            WHEN "city" = 'UNITED ST3' THEN 'UNITED STATES'
+            WHEN "city" = 'ALGERIA  4' THEN 'ALGERIA'
+            WHEN "city" = 'ARGENTINA6' THEN 'ARGENTINA'
+            WHEN "city" = 'INDONESIA9' THEN 'INDONESIA'
+            WHEN "city" = 'MOROCCO  2' THEN 'MOROCCO'
+            WHEN "city" = 'PERU     1' THEN 'PERU'
+            WHEN "city" = 'ROMANIA  0' THEN 'ROMANIA'
+            WHEN "city" = 'RUSSIA   1' THEN 'RUSSIA'
+            WHEN "city" = 'INDIA    6' THEN 'INDIA'
+            WHEN "city" = 'INDONESIA4' THEN 'INDONESIA'
+            WHEN "city" = 'PERU     2' THEN 'PERU'
+            WHEN "city" = 'SAUDI ARA6' THEN 'SAUDI ARABIA'
+            WHEN "city" = 'VIETNAM  7' THEN 'VIETNAM'
+            WHEN "city" = 'BRAZIL   3' THEN 'BRAZIL'
+            WHEN "city" = 'EGYPT    2' THEN 'EGYPT'
+            WHEN "city" = 'EGYPT    4' THEN 'EGYPT'
+            WHEN "city" = 'ETHIOPIA 4' THEN 'ETHIOPIA'
+            WHEN "city" = 'SAUDI ARA8' THEN 'SAUDI ARABIA'
+            WHEN "city" = 'ETHIOPIA 2' THEN 'ETHIOPIA'
+            WHEN "city" = 'MOZAMBIQU4' THEN 'MOZAMBIQUE'
+            WHEN "city" = 'ROMANIA  8' THEN 'ROMANIA'
+            WHEN "city" = 'JAPAN    4' THEN 'JAPAN'
+            WHEN "city" = 'VIETNAM  3' THEN 'VIETNAM'
+            WHEN "city" = 'INDIA    2' THEN 'INDIA'
+            WHEN "city" = 'JORDAN   4' THEN 'JORDAN'
+            WHEN "city" = 'ALGERIA  3' THEN 'ALGERIA'
+            WHEN "city" = 'ALGERIA  9' THEN 'ALGERIA'
+            WHEN "city" = 'KENYA    4' THEN 'KENYA'
+            WHEN "city" = 'MOZAMBIQU0' THEN 'MOZAMBIQUE'
+            WHEN "city" = 'RUSSIA   0' THEN 'RUSSIA'
+            WHEN "city" = 'SAUDI ARA0' THEN 'SAUDI ARABIA'
+            WHEN "city" = 'ALGERIA  6' THEN 'ALGERIA'
+            WHEN "city" = 'MOROCCO  7' THEN 'MOROCCO'
+            WHEN "city" = 'CANADA   5' THEN 'CANADA'
+            ELSE "city"
+        END AS "city",
+        "country",
+        "region",
+        "phone_number",
+        "market_segment",
+        "street_address"
+    FROM "customer_renamed_trimmed"
+)
+
+-- COCOON BLOCK END
+SELECT *
+FROM "customer_renamed_trimmed_cleaned"

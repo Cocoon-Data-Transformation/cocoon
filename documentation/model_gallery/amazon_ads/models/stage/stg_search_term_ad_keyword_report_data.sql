@@ -1,8 +1,9 @@
 -- COCOON BLOCK START: PLEASE DO NOT MODIFY THIS BLOCK FOR SELF-MAINTENANCE
+-- Generated at 2024-08-25 17:38:31.035705+00:00
 WITH 
 "search_term_ad_keyword_report_data_projected" AS (
     -- Projection: Selecting 13 out of 14 columns
-    -- Columns projected out: ['_fivetran_synced']
+    -- Columns projected out: ['ad_group_id', 'campaign_id', 'date_', 'keyword_id', '_fivetran_synced', 'campaign_budget_amount', 'campaign_budget_currency_code', 'campaign_budget_type', 'clicks', 'cost', 'impressions', 'keyword_bid', 'search_term', 'targeting']
     SELECT 
         "ad_group_id",
         "campaign_id",
@@ -17,61 +18,38 @@ WITH
         "keyword_bid",
         "search_term",
         "targeting"
-    FROM "search_term_ad_keyword_report_data"
+    FROM "memory"."main"."search_term_ad_keyword_report_data"
 ),
 
 "search_term_ad_keyword_report_data_projected_renamed" AS (
     -- Rename: Renaming columns
-    -- date_ -> report_date
+    -- date_ -> performance_date
     -- campaign_budget_amount -> daily_budget_amount
     -- campaign_budget_currency_code -> budget_currency
     -- campaign_budget_type -> budget_type
+    -- cost -> daily_ad_cost
+    -- keyword_bid -> keyword_bid_amount
     -- targeting -> targeting_criteria
     SELECT 
-        ad_group_id,
-        campaign_id,
-        date_ AS report_date,
-        keyword_id,
-        campaign_budget_amount AS daily_budget_amount,
-        campaign_budget_currency_code AS budget_currency,
-        campaign_budget_type AS budget_type,
-        clicks,
-        cost,
-        impressions,
-        keyword_bid,
-        search_term,
-        targeting AS targeting_criteria
-    FROM search_term_ad_keyword_report_data_projected
-),
-
-"search_term_ad_keyword_report_data_projected_renamed_cleaned" AS (
-    -- Clean unusual string values: 
-    -- targeting_criteria: The problem is that the letters 'b', 'y', and 'x' before 'wing parts' are unusual and potentially unclear abbreviations. These likely stand for different types or sections of wing parts, but without more context it's difficult to determine their exact meaning. The correct values should use clear, fully spelled-out terms instead of single letter abbreviations. 
-    SELECT
         "ad_group_id",
         "campaign_id",
-        "report_date",
+        "date_" AS "performance_date",
         "keyword_id",
-        "daily_budget_amount",
-        "budget_currency",
-        "budget_type",
+        "campaign_budget_amount" AS "daily_budget_amount",
+        "campaign_budget_currency_code" AS "budget_currency",
+        "campaign_budget_type" AS "budget_type",
         "clicks",
-        "cost",
+        "cost" AS "daily_ad_cost",
         "impressions",
-        "keyword_bid",
+        "keyword_bid" AS "keyword_bid_amount",
         "search_term",
-        CASE
-            WHEN "targeting_criteria" = 'b wing parts' THEN 'body wing parts'
-            WHEN "targeting_criteria" = 'y wing parts' THEN 'yaw wing parts'
-            WHEN "targeting_criteria" = 'x wing parts' THEN 'auxiliary wing parts'
-            ELSE "targeting_criteria"
-        END AS "targeting_criteria"
-    FROM "search_term_ad_keyword_report_data_projected_renamed"
+        "targeting" AS "targeting_criteria"
+    FROM "search_term_ad_keyword_report_data_projected"
 ),
 
-"search_term_ad_keyword_report_data_projected_renamed_cleaned_casted" AS (
+"search_term_ad_keyword_report_data_projected_renamed_casted" AS (
     -- Column Type Casting: 
-    -- report_date: from VARCHAR to DATE
+    -- performance_date: from VARCHAR to DATE
     SELECT
         "ad_group_id",
         "campaign_id",
@@ -80,14 +58,16 @@ WITH
         "budget_currency",
         "budget_type",
         "clicks",
-        "cost",
+        "daily_ad_cost",
         "impressions",
-        "keyword_bid",
+        "keyword_bid_amount",
         "search_term",
         "targeting_criteria",
-        CAST("report_date" AS DATE) AS "report_date"
-    FROM "search_term_ad_keyword_report_data_projected_renamed_cleaned"
+        CAST("performance_date" AS DATE) 
+        AS "performance_date"
+    FROM "search_term_ad_keyword_report_data_projected_renamed"
 )
 
 -- COCOON BLOCK END
-SELECT * FROM "search_term_ad_keyword_report_data_projected_renamed_cleaned_casted"
+SELECT *
+FROM "search_term_ad_keyword_report_data_projected_renamed_casted"
