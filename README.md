@@ -6,8 +6,8 @@
 
 😎 Cocoon thoroughly prepares your data for RAG. Specifically, Cocoon helps document, connect, and optimize your data pipelines offline. The result can be used for online RAG in use cases like pipeline copilots and data transformation. Check out the YouTube demo 👇:
 
-- 📚 [Learn more about features](https://cocoon-data-transformation.github.io/page/)
--  **Demo for Data Warehouse RAG**
+- 📚 [*Learn more about features*](https://cocoon-data-transformation.github.io/page/)
+-  [*Demo for Data Warehouse RAG*](https://youtu.be/xdmRXs0UnfE)
   <br>
   <div align="center">
   <a href="https://youtu.be/xdmRXs0UnfE" target="_blank">
@@ -16,11 +16,11 @@
   </div>
   <br>
   
--  **Demo for Data Pipeline RAG**
+-  [*Demo for Data Pipeline RAG*](https://youtu.be/kv5mwTkpfY0)
   <br>
   <div align="center">
   <a href="https://youtu.be/kv5mwTkpfY0" target="_blank">
-    <img src="./images/Thumbnail.png" width="600" alt="IMAGE ALT TEXT" style="cursor: pointer;">
+    <img src="./images/Thumbnail2.png" width="600" alt="IMAGE ALT TEXT" style="cursor: pointer;">
   </a>
   </div>
   <br>
