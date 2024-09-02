@@ -22904,9 +22904,9 @@ class CocoonBranchStep(Node):
         
         html_labels = [
         "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🧩 <b>Catalog RAG:</b> Give us a set of tables, we'll clean, integrate and model them for future RAG.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🧩 <b>Catalog (for RAG):</b> Give us tables, we'll clean, integrate and catalog them for future RAG.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
         "🔧 <b>Transform:</b> Give us the catalogs of source + target database, we transform.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🤖 <b>Lineage RAG for DBT copilot:</b> Give us a complex DBT project, we'll create a lineage RAG for AI copilot. <br><i>🛡️ Access Control: <u>read-only</u> to dbt project </u></i>",
+        "🤖 <b>Lineage RAG for Pipeline copilot:</b> Give us a large dbt project, we'll create a lineage RAG for copilot. <br><i>🛡️ Access Control: <u>read-only</u> to dbt project </u></i>",
         "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables. <br>",
 
         ]
@@ -34921,9 +34921,9 @@ class DbtLineage:
             model_id = global_model_to_idx[model]
             deps = dependencies[model]
             dep_ids = sorted([global_model_to_idx[dep] for dep in deps if dep in global_model_to_idx])
-            dep_str = f" <- {', '.join(str(id+1) for id in dep_ids)}" if dep_ids else ""
+            dep_str = f" <- {', '.join(str(id) for id in dep_ids)}" if dep_ids else ""
             
-            text_lineage.append(f"{model_id+1}. '{model}'{dep_str}")
+            text_lineage.append(f"{model_id}. '{model}'{dep_str}")
 
         return "\n".join(text_lineage)
 
