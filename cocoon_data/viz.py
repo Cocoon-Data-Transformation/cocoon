@@ -1114,8 +1114,8 @@ def highlight_sql(sql_query, add_copy_button=False, add_css=True):
     highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
     
     if add_copy_button:
-        escaped_sql = sql_query.replace('`', '\\`').replace('${', '\\${')
-        
+        escaped_sql = sql_query.replace('`', '\\`').replace('${', '\\${').replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#039;")
+
         copy_button = f"""
         <button class="copy-button" onclick="navigator.clipboard.writeText(`{escaped_sql}`).then(() => alert('SQL copied to clipboard!'))">
             Copy SQL
@@ -1142,13 +1142,13 @@ def highlight_yml_only(yml_content):
 
 def highlight_yml(yml_content):
     formatter = HtmlFormatter(style='native')
-    css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
+    css_style = f"<style>{formatter.get_style_defs('.highlight')}{border_style}</style>"
 
     highlighted_yml = highlight(yml_content, YamlLexer(), formatter)
 
     bordered_content = f'<div class="border-class">{highlighted_yml}</div>'
 
-    combined_html = css_style + border_style + bordered_content
+    combined_html = css_style + bordered_content
     return combined_html
 
 def wrap_in_scrollable_div(html_code, width='100%', height='200px'):

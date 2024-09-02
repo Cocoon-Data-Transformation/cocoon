@@ -34670,7 +34670,7 @@ class DbtLineage:
 
         properties = {
             f"{model_number}{model_name}": ((model_info.get('description') or '') + ' ' + (model_info.get('cocoon_description') or '')).strip() or "Not available",
-            "tags": "<ul>" + "".join(["<li>" + generate_tag_html(tag, description) + "</li>" for tag, description in tags.items()]) + "</ul>" if tags else "None",
+            "tags": "<ul>" + "".join(["<li>" + generate_tag_html(tag, description) + "</li>" for tag, description in tags.items()]) + "</ul>" if tags else None,
             "Columns": columns_df.to_html(index=False) if not columns_df.empty else None,
             "SQL": highlight_sql_only(model_info.get('raw_code')) if model_info.get('raw_code') else None,
         }
