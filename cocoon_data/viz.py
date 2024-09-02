@@ -701,11 +701,14 @@ def generate_seaborn_palette(n_colors):
 
 
 
-def generate_workflow_image(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, format='svg'):
+def generate_workflow_image(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, 
+                            node_shape=None, directional=True, format='svg', layout_direction='TB'):
     if directional:
         dot = Digraph(format=format)
     else:
         dot = Graph(format=format)
+        
+    dot.attr(rankdir=layout_direction)
 
     if highlight_nodes_indices is None:
         highlight_nodes_indices = []
@@ -774,23 +777,26 @@ def wrap_image_in_html(image_data, height=None, format='svg'):
     if format == 'svg':
         svg_content = image_data.decode('utf-8')
         scrollable_html = f"""
-        <div style="{height_str}overflow: auto; border: 1px solid #cccccc;">
-            {svg_content}
+        <div style="{height_str}overflow: auto; border: 1px solid #e0e0e0; border-radius: 12px; background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 100%;">
+            <div style="min-width: min-content; display: inline-block; padding: 16px;">
+                {svg_content}
+            </div>
         </div>
         """
     else:
         encoded_image = base64.b64encode(image_data).decode()
         mime_type = f'image/{format}'
         scrollable_html = f"""
-        <div style="m{height_str}overflow: auto; border: 1px solid #cccccc;">
-            <img src="data:{mime_type};base64,{encoded_image}" style="display: block; max-width: none; height: auto;">
+        <div style="{height_str}overflow: auto; border: 1px solid #e0e0e0; border-radius: 12px; background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <img src="data:{mime_type};base64,{encoded_image}" style="display: block; max-width: none; height: auto; padding: 16px;">
         </div>
         """
     return scrollable_html
 
-def generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=None, format='svg'):
+def generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, 
+                                             height=None, format='svg', layout_direction='TB'):
     try:
-        image_data = generate_workflow_image(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, format)
+        image_data = generate_workflow_image(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, format, layout_direction=layout_direction)
         return wrap_image_in_html(image_data, height, format)
     except:
         return """
@@ -801,9 +807,9 @@ def generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels=None, hig
 </div>
 """        
 
-def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=None, format='svg'):
+def generate_workflow_html_multiple(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, node_shape=None, directional=True, height=None, format='svg', layout_direction='TB'):
     if _cocoon_global_values['IMAGE_MODE'] == 'graphviz':
-        return generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, height, format)
+        return generate_workflow_html_multiple_graphviz(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, height, format, layout_direction=layout_direction)
     else:
         return generate_workflow_html_multiple_mermaid(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, node_shape, directional, height)
 
@@ -1062,26 +1068,69 @@ def create_graph_data(hubs, links, satellites, hub_link_edges, link_satellite_ed
 
 
 border_style = """
-<style>
 .border-class {
-    border: 1px solid black;
+    border: 1px solid #444;
     padding: 10px;
     margin: 10px;
     font-size: 12px;
+    background-color: #272822;
+    position: relative;
 }
-</style>
+"""
+
+copy_button_css = f"""
+.copy-button {{
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    padding: 5px 10px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #f8f8f2;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}}
+.copy-button:hover {{
+    background-color: rgba(255, 255, 255, 0.2);
+}}
 """
 
 def highlight_sql_only(sql_query):
     formatter = HtmlFormatter(style='monokai')
     return highlight(sql_query, SqlLexer(), formatter)
 
-def highlight_sql(sql_query):
+def highlight_sql(sql_query, add_copy_button=False, add_css=True):
     formatter = HtmlFormatter(style='monokai')
-    css_style = f"<style>{formatter.get_style_defs('.highlight')}</style>"
-    combined_css = css_style + border_style
+    css_style = f"""
+<style>
+{formatter.get_style_defs('.highlight')}
+{copy_button_css if add_copy_button else ""}
+{border_style}
+</style>
+"""
+    combined_css = css_style if add_css else ""
     highlighted_sql = wrap_in_scrollable_div(highlight(sql_query, SqlLexer(), formatter), height='600px')
-    bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
+    
+    if add_copy_button:
+        escaped_sql = sql_query.replace('`', '\\`').replace('${', '\\${')
+        
+        copy_button = f"""
+        <button class="copy-button" onclick="navigator.clipboard.writeText(`{escaped_sql}`).then(() => alert('SQL copied to clipboard!'))">
+            Copy SQL
+        </button>
+        """
+        
+        bordered_content = f"""
+        <div class="border-class">
+            {copy_button}
+            {highlighted_sql}
+        </div>
+        """
+    else:
+        bordered_content = f'<div class="border-class">{highlighted_sql}</div>'
+    
     combined_html = combined_css + bordered_content
     return combined_html
 
@@ -1352,18 +1401,23 @@ def generate_schema_graph_graphviz(nodes, edges, height=None, format="svg", high
 
 
 
-def generate_dropdown_html(selection_group_id, options_dict, full=True, default_selection="Select an option"):
+def generate_dropdown_html(selection_group_id, options_dict, full=True, default_selection="Select an option", selected=None):
     dropdown_items = []
     content_divs = []
 
-    for option_name, option_content in options_dict.items():
+    for index, (option_name, option_content) in enumerate(options_dict.items()):
         if option_name.startswith("cocoon_html_divider"):
             dropdown_items.append('<li><hr class="dropdown-divider"></li>')
         else:
-            option_id = f"{selection_group_id}_{option_name.replace(' ', '_')}"
-            dropdown_items.append(f'<li><a class="dropdown-item" data-bs-toggle="collapse" data-bs-target="#{option_id}Content" aria-expanded="false" aria-controls="{option_id}Content">{option_name}</a></li>')
+            option_id = f"{selection_group_id}_{index}"
+            is_selected = option_name == selected
+            show_class = ' show' if is_selected else ''
+            active_class = ''
+            aria_expanded = 'true' if is_selected else 'false'
+            
+            dropdown_items.append(f'<li><a class="dropdown-item{active_class}" data-bs-toggle="collapse" data-bs-target="#{option_id}Content" aria-expanded="{aria_expanded}" aria-controls="{option_id}Content">{option_name}</a></li>')
             content_divs.append(f'''
-            <div class="collapse" id="{option_id}Content" data-bs-parent="#{selection_group_id}">
+            <div class="collapse{show_class}" id="{option_id}Content" data-bs-parent="#{selection_group_id}">
                 {option_content}
             </div>
             ''')
@@ -1390,7 +1444,6 @@ def generate_dropdown_html(selection_group_id, options_dict, full=True, default_
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bootstrap Dropdown Example (No Custom JS)</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </head>

@@ -11745,8 +11745,8 @@ class Node:
         return None
 
     def run(self, extract_output, use_cache=True):
-        
-        print(f"Running {self.name}.")
+        if cocoon_main_setting['DEBUG_MODE']:
+            print(f"Running {self.name}.")
         return extract_output
     
     def run_but_fail(self, extract_output, use_cache=True):
@@ -11788,8 +11788,9 @@ The messages are:
             
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         self.run_output = run_output
-
-        print(f"Postprocessing {self.name}.")
+        
+        if cocoon_main_setting['DEBUG_MODE']:
+            print(f"Postprocessing {self.name}.")
 
         document = run_output
         
@@ -11842,14 +11843,16 @@ class Workflow(Node):
     default_name = "Workflow"
     default_description = "This is the base class for all workflows."
 
-    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, 
-                 output=None, id_para="element_name", class_para={}):
+    def __init__(self, name=None, description=None, viewer=False, item=None, para=None, 
+                 output=None, id_para="element_name", class_para=None):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
         self.nodes = {}
         self.edges = {}
         self.item = item
 
+        if para is None:
+            para = {}
         self.para = para
         
         self.root_node = None
@@ -11861,6 +11864,8 @@ class Workflow(Node):
         self.init_path()
 
         self.output = output
+        if class_para is None:
+            class_para = {}
         self.class_para = class_para
 
 
@@ -11905,7 +11910,6 @@ class Workflow(Node):
             return
         
         self.register(node, children=[self.root_node])
-            
 
     def add_to_leaf(self, node):
         nodes, edges = list(self.nodes.keys()), self.edges 
@@ -12013,7 +12017,8 @@ class Workflow(Node):
 
         elif len(children) == 1:
             next_node = children[0]
-            print(f"Automatically proceeding to the next node: {next_node}")
+            if cocoon_main_setting['DEBUG_MODE']:
+                print(f"Automatically proceeding to the next node: {next_node}")
             self.execute_node(next_node)
 
         else:
@@ -12099,8 +12104,8 @@ class MultipleNode(Workflow):
     default_name = "Multiple Node"
     default_description = "This node dynamically creates multiple nodes based on the input data."
 
-    def __init__(self, name=None, description=None, viewer=False, item=None, para={}, 
-                 output=None, id_para="element_name", class_para={}):
+    def __init__(self, name=None, description=None, viewer=False, item=None, para=None, 
+                 output=None, id_para="element_name", class_para=None):
         self.name = name if name is not None else self.default_name
         self.description = description if description is not None else self.default_description
         self.nodes = {}
@@ -12109,6 +12114,8 @@ class MultipleNode(Workflow):
         self.elements = []
         self.item = item
         
+        if para is None:
+            para = {}
         self.para = para
         self.viewer = viewer
         self.unit = "element"
@@ -12120,6 +12127,8 @@ class MultipleNode(Workflow):
         self.init_path()
 
         self.output = output
+        if class_para is None:
+            class_para = {}
         self.class_para = class_para
         
         self.example_node = self.construct_node("example")
@@ -15403,7 +15412,10 @@ class TransformationSQLPipeline(TransformationPipeline):
         source_steps = [self.steps[source_idx] for source_idx in source_step_indicies]
         return self.steps[step_idx].get_codes(mode=mode, source_steps=source_steps, full=full)
 
-    def get_codes(self, mode="dbt", con=None):
+    def get_codes(self, mode="dbt", con=None, para=None):
+        if para is None:
+            para = {}
+            
         sorted_step_idx = topological_sort(self.steps, self.edges)
         
         if mode == "dbt":
@@ -22034,7 +22046,10 @@ class SelectTable(Node):
         display(mode_selector)
         display(next_button)
         
-def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, table_name = None, para={}, output=None):
+def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, table_name = None, para=None, output=None):
+    if para is None:
+        para = {}
+            
     if query_widget is None:
         query_widget = QueryWidget(con)
     
@@ -22082,7 +22097,10 @@ def create_cocoon_documentation_workflow(con, query_widget=None, viewer=False, t
     return query_widget, main_workflow
 
 
-def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None, para={}, output=None, table_object=None):
+def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_name = None, para=None, output=None, table_object=None):
+    if para is None:
+        para = {}
+        
     if query_widget is None:
         query_widget = QueryWidget(con)
     
@@ -22140,8 +22158,10 @@ def create_cocoon_stage_workflow(con, query_widget=None, viewer=False, table_nam
     
 
 
-def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_directory="./dbt_directory", para={}, output=None):
-
+def create_cocoon_data_vault_workflow(con, query_widget=None, viewer=False, dbt_directory="./dbt_directory", para=None, output=None):
+    if para is None:
+        para = {}
+        
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -22884,10 +22904,11 @@ class CocoonBranchStep(Node):
         
         html_labels = [
         "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🧩 <b>Catalog:</b> Give us a set of tables, we'll clean, integrate and model them.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🧩 <b>Catalog RAG:</b> Give us a set of tables, we'll clean, integrate and model them for future RAG.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
         "🔧 <b>Transform:</b> Give us the catalogs of source + target database, we transform.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🤖 <b>Lineage RAG for DBT copilot:</b> Give us a complex DBT project, we'll create a lineage RAG for AI copilot. <br><i>🛡️ Access Control: <u>read-only</u> to dbt project </u></i>",
         "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables. <br>",
-        "🔬 <b>(Preview) Pipeline Understanding:</b> Give us a Pipeline, we'll interpret it.",
+
         ]
         coming_labels = [
         "🔄 <b>(Coming Soon) Integrate:</b> Give us tables, we'll integrate them.",
@@ -22899,8 +22920,8 @@ class CocoonBranchStep(Node):
             "Data Format Workflow",
             "Data Vault Workflow",
             "Single Table Transformation Workflow",
-            "Fuzzy Join Workflow",
             "DBT Project Explore Workflow",
+            "Fuzzy Join Workflow",
         ]
 
         radio_buttons_widget, checkboxes = create_html_radio_buttons(html_labels)
@@ -22932,7 +22953,10 @@ class CocoonBranchStep(Node):
         
         display(VBox([next_button, hint_html]))
         
-def create_cocoon_workflow(con, para = {}, output=None):
+def create_cocoon_workflow(con= None, para = None, output=None):
+    
+    if para is None:
+        para = {}
     
     item = {}
     query_widget = None
@@ -22955,7 +22979,7 @@ def create_cocoon_workflow(con, para = {}, output=None):
     _, stage_workflow = create_cocoon_data_format_workflow(con=con, query_widget=query_widget, para=para, output=output)
     _, profile_workflow = create_cocoon_documentation_workflow(con=con, query_widget=query_widget, output=output)
     _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget, output=output)    
-    dbt_explore_workflow = create_cocoon_dbt_explore_workflow()
+    dbt_explore_workflow = create_cocoon_dbt_explore_workflow(para=para, output=output)
     _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget, para=para, output=output)
     _, data_vault_workflow = create_cocoon_data_vault_workflow(con=con, query_widget=query_widget, para=para, output=output)
     
@@ -22968,8 +22992,10 @@ def create_cocoon_workflow(con, para = {}, output=None):
     
     return query_widget, main_workflow
 
-def create_cocoon_data_format_workflow(con, query_widget=None, viewer=False, dbt_directory="./dbt_directory", para={}, output=None):
-
+def create_cocoon_data_format_workflow(con, query_widget=None, viewer=False, dbt_directory="./dbt_directory", para=None, output=None):
+    if para is None:
+        para = {}
+        
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -23363,7 +23389,9 @@ class InputRelationshipForAll(MultipleNode):
     default_name = 'Input Relationship For All'
     default_description = 'This node tags all the table.'        
         
-    def construct_node(self, element_name, tags = {}, idx=0, total=0):
+    def construct_node(self, element_name, tags = None, idx=0, total=0):
+        if tags is None:
+            tags = {}
         para = self.para.copy()
         para["table_name"] = element_name
         para["table_idx"] = idx
@@ -27161,7 +27189,7 @@ class StageForAll(MultipleNode):
         submit_button.on_click(on_submit_button_click)
         
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
-            on_materialize_click(view_button, "WITH_VIEW")
+            on_materialize_click(table_button, "WITH_TABLE")
             on_submit_button_click(submit_button)
             return
         
@@ -27169,7 +27197,7 @@ class StageForAll(MultipleNode):
         display(df)
         display(HTML("😎 Next, we will integrate the tables ... <br> ⚠️ You need to materialize the tables before proceeding."))
 
-        display(widgets.HBox([view_button, table_button]))
+        display(widgets.HBox([table_button, view_button]))
         display(submit_button)
         
 class StageForAllAndEnd(StageForAll):
@@ -27441,7 +27469,10 @@ class DecideFK(Node):
         callback(matched_fks)
         
         
-def create_cocoon_profile_yml_workflow(con, query_widget=None, viewer=False, table_name = None, para={}):
+def create_cocoon_profile_yml_workflow(con, query_widget=None, viewer=False, table_name = None, para=None):
+    if para is None:
+        para = {}
+        
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -28609,7 +28640,7 @@ QUALIFY ROW_NUMBER() OVER (
 
         step = SQLStep(table_name=new_table_name, sql_code=sql_query, con=con, database=database, schema=schema)
         new_table_pipeline.add_step_to_final(step)
-        new_table_pipeline.run_codes(con=con, mode="WITH_VIEW")
+        new_table_pipeline.run_codes(con=con, mode="WITH_TABLE")
         
         data_project.table_pipelines[new_table_name] = new_table_pipeline
         
@@ -30406,11 +30437,6 @@ class SimpleBusinessQuestionNode(Node):
                     return
                 
                 if "chatui" in self.para:
-                    import html
-
-                    def escape_html(text):
-                        return html.escape(text)
-
                     escaped = escape_html(business_question)
                     self.para["chatui"].add_message("You", "🙂 " + escaped)
 
@@ -30816,7 +30842,7 @@ sql_approach: >-
     If sufficient, provide a detailed step-by-step instruction of the SQL approach.
     Dictates which tables, columns, and operations to use.
     However, don't provide codes.
-# from sql_approach, list all related tables
+# from sql_approach list all related tables, even if insufficient
 related_tables: ['table1', 'table2', ...]
 ```"""
 
@@ -31456,8 +31482,10 @@ new_sql_query: |
         
         
         
-def create_cocoon_genai_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
-    
+def create_cocoon_genai_workflow(con=None, query_widget=None, viewer=False, para=None, output=None):
+    if para is None:
+        para = {}
+        
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -31492,7 +31520,10 @@ def create_cocoon_genai_workflow(con=None, query_widget=None, viewer=False, para
     
     return query_widget, main_workflow
 
-def create_dummy_genai_workflow(con, query_widget=None, viewer=False, para={}, output=None):
+def create_dummy_genai_workflow(con, query_widget=None, viewer=False, para=None, output=None):
+    if para is None:
+        para = {}
+        
     if query_widget is None:
         query_widget = QueryWidget(con)
 
@@ -32716,7 +32747,10 @@ class PrintPartition(Node):
         print(f"Tables: {self.para['tables']}")
         callback({})
 
-def create_cocoon_describe_partition_workflow(con, query_widget=None, partition_name=None, tables=None, para={}, output=None):
+def create_cocoon_describe_partition_workflow(con, query_widget=None, partition_name=None, tables=None, para=None, output=None):
+    if para is None:
+        para = {}
+        
     if query_widget is None:
         query_widget = QueryWidget(con)
     
@@ -33105,60 +33139,19 @@ story:
         display(next_button)
         
         
-class DBTLineageConfig(Node):
-    default_name = 'DBT Lineage Configuration'
-    default_description = 'This step allows you to configure the DBT project and build the lineage graph.'
 
-    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
-        clear_output(wait=True)
 
-        dbt_directory_input = widgets.Text(
-            description='DBT Directory:',
-            value=self.para.get("dbt_directory", "./dbt_project"),
-            style={'description_width': 'initial'}
-        )
 
-        manifest_path_input = widgets.Text(
-            description='Manifest Path (optional):',
-            value="",
-            style={'description_width': 'initial'}
-        )
 
-        catalog_path_input = widgets.Text(
-            description='Catalog Path (optional):',
-            value="",
-            style={'description_width': 'initial'}
-        )
 
-        next_button = widgets.Button(description="Next", button_style='success')
 
-        def on_button_click(b):
-            with self.output_context():
-                dbt_directory = dbt_directory_input.value
-                manifest_path = manifest_path_input.value or None
-                catalog_path = catalog_path_input.value or None
 
-                self.para["dbt_directory"] = dbt_directory
 
-                if "dbt_lineage" not in self.para:
-                    nodes, edges, sql_mapping, column_mapping = build_lineage_graph(dbt_directory, manifest_path, catalog_path)
-                    dbt_lineage = DbtLineage(nodes=nodes, edges=edges, sql_mapping=sql_mapping, column_mapping=column_mapping)
-                    self.para["dbt_lineage"] = dbt_lineage
 
-                callback({
-                    "dbt_directory": dbt_directory,
-                })
 
-        next_button.on_click(on_button_click)
 
-        if viewer or ("viewer" in self.para and self.para["viewer"]):
-            if "dbt_directory" in self.para or "dbt_lineage" in self.para:
-                on_button_click(next_button)
-                return
         
-        display(HTML("<h3>🛠️ Configure your DBT project and build lineage</h3>"))
-        display(widgets.VBox([dbt_directory_input, manifest_path_input, catalog_path_input]))
-        display(next_button)
+
 
 
 
@@ -33174,16 +33167,16 @@ class DescribeSQLList(ListNode):
         display(HTML(f"{running_spinner_html} Understanding SQL queries for dbt lineage..."))
 
         sql_query = """
-        SELECT model_name, sql_text
-        FROM sql_mapping
-        WHERE sql_text IS NOT NULL
+        SELECT model_name, raw_code
+        FROM model
+        WHERE raw_code IS NOT NULL
         """
 
         df = dbt_lineage.conn.execute(sql_query).df()
         
         total = len(df)
         
-        outputs = [(idx, total, row.model_name, row.sql_text) for idx, row in enumerate(df.itertuples(index=False))]
+        outputs = [(idx, total, row.model_name, row.raw_code) for idx, row in enumerate(df.itertuples(index=False))]
         
         self.progress = show_progress(len(outputs))
 
@@ -33193,27 +33186,29 @@ class DescribeSQLList(ListNode):
         idx, total, model_name, sql_query = extract_output
         
         clear_output(wait=True)
-        display(HTML(f"({idx}/{total}) Understanding the SQL for '{model_name}'..."))
+        display(HTML(f"({idx+1}/{total}) Understanding the SQL for '{model_name}'..."))
         
-        template = f"""You are given the following SQL query for the model '{model_name}':
+        template = f"""SQL query for model '{model_name}':
 {sql_query}
 
-Please summarize the purpose of this SQL query and tag it according to the following categories:
-1. Filtering: the script selects (or semi-joins) based on some criteria.
-2. Cleaning: the script cleans the existing columns by, e.g., trimming, standardizing, formatting...
-3. Deduplication: the script deduplicates by window function/qualifying...
-4. Featurization: the script extracts new features from the existing columns. E.g., extracting weekend/weekday from a date...
-5. Integration: the script joins and unions tables to integrate information. Note that semi-join is not considered as integration.
-6. Aggregation: the script aggregates data, group by ... E.g., sum, count, average...
-7. Other: there are other significant tasks performed beyond the above.
+Summarize the SQL query's purpose and tag it:
+1. filtering: selects/semi-joins
+2. cleaning: e.g., trims, standardizes, formats columns
+3. deduplication: e.g., select distinct, window functions/qualifying
+4. featurization: e.g., extracting weekend/weekday from a date
+5. integration: joins/unions tables (excluding semi-joins)
+6. aggregation: groups data (sum, count, average, etc.)
+7. other: significant tasks beyond the above
 
 Respond with the following format:
 ```yml
 summary: >-
-    Brief natural language summary of what the SQL query does.
+    Brief summary of what the SQL query does.
 tags:
-    - tag1
-    - tag2
+    filtering: >-
+        only active users `status = True` # reference the related codes
+    other_applicable_tag: >-
+        ...
 ```"""
 
         messages = [{"role": "user", "content": template}]
@@ -33236,13 +33231,12 @@ tags:
         if not isinstance(result['summary'], str):
             raise TypeError("result['summary'] must be a string")
         
-        if result['tags'] and not isinstance(result['tags'], list):
-            raise TypeError("result['tags'] must be a list")
+        if not isinstance(result['tags'], dict):
+            raise TypeError("result['tags'] must be a dictionary")
         
-        for tag in result['tags']:
-            if not isinstance(tag, str):
-                raise TypeError(f"Each tag must be a string: {tag}")
-        
+        for tag_key, tag_value in result['tags'].items():
+            if not isinstance(tag_key, str) or not isinstance(tag_value, str):
+                raise TypeError(f"Tag key and value must be strings: {tag_key}: {tag_value}")
         self.progress.value += 1
         
         return {model_name: result}
@@ -33257,17 +33251,75 @@ tags:
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         dbt_lineage = self.para['dbt_lineage']
         
+        display(HTML("🎉 We have documented all the models..."))
+
         data = {
             'model_name': [],
             'summary': [],
             'tags': []
         }
         
+        model_htmls = []
+        
         for model_name, result in run_output.items():
             data['model_name'].append(model_name)
             data['summary'].append(result['summary'])
             data['tags'].append(result['tags'])
+            
+            raw_code_query = "SELECT raw_code FROM model WHERE model_name = ?"
+            raw_code_df = dbt_lineage.conn.execute(raw_code_query, [model_name]).df()
+            raw_code = raw_code_df['raw_code'][0] if not raw_code_df.empty else ""
+            
+            tag_html = "<ul>" + "".join(["<li>" + generate_tag_html(tag, description) + "</li>" for tag, description in result['tags'].items()]) + "</ul>"
+            
+            model_dict = OrderedDict([
+                ("Description", result['summary']),
+                ("Tags", tag_html),
+                ("Model Code", highlight_sql(raw_code)),
+            ])
+            
+            model_html = ""
+            for key, value in model_dict.items():
+                model_html += wrap_in_card(key, value)
+
+            formatter = HtmlFormatter(style='monokai')
+            css_style = formatter.get_style_defs('.highlight')
+            html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <style>
+        pre {{ line-height: 125%; }}
+        .highlight {{
+            background: #272822;
+            color: #f8f8f2;
+            border-radius: 4px;
+            padding: 1em;
+            margin: 1em 0;
+            overflow-x: auto;
+            font-size: 12px;
+        }}
+        {css_style}
+        {tag_css}
+        {table_css}
+    </style>
+</head>
+<body>
+    {model_html}
+</body>
+</html>
+"""
+            
+            model_htmls.append([model_name, html])
         
+        tabs = create_dropdown_with_content(model_htmls)
+        display(tabs)
+
+
         df = pd.DataFrame(data)
         
         if len(df) == 0:
@@ -33276,11 +33328,8 @@ tags:
         
         editable_columns = [False, True, True]
         reset = True
-        editable_list = {
-            'tags': {}
-        }
         
-        grid = create_dataframe_grid(df, editable_columns, reset=reset, editable_list=editable_list)
+        grid = create_dataframe_grid(df, editable_columns, reset=reset)
         
         display(grid)
         
@@ -33288,9 +33337,31 @@ tags:
         
         def on_button_click(b):
             with self.output_context():
-                updated_df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
+                updated_df = grid_to_updated_dataframe(grid, reset=reset)
                 
-                dbt_lineage.union_sql_tags(updated_df)
+                for _, row in updated_df.iterrows():
+                    model_name = row['model_name']
+                    summary = row['summary']
+                    tags = ast.literal_eval(row['tags']) if isinstance(row['tags'], str) else row['tags']
+
+                    dbt_lineage.conn.execute("""
+                        UPDATE model
+                        SET cocoon_description = ?
+                        WHERE model_name = ?
+                    """, (summary, model_name))
+
+                    dbt_lineage.conn.execute("""
+                        DELETE FROM model_cocoon_tag
+                        WHERE model_name = ?
+                    """, (model_name,))
+
+                    for tag, description in tags.items():
+                        dbt_lineage.conn.execute("""
+                            INSERT INTO model_cocoon_tag (model_name, cocoon_tag, cocoon_description)
+                            VALUES (?, ?, ?)
+                            ON CONFLICT(model_name, cocoon_tag) DO UPDATE SET
+                            cocoon_description = EXCLUDED.cocoon_description
+                        """, (model_name, tag, description))
                 
                 document = df.to_json(orient="split")
                 callback(document)
@@ -33301,6 +33372,7 @@ tags:
         if self.viewer or ("viewer" in self.para and self.para["viewer"]):
             on_button_click(next_button)
             return
+        
         
 class BuildColumnLineageForAll(MultipleNode):
     default_name = 'Build Column Lineage For All'
@@ -33313,41 +33385,35 @@ class BuildColumnLineageForAll(MultipleNode):
         
         display(HTML(f"{running_spinner_html} Identifying models for column lineage..."))
         
-
         sql_query = """
 WITH model_with_sql AS (
     SELECT DISTINCT model_name
-    FROM sql_mapping
-    WHERE sql_text IS NOT NULL
+    FROM model
+    WHERE raw_code IS NOT NULL
 ),
 model_with_columns AS (
     SELECT model_name
-    FROM column_mapping
+    FROM model_column
     GROUP BY model_name
     HAVING COUNT(*) > 0
 ),
 model_with_parents AS (
-    SELECT DISTINCT n2.model_name AS child_model
-    FROM nodes n1
-    JOIN edges e ON n1.index = e.parent_idx
-    JOIN nodes n2 ON e.child_idx = n2.index
+    SELECT DISTINCT target_model_name AS child_model
+    FROM model_lineage
 ),
 parent_models_with_columns AS (
-    SELECT DISTINCT mwp.child_model
-    FROM model_with_parents mwp
-    JOIN nodes n ON mwp.child_model = n.model_name
-    JOIN edges e ON n.index = e.child_idx
-    JOIN nodes parent_n ON e.parent_idx = parent_n.index
-    JOIN column_mapping cm ON parent_n.model_name = cm.model_name
-    GROUP BY mwp.child_model
-    HAVING COUNT(DISTINCT cm.model_name) > 0
+    SELECT DISTINCT ml.target_model_name AS child_model
+    FROM model_lineage ml
+    JOIN model_column mc ON ml.source_model_name = mc.model_name
+    GROUP BY ml.target_model_name
+    HAVING COUNT(DISTINCT mc.model_name) > 0
 )
-SELECT n.model_name
-FROM nodes n
-JOIN model_with_sql mws ON n.model_name = mws.model_name
-JOIN model_with_columns mwc ON n.model_name = mwc.model_name
-JOIN model_with_parents mwp ON n.model_name = mwp.child_model
-JOIN parent_models_with_columns pmwc ON n.model_name = pmwc.child_model
+SELECT m.model_name
+FROM model m
+JOIN model_with_sql mws ON m.model_name = mws.model_name
+JOIN model_with_columns mwc ON m.model_name = mwc.model_name
+JOIN model_with_parents mwp ON m.model_name = mwp.child_model
+JOIN parent_models_with_columns pmwc ON m.model_name = pmwc.child_model
         """
 
         df = dbt_lineage.conn.execute(sql_query).df()
@@ -33372,7 +33438,7 @@ JOIN parent_models_with_columns pmwc ON n.model_name = pmwc.child_model
         node = ColumnLineageForModel(para=para, id_para="model_name")
         node.inherit(self)
         return node
-
+    
 class ColumnLineageForModel(ListNode):
     default_name = 'Column Lineage For Model'
     default_description = 'This node builds column lineage for a specific model, processing columns in chunks.'
@@ -33387,38 +33453,37 @@ class ColumnLineageForModel(ListNode):
         
         def get_model_info(conn, model_name):
             sql_query = conn.execute("""
-                SELECT sql_text
-                FROM sql_mapping
+                SELECT raw_code
+                FROM model
                 WHERE model_name = ?
             """, [model_name]).fetchone()
             sql_query = sql_query[0] if sql_query else ''
 
+
             sql_info = conn.execute("""
-                SELECT summary, tags
-                FROM sql_tags
+                SELECT cocoon_tag, cocoon_description
+                FROM model_cocoon_tag
                 WHERE model_name = ?
             """, [model_name]).fetchone()
             sql_info = dict(zip(['summary', 'tags'], sql_info)) if sql_info else None
 
             columns = conn.execute("""
-                SELECT column_name, column_type, comment
-                FROM column_mapping
+                SELECT column_name, description
+                FROM model_column
                 WHERE model_name = ?
             """, [model_name]).df().set_index('column_name').to_dict('index')
 
             parent_nodes = conn.execute("""
-                SELECT n1.model_name as parent_model
-                FROM nodes n1
-                JOIN edges e ON n1.index = e.parent_idx
-                JOIN nodes n2 ON e.child_idx = n2.index
-                WHERE n2.model_name = ?
+                SELECT source_model_name as parent_model
+                FROM model_lineage
+                WHERE target_model_name = ?
             """, [model_name]).df()['parent_model'].tolist()
 
             parent_columns = {}
             for parent in parent_nodes:
                 parent_cols = conn.execute("""
-                    SELECT column_name, column_type, comment
-                    FROM column_mapping
+                    SELECT column_name, description
+                    FROM model_column
                     WHERE model_name = ?
                 """, [parent]).df().set_index('column_name').to_dict('index')
                 parent_columns[parent] = parent_cols
@@ -33457,16 +33522,20 @@ class ColumnLineageForModel(ListNode):
         parent_table = extract_output['parent_table']
         parent_columns = extract_output['parent_columns'][parent_table]
 
+
+        
         parent_columns_str = '\n'.join(
-            f"{i+1}. '{col}': {parent_columns[col]['comment'][:97] + '...' if parent_columns[col]['comment'] and len(parent_columns[col]['comment']) > 100 else parent_columns[col]['comment']}" 
-            if parent_columns[col]['comment'] 
+            f"{i+1}. '{col}': {parent_columns[col]['description'][:97] + '...' if parent_columns[col]['description'] and len(parent_columns[col]['description']) > 100 else parent_columns[col]['description']}" 
+            if parent_columns[col]['description'] 
             else f"{i+1}. '{col}'" 
             for i, col in enumerate(parent_columns)
         )
 
+        columns = OrderedDict(sorted(columns.items()))
+
         output_columns_str = '\n'.join(
-            f"{i+1}. '{col}': {columns[col]['comment'][:97] + '...' if columns[col]['comment'] and len(columns[col]['comment']) > 100 else columns[col]['comment']}" 
-            if columns[col]['comment'] 
+            f"{i+1}. '{col}': {columns[col]['description'][:97] + '...' if columns[col]['description'] and len(columns[col]['description']) > 100 else columns[col]['description']}" 
+            if columns[col]['description'] 
             else f"{i+1}. '{col}'" 
             for i, col in enumerate(columns)
         )
@@ -33482,14 +33551,14 @@ Focus on these input columns for parent table '{parent_table}':
 {parent_columns_str}
 
 Describe how each column is used with tag:
-1. Direct: the column is directly copied without any transformation
-2. Filtering: the column is filtered based on ...
-3. Cleaning: the column is cleaned by e.g., trimming, standardizing, casting, formatting...
-4. Deduplication: the column is used for deduplication as id (e.g., window by) or criteria (qualify...)
-5. Featurization: the x feature is extracted from this column
-6. Integration: the column is used as the key to join or union
-7. Aggregation: the column is grouped by, or aggregated
-8. Other: there are other significant tasks performed beyond the above.
+1. direct: Copied without changes
+2. filtering: Used in WHERE or HAVING clauses
+3. cleaning: Standardized, formatted, or cast
+4. deduplication: Used as ID (e.g., window by), criteria (qualify...) or DISTINCT
+5. featurization: New features derived from it
+6. integration: Join or union key
+7. aggregation: Used in GROUP BY or aggregate functions
+8. other: Significant tasks not covered above
 
 Respond with the following format for each input column:
 ```yml
@@ -33497,7 +33566,9 @@ column_name:
     is_used: true/false
     # if is_used, fill out below...
     how_used:
-        'tag_name': explain this tag
+        # for each applicable tag, reference related codes
+        cleaning: >-
+            cast to integer `CAST(number AS INT)`
     # is this column mapped to another column in the output, for column lineage
     # e.g., it is directly copied to, aggregated, or transformed 
     # if not, says null
@@ -33554,8 +33625,6 @@ column_name:
                 else:
                     columns_to_remove.append(column_name)
         
-        for column_name in columns_to_remove:
-            del result[column_name]
             
         self.progress.value += 1
         
@@ -33582,6 +33651,8 @@ column_name:
     def postprocess(self, run_output, callback, viewer=False, extract_output=None):
         dbt_lineage = self.para['dbt_lineage']
 
+        display(HTML("🎉 We have documented the column lineage..."))
+
         data = {
             'input_model': [],
             'input_column': [],
@@ -33590,8 +33661,16 @@ column_name:
             'output_columns': []
         }
 
+        nodes = {}
+        edges = []
+
         for model_name, model_data in run_output.items():
             for parent_table, table_data in model_data.items():
+                if parent_table not in nodes:
+                    nodes[parent_table] = set()
+                if model_name not in nodes:
+                    nodes[model_name] = set()
+
                 for column_name, column_info in table_data.items():
                     if column_info['is_used']:
                         data['input_model'].append(parent_table)
@@ -33607,6 +33686,94 @@ column_name:
                         if column_info['outputs']:
                             output_cols = str(column_info['outputs'])
                         data['output_columns'].append(output_cols)
+
+                        nodes[parent_table].add(column_name)
+                        
+                        if column_info['outputs']:
+                            for output_col, description in column_info['outputs'].items():
+                                nodes[model_name].add(output_col)
+                                edges.append((parent_table, column_name, model_name, output_col))
+                        else:
+                            edges.append((parent_table, column_name, model_name, None))
+
+        nodes = {k: list(v) for k, v in nodes.items()}
+
+        html_output = generate_schema_graph_graphviz(nodes, edges)
+        display(HTML(html_output))
+
+        def generate_model_html(model_name, model_data):
+            model_html_list = []
+            for parent_table, table_data in model_data.items():
+
+                html = ""
+                html += "<table class='table table-striped'>"
+                html += "<thead><tr><th>Input Column</th><th>Usage</th><th>Output Columns</th></tr></thead>"
+                html += "<tbody>"
+                
+                for column_name, column_info in table_data.items():
+                    if column_info['is_used']:
+                        usage_html = "".join([generate_tag_html(tag, description) + "<br>" for tag, description in column_info['how_used'].items()])
+
+                        output_columns = column_info.get('outputs', {})
+                        output_html = ""
+                        if output_columns:
+                            for output_col, description in output_columns.items():
+                                output_html += f"<b>{output_col}</b>: {description}<br>"
+                        
+                        html += f"<tr><td>{column_name}</td><td>{usage_html}</td><td>{output_html}</td></tr>"
+                
+                html += "</tbody></table>"
+                full_html = wrap_in_model_html(wrap_in_card(parent_table, html))
+                model_html_list.append([parent_table, full_html])
+
+            return model_html_list
+
+        def wrap_in_model_html(content):
+            formatter = HtmlFormatter(style='monokai')
+            css_style = formatter.get_style_defs('.highlight')
+            return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <style>
+        pre {{ line-height: 125%; }}
+        .highlight {{
+            background: #272822;
+            color: #f8f8f2;
+            border-radius: 4px;
+            padding: 1em;
+            margin: 1em 0;
+            overflow-x: auto;
+            font-size: 12px;
+        }}
+        {css_style}
+        {tag_css}
+        {table_css}
+    </style>
+</head>
+<body>
+    <div class="container">
+        {content}
+    </div>
+</body>
+</html>"""
+
+        model_htmls = []
+        for model_name, model_data in run_output.items():
+            model_html_list = generate_model_html(model_name, model_data)
+            model_htmls += model_html_list
+
+        model_code_html = highlight_sql(extract_output[0]['sql_query'])
+        model_htmls.append(["Model Code", model_code_html])
+
+        tabs = create_dropdown_with_content(model_htmls)
+        display(tabs)
+
+
 
         df = pd.DataFrame(data)
 
@@ -33627,7 +33794,29 @@ column_name:
         def on_button_click(b):
             with self.output_context():
                 updated_df = grid_to_updated_dataframe(grid, reset=reset, editable_list=editable_list)
-                dbt_lineage.union_table_lineage(updated_df)
+                
+                for _, row in updated_df.iterrows():
+                    tags = eval(row['tags']) if row['tags'] else {}
+                    output_columns = eval(row['output_columns']) if row['output_columns'] else {}
+                    
+                    for tag, description in tags.items():
+                        dbt_lineage.conn.execute("""
+                            INSERT INTO model_column_cocoon_tag 
+                            (source_model_name, source_column_name, target_model_name, cocoon_tag, cocoon_description)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT(source_model_name, source_column_name, target_model_name, cocoon_tag) 
+                            DO UPDATE SET cocoon_description = EXCLUDED.cocoon_description
+                        """, (row['input_model'], row['input_column'], row['output_model'], tag, description))
+
+                    for output_column, description in output_columns.items():
+                        dbt_lineage.conn.execute("""
+                            INSERT INTO column_lineage 
+                            (source_model_name, source_column_name, target_model_name, target_column_name, cocoon_description)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON CONFLICT(source_model_name, source_column_name, target_model_name, target_column_name) 
+                            DO UPDATE SET cocoon_description = EXCLUDED.cocoon_description
+                        """, (row['input_model'], row['input_column'], row['output_model'], output_column, description))
+
                 document = updated_df.to_json(orient="split")
                 callback(document)
 
@@ -33639,179 +33828,952 @@ column_name:
             return
             
     
-def create_cocoon_dbt_explore_workflow(output=None, para={}, dbt_directory=None, nodes=None, edges=None, sql_mapping=None, column_mapping=None, viewer=False):
-
-    workflow_para = {"viewer": viewer, 
-                     "dbt_directory": dbt_directory}
+        
     
-    for key, value in para.items():
-        workflow_para[key] = value
     
-    if all(param is not None for param in [nodes, edges, sql_mapping, column_mapping]):
-        dbt_lineage = DbtLineage(nodes=nodes, edges=edges, sql_mapping=sql_mapping, column_mapping=column_mapping)
-        workflow_para['dbt_lineage'] = dbt_lineage
         
-    main_workflow = Workflow("DBT Project Explore Workflow", 
-                         item = {},
-                        description="A workflow to explore a DBT project",
-                        output=output,
-                        para=workflow_para)
 
-    main_workflow.add_to_leaf(DBTLineageConfig(output=output))
-    main_workflow.add_to_leaf(DescribeSQLList(output=output))
-    main_workflow.add_to_leaf(BuildColumnLineageForAll(output=output))
     
-    return main_workflow
 
-class DbtLineage:
+class DBTLineageBuilder(Node):
+    default_name = 'DBT Lineage Builder'
+    default_description = 'This step reads the DBT manifest and builds the lineage graph.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        if 'dbt_lineage' in self.para:
+            dbt_lineage = self.para['dbt_lineage']
+        else:
+            dbt_directory = self.para.get("dbt_directory")
+            if not dbt_directory:
+                display(HTML("<div style='color: red;'>Error: DBT directory not found in parameters.</div>"))
+                return
+
+            manifest_path = os.path.join(dbt_directory, 'target', 'manifest.json')
+            if not os.path.exists(manifest_path):
+                display(HTML(f"<div style='color: red;'>Error: {manifest_path} not found. Please ensure your DBT project is compiled.</div>"))
+                return
+
+            dbt_lineage = DbtLineage(dbt_directory = dbt_directory)
+
+            json_content = read_from(manifest_path)
+            manifest_dict = json.loads(json_content)
+
+            dbt_lineage.populate_from_manifest(manifest_dict)
+
+            self.para['dbt_lineage'] = dbt_lineage
+
+        display(HTML("<div style='line-height: 1.2;'><h2>🎉 Your DBT model lineage is ready for RAG</h2><em>We learned them from <code>target/manifest.json</code>, and your DBT copilot is ready for use.</em></div>"))
+        dbt_lineage.display_lineage_widgets()
 
 
-    def __init__(self, db_name=None, nodes=None, edges=None, sql_mapping=None, column_mapping=None):
-        self.conn = duckdb.connect(':memory:')
-        
-        if db_name:
-            self.load_from_disk(db_name)
-            return
+        text_input = widgets.Text(
+            placeholder='Ask any question about the DBT project...',
+            layout=widgets.Layout(width='70%')
+        )
 
-        nodes_df = pd.DataFrame({'model_name': nodes if nodes is not None else []})
-        nodes_df['index'] = nodes_df.index
+        send_button = widgets.Button(
+            description='Send',
+            button_style='primary',
+            layout=widgets.Layout(width='10%')
+        )
+
+        def on_send(b):
+            with self.output_context():
+                message = text_input.value
+                callback({"question": message})
+                return
+
+        send_button.on_click(on_send)
+
+        chat_input = widgets.HBox([text_input, send_button], layout=widgets.Layout(width='100%', margin='10px 0px'))
+
+        display(chat_input)
+
+            
+class DBTRAGBranchStep(Node):
+    default_name = 'DBT RAG Branch Options'
+    default_description = 'Choose a DBT RAG option for your project'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
         
-        edges_df = pd.DataFrame(edges if edges is not None else [], columns=['parent_idx', 'child_idx'])
-        
-        sql_mapping_df = pd.DataFrame(list(sql_mapping.items()) if sql_mapping is not None else [], 
-                                           columns=['model_name', 'sql_text'])
-        
-        column_mapping_df = pd.DataFrame([
-            {
-                'model_name': model,
-                'column_name': col_name,
-                'column_type': col_info['type'],
-                'comment': col_info['comment'],
-                'index': col_info['index']
-            }
-            for model, columns in (column_mapping or {}).items()
-            for col_name, col_info in columns.items()
+        style = HTML("""
+        <style>
+        .widget-checkbox { margin-right: 10px; }
+        .option-label { 
+            font-size: 14px; 
+        }
+        em { 
+            font-size: 12px; 
+            color: #666; 
+            display: block;
+            margin-top: -5px;
+        }
+        code {
+            font-family: 'Fira Code', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        pre.command-line {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            padding: 10px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #333;
+            border: 1px solid #e1e4e8;
+        }
+        pre.command-line code {
+            background-color: transparent;
+            padding: 0;
+            border: none;
+                }
+        </style>
+        """)
+        display(style)
+
+        header_html = f'''
+        <div style="display: flex; align-items: center;">
+        <img src="data:image/png;base64,{cocoon_icon_64}" alt="cocoon icon" width=50 style="margin-right: 10px;">
+        <div style="margin: 0; padding: 0;">
+        <h1 style="margin: 0; padding: 0;">Cocoon: RAG for DBT</h1>
+        <em style="margin: 0; padding: 0;">RAG your large and complex DBT project for Multi-Step LLM Agents</em>
+        </div>
+        </div><hr>
+        '''
+
+        display(HTML(header_html))
+
+        build_rag_label = widgets.HTML(value="<div style='line-height: 1.2;'><h2>⚙️ Offline: Build RAG for DBT</h2><em>The more we prepare offline, the better the online query will be</em></div>")
+        build_rag_options = [
+            ('<span class="option-label"><div><strong>Model Lineage (✅ Done)</strong></div><div><em><b>🕸️ Graph-RAG:</b> Read model lineage directly from manifest.json</em></div></span>', True, True),
+            ('<span class="option-label"><div><strong>Model Augmented Documentation (✅ Recommended)</strong></div><div><em><b>🔍 Vector-RAG:</b> LLMs explore models and augment document (fast)</em></div></span>', True, False),
+            '<span class="option-label"><div><strong>Column Lineage</strong></div><div><em><b>🕸️ Graph-RAG:</b> LLMs explore columns and build lineage (for deeper analysis)</em></div></span>',
+            ('<span class="option-label"><div><strong>Macro Augmented Documentation (🔜 Coming soon...)</strong></div><div><em><b>🧰 Tool-RAG:</b> LLMs explore and prepare Macro </em></div></span>', False, True),
+            ('<span class="option-label"><div><strong>Metric Augmented Documentation (🔜 Coming soon...)</strong></div><div><em><b>🧰 Tool-RAG:</b> LLMs explore and prepare Metric</em></div></span>', False, True),
+            ('<span class="option-label"><div><strong>Test Augmented Documentation (🔜 Coming soon...)</strong></div><div><em><b>🧰 Tool-RAG:</b> LLMs explore and prepare Test </em></div></span>', False, True)
+        ]
+        build_rag_checkboxes_widget, build_rag_checkboxes = create_html_radio_buttons(build_rag_options, radio=False)
+        build_rag_button = widgets.Button(description="Build RAG", button_style='success', icon='database')
+
+        use_rag_label = widgets.HTML(value="<div style='line-height: 1.2;'><h2>🚀 Online: Query DBT using RAG</h2><em>Query your large and complex DBT project with the prepared RAG</em></div>")
+        use_rag_options = [
+            '<span class="option-label"><div><strong>DBT Copilot using RAG</strong></div><div><em><b>🤖 General-purpose:</b> Copilot for pipeline exploration, maintenance, and prototyping</em></div></span>',
+            '<span class="option-label"><div><strong>Augment yml Document</strong></div><div><em><b>📝 Augmentation:</b> Augment existing yml documentation from RAG (column lineage required)</em></div></span>'
+        ]
+        use_rag_radio_widget, use_rag_radio_buttons = create_html_radio_buttons(use_rag_options, radio=True)
+        use_rag_button = widgets.Button(description="Use RAG", button_style='info', icon='play')
+
+        build_rag_container = widgets.VBox([
+            build_rag_label,
+            widgets.VBox([build_rag_checkboxes_widget], layout=widgets.Layout(border='1px solid #ddd', padding='10px', margin='5px')),
+            build_rag_button
         ])
 
-        self.conn.execute("CREATE TABLE nodes AS SELECT * FROM nodes_df")
-        
-        self.conn.execute("CREATE TABLE edges AS SELECT * FROM edges_df")
-        
-        self.conn.execute("CREATE TABLE sql_mapping AS SELECT * FROM sql_mapping_df")
-        
-        self.conn.execute("CREATE TABLE column_mapping AS SELECT * FROM column_mapping_df")
-        
-        self.conn.execute("""
-            CREATE TABLE sql_tags (
-                model_name VARCHAR,
-                summary VARCHAR,
-                tags JSON
-            )
-        """)
+        use_rag_container = widgets.VBox([
+            use_rag_label,
+            widgets.VBox([use_rag_radio_widget], layout=widgets.Layout(border='1px solid #ddd', padding='10px', margin='5px')),
+            use_rag_button
+        ])
 
-        self.conn.execute("""
-            CREATE TABLE table_lineage (
-                input_model VARCHAR,
-                input_column VARCHAR,
-                tags JSON,
-                output_model VARCHAR,
-                output_columns JSON
-            )
-        """)
+        hr = widgets.HTML(value='<hr>')
 
-    def get_ordered_nodes(self):
-        nodes_query = self.conn.execute("""
-            SELECT model_name, index
-            FROM nodes
-            ORDER BY index
-        """).fetchall()
-        return nodes_query
+        display(widgets.VBox([build_rag_container, hr, use_rag_container]))
+            
+        def on_build_rag_click(b):
+            with self.output_context():
+                def get_selected_options():
+                    option_keys = [
+                        'model_lineage',
+                        'model_doc',
+                        'column_lineage',
+                        'macro_doc',
+                        'metric_doc',
+                        'test_doc'
+                    ]
+                    
+                    selected_options = {}
+                    for key, option, checkbox in zip(option_keys, build_rag_options, build_rag_checkboxes):
+                        if isinstance(option, tuple):
+                            selected_options[key] = checkbox.value
+                        else:
+                            selected_options[key] = checkbox.value if not checkbox.disabled else False
+                    
+                    return selected_options
+                
+                selected_options = get_selected_options()
+                self.para["cocoon_dbt_rag_options"] = selected_options
+                
+                print(selected_options)
+                callback({
+                    "next_node": "DBT RAG Preparation Workflow"
+                })
+
+        def on_use_rag_click(b):
+            with self.output_context():
+                def get_selected_option():
+                    for option, radio_button in zip(use_rag_options, use_rag_radio_buttons):
+                        if radio_button.value:
+                            if "DBT Copilot" in option:
+                                return "rag copilot"
+                            elif "Augment yml Document" in option:
+                                return "documentation"
+                    return None
+
+                selected_option = get_selected_option()
+                print(selected_option)
+                
+                if not selected_option:
+                    print("⚠️ Please select an option to use RAG")
+                    return
+                
+                callback({
+                    "next_node": selected_option
+                })
+
+        build_rag_button.on_click(on_build_rag_click)
+        use_rag_button.on_click(on_use_rag_click)
+        
+class DBTLineageConfig(Node):
+    default_name = 'DBT Lineage Configuration'
+    default_description = 'This step allows you to configure the DBT project and build the lineage graph.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        dbt_directory_input = widgets.Text(
+            value=self.para.get("dbt_directory", "./dbt_project"),
+            layout=widgets.Layout(width='70%')
+        )
+
+        next_button = widgets.Button(description="Build RAG", button_style='success', icon='database', layout=widgets.Layout(width='10%'))
+
+
+
+        def on_button_click(b):
+            with self.output_context():
+                dbt_directory = dbt_directory_input.value
+
+                manifest_path = os.path.join(dbt_directory, 'target', 'manifest.json')
+                if not file_exists(manifest_path):
+                    display(HTML(f"<div style='color: red;'>Error: {manifest_path} not found. Please ensure your DBT project is compiled.</div>"))
+                    return
+
+                self.para["dbt_directory"] = dbt_directory
+
+                callback({
+                    "dbt_directory": dbt_directory,
+                })
+
+        next_button.on_click(on_button_click)
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if "dbt_directory" in self.para:
+                on_button_click(next_button)
+                return
+        
+        display(HTML("<div style='line-height: 1.2;'><h2>🛠️ Provide your DBT Directory for RAG</h2><em>Ensure it's compiled with <code>target/manifest.json</code> available. Prefer full path than relative path.</em></div>"))
+        display(widgets.HBox([dbt_directory_input, next_button]))
+
+
+class ProcessUserQuestion(Node):
+    default_name = 'Process User Question'
+    default_description = 'This step processes the user question from the DBT Lineage Builder.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        question = self.get_sibling_document('DBT Lineage Builder').get("question", "No question found")
+        dbt_lineage = self.para['dbt_lineage']
+
+        chat = ChatHTMLGenerator()
+        chat.display()
+
+        agent = DBTLLMAgent(dbt_lineage, chat_ui=chat, debug=False)
+
+        def serve_user_question(question):
+            agent.process_user_question(question)
+
+        follow_up_button = widgets.Button(
+            description='Follow Up',
+            icon='arrow-right',
+            button_style='primary',
+            layout=widgets.Layout(width='15%'),
+            tooltip='Ask a follow-up question'
+        )
+
+        new_question_input = widgets.Text(
+            placeholder='Enter your question here...',
+            layout=widgets.Layout(width='70%')
+        )
+
+        new_button = widgets.Button(
+            description='New',
+            icon='plus',
+            button_style='warning',
+            layout=widgets.Layout(width='15%'),
+            tooltip='Start a new conversation'
+        )
+
+        warning_widget = widgets.HTML(
+            value='',
+            layout=widgets.Layout(width='100%', margin='10px 0px')
+        )
+
+        def on_follow_up(b):
+            new_question = new_question_input.value
+            if new_question:
+                serve_user_question(new_question)
+                new_question_input.value = ''
+            update_warning()
+
+        def on_new(b):
+            chat.clear_all_messages()
+            nonlocal agent
+            agent = DBTLLMAgent(dbt_lineage, chat_ui=chat, debug=False)
+            warning_widget.value = ''
+            new_question = new_question_input.value
+            if new_question:
+                serve_user_question(new_question)
+                new_question_input.value = ''
+
+        follow_up_button.on_click(on_follow_up)
+        new_button.on_click(on_new)
+
+        def update_warning():
+            if len(agent.conversation_history) > 10:
+                warning_widget.value = '<div style="color: red">Warning: Conversation is getting long. Consider starting a new conversation for better performance.</div>'
+            else:
+                warning_widget.value = ''
+
+        new_question_box = widgets.HBox([new_question_input, follow_up_button, new_button], 
+                                        layout=widgets.Layout(width='100%', margin='20px 0px'))
+
+        display(widgets.VBox([new_question_box, warning_widget]))
+
+        serve_user_question(question)
+
+
+def create_cocoon_dbt_explore_workflow(con=None, output=None, para={}, viewer=False):
     
-    def get_index_by_model_name(self, model_name, one_based=True):
+    main_workflow = Workflow("DBT Project Explore Workflow", 
+                        item = {},
+                        description="A workflow to explore a DBT project",
+                        output=output,
+                        para=para)
+
+    main_workflow.add_to_leaf(DBTLineageConfig(output=output))
+    main_workflow.add_to_leaf(DBTLineageBuilder(output=output))
+    main_workflow.add_to_leaf(ProcessUserQuestion(output=output)) 
+
+    
+    
+    
+    return main_workflow
+    
+
+def create_cocoon_dbt_rag_prep_workflow(para={}, output=None):
+
+    rag_prep_workflow = Workflow("DBT RAG Preparation Workflow", 
+                                 description="A workflow to prepare RAG for DBT project",
+                                 para=para,
+                                 output=output)
+
+    rag_prep_workflow.add_to_leaf(DescribeSQLList(output=output))
+    rag_prep_workflow.add_to_leaf(BuildColumnLineageForAll(output=output))
+
+    return rag_prep_workflow
+
+class DbtLineage:
+    def __init__(self, dbt_directory=''):
+        self.conn = duckdb.connect(':memory:')
+        self.dbt_directory = dbt_directory
+        self._create_tables()
+
+    def _create_tables(self):
+        self.conn.execute("""
+            CREATE TABLE model (
+                model_name VARCHAR PRIMARY KEY,
+                database VARCHAR,
+                schema VARCHAR,
+                table_name VARCHAR,
+                original_file_path VARCHAR,
+                raw_code TEXT,
+                compiled_path VARCHAR,
+                compiled_code TEXT,
+                yml_path VARCHAR,
+                materialized VARCHAR,
+                description TEXT,
+                cocoon_description TEXT
+            )
+        """)
+        
+        self.conn.execute("""
+            CREATE TABLE model_cocoon_tag (
+                model_name VARCHAR,
+                cocoon_tag VARCHAR,
+                cocoon_description TEXT,
+                UNIQUE(model_name, cocoon_tag)
+            )
+        """)
+        
+        self.conn.execute("""
+        CREATE TABLE model_column_cocoon_tag (
+            source_model_name VARCHAR,
+            source_column_name VARCHAR,
+            target_model_name VARCHAR,
+            cocoon_tag VARCHAR,
+            cocoon_description TEXT,
+            UNIQUE(source_model_name, source_column_name, target_model_name, cocoon_tag)
+        )
+        """)
+                
+        self.conn.execute("""
+            CREATE TABLE model_lineage (
+                source_model_name VARCHAR,
+                target_model_name VARCHAR,
+                UNIQUE(source_model_name, target_model_name)
+            )
+        """)
+        
+        self.conn.execute("""
+            CREATE TABLE column_lineage (
+                source_model_name VARCHAR,
+                source_column_name VARCHAR,
+                target_model_name VARCHAR,
+                target_column_name VARCHAR,
+                cocoon_description TEXT,
+                UNIQUE(source_model_name, source_column_name, target_model_name, target_column_name)
+            )
+        """)
+        
+        self.conn.execute("""
+            CREATE TABLE model_column (
+                model_name VARCHAR,
+                column_name VARCHAR,
+                description TEXT,
+                cocoon_description TEXT,
+                UNIQUE(model_name, column_name)
+            )
+        """)
+
+    def add_or_update_model(self, model_data):
+        columns = ', '.join(model_data.keys())
+        placeholders = ', '.join(['?' for _ in model_data])
+        values = tuple(model_data.values())
+        
+        self.conn.execute(f"""
+            INSERT INTO model ({columns})
+            VALUES ({placeholders})
+            ON CONFLICT(model_name) DO UPDATE SET
+            {', '.join([f"{k} = EXCLUDED.{k}" for k in model_data.keys() if k != 'model_name'])}
+        """, values)
+            
+    def add_model_cocoon_tag(self, model_name, cocoon_tag):
+        existing = self.conn.execute("""
+            SELECT 1 FROM model_cocoon_tag
+            WHERE model_name = ? AND cocoon_tag = ?
+        """, (model_name, cocoon_tag)).fetchone()
+        
+        if not existing:
+            self.conn.execute("""
+                INSERT INTO model_cocoon_tag (model_name, cocoon_tag)
+                VALUES (?, ?)
+            """, (model_name, cocoon_tag))
+
+    def add_model_lineage(self, source_model_name, target_model_name):
+        existing = self.conn.execute("""
+            SELECT 1 FROM model_lineage
+            WHERE source_model_name = ? AND target_model_name = ?
+        """, (source_model_name, target_model_name)).fetchone()
+        
+        if not existing:
+            self.conn.execute("""
+                INSERT INTO model_lineage (source_model_name, target_model_name)
+                VALUES (?, ?)
+            """, (source_model_name, target_model_name))
+            
+            self.invalidate_lineage_cache()
+
+    def add_or_update_column_lineage(self, column_lineage_data):
+        columns = ', '.join(column_lineage_data.keys())
+        placeholders = ', '.join(['?' for _ in column_lineage_data])
+        values = tuple(column_lineage_data.values())
+        
+        self.conn.execute(f"""
+            INSERT INTO column_lineage ({columns})
+            VALUES ({placeholders})
+            ON CONFLICT(source_model_name, source_column_name, target_model_name, target_column_name) 
+            DO UPDATE SET cocoon_description = COALESCE(EXCLUDED.cocoon_description, column_lineage.cocoon_description)
+        """, values)
+
+    def add_or_update_column(self, column_data):
+        columns = ', '.join(column_data.keys())
+        placeholders = ', '.join(['?' for _ in column_data])
+        values = tuple(column_data.values())
+        
+        self.conn.execute(f"""
+            INSERT INTO model_column ({columns})
+            VALUES ({placeholders})
+            ON CONFLICT(model_name, column_name) DO UPDATE SET
+            description = COALESCE(EXCLUDED.description, model_column.description),
+            cocoon_description = COALESCE(EXCLUDED.cocoon_description, model_column.cocoon_description)
+        """, values)
+        
+    def populate_from_manifest(self, manifest_dict):
+        nodes = manifest_dict.get('nodes', {})
+        
+        for node_name, node_data in nodes.items():
+            if node_data['resource_type'] != 'model':
+                continue
+            
+            model_data = {
+                'model_name': node_name, 
+                'database': node_data.get('database'),
+                'schema': node_data.get('schema'),
+                'table_name': node_data.get('name'),
+                'original_file_path': node_data.get('original_file_path'),
+                'raw_code': node_data.get('raw_code'),
+                'compiled_path': node_data.get('compiled_path'),
+                'compiled_code': clean_sql(node_data.get('compiled_code')),
+                'materialized': node_data.get('config', {}).get('materialized'),
+                'description': node_data.get('description'),
+                'yml_path': None,
+                'cocoon_description': None
+            }
+            self.add_or_update_model(model_data)
+            
+            for upstream_node in node_data.get('depends_on', {}).get('nodes', []):
+                if upstream_node.startswith('model.'):
+                    self.add_model_lineage(upstream_node, node_name)
+            
+            for column_name, column_data in node_data.get('columns', {}).items():
+                column_info = {
+                    'model_name': node_name,
+                    'column_name': column_name,
+                    'description': column_data.get('description'),
+                    'cocoon_description': None
+                }
+                self.add_or_update_column(column_info)
+        
+        self.compute_lineage_info()
+    
+    def compute_lineage_info(self):
+        table_exists = self.conn.execute("""
+            SELECT table_name FROM information_schema.tables 
+            WHERE table_name = 'ordered_models' AND table_schema = 'main'
+        """).fetchone()
+
+        if table_exists:
+            return
+
+        self.conn.execute("""
+            CREATE OR REPLACE TABLE ordered_models AS
+            WITH RECURSIVE ancestor_count AS (
+                -- Base case: models with no parents
+                SELECT 
+                    m.model_name,
+                    0 AS num_ancestors
+                FROM 
+                    model m
+                WHERE 
+                    m.model_name NOT IN (SELECT DISTINCT target_model_name FROM model_lineage)
+                
+                UNION ALL
+                
+                -- Recursive case: count ancestors for models with parents
+                SELECT 
+                    ml.target_model_name AS model_name,
+                    ac.num_ancestors + 1 AS num_ancestors
+                FROM 
+                    model_lineage ml
+                JOIN 
+                    ancestor_count ac ON ml.source_model_name = ac.model_name
+            )
+            SELECT 
+                model_name, 
+                SUM(num_ancestors) AS total_ancestors,
+                ROW_NUMBER() OVER (ORDER BY SUM(num_ancestors), model_name) AS new_rowid
+            FROM 
+                ancestor_count
+            GROUP BY 
+                model_name
+            ORDER BY 
+                total_ancestors, model_name
+        """)
+
+        
+    def get_ordered_models(self):
+        self.compute_lineage_info()
+        return self.conn.execute("""
+            SELECT model_name, new_rowid AS rowid
+            FROM ordered_models
+            ORDER BY new_rowid
+        """).fetchall()
+    
+    def get_model_lineage(self):
+        lineage_query = self.conn.execute("""
+            SELECT source_model_name, target_model_name
+            FROM model_lineage
+        """).fetchall()
+        return lineage_query
+
+    def get_index_by_model_name(self, model_name):
+        self.compute_lineage_info()
         query = self.conn.execute("""
-            SELECT index
-            FROM nodes
+            SELECT new_rowid
+            FROM ordered_models
             WHERE model_name = ?
         """, (model_name,)).fetchone()
         
         if query:
             index = query[0]
-            if one_based:
-                index += 1
             return index
         else:
             return None
 
-    def get_edges(self):
-        """Retrieve edges."""
-        edges_query = self.conn.execute("""
-            SELECT parent_idx, child_idx
-            FROM edges
-        """).fetchall()
-        return [(edge[0], edge[1]) for edge in edges_query]
-    
+    def invalidate_lineage_cache(self):
+        self.conn.execute("DROP TABLE IF EXISTS model_parent_count")
+        self.conn.execute("DROP TABLE IF EXISTS ordered_models")
 
-    def display_lineage_html(self, numbered=True):
-        nodes_query = self.get_ordered_nodes()
+    def save_to_disk(self, db_name=None):
+        if db_name is None:
+            db_name = os.path.join(self.dbt_directory, "cocoon_lineage.db")
+        self.conn.execute(f"EXPORT DATABASE '{db_name}'")
+
+    def load_from_disk(self, db_name=None):
+        if db_name is None:
+            db_name = os.path.join(self.dbt_directory, "cocoon_lineage.db")
         
-        if numbered:
-            nodes = [f"{idx+1}. {name}" for name, idx in nodes_query]
+        if not os.path.exists(db_name):
+            if cocoon_main_setting['DEBUG_MODE']:
+                print(f"Database file not found: {db_name}")
+            return False
+
+        self.conn.close()
+        
+        self.conn = duckdb.connect(':memory:')
+        
+        self.conn.execute(f"IMPORT DATABASE '{db_name}'")
+        
+        return True
+
+    def display_database(self):
+        query_widget = QueryWidget(self.conn)
+        query_widget.display()
+        
+    def get_recursive_model_lineage(self, model_name, max_forward_depth=None, max_backward_depth=None):
+        def get_direct_lineage(input_model, direction='forward'):
+            if direction == 'forward':
+                query = """
+                SELECT 
+                    source_model_name, 
+                    target_model_name
+                FROM model_lineage
+                WHERE source_model_name = ?
+                """
+            else:
+                query = """
+                SELECT 
+                    source_model_name, 
+                    target_model_name
+                FROM model_lineage
+                WHERE target_model_name = ?
+                """
+            return self.conn.execute(query, [input_model]).fetchall()
+
+        def traverse_lineage(start_model, direction):
+            visited = set()
+            result = []
+            initial_depth = 1 if direction == 'forward' else -1
+            queue = deque([(start_model, initial_depth)])
+
+            while queue:
+                current_model, depth = queue.popleft()
+                
+                if current_model in visited:
+                    continue
+                
+                if direction == 'forward' and max_forward_depth is not None and depth > max_forward_depth:
+                    continue
+                if direction == 'backward' and max_backward_depth is not None and abs(depth) > max_backward_depth:
+                    continue
+                
+                visited.add(current_model)
+                
+                direct_lineage = get_direct_lineage(current_model, direction)
+                
+                for row in direct_lineage:
+                    result.append(row + (depth,))
+                    if direction == 'forward':
+                        next_model = row[1]
+                        if next_model not in visited:
+                            queue.append((next_model, depth + 1))
+                    else:
+                        prev_model = row[0]
+                        if prev_model not in visited:
+                            queue.append((prev_model, depth - 1))
+
+            return result
+
+        forward_lineage = traverse_lineage(model_name, 'forward')
+        
+        backward_lineage = traverse_lineage(model_name, 'backward')
+        
+        lineage_data = backward_lineage + forward_lineage
+        
+        df = pd.DataFrame(lineage_data, columns=[
+            'source_model_name', 'target_model_name', 'depth'
+        ])
+        
+        return df
+    
+    def get_full_file_path(self, table_name):
+        query = self.conn.execute("""
+            SELECT original_file_path
+            FROM model
+            WHERE table_name = ? OR model_name = ?
+        """, (table_name, table_name)).fetchone()
+
+        if query and query[0]:
+            return os.path.join(self.dbt_directory, query[0])
         else:
-            nodes = [name for name, idx in nodes_query]
+            return None
+        
+    def display_model_lineage_html(self, numbered=True, model_name=None, max_forward_depth=None, max_backward_depth=None):
+        all_models_query = self.get_ordered_models()
+        global_model_to_idx = {name: idx for name, idx in all_models_query}
 
-        edges = self.get_edges()
+        if model_name is None:
+            model_lineage = self.get_model_lineage()
+            models_to_display = [name for name, _ in all_models_query]
+        else:
+            lineage_df = self.get_recursive_model_lineage(model_name, max_forward_depth, max_backward_depth)
+            models_to_display = sorted(set(lineage_df['source_model_name'].tolist() + lineage_df['target_model_name'].tolist()))
 
-        image = generate_workflow_image(nodes, edges, format='svg')
+        if not models_to_display:
+            return None
+        
+        local_model_to_idx = {name: idx for idx, name in enumerate(models_to_display)}
 
-        html_content = wrap_image_in_html(image, format='svg')
+        if numbered:
+            nodes = [f"{global_model_to_idx[name]}. {name}" for name in models_to_display]
+        else:
+            nodes = models_to_display
+
+        if model_name is None:
+            edges = [(local_model_to_idx[source], local_model_to_idx[target]) for source, target in model_lineage]
+        else:
+            edges = [(local_model_to_idx[row['source_model_name']], local_model_to_idx[row['target_model_name']]) 
+                    for _, row in lineage_df.iterrows()]
+
+        highlight_index = local_model_to_idx[model_name] if (model_name and model_name in local_model_to_idx) else None
+
+        html_content = generate_workflow_html_multiple(
+            nodes, 
+            edges, 
+            format='svg', 
+            layout_direction='LR', 
+            height=500,
+            highlight_nodes_indices=[highlight_index] if highlight_index is not None else None
+        )
 
         return html_content
-
-    def display_lineage(self, numbered=True):
-        html_content = self.display_lineage_html(numbered)
+    
+    def display_model_lineage(self, numbered=True, model_name=None, max_forward_depth=None, max_backward_depth=None):
+        html_content = self.display_model_lineage_html(numbered, model_name, max_forward_depth, max_backward_depth)
 
         display(HTML(html_content))
     
-    def interactive_lineage_display(self):
-        self.display_lineage(numbered=True)
+    def display_model_lineage_by_indices(self, model_indices=None, numbered=True):
+        html_content = self.get_model_lineage_html_by_indices(model_indices, numbered)
+        if html_content:
+            display(HTML(html_content))
+        else:
+            print("No models to display.")
 
-        nodes_query = self.get_ordered_nodes()
+    def get_model_lineage_html_by_indices(self, model_indices=None, numbered=True):
+        all_models_query = self.get_ordered_models()
+        global_idx_to_model = {idx: name for name, idx in all_models_query}
         
-        model_options = [(f"{idx+1}. {name}", name) for name, idx in nodes_query]
+        if model_indices is None:
+            models_to_display = list(global_idx_to_model.values())
+        else:
+            models_to_display = [global_idx_to_model[idx] for idx in model_indices if idx in global_idx_to_model]
+        
+        if not models_to_display:
+            return None
+        
+        local_model_to_idx = {name: idx for idx, name in enumerate(models_to_display)}
+        
+        model_to_global_idx = {name: idx for idx, name in global_idx_to_model.items()}
 
-        dropdown = widgets.Dropdown(
-            options=model_options,
-            description='Select Model:',
-            disabled=False,
+        if numbered:
+            nodes = [f"{model_to_global_idx[name]}. {name}" for name in models_to_display]
+        else:
+            nodes = models_to_display
+        
+        all_model_lineage = self.get_model_lineage()
+        
+        edges = []
+        for source, target in all_model_lineage:
+            if source in local_model_to_idx and target in local_model_to_idx:
+                edges.append((local_model_to_idx[source], local_model_to_idx[target]))
+        
+        html_content = generate_workflow_html_multiple(
+            nodes, 
+            edges, 
+            format='svg', 
+            layout_direction='LR', 
+            height=500
         )
-
-        output = widgets.Output()
-
-        def on_change(change):
-            with output:
-                output.clear_output()
-                selected_model = change['new']
-                summary_html = self.get_model_summary_html(selected_model)
-                display(HTML(summary_html))
-
-        dropdown.observe(on_change, names='value')
-
-        display(dropdown, output)
         
-    def to_html(self, column_lineage=True, dbt_name="Cocoon DBT Project"):
-        table_lineage_html = self.display_lineage_html()
-        table_lineage_card = wrap_in_card(body=table_lineage_html)
+        return html_content
+
+    def generate_model_summary_html_dict(self, model_name, numbered=True):
+        model_query = self.conn.execute("""
+            SELECT * FROM model WHERE model_name = ?
+        """, (model_name,))
         
-        nodes_query = self.get_ordered_nodes()
-        options = OrderedDict()
+        columns = [column[0] for column in model_query.description]
+        model_info = model_query.fetchone()
+
+        if not model_info:
+            return {}
+
+        model_info = dict(zip(columns, model_info))
+
+        tags_query = self.conn.execute("""
+            SELECT cocoon_tag, cocoon_description
+            FROM model_cocoon_tag
+            WHERE model_name = ?
+        """, (model_name,))
+        tags = dict(tags_query.fetchall())
+
+
+        columns_df = pd.read_sql("""
+            SELECT column_name, description, cocoon_description
+            FROM model_column
+            WHERE model_name = ?
+        """, self.conn, params=(model_name,))
+
+        if columns_df['cocoon_description'].isnull().all():
+            columns_df = columns_df.drop('cocoon_description', axis=1)
+
+        model_number = ""
+        if numbered:
+            model_index = self.get_index_by_model_name(model_name)
+            model_number = f"{model_index}. "
+
+        properties = {
+            f"{model_number}{model_name}": ((model_info.get('description') or '') + ' ' + (model_info.get('cocoon_description') or '')).strip() or "Not available",
+            "tags": "<ul>" + "".join(["<li>" + generate_tag_html(tag, description) + "</li>" for tag, description in tags.items()]) + "</ul>" if tags else "None",
+            "Columns": columns_df.to_html(index=False) if not columns_df.empty else None,
+            "SQL": highlight_sql_only(model_info.get('raw_code')) if model_info.get('raw_code') else None,
+        }
+
+        properties = {k: v for k, v in properties.items() if v is not None}
+
+        return properties
+    
+    def generate_model_summary_text_dict(self, model_name=None, model_id=None):
+        if model_name is None and model_id is None:
+            raise ValueError("Either model_name or model_id must be provided")
+
+        if model_id is not None:
+            model_name_query = self.conn.execute("""
+                SELECT model_name
+                FROM ordered_models
+                WHERE new_rowid = ?
+            """, (model_id,)).fetchone()
+            
+            if model_name_query is None:
+                return {}
+            
+            model_name = model_name_query[0]
+            
+        model_query = self.conn.execute("""
+            SELECT * FROM model WHERE model_name = ?
+        """, (model_name,))
         
-        for name, idx in nodes_query:
-            model_key = f"{idx+1}. {name}"
-            model_content = self.get_model_summary_collapse_html(name, column_lineage=True, full=False)
-            model_content_in_card = wrap_in_card(body=model_content)
-            options[model_key] = model_content_in_card
+        columns = [column[0] for column in model_query.description]
+        model_info = model_query.fetchone()
+
+        if not model_info:
+            return {}
+
+        model_info = dict(zip(columns, model_info))
+
+        columns_df = pd.read_sql("""
+            SELECT column_name, description
+            FROM model_column
+            WHERE model_name = ?
+        """, self.conn, params=(model_name,))
+
+        properties = {
+            "Description": model_info.get('description') or None,
+            "Columns": "\n".join([f"{i+1}. '{row['column_name']}': {row['description'] or 'No description'}" 
+                                for i, row in columns_df.iterrows()]) if not columns_df.empty else None,
+            "Raw SQL": f"```sql\n{model_info.get('raw_code')}\n```" if model_info.get('raw_code') else None
+        }
+
+        properties = {k: v for k, v in properties.items() if v is not None}
+
+        return properties
+    
+    def generate_multiple_model_summaries_dict(self, model_indices, full=False):
+        summaries = OrderedDict()
+
+        if model_indices is None:
+            model_indices_query = self.conn.execute("""
+                SELECT new_rowid
+                FROM ordered_models
+                ORDER BY new_rowid
+            """).fetchall()
+            model_indices = [row[0] for row in model_indices_query]
+    
+
+        for idx in model_indices:
+            model_query = self.conn.execute("""
+                SELECT model_name
+                FROM ordered_models
+                WHERE new_rowid = ?
+            """, [idx]).fetchone()
+            
+            if model_query is None:
+                continue
+            
+            model_name = model_query[0]
+            key = f"{idx}. {model_name}"
+            
+            html_content = self.generate_model_summary_html(model_name, full=full)
+            
+            summaries[key] = html_content
         
-        model_html = generate_dropdown_html("cocoon", options, default_selection="Choose the Model", full=False)
+        return summaries
+
+    def generate_multiple_model_summaries(self, model_indices, full=True, include_model_lineage=False):
+        if model_indices is None:
+            section_name = "model_summary_all"
+        else:
+            section_name = f"model_summary_{'_'.join(map(str, model_indices))}"
+        
+        options = self.generate_multiple_model_summaries_dict(model_indices, full=False)
+
+        if include_model_lineage:
+            model_lineage_html = self.display_model_lineage_html(numbered=True)
+            
+            options = OrderedDict([("Model Lineage", model_lineage_html)] + list(options.items()))
+        
+        selected = next(iter(options.keys()), None)
+        
+        combined_html = generate_dropdown_html(section_name, options, default_selection="Explore Model", full=False, selected=selected)
+
+        if not full:
+            return combined_html
         
         formatter = HtmlFormatter(style='monokai')
         css_style = formatter.get_style_defs('.highlight')
@@ -33824,6 +34786,9 @@ class DbtLineage:
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <style>
+        body {{
+            font-size: 0.75rem;
+        }}
         pre {{ line-height: 125%; }}
         .highlight {{
             background: #272822;
@@ -33836,612 +34801,24 @@ class DbtLineage:
         }}
         {css_style}
         {tag_css}
-        {table_css}
+        {pandas_css}
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <div class="row mb-4">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <a href="https://github.com/Cocoon-Data-Transformation/cocoon" target="_blank"
-                        class="text-decoration-none text-dark">
-                        <div class="d-flex align-items-center">
-                            <img src="https://raw.githubusercontent.com/Cocoon-Data-Transformation/cocoon/main/images/cocoon_icon.png"
-                                alt="cocoon icon" width="40" class="mr-3">
-                            <div class="mx-3">
-                                <h4 class="mb-0">Cocoon Semantic Lineage</h4>
-                                <small class="mb-0 text-muted">Cocoon uses LLMs and can mistake</small>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-6 d-flex align-items-center justify-content-end">
-                    <h3>{dbt_name}</h3>
-                </div>
-            </div>
-            {table_lineage_card}
-            {model_html}
-        </div>
-    </div>    
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container">
-            <div style="height: 6rem;"></div>
-        </div>
-    </footer>
+    {combined_html}
 </body>
 </html>
-        """
+"""
         return html
-        
-    def _parse_dict_or_none(self, value):
-        if isinstance(value, (dict, list)):
-            return value
-        if pd.isna(value) or value == '':
-            return None
-        if isinstance(value, str):
-            return ast.literal_eval(value)
-        return value
-
-    def union_sql_tags(self, df):
-        required_columns = ['model_name', 'summary', 'tags']
-        if not all(col in df.columns for col in required_columns):
-            missing_columns = set(required_columns) - set(df.columns)
-            raise ValueError(f"Input DataFrame is missing required columns: {missing_columns}")
-        
-        df = df.copy()
-
-        df['tags'] = df['tags'].apply(self._parse_dict_or_none)
-
-        self.conn.execute("CREATE TEMPORARY TABLE temp_sql_tags AS SELECT * FROM df")
-
-        self.conn.execute("""
-            INSERT INTO sql_tags (model_name, summary, tags)
-            SELECT 
-                model_name,
-                summary,
-                tags
-            FROM temp_sql_tags
-        """)
-
-        self.conn.execute("DROP TABLE temp_sql_tags")
-        
-    def union_table_lineage(self, df):
-        required_columns = ['input_model', 'input_column', 'tags', 'output_model', 'output_columns']
-        if not all(col in df.columns for col in required_columns):
-            missing_columns = set(required_columns) - set(df.columns)
-            raise ValueError(f"Input DataFrame is missing required columns: {missing_columns}")
-        
-        df = df.copy()
-
-        df['tags'] = df['tags'].apply(self._parse_dict_or_none)
-        df['output_columns'] = df['output_columns'].apply(self._parse_dict_or_none)
-
-        self.conn.execute("CREATE TEMPORARY TABLE temp_lineage AS SELECT * FROM df")
-
-        self.conn.execute("""
-            INSERT INTO table_lineage (input_model, input_column, tags, output_model, output_columns)
-            SELECT 
-                input_model,
-                input_column,
-                tags,
-                output_model,
-                output_columns
-            FROM temp_lineage
-        """)
-
-        self.conn.execute("DROP TABLE temp_lineage")
-        
-    def display_column_lineage(self, model_name, column_name, lineage_df=None, display_lineage=True):
-        html_output = self.get_column_lineage_html(model_name, column_name, lineage_df, display_lineage)
-        display(HTML(html_output))
-        
     
-    def get_column_lineage_raw_dicts(self, model_name, column_name, lineage_df=None):
-        if lineage_df is None:
-            lineage_df = self.get_recursive_lineage_df(model_name, column_name)
-        
-        if lineage_df is None or len(lineage_df) == 0:
-            return OrderedDict(), OrderedDict()
+    def generate_model_summary_html(self, model_name, full=True):
+        options = self.generate_model_summary_html_dict(model_name)     
 
-        source_lineage = OrderedDict()
-        usage_lineage = OrderedDict()
-
-        lineage_df = lineage_df.sort_values('depth')
-
-        for _, row in lineage_df.iterrows():
-            depth = row['depth']
-            input_model = row['input_model']
-            output_model = row['output_model']
-            input_column = row['input_column']
-            tags = row['tags']
-            output_columns = row['output_columns']
-
-            if depth < 0:
-                if input_model not in source_lineage:
-                    source_lineage[input_model] = OrderedDict()
-                
-                source_lineage[input_model][input_column] = OrderedDict({
-                    'tags': tags,
-                    'output_model': output_model,
-                    'output_columns': output_columns
-                })
-            elif depth > 0:
-                if output_model not in usage_lineage:
-                    usage_lineage[output_model] = OrderedDict()
-                
-                usage_lineage[output_model][column_name] = OrderedDict({
-                    'input_model': input_model,
-                    'input_column': input_column,
-                    'tags': tags,
-                    'output_columns': output_columns
-                })
-
-        return source_lineage, usage_lineage
-
-    def print_all_nodes(self, selected_indices=None):
-        nodes = self.get_nodes(selected_indices=selected_indices)
-        
-        for node in nodes:
-            print(node)
-    
-    def get_nodes(self, selected_indices=None):
-        nodes_query = self.get_ordered_nodes()
-        
-        if selected_indices:
-            nodes = [f"{idx+1}. {name}" for name, idx in nodes_query if idx + 1 in selected_indices]
-        else:
-            nodes = [f"{idx+1}. {name}" for name, idx in nodes_query]
-            
-        return nodes
-            
-    def check_table_lineage_existence(self, model_name, upstream=False):
-        if upstream:
-            query = """
-                SELECT COUNT(*) > 0 AS exists
-                FROM table_lineage
-                WHERE output_model = ?
-            """
-        else:
-            query = """
-                SELECT COUNT(*) > 0 AS exists
-                FROM table_lineage
-                WHERE input_model = ?
-            """
-        
-        result = self.conn.execute(query, [model_name]).fetchone()
-        return result[0]
-
-    def get_nodes_directory_mapping(self, directory, selected_indices = None):
-        nodes = self.get_nodes(selected_indices=selected_indices)
-        nodes_directory_mapping = explore_dbt_models(directory, nodes)
-        return nodes_directory_mapping
-        
-    def display_nodes_directory_mapping(self, directory, selected_indices=None):
-        nodes = self.get_nodes(selected_indices=selected_indices)
-        nodes_directory_mapping = explore_dbt_models(directory, nodes)
-        
-        data = []
-        
-        for model_name, yml_path in nodes_directory_mapping.items():
-            model_name_without_number = model_name.split('. ', 1)[1]
-            has_upstream = self.check_table_lineage_existence(model_name_without_number, upstream=True)
-            has_downstream = self.check_table_lineage_existence(model_name_without_number, upstream=False)
-            
-            upstream_emoji = '✔️ found' if has_upstream else '❌ not found'
-            downstream_emoji = '✔️ found' if has_downstream else '❌ not found'
-            yml_emoji = '❌ not found' if yml_path is None else yml_path
-            
-            data.append({
-                'model name': model_name,
-                'yml path': yml_emoji,
-                'upstream lineage': upstream_emoji,
-                'downstream lineage': downstream_emoji,
-            })
-        
-        df = pd.DataFrame(data)
-        
-        return df
-
-    def get_column_lineage_summary(self, model_name, column_name):
-        
-        para = {
-            'dbt_lineage': self,
-            'model_name': model_name,
-            'column_name': column_name
-        }
-
-        main_workflow = create_cocoon_dbt_lineage_explanation_workflow(para=para)
-        main_workflow.start()
-        return main_workflow.global_document['DBT Lineage Explanation Workflow']['Explain Lineage']
-
-    def append_dbt_lineage_summary_to_model(self, directory, selected_indices=None):
-        nodes_directory_mapping = self.get_nodes_directory_mapping(directory=directory, selected_indices=selected_indices)
-        total_models = len(nodes_directory_mapping)
-        
-        for current_idx, (node, yml_path) in enumerate(nodes_directory_mapping.items(), start=1):
-            if yml_path:
-                model_name = node.split('. ', 1)[1].split('.')[-1]
-                full_model_name = node.split('. ', 1)[-1]
-                
-                clear_output(wait=True)
-                display(HTML(f"{running_spinner_html} ({current_idx}/{total_models}) Explaining lineage for {model_name}..."))
-                
-                append_column_descriptions(yml_path, model_name, full_model_name, self)
-    
-    def get_column_lineage_dict(self, model_name, column_name, lineage_df=None, display_lineage=True):
-        if lineage_df is None:
-            lineage_df = self.get_recursive_lineage_df(model_name, column_name)
-        
-        lineage_dict = OrderedDict()
-        
-        if lineage_df is None or len(lineage_df) == 0:
-            return lineage_dict
-        
-        if display_lineage:
-            lineage_graph_html = self.build_column_lineage_graph_html(model_name, column_name, lineage_df)
-            lineage_dict["Column Lineage"] = lineage_graph_html
-        
-        tag_styles = {
-            "Direct": {"bg": "#000000", "color": "#FFFFFF"},
-            "Filtering": {"bg": "#BBDEFB", "color": "#1565C0"},
-            "Cleaning": {"bg": "#C8E6C9", "color": "#2E7D32"},
-            "Deduplication": {"bg": "#FFF9C4", "color": "#F9A825"},
-            "Featurization": {"bg": "#E1BEE7", "color": "#6A1B9A"},
-            "Integration": {"bg": "#C5CAE9", "color": "#283593"},
-            "Aggregation": {"bg": "#F8BBD0", "color": "#AD1457"},
-            "Other": {"bg": "#F5F5F5", "color": "#616161"}
-        }
-
-        def get_tag_style(tag):
-            return tag_styles.get(tag, tag_styles["Other"])
-
-        def generate_tag_html(tag, explanation):
-            style = get_tag_style(tag)
-            return f'<li><span class="tag" style="background-color: {style["bg"]}; color: {style["color"]}; border: 1px solid {style["color"]};">{tag}</span> {explanation}</li>'
-
-        for depth in sorted(lineage_df['depth'].unique()):
-            depth_df = lineage_df[lineage_df['depth'] == depth].sort_values('output_model')
-            for output_model in depth_df['output_model'].unique():
-                model_df = depth_df[depth_df['output_model'] == output_model]
-                model_index = self.get_index_by_model_name(output_model)
-                
-                card_header = f"{model_index}. {output_model}"
-                card_body = '<ul class="list-unstyled">'
-                
-                for _, row in model_df.iterrows():
-                    input_model_index = self.get_index_by_model_name(row['input_model'])
-                    input_info = f"{input_model_index}. {row['input_model']}[{row['input_column']}]"
-                    
-                    card_body += f'''
-                        <li>
-                            <strong>Input Column:</strong> {input_info}
-                            <ul class="list-unstyled mt-2">
-                    '''
-                    
-                    for tag, explanation in row['tags'].items():
-                        card_body += generate_tag_html(tag, explanation)
-                    
-                    if row['output_columns']:
-                        card_body += '<strong>Output Columns:</strong><ul>'
-                        for col, explanation in row['output_columns'].items():
-                            card_body += f'<li><strong>{col}:</strong> {explanation}</li>'
-                        card_body += '</ul>'
-                    
-                    card_body += '''
-                            </ul>
-                        </li>
-                    '''
-                
-                card_body += '</ul>'
-                lineage_dict[card_header] = card_body
-
-        return lineage_dict
-        
-    def get_column_lineage_html(self, model_name, column_name, lineage_df=None, display_lineage=True, full=True):
-        
-        sections = self.get_column_lineage_dict(model_name, column_name, lineage_df, display_lineage)
-        
-        cards_html = ""
-        for section_name, section_content in sections.items():
+        combined_html = ""
+        for section_name, section_content in options.items():
             if section_content:
-                cards_html += wrap_in_card(section_name, section_content)
-                
-        if not full:
-            return cards_html
-        
-        formatter = HtmlFormatter(style='monokai')
-        css_style = formatter.get_style_defs('.highlight')
-        html = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-            <style>
-                pre {{ line-height: 125%; }}
-                .highlight {{
-                    background: #272822;
-                    color: #f8f8f2;
-                    border-radius: 4px;
-                    padding: 1em;
-                    margin: 1em 0;
-                    overflow-x: auto;
-                    font-size: 12px;
-                }}
-                {css_style}
-                {tag_css}
-                {table_css}
-            </style>
-        </head>
-        <body>
-            {cards_html}
-        </body>
-        </html>
-        """
-        return html
+                combined_html += wrap_in_card(section_name, section_content)
 
-
-    def get_recursive_lineage_df(self, model_name, column_name):
-        def get_direct_lineage(input_model, input_column, direction='forward'):
-            if direction == 'forward':
-                query = """
-                SELECT 
-                    input_model, 
-                    input_column, 
-                    tags, 
-                    output_model, 
-                    output_columns
-                FROM table_lineage
-                WHERE input_model = ? AND input_column = ?
-                """
-            else:
-                query = """
-                SELECT 
-                    input_model, 
-                    input_column, 
-                    tags, 
-                    output_model, 
-                    output_columns
-                FROM table_lineage
-                WHERE output_model = ? 
-                AND list_contains(json_keys(output_columns), ?)
-                """
-            return self.conn.execute(query, [input_model, input_column]).fetchall()
-
-        def safe_json_loads(json_str):
-            if json_str is None:
-                return {}
-            try:
-                return json.loads(json_str)
-            except json.JSONDecodeError:
-                return {}
-
-        def traverse_lineage(start_model, start_column, direction):
-            visited = set()
-            result = []
-            initial_depth = 1 if direction == 'forward' else -1
-            queue = deque([(start_model, start_column, initial_depth)])
-
-            while queue:
-                current_model, current_column, depth = queue.popleft()
-                
-                if (current_model, current_column) in visited:
-                    continue
-                
-                visited.add((current_model, current_column))
-                
-                direct_lineage = get_direct_lineage(current_model, current_column, direction)
-                
-                for row in direct_lineage:
-                    result.append(row + (depth,))
-                    if direction == 'forward':
-                        next_model = row[3]
-                        next_columns = safe_json_loads(row[4])
-                        for next_column in next_columns.keys():
-                            if (next_model, next_column) not in visited:
-                                queue.append((next_model, next_column, depth + 1))
-                    else:
-                        prev_model = row[0]
-                        prev_column = row[1]
-                        if (prev_model, prev_column) not in visited:
-                            queue.append((prev_model, prev_column, depth - 1))
-
-            return result
-
-        forward_lineage = traverse_lineage(model_name, column_name, 'forward')
-        
-        backward_lineage = traverse_lineage(model_name, column_name, 'backward')
-        
-        lineage_data = backward_lineage + forward_lineage
-        
-        df = pd.DataFrame(lineage_data, columns=[
-            'input_model', 'input_column', 'tags', 'output_model', 'output_columns', 'depth'
-        ])
-        
-        df['tags'] = df['tags'].apply(safe_json_loads)
-        df['output_columns'] = df['output_columns'].apply(safe_json_loads)
-        
-        return df
-    
-    def build_column_lineage_graph(self, model_name, column_name, lineage_df=None):
-        if lineage_df is None:
-            lineage_df = self.get_recursive_lineage_df(model_name, column_name)
-            
-        nodes = defaultdict(set)
-        edges = []
-
-        for _, row in lineage_df.iterrows():
-            input_model = row['input_model']
-            input_column = row['input_column']
-            output_model = row['output_model']
-            output_columns = row['output_columns']
-
-            nodes[input_model].add(input_column)
-
-            if output_model and output_model not in nodes:
-                nodes[output_model] = set()
-
-            if output_columns:
-                for output_column in output_columns.keys():
-                    nodes[output_model].add(output_column)
-                    
-                    edges.append((input_model, input_column, output_model, output_column))
-            else:
-                edges.append((input_model, input_column, output_model, None))
-
-        nodes = {table: sorted(columns) for table, columns in nodes.items()}
-
-        return nodes, edges
-    
-    def build_column_lineage_graph_html(self, model_name, column_name, lineage_df=None):
-        nodes, edges = self.build_column_lineage_graph(model_name, column_name, lineage_df)
-        
-        indexed_nodes = {}
-        for model, columns in nodes.items():
-            index = self.get_index_by_model_name(model)
-            indexed_nodes[f"{index}. {model}"] = columns
-
-        indexed_edges = []
-        for input_model, input_column, output_model, output_column in edges:
-            input_index = self.get_index_by_model_name(input_model)
-            output_index = self.get_index_by_model_name(output_model)
-            indexed_edges.append((
-                f"{input_index}. {input_model}",
-                input_column,
-                f"{output_index}. {output_model}",
-                output_column
-            ))
-
-        model_index = self.get_index_by_model_name(model_name)
-        highlighted_node = f"{model_index}. {model_name}"
-
-        html_output = generate_schema_graph_graphviz(indexed_nodes, indexed_edges, highlighted_node=highlighted_node)
-        return html_output
-
-        
-    def save_to_disk(self, db_name="cocoon_lineage.db"):
-        if not db_name.endswith('.db'):
-            db_name += '.db'
-        self.conn.execute(f"EXPORT DATABASE '{db_name}'")
-        print(f"Database saved to {db_name}")
-
-    def load_from_disk(self, db_name="cocoon_lineage.db"):
-        self.conn.close()
-        
-        self.conn = duckdb.connect(':memory:')
-        
-        self.conn.execute(f"IMPORT DATABASE '{db_name}'")
-        
-        print(f"Database imported from {db_name}")
-        
-    def display_model_summary(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True, column_lineage=False):
-        html_output = self.get_model_summary_html(model_name, model_info, display_columns, display_sql, column_mapping, column_lineage)
-        display(HTML(html_output))
-    
-    def get_model_summary_dict(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True, column_lineage=False):
-        if model_info is None:
-            model_info = self.get_model_info(model_name)
-
-        if model_info.get('summary', None) is None:
-            return OrderedDict()
-        
-        model_index = self.get_index_by_model_name(model_name)
-        
-        def generate_tags_html():
-            tag_styles = {
-                "Direct": {"bg": "#000000", "color": "#FFFFFF"},
-                "Filtering": {"bg": "#BBDEFB", "color": "#1565C0"},
-                "Cleaning": {"bg": "#C8E6C9", "color": "#2E7D32"},
-                "Deduplication": {"bg": "#FFF9C4", "color": "#F9A825"},
-                "Featurization": {"bg": "#E1BEE7", "color": "#6A1B9A"},
-                "Integration": {"bg": "#C5CAE9", "color": "#283593"},
-                "Aggregation": {"bg": "#F8BBD0", "color": "#AD1457"},
-                "Other": {"bg": "#F5F5F5", "color": "#616161"}
-            }
-            
-            def get_tag_style(tag):
-                return tag_styles.get(tag, tag_styles["Other"])
-            
-            return "".join([
-                f'<span class="tag" style="background-color: {get_tag_style(tag)["bg"]}; color: {get_tag_style(tag)["color"]}; border: 1px solid {get_tag_style(tag)["color"]};">{tag}</span>'
-                for tag in model_info['tags']
-            ])
-
-        def generate_columns_html():
-            if not display_columns:
-                return ""
-            
-            columns_html = """
-                <table class="columns-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Comment</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            """
-            for column in model_info['columns']:
-                columns_html += f"""
-                    <tr>
-                        <td>{column['name']}</td>
-                        <td>{column['type']}</td>
-                        <td>{column['comment']}</td>
-                    </tr>
-                """
-            columns_html += """
-                    </tbody>
-                </table>
-            """
-            return columns_html
-
-        def generate_sql_html():
-            if not display_sql or not model_info['sql_text']:
-                return ""
-            return wrap_in_scrollable_div(highlight_sql_only(model_info['sql_text']), height='600px')
-
-        def generate_column_mapping_html():
-            if not column_mapping:
-                return ""
-            return self.get_model_column_mapping_html(model_name, model_info)
-
-        sections = OrderedDict([
-            ("Model Summary", f"<p>{model_info['summary']}</p>{generate_tags_html()}"),
-            ("Table Lineage", generate_column_mapping_html()),
-            ("Model Columns", generate_columns_html()),
-            ("SQL Query", generate_sql_html())
-        ])
-        
-        if column_lineage:
-            sections["cocoon_html_divider1"] = ""
-            for column in model_info['columns']:
-                column_name = column['name']
-                html_content = self.get_column_lineage_html(model_name, column_name, full=False)
-                if html_content:
-                    sections[column_name] = html_content
-            
-        return sections
-    
-    def get_model_summary_collapse_html(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True, column_lineage=False, full=True):
-        options = self.get_model_summary_dict(model_name, column_lineage=True)
-        model_summary_html = options.pop('Model Summary', None)
-        model_index = self.get_index_by_model_name(model_name)
-        model_key = f"{model_index}. {model_name}"
-            
-        if model_summary_html is None:
-            combined_html = wrap_in_card(model_key, "The model details are not provided")
-        else:
-            combined_html = wrap_in_card(model_key, model_summary_html)
-            sql_query_html = options.pop('SQL Query', None)
-            if sql_query_html:
-                combined_html += wrap_in_card('SQL Query', sql_query_html)
-            
-            details_html = generate_dropdown_html(model_name, options, default_selection="Explore Lineage", full=False)
-            combined_html +=  details_html
             
         if not full:
             return combined_html
@@ -34457,6 +34834,9 @@ class DbtLineage:
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <style>
+        body {{
+            font-size: 0.75rem;
+        }}
         pre {{ line-height: 125%; }}
         .highlight {{
             background: #272822;
@@ -34469,7 +34849,7 @@ class DbtLineage:
         }}
         {css_style}
         {tag_css}
-        {table_css}
+        {pandas_css}
     </style>
 </head>
 <body>
@@ -34479,141 +34859,262 @@ class DbtLineage:
 """
         return html
     
-    def get_model_summary_html(self, model_name, model_info=None, display_columns=True, display_sql=True, column_mapping=True, column_lineage=False, full=True):
+    def display_model_summary(self, model_name):
+        html_content = self.generate_model_summary_html(model_name)
+        display(HTML(wrap_in_iframe(html_content)))
         
-        sections = self.get_model_summary_dict(model_name, model_info, display_columns, display_sql, column_mapping, column_lineage)
+    def create_lineage_widgets(self, width="100%", height=400):
+        all_models = self.get_ordered_models()
         
-        cards_html = ""
-        for section_name, section_content in sections.items():
-            if section_content:
-                cards_html += wrap_in_card(section_name, section_content)
+        options = ["Model Lineage"] + [f"{model_id}. {model_name}" for model_name, model_id in all_models]
+        
+        dropdown = widgets.Dropdown(
+            options=options,
+            value="Model Lineage",
+            disabled=False,
+        )
+        
+        html_widget = widgets.HTML(
+            value=self.display_model_lineage_html(),
+            placeholder='',
+            description='',
+        )
+        
+        def update_html(change):
+            if change['new'] == "Model Lineage":
+                html_widget.value = self.display_model_lineage_html()
+            else:
+                model_name = change['new'].split('. ', 1)[1]
+                html_widget.value = wrap_in_iframe(self.generate_model_summary_html(model_name=model_name), width=width, height=height)
+        
+        dropdown.observe(update_html, names='value')
+        
+        return dropdown, html_widget
+
+    def display_lineage_widgets(self, width="100%", height=500):
+        dropdown, html_widget = self.create_lineage_widgets(width=width, height=height)
+        display(dropdown, html_widget)
+        
+    def generate_text_lineage(self, model_name=None, max_forward_depth=None, max_backward_depth=None):
+        all_models_query = self.get_ordered_models()
+        global_model_to_idx = {name: idx for name, idx in all_models_query}
+
+        if model_name is None:
+            model_lineage = self.get_model_lineage()
+            models_to_display = [name for name, _ in all_models_query]
+            
+            dependencies = {model: set() for model in models_to_display}
+            for source, target in model_lineage:
+                dependencies[target].add(source)
+        else:
+            lineage_df = self.get_recursive_model_lineage(model_name, max_forward_depth, max_backward_depth)
+            models_to_display = set(lineage_df['source_model_name'].tolist() + lineage_df['target_model_name'].tolist())
+            
+            dependencies = {model: set() for model in models_to_display}
+            for _, row in lineage_df.iterrows():
+                dependencies[row['target_model_name']].add(row['source_model_name'])
+
+        models_to_display = sorted(models_to_display, key=lambda x: global_model_to_idx[x])
+
+        text_lineage = []
+        for model in models_to_display:
+            model_id = global_model_to_idx[model]
+            deps = dependencies[model]
+            dep_ids = sorted([global_model_to_idx[dep] for dep in deps if dep in global_model_to_idx])
+            dep_str = f" <- {', '.join(str(id+1) for id in dep_ids)}" if dep_ids else ""
+            
+            text_lineage.append(f"{model_id+1}. '{model}'{dep_str}")
+
+        return "\n".join(text_lineage)
+
+    def get_lowest_categories(self):
+        return []
+
+
+    def get_story_list(self, exclude_categories=None):
+        return []
+    
+        
+
+        
+        
+        
+
+        
+        
+        
+        
+
+
+    
+        
+
+    
+
+        
+
+
+
+
+
+
+    
+
+        
+
+
+
+
+
+        
+        
+        
+        
+        
+        
+
+        
+
+
+
+
+        
+        
+
+
+
+
+        
+        
+    
+        
+
+
+
+
                 
-        if not full:
-            return cards_html
+                
 
-        formatter = HtmlFormatter(style='monokai')
-        css_style = formatter.get_style_defs('.highlight')
-        html = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-            <style>
-                pre {{ line-height: 125%; }}
-                .highlight {{
-                    background: #272822;
-                    color: #f8f8f2;
-                    border-radius: 4px;
-                    padding: 1em;
-                    margin: 1em 0;
-                    overflow-x: auto;
-                    font-size: 12px;
-                }}
-                {css_style}
-                {tag_css}
-                {table_css}
-            </style>
-        </head>
-        <body>
-            {cards_html}
-        </body>
-        </html>
-        """
-        return html
-    
-    def get_model_column_mapping_html(self, model_name, model_info=None):
 
-        if model_info is None:
-            model_info = self.get_model_info(model_name)
         
-        nodes = {}
-        edges = []
-
-        model_index = self.get_index_by_model_name(model_name)
-        model_key = f"{model_index}. {model_name}"
-        nodes[model_key] = [col['name'] for col in model_info['columns']]
-
-        for parent_model, column_mappings in model_info['column_mapping'].items():
-            parent_index = self.get_index_by_model_name(parent_model)
-            
-            parent_key = f"{parent_index}. {parent_model}"
-            if parent_key not in nodes:
-                nodes[parent_key] = list(column_mappings.keys())
-
-            for parent_col, child_cols in column_mappings.items():
-                for child_col in child_cols:
-                    edges.append((parent_key, parent_col, model_key, child_col))
-
-        html_output = generate_schema_graph_graphviz(nodes, edges, highlighted_node=model_key)
-        return html_output
     
-    def get_model_info(self, model_name):
-        sql_query = self.conn.execute(f"SELECT sql_text FROM sql_mapping WHERE model_name = ?", [model_name]).fetchone()
-        sql_text = sql_query[0] if sql_query else None
-
-        columns_query = self.conn.execute("""
-            SELECT column_name, column_type, comment, index
-            FROM column_mapping
-            WHERE model_name = ?
-            ORDER BY index
-        """, [model_name]).fetchall()
-        columns = [{"name": col[0], "type": col[1], "comment": col[2], "index": col[3]} for col in columns_query]
-
-        parents_query = self.conn.execute("""
-            SELECT p.model_name
-            FROM nodes p
-            JOIN edges e ON p.index = e.parent_idx
-            JOIN nodes c ON c.index = e.child_idx
-            WHERE c.model_name = ?
-        """, [model_name]).fetchall()
-        parent_models = [parent[0] for parent in parents_query]
-
-        children_query = self.conn.execute("""
-            SELECT c.model_name
-            FROM nodes c
-            JOIN edges e ON c.index = e.child_idx
-            JOIN nodes p ON p.index = e.parent_idx
-            WHERE p.model_name = ?
-        """, [model_name]).fetchall()
-        child_models = [child[0] for child in children_query]
-
-        column_mapping = {}
-        for parent in parent_models:
-            parent_columns = self.conn.execute("""
-                SELECT tl.input_column, tl.output_columns
-                FROM table_lineage tl
-                WHERE tl.input_model = ? AND tl.output_model = ?
-            """, [parent, model_name]).fetchall()
-            
-            column_mapping[parent] = {}
-            for input_col, output_cols in parent_columns:
-                if output_cols:
-                    output_cols_dict = json.loads(output_cols)
-                else:
-                    output_cols_dict = {}
-                column_mapping[parent][input_col] = list(output_cols_dict.keys())
-
-        tags_query = self.conn.execute("""
-            SELECT summary, tags
-            FROM sql_tags
-            WHERE model_name = ?
-        """, [model_name]).fetchone()
         
-        summary = tags_query[0] if tags_query else None
-        tags = json.loads(tags_query[1]) if tags_query and tags_query[1] else []
+            
+            
+        
 
-        return {
-            "sql_text": sql_text,
-            "columns": columns,
-            "parent_models": parent_models,
-            "child_models": child_models,
-            "column_mapping": column_mapping,
-            "summary": summary,
-            "tags": tags
-        }
+        
+        
+        
+            
+            
+        
+        
+
+        
+
+
+        
+                
+                
+    
+        
+        
+        
+        
+
+
+
+                
+                
+                    
+                    
+                    
+                    
+                
+
+        
+        
+        
+                
+        
+
+
+
+
+
+                
+                
+                
+                
+
+
+        
+        
+        
+        
+        
+    
+            
+
+
+
+
+                    
+
+
+    
+        
+
+
+
+
+        
+
+        
+        
+        
+        
+    
+
+        
+        
+            
+            
+
+            
+
+
+
+        
+            
+    
+            
+            
+            
+        
+    
+        
+        
+                
+
+    
+
+        
+
+
+            
+
+
+    
+
+
+
+
+            
+
+        
+
         
 class ConnectSourceDataNode(Node):
     default_name = 'Connect Source Data'
@@ -35063,7 +35564,9 @@ summary: >-
         callback(run_output)
         
         
-def create_cocoon_dbt_lineage_explanation_workflow(output=None, para={}, viewer=False):
+def create_cocoon_dbt_lineage_explanation_workflow(output=None, para=None, viewer=False):
+    if para is None:
+        para = {}
 
     main_workflow = Workflow("DBT Lineage Explanation Workflow", 
                         item = {},
@@ -35447,7 +35950,7 @@ class DBTSourceProjectConfigAndRead(Node):
                 directory = dbt_directory_input.value
                 data_project = read_project(directory)
                 if data_project:
-                    data_project.display_story_multiple_page()
+                    data_project.display_graph_static()
                     submit_button.layout.display = 'block'
 
         def on_submit_click(b):
@@ -35526,7 +36029,7 @@ class DBTTargetProjectConfigAndRead(Node):
                 directory = dbt_directory_input.value
                 data_project = read_project(directory)
                 if data_project:
-                    data_project.display_story_multiple_page()
+                    data_project.display_graph_static()
                     submit_button.layout.display = 'block'
 
         def on_submit_click(b):
@@ -36226,7 +36729,10 @@ sql_query: |
             on_next_button_clicked(next_button)
             return
 
-def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=False, para={}, output=None):
+def create_cocoon_table_transform_workflow(con=None, query_widget=None, viewer=False, para=None, output=None):
+    
+    if para is None:
+        para = {}
     
     if query_widget is None:
         query_widget = QueryWidget(con)
@@ -38363,3 +38869,689 @@ def get_project_html(dbt_directory=None, con=None, model_directory=None, project
     model_html = generate_full_step_page("Cocoon Catalog", "Verified by human, RAG by LLMs", project_name, side_list_html, tab_content_html, additional_css=tree_hierarchy_css)
     return model_html
 
+
+
+class ChatHTMLGenerator:
+    def __init__(self):
+        self.messages = []
+        self.html_widget = widgets.HTML()
+        formatter = HtmlFormatter(style='monokai')
+        self.css_style = formatter.get_style_defs('.highlight')
+
+        self.html_template = '''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <title>Chat UI</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+        }}
+        .chat-body {{
+            height: calc(100% - 56px);
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: rgba(242, 242, 247, 0.7);
+        }}
+        .message-container {{
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }}
+        .message {{
+            width: 900px;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            line-height: 1.4;
+            font-size: 0.75rem;
+        }}
+        .message-party1 {{
+            background-color: #007aff;
+            color: #ffffff;
+            margin-left: auto;
+        }}
+        .message-party2 {{
+            background-color: #ffffff;
+            color: #1c1c1e;
+            border: 1px solid #e5e5ea;
+        }}
+        .sender-name {{
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            color: #8e8e93;
+        }}
+        .main-title {{
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }}
+        .avatar {{
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+            background-color: white;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+        }}
+        .message-party1-container {{
+            flex-direction: row-reverse;
+        }}
+        .message-party1-container .avatar {{
+            margin-right: 0;
+            margin-left: 10px;
+        }}
+        {css_style}
+        {tag_css}
+        {pandas_css}
+        {better_scrollable_css}
+        {copy_button_css}
+        {border_style}
+    </style>
+</head>
+<body>
+    <div class="chat-body">
+        {messages}
+    </div>
+</body>
+
+</html>
+'''
+
+        self.update_widget()
+        
+    def add_message(self, content, party, sender=None, icon=""):
+        party_class = f"message-party{party}"
+        container_class = f"message-container message-party{party}-container" if party == 1 else "message-container"
+        avatar_html = f'<div class="avatar" style="background-image: url(data:image/png;base64,{icon});"></div>' if sender else ''
+        sender_html = f'<div class="sender-name">{sender}</div>' if sender else ''
+        
+        message_html = f'''
+        <div class="{container_class}">
+            {avatar_html}
+            <div class="message {party_class}">
+                {sender_html}
+                <div>{content}</div>
+            </div>
+        </div>
+        '''
+        self.messages.append(message_html)
+        self.update_widget()
+    
+    def clear_all_messages(self):
+        self.messages = []
+        self.update_widget()
+
+
+    def generate_full_html(self):
+        messages_html = '\n'.join(self.messages)
+        html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocoon: RAG large and complex dbt project by lineage</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <title>Chat UI</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+        }}
+        .chat-body {{
+            height: calc(100% - 56px);
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: rgba(242, 242, 247, 0.7);
+        }}
+        .message-container {{
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }}
+        .message {{
+            width: 700px;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            line-height: 1.4;
+            font-size: 0.75rem;
+        }}
+        .message-party1 {{
+            background-color: #007aff;
+            color: #ffffff;
+            margin-left: auto;
+        }}
+        .message-party2 {{
+            background-color: #ffffff;
+            color: #1c1c1e;
+            border: 1px solid #e5e5ea;
+        }}
+        .sender-name {{
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            color: #8e8e93;
+        }}
+        .main-title {{
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }}
+        .avatar {{
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            flex-shrink: 0;
+            background-color: white;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+        }}
+        .message-party1-container {{
+            flex-direction: row-reverse;
+        }}
+        .message-party1-container .avatar {{
+            margin-right: 0;
+            margin-left: 10px;
+        }}
+        {self.css_style}
+        {tag_css}
+        {pandas_css}
+        {better_scrollable_css}
+        {copy_button_css}
+        {border_style}
+        {float_notification_css}
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-5">
+        <h1 class="text-center text-white">
+            <a href="https://github.com/Cocoon-Data-Transformation/cocoon" style="text-decoration: none; color: inherit;">
+                <span class="fw-bold">Cocoon:</span> RAG Large and Complex DBT Project by Lineage
+            </a>
+        </h1>
+    </div>
+    
+    <div class="container-fluid mt-5 mb-5">
+        <div class="col-12 col-md-10 col-lg-8 mx-auto">
+            <div class="chat-body p-4 rounded">
+                {messages_html}
+            </div>
+        </div>
+    </div>
+    
+    <div class="floating-notification">
+        <span class="notification-icon rotate">⟳</span>
+        New chat results may be available. Refresh to check.
+    </div>
+
+</body>
+</html>"""
+
+        return html_content
+        
+    def update_widget(self):
+        messages_html = '\n'.join(self.messages)
+        self.html_widget.value = self.html_template.format(messages=messages_html,
+                                                            css_style=self.css_style,
+                                                         tag_css=tag_css,
+                                                         pandas_css=pandas_css,
+                                                         better_scrollable_css=better_scrollable_css,
+                                                         copy_button_css=copy_button_css,
+                                                         border_style=border_style)
+    
+    def display(self):
+        display(self.html_widget)
+
+
+
+
+def replace_sql_with_highlighted(content, dbt_lineage=None):
+    
+    content = re.sub(r'\n*```sql', '```sql', content)
+    content = re.sub(r'```\n*', '```', content)
+
+    def replace_sql(match):
+        sql_query = match.group(1).strip()
+        sql_path = ""
+        if dbt_lineage is not None:
+            model_name_match = re.match(r"^-- model_name: '([^']+)'", sql_query)
+            if model_name_match:
+                model_name = model_name_match.group(1)
+                sql_query = re.sub(r"^-- model_name: '[^']+'\s*", "", sql_query).strip()
+                file_path = dbt_lineage.get_full_file_path(model_name)
+                if file_path:
+                    sql_path = f'<br><a href="{file_path}" target="_blank">{model_name}</a><br>'
+                else:
+                    sql_path = f'<br>{model_name}<br>'
+        
+        highlighted_sql = highlight_sql(sql_query, add_copy_button=True, add_css=False)
+        return f"{sql_path}{highlighted_sql}"
+
+    placeholder = "SQL_BLOCK_PLACEHOLDER"
+    sql_blocks = []
+
+    def capture_sql(match):
+        sql_blocks.append(match.group(0))
+        return placeholder
+
+    content_with_placeholders = re.sub(r'```sql(.*?)```', capture_sql, content, flags=re.DOTALL)
+
+    content_with_br = content_with_placeholders.replace('\n', '<br>')
+
+    def replace_placeholder(match):
+        return replace_sql(re.match(r'```sql(.*?)```', sql_blocks.pop(0), flags=re.DOTALL))
+
+    final_content = re.sub(placeholder, replace_placeholder, content_with_br)
+
+    final_content = re.sub(r'<br>```sql', '```sql', final_content)
+    final_content = re.sub(r'```<br>', '```', final_content)
+
+    if dbt_lineage is not None:
+        def replace_model_name(match):
+            model_name = match.group(1)
+            file_path = dbt_lineage.get_full_file_path(model_name)
+            if file_path:
+                return f'<a href="{file_path}" target="_blank">{model_name}</a>'
+            return f'`{model_name}`'
+
+        final_content = re.sub(r'`([^`]+)`', replace_model_name, final_content)
+    return final_content
+
+
+
+
+
+
+class DBTLLMAgent:
+    def __init__(self, dbt_lineage, debug=True, chat_ui=None):
+        self.dbt_lineage = dbt_lineage
+        self.conversation_history = []
+        self.step_count = 0
+        self.debug = debug
+        self.chat_ui = chat_ui
+        self.explored_model_ids = set()
+
+    def generate_initial_prompt(self, user_question):
+        model_context = self.dbt_lineage.generate_text_lineage()
+        prompt = f"""# DBT Project models (higher index models are downstream):
+{model_context}
+
+## General Principles
+1. Prioritize SQL-based answers using existing models.
+2. Be evidence-based, referencing `model_name` and ```sql codes``` frequently
+3. Explore upstream models for data sufficiency, prefer downstream models for final answers.
+4. Keep responses concise.
+5. Persist in exploration if data seems insufficient.
+
+## Syntax Guidelines
+- Reference models: `model_name`
+- SQL code blocks:
+  ```sql
+  SELECT ...
+  ```
+- New model creation:
+  ```sql
+  -- model_name: 'new_model_name'
+  SELECT ...
+  ```
+
+## Editing Existing Models
+- Highlight changes only:
+  ```sql
+  -- model_name: 'existing_model_name'
+  -- ... existing code ...
+  {{ edit_1 }}
+  -- ... existing code ...
+  {{ edit_2 }}
+  -- ... existing code ...
+  ```
+- Skip unchanged parts (start/end of file).
+- Rewrite entire file only if explicitly requested.
+- Consider downstream effects when editing.
+- Propose edits for affected downstream models.
+
+## Your actions (one at a time):
+1. Explore the dbt model to answer the user's question. 
+```yml
+reason: >-
+    The most relavant models are ...
+action: explore
+model_ids: [<list of up to 10 model ids to explore; preferably include their upstream models for better context>]
+```
+2. Answer the question based on the current context.
+```yml
+reason: >-
+    I'm going to build new model/edit existing models and their downstream models. I have explored all the relavant models/ I still need to explore ...[action becomes explore]
+action: conclude
+answer: |
+    <reference `model_name` and ```sql codes```>
+```
+
+Now answer the question: "{user_question}"
+Your action:"""
+        self.print_message("user", prompt)
+        return prompt
+    
+    def generate_follow_up(self, user_question):
+        return f'User follow-up question: "{user_question}"\nYour action:'
+
+    def process_user_question(self, user_question):
+        if not self.conversation_history:
+            initial_prompt = self.generate_initial_prompt(user_question)
+            self.conversation_history = [{"role": "user", "content": initial_prompt}]
+            
+            if self.chat_ui:
+                self.chat_ui.add_message(f"{escape_html(user_question)}", 1)
+                self.chat_ui.add_message("<b>Here is the model lineage for the dbt project. Let me know which models you want to explore.</b><br><br>" + self.dbt_lineage.display_model_lineage_html(), 2, "Cocoon RAG", icon=cocoon_icon_64)
+        else:
+            follow_up_prompt = self.generate_follow_up(user_question)
+            self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+            if self.chat_ui:
+                self.chat_ui.add_message(f"{escape_html(user_question)}", 1)
+        
+
+        max_rounds = 10
+        for _ in range(max_rounds):
+            for attempt in range(3):
+                response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
+                llm_message = response['choices'][0]['message']
+                yaml_content = extract_yml_code(llm_message["content"])
+                
+                try:
+                    decision = yaml.safe_load(yaml_content)
+                    if decision['action'] in ['explore', 'conclude']:
+                        self.conversation_history.append(llm_message)
+                        self.print_message(llm_message["role"], llm_message["content"])
+                        
+                        if decision['action'] == 'explore':
+                            self.explore_dbt_models(decision.get('reason', 'No reason provided'), decision.get('model_ids', []))
+                        else:
+                            self.conclude(decision)
+                            return decision
+                        
+                        break
+                except:
+                    if attempt == 2:
+                        decision = {
+                            "action": "conclude",
+                            "answer": "There seems to be some issue processing your request. Could you please rephrase your question or provide more details?"
+                        }
+                        self.conclude(decision)
+                        return decision
+                    continue
+        
+        return {"action": "conclude", "answer": "Max rounds reached without a conclusion. Please try rephrasing your question."}
+
+    def explore_dbt_models(self, reason, model_ids):
+        exploration_results = []
+        newly_explored_models = []
+        for model_id in model_ids:
+            if model_id in self.explored_model_ids:
+                exploration_results.append(f"Model ID {model_id}:\nAlready explored before")
+            else:
+                model_summary_dict = self.dbt_lineage.generate_model_summary_text_dict(model_id=model_id)
+                model_summary_text = "\n".join([f"{key}\n{model_summary_dict[key]}" for key in model_summary_dict])
+                exploration_results.append(f"Model ID {model_id}:\n{model_summary_text}")
+                self.explored_model_ids.add(model_id)
+                newly_explored_models.append(model_id)
+        
+        if self.debug:
+            self.dbt_lineage.display_model_lineage_by_indices(newly_explored_models)
+
+        combined_results = "\n\n".join(exploration_results)
+        follow_up_prompt = f"""Exploration results:
+{combined_results}
+
+Your next action (Explore or Conclude):"""
+        self.print_message("user", follow_up_prompt)
+        self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+
+        if self.chat_ui:
+            self.chat_ui.add_message(f"<b>Thinking:</b> {reason}.<br><b>Exploring:</b> I want to explore these models in detail:<br><br>{self.dbt_lineage.get_model_lineage_html_by_indices(model_indices=model_ids)}", 2, "LLM Agent", icon=claude_icon_64)
+            self.chat_ui.add_message(f"<b>Here are the details for the specific models:</b><br><br>{wrap_in_iframe(self.dbt_lineage.generate_multiple_model_summaries(model_indices=model_ids), width='100%')}", 2, "Cocoon RAG", icon=cocoon_icon_64)
+    
+    def conclude(self, decision):
+        if self.chat_ui:
+            content = decision.get('answer', '')
+            self.chat_ui.add_message(replace_sql_with_highlighted(content, self.dbt_lineage), 2, "LLM Agent", icon=claude_icon_64)
+
+    def print_message(self, role, content):
+        if self.debug:
+            self.step_count += 1
+            print(f"\n--- Step {self.step_count}: {role.capitalize()} Message ---\n")
+            print(content)
+            print("\n--- End of Message ---\n")
+
+
+
+
+        
+class InferSQLOutputColumnsForAll(MultipleNode):
+    default_name = 'Infer SQL Output Columns For All'
+    default_description = 'This node infers output columns for all models with missing column information.'
+
+    def construct_node(self, element_name, idx=0, total=0):
+        para = self.para.copy()
+        para["model_name"] = element_name
+        para["idx"] = idx
+        para["total"] = total
+        
+        node = InferSQLOutputColumns(para=para, id_para="model_name")
+        node.inherit(self)
+        return node
+
+    def extract(self, item):
+        dbt_lineage = self.para['dbt_lineage']
+        
+        sql_query = """
+        SELECT DISTINCT m.model_name
+        FROM model m
+        LEFT JOIN model_column mc ON m.model_name = mc.model_name
+        JOIN ordered_models om ON m.model_name = om.model_name
+        WHERE mc.model_name IS NULL AND m.raw_code IS NOT NULL
+        ORDER BY om.new_rowid ASC
+        """
+
+        df = dbt_lineage.conn.execute(sql_query).df()
+        
+        self.elements = df['model_name'].tolist()
+        self.nodes = {element: self.construct_node(element, idx, len(self.elements))
+                      for idx, element in enumerate(self.elements)}
+
+
+class InferSQLOutputColumns(Node):
+    default_name = 'Infer SQL Output Columns'
+    default_description = 'This node infers the output columns of a SQL query.'
+
+    def extract(self, item):
+        clear_output(wait=True)
+
+        dbt_lineage = self.para['dbt_lineage']
+        model_name = self.para['model_name']
+        
+        sql_query = """
+        SELECT raw_code
+        FROM model
+        WHERE model_name = ?
+        """
+        df = dbt_lineage.conn.execute(sql_query, [model_name]).df()
+        
+        if len(df) == 0:
+            return None
+        
+        raw_sql = df['raw_code'][0]
+
+        upstream_query = """
+        SELECT source_model_name
+        FROM model_lineage
+        WHERE target_model_name = ?
+        """
+        upstream_models = dbt_lineage.conn.execute(upstream_query, [model_name]).df()['source_model_name'].tolist()
+
+        upstream_columns = {}
+        for upstream_model in upstream_models:
+            column_query = """
+            SELECT column_name, description
+            FROM model_column
+            WHERE model_name = ?
+            """
+            columns = dbt_lineage.conn.execute(column_query, [upstream_model]).df()
+            upstream_columns[upstream_model] = columns.to_dict('records')
+
+        
+        downstream_query = """
+        SELECT target_model_name
+        FROM model_lineage
+        WHERE source_model_name = ?
+        """
+        downstream_models = dbt_lineage.conn.execute(downstream_query, [model_name]).df()['target_model_name'].tolist()
+
+        downstream_code = {}
+        for downstream_model in downstream_models:
+            code_query = """
+            SELECT raw_code
+            FROM model
+            WHERE model_name = ?
+            """
+            code = dbt_lineage.conn.execute(code_query, [downstream_model]).df()
+            if not code.empty:
+                downstream_code[downstream_model] = code['raw_code'][0]
+
+        return {
+            'raw_sql': raw_sql,
+            'upstream_columns': upstream_columns,
+            'downstream_code': downstream_code
+        }
+    
+    def run(self, extract_output, use_cache=True):
+        if extract_output is None:
+            return self.run_but_fail(extract_output)
+        
+        raw_sql = extract_output['raw_sql']
+        upstream_columns = extract_output['upstream_columns']
+        downstream_code = extract_output['downstream_code']
+        
+        prompt = f"""You have the following model:
+{self.para['model_name']}
+with the following SQL query:
+{raw_sql}
+"""
+        if len(upstream_columns) > 0:
+            prompt += "\nUpstream Model Columns:\n"
+            for model, columns in upstream_columns.items():
+                prompt += f"\n{model}:\n"
+            for column in columns:
+                prompt += f"- {column['column_name']}: {column['description']}\n"
+
+        if len(downstream_code) > 0:
+            prompt += "\nDownstream Model Code (Check what columns are used in the downstream model):\n"
+            for model, code in downstream_code.items():
+                prompt += f"\n{model}:\n```sql\n{code}\n```\n"
+
+
+        prompt += f"""
+Please provide the inferred columns for the modle {self.para['model_name']} in the following format:
+```yml
+columns:
+- name: column_name
+description: Brief description of the column
+- ...
+```"""
+
+        messages = [{"role": "user", "content": prompt}]
+        response = call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=use_cache)
+        messages.append(response['choices'][0]['message'])
+        self.messages.append(messages)
+
+        yaml_content = extract_yml_code(response['choices'][0]['message']["content"])
+        inferred_columns = yaml.safe_load(yaml_content)['columns']
+
+
+        return {
+            "model_name": self.para['model_name'],
+            "inferred_columns": inferred_columns
+        }
+    
+    def run_but_fail(self, extract_output, use_cache=True):
+        return {
+            "model_name": self.para['model_name'],
+            "inferred_columns": []
+        }
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        dbt_lineage = self.para['dbt_lineage']
+        model_name = run_output['model_name']
+        inferred_columns = run_output['inferred_columns']
+
+        next_button = widgets.Button(
+            description='Next',
+            button_style='success',
+            tooltip='Proceed to the next step'
+        )
+        
+        def on_next_button_click(b):
+            with self.output_context():
+                for column in inferred_columns:
+                    dbt_lineage.conn.execute("""
+                        INSERT INTO model_column (model_name, column_name, description, cocoon_description)
+                        VALUES (?, ?, NULL, ?)
+                        ON CONFLICT (model_name, column_name) DO UPDATE SET
+                        description = COALESCE(model_column.description, NULL),
+                        cocoon_description = EXCLUDED.cocoon_description
+                    """, [model_name, column['name'], column['description']])
+
+                callback(run_output)
+        
+        next_button.on_click(on_next_button_click)
+
+        if viewer:
+            on_next_button_click(next_button)
+
+        print(f"Model: {model_name}")
+        print("\nRaw SQL:")
+        print(extract_output['raw_sql'])
+        
+        print("\nUpstream Model Columns:")
+        for upstream_model, columns in extract_output['upstream_columns'].items():
+            print(f"\n{upstream_model}:")
+            for column in columns:
+                print(f"- {column['column_name']}: {column['description']}")
+        
+        print("\nInferred columns:")
+        for column in inferred_columns:
+            print(f"- {column['name']}: {column['description']}")
+                
+        display(next_button)
+
+def get_tag_style(tag):
+    tag_styles = {
+        "Direct": {"bg": "#000000", "color": "#FFFFFF"},
+        "Filtering": {"bg": "#BBDEFB", "color": "#1565C0"},
+        "Cleaning": {"bg": "#C8E6C9", "color": "#2E7D32"},
+        "Deduplication": {"bg": "#FFF9C4", "color": "#F9A825"},
+        "Featurization": {"bg": "#E1BEE7", "color": "#6A1B9A"},
+        "Integration": {"bg": "#C5CAE9", "color": "#283593"},
+        "Aggregation": {"bg": "#F8BBD0", "color": "#AD1457"},
+        "Other": {"bg": "#F5F5F5", "color": "#616161"}
+    }
+
+    return next((style for key, style in tag_styles.items() if key.lower() == tag.lower()), tag_styles["Other"])
+
+def generate_tag_html(tag, explanation):
+    style = get_tag_style(tag)
+    return f'<span class="tag" style="background-color: {style["bg"]}; color: {style["color"]}; border: 1px solid {style["color"]};">{tag}</span> {explanation}'

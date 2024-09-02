@@ -3,6 +3,7 @@ import traceback
 import re
 from jinja2 import Template
 import ast
+import html
 
 def get_detailed_error_info():
 
@@ -174,3 +175,6 @@ def clean_summary(summary):
 def indent_paragraph(paragraph, spaces=4):
     indent = ' ' * spaces
     return '\n'.join(indent + line for line in paragraph.split('\n'))
+
+def escape_html(text):
+    return html.escape(text)

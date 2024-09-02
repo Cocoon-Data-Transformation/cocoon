@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cocoon_data",
-    version="0.1.155",
+    version="0.1.159",
     packages=find_packages(),
     install_requires=open("requirements.txt").read().splitlines(),
     extras_require={

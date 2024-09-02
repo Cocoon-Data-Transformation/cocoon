@@ -42,6 +42,20 @@ textarea, input {{
     padding: 3px;     /* Adds some padding inside the dropdown box */
 }}
 
+.widget-text input[type="text"] {{
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}}
+.widget-text input[type="text"]:focus {{
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 2px rgba(74,144,226,0.2);
+}}
 {pandas_css}
 </style>
 """
@@ -723,28 +737,60 @@ def color_columns_multiple(df, colors, column_indices_list):
 
 
 
-def create_html_radio_buttons(html_labels, disabled = False):
-    labels_html = [widgets.HTML(value=label) for label in html_labels]
-    
+def create_html_radio_buttons(html_labels, disabled=False, radio=True):
+    labels_html = []
+    checkboxes = []
     checkbox_style = {'description_width': '0px', 'handle_color': 'lightblue'}
-    
-    checkboxes = [widgets.Checkbox(value=False, description='', disabled=disabled, style=checkbox_style, layout={'width': 'initial'}) for _ in html_labels]
-    
-    if not disabled:
-        checkboxes[0].value = True
-    
-    def on_checkbox_change(change):
-        if change['new']:
+
+    for item in html_labels:
+        if isinstance(item, str):
+            label = widgets.HTML(value=item)
+            checkbox = widgets.Checkbox(
+                value=False,
+                description='',
+                disabled=disabled,
+                style=checkbox_style,
+                layout={'width': 'initial'}
+            )
+        elif isinstance(item, tuple):
+            label = widgets.HTML(value=item[0])
+            default_value = item[1] if len(item) > 1 else False
+            item_disabled = item[2] if len(item) > 2 else disabled
+            checkbox = widgets.Checkbox(
+                value=default_value,
+                description='',
+                disabled=item_disabled,
+                style=checkbox_style,
+                layout={'width': 'initial'}
+            )
+        else:
+            raise ValueError(f"Unsupported input type for html_labels: {type(item)}")
+
+        labels_html.append(label)
+        checkboxes.append(checkbox)
+
+    if radio:
+        def on_checkbox_change(change):
+            if change['new']:
+                for checkbox in checkboxes:
+                    if checkbox is not change['owner']:
+                        checkbox.value = False
+
+        for checkbox in checkboxes:
+            checkbox.observe(on_checkbox_change, names='value')
+
+        if not all(cb.disabled for cb in checkboxes):
             for checkbox in checkboxes:
-                if checkbox is not change['owner']:
-                    checkbox.value = False
-    
-    for checkbox in checkboxes:
-        checkbox.observe(on_checkbox_change, names='value')
-    
-    radio_buttons_widget = widgets.VBox([widgets.HBox([cb, label], layout=widgets.Layout(align_items='center', margin='0')) for cb, label in zip(checkboxes, labels_html)])
-    
-    return radio_buttons_widget, checkboxes
+                if not checkbox.disabled:
+                    checkbox.value = True
+                    break
+
+    buttons_widget = widgets.VBox([widgets.HBox([cb, label], layout=widgets.Layout(align_items='center', margin='0')) for cb, label in zip(checkboxes, labels_html)])
+
+    return buttons_widget, checkboxes
+
+
+
 
 def get_selected_index(checkboxes):
     return next((index for index, checkbox in enumerate(checkboxes) if checkbox.value), None)

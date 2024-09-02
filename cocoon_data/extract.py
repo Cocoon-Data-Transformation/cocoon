@@ -46,11 +46,46 @@ def extract_python_code(s):
     return match.group(1).strip() if match else s
 
 
-def extract_yml_code(s):
-    import re
-    pattern = r"```yml(.*?)```"
-    match = re.search(pattern, s, re.DOTALL)
-    return match.group(1).strip() if match else s
+def extract_yml_code(text):
+    yml_content = []
+    i = 0
+    in_yml = False
+    nested_level = 0
+
+    while i < len(text):
+        if text[i:i+6] == '```yml' and not in_yml:
+            in_yml = True
+            i += 6
+        elif text[i:i+3] == '```' and in_yml:
+            if i+3 < len(text) and text[i+3:i+6] == 'sql':
+                nested_level += 1
+                yml_content.append(text[i:i+6])
+                i += 6
+            elif i+4 < len(text) and text[i+3:i+7] == 'json':
+                nested_level += 1
+                yml_content.append(text[i:i+7])
+                i += 7
+            elif i+6 < len(text) and text[i+3:i+9] == 'python':
+                nested_level += 1
+                yml_content.append(text[i:i+9])
+                i += 9
+            elif nested_level > 0:
+                nested_level -= 1
+                yml_content.append(text[i:i+3])
+                i += 3
+            elif nested_level == 0:
+                break
+            else:
+                yml_content.append(text[i])
+                i += 1
+        elif in_yml:
+            yml_content.append(text[i])
+            i += 1
+        else:
+            i += 1
+
+    return ''.join(yml_content).strip() if yml_content else None
+
 
 
 def represent_ordereddict(dumper, data):
