@@ -15624,7 +15624,7 @@ class DataProject:
          
     def get_key_info(self, tables=None, include_ri=True):
         if not tables:
-            return self.key
+            tables = self.key.keys()
         
         key_info = {}
         for table in self.key:
@@ -30890,13 +30890,12 @@ related_tables: ['table1', 'table2', ...]
         analysis = run_output
         business_question, schema_description, all_related_tables, data_project = extract_output
         
-        display(HTML(f"❓ <b>Feasible in SQL?</b> {'✔️ Yes' if analysis['sufficient'] else '❌ No'}"))
        
         
-        related_tables = analysis.get('related_tables', []) if analysis['sufficient'] else []
+        related_tables = analysis.get('related_tables', [])
         
         if not analysis['sufficient']:
-            display(HTML(f"🤔 <b>Explanation:</b> {analysis['explanation']}"))
+            display(HTML(f"⚠️ <b>Caveat:</b> {analysis['explanation']}"))
         
         
         display(HTML(f"📚 <b>Related Tables:</b>"))
@@ -30905,13 +30904,12 @@ related_tables: ['table1', 'table2', ...]
         
         
         text_area = None
-        if analysis['sufficient']:
-            display(HTML(f"🧐 <b>SQL Instruction:</b>"))
-            text_area, char_count_label = create_text_area_with_char_count(analysis['sql_approach'], max_chars=1000)
-            layout = Layout(display='flex', justify_content='space-between', width='100%')
-            
-            display(HBox([text_area, char_count_label], layout=layout))
-            display(HTML(f"🔗 <b>Related Tables:</b>"))
+        display(HTML(f"🧐 <b>SQL Instruction:</b>"))
+        text_area, char_count_label = create_text_area_with_char_count(analysis['sql_approach'], max_chars=1200)
+        layout = Layout(display='flex', justify_content='space-between', width='100%')
+        
+        display(HBox([text_area, char_count_label], layout=layout))
+        display(HTML(f"🔗 <b>Related Tables:</b>"))
             
         multi_select = create_column_selector(all_related_tables, default=False, except_columns = related_tables)
         
@@ -31433,8 +31431,7 @@ new_sql_query: |
             return
         
         display(HTML(f"🎉 <b>The codes are ready!</b>"))
-        if "debug_reasoning" in code_clauses:
-            display(HTML(f"🤔 <b>Debug Reasoning:</b> {code_clauses['debug_reasoning']}"))
+   
         
         sql_query = code_clauses['sql_query']
         highlighted_html = highlight_sql(sql_query)
@@ -34193,6 +34190,10 @@ class DbtLineage:
         self.dbt_directory = dbt_directory
         self._create_tables()
 
+        self.tables = {}
+                
+        self.table_object = {}
+
     def _create_tables(self):
         self.conn.execute("""
             CREATE TABLE model (
@@ -34934,6 +34935,63 @@ class DbtLineage:
     def get_story_list(self, exclude_categories=None):
         return []
     
+    def add_model(self, model_name):
+        model_query = self.conn.execute("""
+            SELECT description, cocoon_description
+            FROM model
+            WHERE model_name = ?
+        """, (model_name,)).fetchone()
+
+        if model_query is None:
+            if cocoon_main_setting['DEBUG_MODE']:
+                print(f"Model '{model_name}' not found in the database.")
+            return
+
+        description, cocoon_description = model_query
+
+        table_summary = description or ""
+        if cocoon_description:
+            table_summary += " " + cocoon_description if table_summary else cocoon_description
+
+        columns_query = self.conn.execute("""
+            SELECT column_name, description, cocoon_description
+            FROM model_column
+            WHERE model_name = ?
+            ORDER BY column_name
+        """, (model_name,))
+
+        columns = []
+        column_desc = OrderedDict()
+
+        for column_name, col_description, col_cocoon_description in columns_query.fetchall():
+            columns.append(column_name)
+            
+            full_description = col_description or ""
+            if col_cocoon_description:
+                full_description += " " + col_cocoon_description if full_description else col_cocoon_description
+            
+            column_desc[column_name] = full_description
+
+        table_object = Table(
+            table_name=model_name,
+            table_summary=table_summary,
+            columns=columns,
+            column_desc=column_desc
+        )
+
+        self.tables[model_name] = columns
+
+        self.table_object[model_name] = table_object
+
+        if cocoon_main_setting['DEBUG_MODE']:
+            print(f"Added model '{model_name}' with columns: {columns}")
+            print(f"Table summary: {table_summary}")
+            print(f"Column descriptions: {column_desc}")
+
+    def get_key_columns(self, table):
+        keys_to_exclude = set()
+        return keys_to_exclude
+
         
 
         
@@ -36615,7 +36673,14 @@ class SQLQueryMatchingConstructor(Node):
 
         schema_matching_df = pd.read_json(self.get_sibling_document('Refine Schema Matching'), orient="split")
         join_graph_output = self.get_sibling_document('Join Graph From Matching Builder')
-        
+
+
+        previous_node_output = self.get_sibling_document('Business Question Data Sufficiency Check')
+        related_tables = previous_node_output['related_tables']
+        data_project = self.para["source_data_project"]
+        schema_description = yaml.dump(data_project.describe_project_yml(tables=related_tables, limit=9999))
+
+
         con = self.item["con"]
         
         database_hint = ""
@@ -36631,14 +36696,14 @@ class SQLQueryMatchingConstructor(Node):
         
         identify_instruction = ""
         if database is not None and schema is not None:
-            identify_instruction = f"Note that the database is '{database}' and the schema is '{schema}'."
+            identify_instruction = f"Note that the database is {enclose_table_name(database, con=con)} and the schema is {enclose_table_name(schema, con=con)}. "
             identify_instruction += f"Identify each table. E.g., {enclose_table_name(database, con=con)}.{enclose_table_name(schema, con=con)}.{enclose_table_name('table_name', con=con)}"
             
             
-        return column_matching, join_graph, database_hint, identify_instruction
+        return column_matching, join_graph, database_hint, identify_instruction, schema_description
 
     def run(self, extract_output, use_cache=True):
-        column_matching, join_graph, database_hint, identify_instruction = extract_output
+        column_matching, join_graph, database_hint, identify_instruction, schema_description = extract_output
 
         column_matching_str = column_matching.to_csv(index=False) 
         join_graph_str = yaml.dump(join_graph, default_flow_style=False)
@@ -36649,7 +36714,10 @@ class SQLQueryMatchingConstructor(Node):
         template = f"""Given the following Column Matching:
 {column_matching_str}
 
-And the following join graph:
+The input tables schema:
+{schema_description}
+
+And the following join path:
 {join_graph_str}
 
 Please construct a complete SQL query that selects all mapped columns from the source tables and joins them according to the join graph. 
@@ -39267,12 +39335,13 @@ Your action:"""
 
         max_rounds = 10
         for _ in range(max_rounds):
-            for attempt in range(3):
-                response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
-                llm_message = response['choices'][0]['message']
-                yaml_content = extract_yml_code(llm_message["content"])
+            for attempt in range(5): 
                 
                 try:
+                    response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
+                    llm_message = response['choices'][0]['message']
+                    yaml_content = extract_yml_code(llm_message["content"])
+                    
                     decision = yaml.safe_load(yaml_content)
                     if decision['action'] in ['explore', 'conclude']:
                         self.conversation_history.append(llm_message)
@@ -39286,13 +39355,18 @@ Your action:"""
                         
                         break
                 except:
-                    if attempt == 2:
+                    
+                    
+                    if attempt == 4:
                         decision = {
                             "action": "conclude",
                             "answer": "There seems to be some issue processing your request. Could you please rephrase your question or provide more details?"
                         }
                         self.conclude(decision)
                         return decision
+                    
+                    time.sleep(5*attempt)
+
                     continue
         
         return {"action": "conclude", "answer": "Max rounds reached without a conclusion. Please try rephrasing your question."}
