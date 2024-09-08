@@ -15584,6 +15584,60 @@ class TransformationSQLPipeline(TransformationPipeline):
 
 
 
+def serialize_and_order_tables(foreign_key):
+    graph = defaultdict(set)
+    all_tables = set()
+    
+    for (pk_table, _), fk_list in foreign_key.items():
+        all_tables.add(pk_table)
+        for fk_table, _ in fk_list:
+            if fk_table != pk_table:
+                graph[pk_table].add(fk_table)
+                all_tables.add(fk_table)
+    
+    outgoing_count = {table: len(graph[table]) for table in all_tables}
+    
+    ordered_tables = sorted(all_tables, key=lambda t: (-outgoing_count[t], t))
+    
+    numbered_tables = {}
+    visited = set()
+    current_number = len(all_tables)
+
+    def dfs(table):
+        nonlocal current_number
+        if table in visited:
+            return
+        numbered_tables[table] = current_number
+        current_number -= 1
+        visited.add(table)
+
+        all_neighbors = set(graph[table])
+        for k, v in graph.items():
+            if table in v:
+                all_neighbors.add(k)
+
+        sorted_neighbors = sorted(all_neighbors, key=lambda t: (outgoing_count[t], t))
+        for neighbor in sorted_neighbors:
+            dfs(neighbor)
+        
+    for start_table in ordered_tables:
+        dfs(start_table)
+    
+    result = []
+    number_to_table = {}
+    for table in sorted(numbered_tables, key=numbered_tables.get):
+        number = numbered_tables[table]
+        number_to_table[number] = table
+        foreign_keys = [numbered_tables[t] for t in graph[table]]
+        foreign_keys_str = f" <- {', '.join(map(str, sorted(foreign_keys)))}" if foreign_keys else ""
+        result.append(f"{number}. {table}{foreign_keys_str}")
+    
+    return "\n".join(result), number_to_table
+
+
+
+
+
 
 
  
@@ -15679,6 +15733,123 @@ class DataProject:
         
         return warnings
     
+    
+    def generate_text_join(self):
+        str_join, number_to_table = serialize_and_order_tables(self.foreign_key)
+        self.number_to_table = number_to_table
+        return str_join
+
+
+    def describe_table_in_text(self, table_input, show_table_summary=True, show_category=True, 
+                            show_unique=True, show_pattern=True, show_type=True,
+                            show_keys=True):
+        if isinstance(table_input, int):
+            if hasattr(self, 'number_to_table'):
+                table_name = self.number_to_table.get(table_input)
+                if table_name is None:
+                    return f"No table found for id {table_input}"
+                model_id = table_input
+            else:
+                return "Table numbering not available"
+        else:
+            table_name = table_input
+            model_id = None
+
+        if table_name not in self.table_object:
+            return f"No table object found for '{table_name}'"
+
+        table_desc = self.table_object[table_name].print_column_desc(
+            show_table_summary=show_table_summary,
+            show_category=show_category,
+            show_unique=show_unique,
+            show_pattern=show_pattern,
+            show_type=show_type
+        )
+
+        if show_keys:
+            key_info = self.get_key_info(tables=[table_name])
+            if table_name in key_info:
+                table_keys = key_info[table_name]
+                
+                if 'primary_key' in table_keys:
+                    table_desc += f"\n\nPrimary Key: '{table_keys['primary_key']}'"
+                
+                if 'foreign_keys' in table_keys:
+                    table_desc += "\n\nForeign Keys:"
+                    for fk in table_keys['foreign_keys']:
+                        table_desc += f"\n- {fk['column']} references {fk['reference']['table_name']}['{fk['reference']['column']}']"
+
+        return table_desc
+
+
+    def generate_multiple_table_summaries(self, model_indices=None, full=True, include_join_graph=False):
+        
+        self.generate_text_join()
+
+        if model_indices is None:
+            section_name = "model_summary_all"
+            model_indices = list(self.number_to_table.keys())
+        else:
+            section_name = f"model_summary_{'_'.join(map(str, model_indices))}"
+        
+        options = OrderedDict()
+
+        if include_join_graph:
+            join_graph_html = self.generate_html_graph_static()
+            options["Join Graph"] = join_graph_html
+
+        for idx in model_indices:
+            if idx in self.number_to_table:
+                table_name = self.number_to_table[idx]
+                if table_name in self.table_object:
+                    table_obj = self.table_object[table_name]
+                    yml_content = table_obj.create_dbt_schema_yml()
+                    highlighted_yml_content = highlight_yml_only(yml_content)
+                    highlighted_yml_content = f'<h5 class="mb-3">{idx}. {table_name}</h5><small class="text-muted">Table catalog prepared by Cocoon</small>' + highlighted_yml_content
+                    options[f"{idx}. {table_name}"] = highlighted_yml_content
+
+        selected = next(iter(options.keys()), None)
+
+        combined_html = generate_dropdown_html(section_name, options, default_selection="Explore Table", full=False, selected=selected)
+
+        if not full:
+            return combined_html
+        
+        formatter = HtmlFormatter(style='monokai')
+        css_style = formatter.get_style_defs('.highlight')
+        html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {{
+            font-size: 0.75rem;
+        }}
+        pre {{ line-height: 125%; }}
+        .highlight {{
+            background: #272822;
+            color: #f8f8f2;
+            border-radius: 4px;
+            padding: 1em;
+            margin: 1em 0;
+            overflow-x: auto;
+            font-size: 12px;
+        }}
+        {css_style}
+        {tag_css}
+        {pandas_css}
+    </style>
+</head>
+<body>
+    {combined_html}
+</body>
+</html>
+"""
+        return html
     
 
 
@@ -15848,10 +16019,11 @@ class DataProject:
                     'table_name': table_name
                 })
             if add_time_keys:
-                time_keys = [attr for attr, type_ in attributes.items() if is_type_time(type_)]
-                
-                if time_keys:
-                    models[table_name]['time_keys'] = time_keys
+                if isinstance(attributes, dict):
+                    time_keys = [attr for attr, type_ in attributes.items() if is_type_time(type_)]
+                    
+                    if time_keys:
+                        models[table_name]['time_keys'] = time_keys
 
         return OrderedDict({'join_graph': list(models.values())})
         
@@ -16096,14 +16268,35 @@ class DataProject:
 
         display_draggable_graph_html(graph_data)
 
-    def generate_nodes_edges(self):
-        nodes, edges = generate_nodes_edges(self.foreign_key)
+    def generate_nodes_edges(self, selected_nodes=None):
+        if selected_nodes and all(isinstance(node, int) for node in selected_nodes):
+            selected_nodes = [self.number_to_table.get(node) for node in selected_nodes if node in self.number_to_table]
+
+        original_nodes, edges = generate_nodes_edges(self.foreign_key)
         
         for table in self.tables.keys():
-            if table not in nodes:
-                nodes.append(table)
+            if table not in original_nodes:
+                original_nodes.append(table)
         
-        return nodes, edges
+        if selected_nodes:
+            selected_set = set(selected_nodes)
+            
+            filtered_nodes = [node for node in original_nodes if node in selected_set]
+            
+            node_to_index = {node: index for index, node in enumerate(filtered_nodes)}
+            
+            filtered_edges = []
+            for from_idx, to_idx in edges:
+                from_node = original_nodes[from_idx]
+                to_node = original_nodes[to_idx]
+                if from_node in selected_set and to_node in selected_set:
+                    new_from_idx = node_to_index[from_node]
+                    new_to_idx = node_to_index[to_node]
+                    filtered_edges.append((new_from_idx, new_to_idx))
+            
+            return filtered_nodes, filtered_edges
+        
+        return original_nodes, edges
 
     def generate_story_html(self):
         html_items = []
@@ -16114,8 +16307,9 @@ class DataProject:
         html_content = "<ol>\n" + "\n".join(html_items) + "\n</ol>"
         return html_content
         
-    def generate_html_graph_static(self, highlight_nodes=None):
-        nodes, edges = self.generate_nodes_edges()
+    def generate_html_graph_static(self, selected_nodes=None, highlight_nodes=None):
+        
+        nodes, edges = self.generate_nodes_edges(selected_nodes=selected_nodes)
         edge_labels = [''] * len(edges)
         
         highlight_nodes_indices = set()
@@ -16128,38 +16322,40 @@ class DataProject:
         
         
         for partition, table_list in self.partition_mapping.items():
-            if partition not in nodes:
-                nodes.append(partition)
-            partition_index = nodes.index(partition)
-            
-            for table in table_list:
-                if table in highlight_nodes:
-                    if table not in nodes:
-                        nodes.append(table)
-                    table_index = nodes.index(table)
-                    
-                    edges.append((partition_index, table_index))
-                    edge_labels.append("partition")
-                    
-                    highlight_nodes_indices.add(table_index)
-                    highlight_edges_indices.add(len(edges) - 1)
+            if not selected_nodes or partition in selected_nodes:
+                if partition not in nodes:
+                    nodes.append(partition)
+                partition_index = nodes.index(partition)
+                
+                for table in table_list:
+                    if table in highlight_nodes:
+                        if table not in nodes:
+                            nodes.append(table)
+                        table_index = nodes.index(table)
+                        
+                        edges.append((partition_index, table_index))
+                        edge_labels.append("partition")
+                        
+                        highlight_nodes_indices.add(table_index)
+                        highlight_edges_indices.add(len(edges) - 1)
         
         
         for snapshot_table, history_table in self.history_table.items():
-            if snapshot_table not in nodes:
-                nodes.append(snapshot_table)
-            snapshot_index = nodes.index(snapshot_table)
-            
-            if history_table in highlight_nodes:
-                if history_table not in nodes:
-                    nodes.append(history_table)
-                history_index = nodes.index(history_table)
-        
-                edges.append((snapshot_index, history_index))
-                edge_labels.append("history")
+            if not selected_nodes or snapshot_table in selected_nodes:
+                if snapshot_table not in nodes:
+                    nodes.append(snapshot_table)
+                snapshot_index = nodes.index(snapshot_table)
                 
-                highlight_nodes_indices.add(history_index)
-                highlight_edges_indices.add(len(edges) - 1)
+                if history_table in highlight_nodes:
+                    if history_table not in nodes:
+                        nodes.append(history_table)
+                    history_index = nodes.index(history_table)
+            
+                    edges.append((snapshot_index, history_index))
+                    edge_labels.append("history")
+                    
+                    highlight_nodes_indices.add(history_index)
+                    highlight_edges_indices.add(len(edges) - 1)
         
         html_output = generate_workflow_html_multiple(
             nodes, edges, 
@@ -16171,8 +16367,8 @@ class DataProject:
         
         return html_output
 
-    def display_graph_static(self, highlight_nodes=None):
-        html_output = self.generate_html_graph_static(highlight_nodes)
+    def display_graph_static(self, selected_nodes=None, highlight_nodes=None):
+        html_output = self.generate_html_graph_static(selected_nodes=selected_nodes, highlight_nodes=highlight_nodes)
         display(HTML(html_output))
             
     def display_story_multiple_page(self):
@@ -22904,9 +23100,10 @@ class CocoonBranchStep(Node):
         
         html_labels = [
         "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🧩 <b>Catalog (for RAG):</b> Give us tables, we'll clean, integrate and catalog them for future RAG.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🧩 <b>Data Warehouse Catalog (Prepare RAG):</b> Give us tables, we'll clean, integrate and catalog them for future RAG.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
         "🔧 <b>Transform:</b> Give us the catalogs of source + target database, we transform.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🤖 <b>Lineage RAG for Pipeline copilot:</b> Give us a large dbt project, we'll create a lineage RAG for copilot. <br><i>🛡️ Access Control: <u>read-only</u> to dbt project </u></i>",
+        "🤖 <b>Pipeline Copilot:</b> Give us a large dbt project, we'll create a lineage RAG for copilot. <br><i>🛡️ Access Control: <u>read-only</u> to dbt project </u></i>",
+        "🤖 <b>Data Warehouse Copilot (Use RAG):</b> Give us the catalog, and we'll RAG the data warehouse for copilot. <br><i>🛡️ Access Control: <u>Read-only access</u> to the catalog</i>",
         "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables. <br>",
 
         ]
@@ -22921,6 +23118,7 @@ class CocoonBranchStep(Node):
             "Data Vault Workflow",
             "Single Table Transformation Workflow",
             "DBT Project Explore Workflow",
+            "DBT Catalog Explore Workflow",
             "Fuzzy Join Workflow",
         ]
 
@@ -22980,6 +23178,7 @@ def create_cocoon_workflow(con= None, para = None, output=None):
     _, profile_workflow = create_cocoon_documentation_workflow(con=con, query_widget=query_widget, output=output)
     _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget, output=output)    
     dbt_explore_workflow = create_cocoon_dbt_explore_workflow(para=para, output=output)
+    catalog_explore_workflow = create_cocoon_catalog_explore_workflow(para=para, output=output)
     _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget, para=para, output=output)
     _, data_vault_workflow = create_cocoon_data_vault_workflow(con=con, query_widget=query_widget, para=para, output=output)
     
@@ -22987,6 +23186,7 @@ def create_cocoon_workflow(con= None, para = None, output=None):
     main_workflow.register(profile_workflow, parent=branch_node)
     main_workflow.register(fuzzy_join_workflow, parent=branch_node)
     main_workflow.register(dbt_explore_workflow, parent=branch_node)
+    main_workflow.register(catalog_explore_workflow, parent=branch_node)
     main_workflow.register(table_transform_workflow, parent=branch_node)
     main_workflow.register(data_vault_workflow, parent=branch_node)
     
@@ -26255,29 +26455,36 @@ class Table:
         return result
 
     def print_column_desc(self, columns=None, show_category=False, 
-                          show_unique=False, show_pattern=False,
-                          show_type=False):
+                        show_unique=False, show_pattern=False,
+                        show_type=False, show_table_summary=False):
         column_desc_string = ""
+        
+        if show_table_summary and self.table_summary:
+            column_desc_string += f"{self.table_summary}\n"
+        
         if columns is None:
-            columns = self.columns
-        for column in columns:
+            columns = sorted(self.columns)
+        else:
+            columns = sorted(col for col in columns if col in self.column_desc)
+        
+        for i, column in enumerate(columns, 1):
             if column in self.column_desc:
-                desc = self.column_desc.get(column, "") + "\n"
+                desc = f"- '{column}': {self.column_desc.get(column, '')}\n"
                 
                 if show_category and column in self.category:
                     categories = self.category[column]
-                    desc += f"  Column domain: {categories}\n"
+                    desc += f"   Column domain: {categories}\n"
                 
                 if show_unique and column in self.uniqueness:
                     current_unique = self.uniqueness[column].get("current_unique", False)
                     unique_reason = self.uniqueness[column].get("unique_reason", None)
                     if current_unique:
-                        desc += "  Column is already unique\n"
+                        desc += "   Column is already unique\n"
                     else:
-                        desc += "  Column is not unique\n"
+                        desc += "   Column is not unique\n"
                         
                     if unique_reason:
-                        desc += f"  It should be unique because: {unique_reason}\n"
+                        desc += f"   It should be unique because: {unique_reason}\n"
                 
                 if show_pattern and column in self.patterns:
                     desc += "   All column values already follow regex patterns:\n"
@@ -26286,11 +26493,12 @@ class Table:
                 
                 if show_type and column in self.data_type:
                     data_type = self.data_type[column]["current_data_type"]
-                    desc += f"  Current data type: {data_type}\n"
+                    desc += f"   Current type: {data_type}\n"
                 
-                column_desc_string += f"'{column}': {desc}"
+                column_desc_string += desc
+        
         return column_desc_string.strip()
-    
+        
     def create_dbt_schema_dict(self, table_cocoon_meta=None):
         data = OrderedDict([
             ("version", 2),
@@ -34670,10 +34878,11 @@ class DbtLineage:
             model_number = f"{model_index}. "
 
         properties = {
-            f"{model_number}{model_name}": ((model_info.get('description') or '') + ' ' + (model_info.get('cocoon_description') or '')).strip() or "Not available",
-            "tags": "<ul>" + "".join(["<li>" + generate_tag_html(tag, description) + "</li>" for tag, description in tags.items()]) + "</ul>" if tags else None,
-            "Columns": columns_df.to_html(index=False) if not columns_df.empty else None,
+            "Model Description": ((model_info.get('description') or '') + ' ' + (model_info.get('cocoon_description') or '')).strip() or "⚠️ Model description is missing from the provided dbt project. <br> 🚀 Run Cocoon Deep RAG to automatically generate it for better RAG.",
+            "Tags": "<ul>" + "".join(["<li>" + generate_tag_html(tag, description) + "</li>" for tag, description in tags.items()]) + "</ul>" if tags else None,
             "SQL": highlight_sql_only(model_info.get('raw_code')) if model_info.get('raw_code') else None,
+            "Column Description": columns_df.to_html(index=False) if not columns_df.empty else "⚠️ Column description is missing from the provided dbt project. <br> 🚀 Run Cocoon Deep RAG to automatically generate it for better RAG.",
+            "Column Lineage": "⚠️ Column lineage is missing from the provided dbt project. <br> 🚀 Run Cocoon Deep RAG to automatically generate it for better RAG.",
         }
 
         properties = {k: v for k, v in properties.items() if v is not None}
@@ -34820,6 +35029,11 @@ class DbtLineage:
             if section_content:
                 combined_html += wrap_in_card(section_name, section_content)
 
+        model_number = ""
+        model_index = self.get_index_by_model_name(model_name)
+        model_number = f"{model_index}. "
+
+        combined_html = f'<h5 class="mb-3">{model_number}{model_name}</h5>' + combined_html
             
         if not full:
             return combined_html
@@ -39059,7 +39273,7 @@ class ChatHTMLGenerator:
         self.update_widget()
 
 
-    def generate_full_html(self):
+    def generate_full_html(self,background_color="linear-gradient(135deg, #667eea 0%, #764ba2 100%)", title="RAG large and complex dbt project by lineage"):
         messages_html = '\n'.join(self.messages)
         html_content = f"""
 <!DOCTYPE html>
@@ -39067,14 +39281,14 @@ class ChatHTMLGenerator:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cocoon: RAG large and complex dbt project by lineage</title>
+    <title>Cocoon: {title}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <title>Chat UI</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: {background_color};
             display: flex;
             flex-direction: column;
         }}
@@ -39149,7 +39363,7 @@ class ChatHTMLGenerator:
     <div class="container-fluid mt-5">
         <h1 class="text-center text-white">
             <a href="https://github.com/Cocoon-Data-Transformation/cocoon" style="text-decoration: none; color: inherit;">
-                <span class="fw-bold">Cocoon:</span> RAG Large and Complex DBT Project by Lineage
+                <span class="fw-bold">Cocoon:</span> {title}
             </a>
         </h1>
     </div>
@@ -39629,3 +39843,326 @@ def get_tag_style(tag):
 def generate_tag_html(tag, explanation):
     style = get_tag_style(tag)
     return f'<span class="tag" style="background-color: {style["bg"]}; color: {style["color"]}; border: 1px solid {style["color"]};">{tag}</span> {explanation}'
+
+
+class DBLLMAgent:
+    def __init__(self, data_project, debug=True, chat_ui=None):
+        self.data_project = data_project
+        self.conversation_history = []
+        self.step_count = 0
+        self.debug = debug
+        self.chat_ui = chat_ui
+        self.explored_table_ids = set()
+
+    def generate_initial_prompt(self, user_question):
+        table_context = self.data_project.generate_text_join()
+        prompt = f"""# Database table join path (arrow links foreign keys <- primary key):
+{table_context}
+
+## General Principles
+1. Prioritize SQL-based answers using existing tables.
+2. Be evidence-based, referencing `table_name` and ```sql codes``` frequently
+3. Explore related joinable tables for context
+4. Keep responses concise.
+5. Persist in exploration if data seems insufficient.
+
+## Syntax Guidelines
+- Reference tables: `table_name`
+- SQL code blocks:
+  ```sql
+  SELECT ...
+  ```
+- New table creation:
+  ```sql
+  -- table_name: 'new_table_name'
+  SELECT ...
+  ```
+
+## Your actions (one at a time):
+1. Explore the tables to answer the user's question. 
+```yml
+reason: >-
+    The most relavant tables are ...
+action: explore
+table_ids: [<list of up to 10 table ids to explore; preferably include joinable tables for better context>]
+```
+2. Answer the question based on the current context.
+```yml
+reason: >-
+    I'm going to write SQL code to answer the user's question. I have explored all the relavant tables/ I still need to explore ...[action becomes explore]
+action: conclude
+answer: |
+    <reference `table_name` and ```sql codes```>
+```
+
+Now answer the question: "{user_question}"
+Your action:"""
+        self.print_message("user", prompt)
+        return prompt
+    
+    def generate_follow_up(self, user_question):
+        return f'User follow-up question: "{user_question}"\nYour action:'
+
+    def process_user_question(self, user_question):
+        if not self.conversation_history:
+            initial_prompt = self.generate_initial_prompt(user_question)
+            self.conversation_history = [{"role": "user", "content": initial_prompt}]
+            
+            if self.chat_ui:
+                self.chat_ui.add_message(f"{escape_html(user_question)}", 1)
+                self.chat_ui.add_message("<b>Here is the database. Let me know which tables you want to explore.</b><br><br>" + self.data_project.generate_html_graph_static(), 2, "Cocoon RAG", icon=cocoon_icon_64)
+        else:
+            follow_up_prompt = self.generate_follow_up(user_question)
+            self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+            if self.chat_ui:
+                self.chat_ui.add_message(f"{escape_html(user_question)}", 1)
+        
+
+        max_rounds = 10
+        for _ in range(max_rounds):
+            for attempt in range(5): 
+                
+                try:
+                    response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
+                    llm_message = response['choices'][0]['message']
+                    yaml_content = extract_yml_code(llm_message["content"])
+                    
+                    decision = yaml.safe_load(yaml_content)
+                    if decision['action'] in ['explore', 'conclude']:
+                        self.conversation_history.append(llm_message)
+                        self.print_message(llm_message["role"], llm_message["content"])
+                        
+                        if decision['action'] == 'explore':
+                            self.explore_tables(decision.get('reason', 'No reason provided'), decision.get('table_ids', []))
+                        else:
+                            self.conclude(decision)
+                            return decision
+                        
+                        break
+                except:
+                    
+                    
+                    if attempt == 4:
+                        decision = {
+                            "action": "conclude",
+                            "answer": "There seems to be some issue processing your request. Could you please rephrase your question or provide more details?"
+                        }
+                        self.conclude(decision)
+                        return decision
+                    
+                    time.sleep(5*attempt)
+
+                    continue
+        
+        return {"action": "conclude", "answer": "Max rounds reached without a conclusion. Please try rephrasing your question."}
+
+    def explore_tables(self, reason, table_ids):
+        exploration_results = []
+        newly_explored_tables = []
+        for table_id in table_ids:
+            if table_id in self.explored_table_ids:
+                exploration_results.append(f"table ID {table_id}:\nAlready explored before")
+            else:
+                table_summary_text = self.data_project.describe_table_in_text(table_input=table_id)
+                exploration_results.append(f"table ID {table_id}:\n{table_summary_text}")
+                self.explored_table_ids.add(table_id)
+                newly_explored_tables.append(table_id)
+
+        combined_results = "\n\n".join(exploration_results)
+        follow_up_prompt = f"""Exploration results:
+{combined_results}
+
+Your next action (Explore or Conclude):"""
+        self.print_message("user", follow_up_prompt)
+        self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+
+        if self.chat_ui:
+            self.chat_ui.add_message(f"{reason}. Therefore, I want to explore these tables in detail:<br><br>{self.data_project.generate_html_graph_static(selected_nodes=table_ids)}", 2, "LLM Agent", icon=claude_icon_64)
+            self.chat_ui.add_message(f"<b>Here are the details for the specific tables:</b><br><br>{wrap_in_iframe(self.data_project.generate_multiple_table_summaries(model_indices=table_ids), width='100%')}", 2, "Cocoon RAG", icon=cocoon_icon_64)
+    
+    def conclude(self, decision):
+        if self.chat_ui:
+            content = decision.get('answer', '')
+            self.chat_ui.add_message(replace_sql_with_highlighted(content), 2, "LLM Agent", icon=claude_icon_64)
+
+    def print_message(self, role, content):
+        if self.debug:
+            self.step_count += 1
+            print(f"\n--- Step {self.step_count}: {role.capitalize()} Message ---\n")
+            print(content)
+            print("\n--- End of Message ---\n")
+
+class DBTCatalogConfig(Node):
+    default_name = 'DBT Catalog Configuration'
+    default_description = 'This step allows you to configure the DBT catalog for exploration.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        catalog_file_input = widgets.Text(
+            value=self.para.get("dbt_directory", ""),
+            layout=widgets.Layout(width='70%')
+        )
+
+        next_button = widgets.Button(description="Load", button_style='success', icon='book', layout=widgets.Layout(width='10%'))
+
+        def on_button_click(b):
+            with self.output_context():
+                dbt_directory = catalog_file_input.value
+
+                if not file_exists(dbt_directory):
+                    print(f"Error: The directory '{dbt_directory}' does not exist.")
+                    return
+                
+                self.para["dbt_directory"] = dbt_directory
+
+                callback({
+                    "dbt_directory": dbt_directory,
+                })
+
+        next_button.on_click(on_button_click)
+
+        if viewer or ("viewer" in self.para and self.para["viewer"]):
+            if "dbt_directory" in self.para:
+                on_button_click(next_button)
+                return
+        
+        display(HTML("<div style='line-height: 1.2;'><h2>📚 Provide your DBT Catalog File</h2><em>Enter the path to your DBT catalog JSON file. Prefer full path over relative path.</em></div>"))
+        display(widgets.HBox([catalog_file_input, next_button]))
+
+
+class DBTCatalogBuilder(Node):
+    default_name = 'DBT Catalog Builder'
+    default_description = 'This step reads the DBT catalog and builds the data project.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        dbt_directory = self.para.get("dbt_directory")
+        if not dbt_directory:
+            display(HTML("<div style='color: red;'>Error: DBT directory not found in parameters.</div>"))
+            return
+
+        data_project = read_data_project_from_dir(dbt_directory)
+
+        self.para['dbt_lineage'] = data_project
+
+        display(HTML("<div style='line-height: 1.2;'><h2>🎉 Your DBT catalog is ready for exploration</h2><em>We've loaded the data project from your DBT directory.</em></div>"))
+
+        html_content = data_project.generate_multiple_table_summaries(include_join_graph=True)
+        display(HTML(wrap_in_iframe(html_content)))
+
+        text_input = widgets.Text(
+            placeholder='Ask any question about the DBT project...',
+            layout=widgets.Layout(width='70%')
+        )
+
+        send_button = widgets.Button(
+            description='Send',
+            button_style='primary',
+            layout=widgets.Layout(width='10%')
+        )
+
+        def on_send(b):
+            with self.output_context():
+                message = text_input.value
+                callback({"question": message})
+                return
+
+        send_button.on_click(on_send)
+
+        chat_input = widgets.HBox([text_input, send_button], layout=widgets.Layout(width='100%', margin='10px 0px'))
+
+        display(chat_input)
+
+class ProcessUserQuestionCatalog(Node):
+    default_name = 'Process User Question Catalog'
+    default_description = 'This step processes the user question from the DBT Lineage Builder.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        question = self.get_sibling_document('DBT Catalog Builder').get("question", "No question found")
+        dbt_lineage = self.para['dbt_lineage']
+
+        chat = ChatHTMLGenerator()
+        chat.display()
+
+        agent = DBLLMAgent(dbt_lineage, chat_ui=chat, debug=False)
+
+        def serve_user_question(question):
+            agent.process_user_question(question)
+
+        follow_up_button = widgets.Button(
+            description='Follow Up',
+            icon='arrow-right',
+            button_style='primary',
+            layout=widgets.Layout(width='15%'),
+            tooltip='Ask a follow-up question'
+        )
+
+        new_question_input = widgets.Text(
+            placeholder='Enter your question here...',
+            layout=widgets.Layout(width='70%')
+        )
+
+        new_button = widgets.Button(
+            description='New',
+            icon='plus',
+            button_style='warning',
+            layout=widgets.Layout(width='15%'),
+            tooltip='Start a new conversation'
+        )
+
+        warning_widget = widgets.HTML(
+            value='',
+            layout=widgets.Layout(width='100%', margin='10px 0px')
+        )
+
+        def on_follow_up(b):
+            new_question = new_question_input.value
+            if new_question:
+                serve_user_question(new_question)
+                new_question_input.value = ''
+            update_warning()
+
+        def on_new(b):
+            chat.clear_all_messages()
+            nonlocal agent
+            agent = DBTLLMAgent(dbt_lineage, chat_ui=chat, debug=False)
+            warning_widget.value = ''
+            new_question = new_question_input.value
+            if new_question:
+                serve_user_question(new_question)
+                new_question_input.value = ''
+
+        follow_up_button.on_click(on_follow_up)
+        new_button.on_click(on_new)
+
+        def update_warning():
+            if len(agent.conversation_history) > 10:
+                warning_widget.value = '<div style="color: red">Warning: Conversation is getting long. Consider starting a new conversation for better performance.</div>'
+            else:
+                warning_widget.value = ''
+
+        new_question_box = widgets.HBox([new_question_input, follow_up_button, new_button], 
+                                        layout=widgets.Layout(width='100%', margin='20px 0px'))
+
+        display(widgets.VBox([new_question_box, warning_widget]))
+
+        serve_user_question(question)
+
+
+def create_cocoon_catalog_explore_workflow(con=None, output=None, para={}, viewer=False):
+    
+    main_workflow = Workflow("DBT Catalog Explore Workflow", 
+                        item = {},
+                        description="A workflow to explore a DBT catalog",
+                        output=output,
+                        para=para)
+
+    main_workflow.add_to_leaf(DBTCatalogConfig(output=output))
+    main_workflow.add_to_leaf(DBTCatalogBuilder(output=output))
+    main_workflow.add_to_leaf(ProcessUserQuestionCatalog(output=output)) 
+
+    return main_workflow
