@@ -15675,7 +15675,12 @@ class DataProject:
         self.story = []
         
         self.partition_mapping = {}
-         
+        
+        self.name = ""
+
+    def get_name(self):
+        return self.name
+
     def get_key_info(self, tables=None, include_ri=True):
         if not tables:
             tables = self.key.keys()
@@ -15733,12 +15738,22 @@ class DataProject:
         
         return warnings
     
-    
+    def generate_text_summary(self, idx=None):
+        name = self.get_name
+        intro = f"# This is a database\n"
+        intro += "# Below is join graph (table with foreign keys <- tables with primary key):\n"
+        return intro + self.generate_text_join()
+        
     def generate_text_join(self):
         str_join, number_to_table = serialize_and_order_tables(self.foreign_key)
         self.number_to_table = number_to_table
         return str_join
 
+    def generate_item_text_summary(self, item_id):
+        return self.describe_table_in_text(table_input=item_id)
+    
+    def get_item_name_by_id(self, item_id):
+        return self.number_to_table.get(item_id)
 
     def describe_table_in_text(self, table_input, show_table_summary=True, show_category=True, 
                             show_unique=True, show_pattern=True, show_type=True,
@@ -15781,6 +15796,11 @@ class DataProject:
 
         return table_desc
 
+    def generate_items_summary(self, item_ids=None, full=True):
+        if item_ids is None:
+            return self.generate_multiple_table_summaries(model_indices=item_ids,include_join_graph=True, full=full)
+        else:
+            return self.generate_multiple_table_summaries(model_indices=item_ids, full=full)
 
     def generate_multiple_table_summaries(self, model_indices=None, full=True, include_join_graph=False):
         
@@ -15805,7 +15825,7 @@ class DataProject:
                     table_obj = self.table_object[table_name]
                     yml_content = table_obj.create_dbt_schema_yml()
                     highlighted_yml_content = highlight_yml_only(yml_content)
-                    highlighted_yml_content = f'<h5 class="mb-3">{idx}. {table_name}</h5><small class="text-muted">Table catalog prepared by Cocoon</small>' + highlighted_yml_content
+                    highlighted_yml_content = f'<b>{idx}. {table_name}</b><br><small class="text-muted mb-3">Table catalog prepared by Cocoon</small>' + highlighted_yml_content
                     options[f"{idx}. {table_name}"] = highlighted_yml_content
 
         selected = next(iter(options.keys()), None)
@@ -16306,7 +16326,10 @@ class DataProject:
         
         html_content = "<ol>\n" + "\n".join(html_items) + "\n</ol>"
         return html_content
-        
+    
+    def generate_html_summary(self, item_ids=None):
+        return self.generate_html_graph_static(selected_nodes=item_ids)
+
     def generate_html_graph_static(self, selected_nodes=None, highlight_nodes=None):
         
         nodes, edges = self.generate_nodes_edges(selected_nodes=selected_nodes)
@@ -23099,13 +23122,11 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
+        "🤖 <b>Chatbot:</b> Give us catalogs and dbt projects, we'll create a cursor-style chatbot.<br><i>🛡️ Access Control: <u>read-only</u> to dbt project </u></i>",
         "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🧩 <b>Data Warehouse Catalog (Prepare RAG):</b> Give us tables, we'll clean, integrate and catalog them for future RAG.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🧩 <b>Data Warehouse Catalog:</b> Give us tables, we'll clean, integrate and catalog them for future RAG.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
         "🔧 <b>Transform:</b> Give us the catalogs of source + target database, we transform.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🤖 <b>Pipeline Copilot:</b> Give us a large dbt project, we'll create a lineage RAG for copilot. <br><i>🛡️ Access Control: <u>read-only</u> to dbt project </u></i>",
-        "🤖 <b>Data Warehouse Copilot (Use RAG):</b> Give us the catalog, and we'll RAG the data warehouse for copilot. <br><i>🛡️ Access Control: <u>Read-only access</u> to the catalog</i>",
         "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables. <br>",
-
         ]
         coming_labels = [
         "🔄 <b>(Coming Soon) Integrate:</b> Give us tables, we'll integrate them.",
@@ -23114,11 +23135,10 @@ class CocoonBranchStep(Node):
         ]
         
         next_nodes = [
+            "Multi-Catalog Explore Workflow",
             "Data Format Workflow",
             "Data Vault Workflow",
             "Single Table Transformation Workflow",
-            "DBT Project Explore Workflow",
-            "DBT Catalog Explore Workflow",
             "Fuzzy Join Workflow",
         ]
 
@@ -23177,15 +23197,13 @@ def create_cocoon_workflow(con= None, para = None, output=None):
     _, stage_workflow = create_cocoon_data_format_workflow(con=con, query_widget=query_widget, para=para, output=output)
     _, profile_workflow = create_cocoon_documentation_workflow(con=con, query_widget=query_widget, output=output)
     _, fuzzy_join_workflow = create_matching_workflow(con=con, query_widget=query_widget, output=output)    
-    dbt_explore_workflow = create_cocoon_dbt_explore_workflow(para=para, output=output)
-    catalog_explore_workflow = create_cocoon_catalog_explore_workflow(para=para, output=output)
+    catalog_explore_workflow = create_cocoon_mul_catalog_explore_workflow(para=para, output=output)
     _, table_transform_workflow = create_cocoon_table_transform_workflow(con=con, query_widget=query_widget, para=para, output=output)
     _, data_vault_workflow = create_cocoon_data_vault_workflow(con=con, query_widget=query_widget, para=para, output=output)
     
     main_workflow.register(stage_workflow, parent=branch_node)
     main_workflow.register(profile_workflow, parent=branch_node)
     main_workflow.register(fuzzy_join_workflow, parent=branch_node)
-    main_workflow.register(dbt_explore_workflow, parent=branch_node)
     main_workflow.register(catalog_explore_workflow, parent=branch_node)
     main_workflow.register(table_transform_workflow, parent=branch_node)
     main_workflow.register(data_vault_workflow, parent=branch_node)
@@ -29870,6 +29888,8 @@ def read_data_project_from_dir(directory, con=None, database=None, schema=None, 
     data_project = DataProject()
     dbt_directory = os.path.join(directory, "models")
 
+    data_project.name = os.path.basename(os.path.normpath(directory))
+
     mode = "WITH_VIEW"
     
     seeds_directory = os.path.join(directory, "seeds") 
@@ -34393,15 +34413,26 @@ def create_cocoon_dbt_rag_prep_workflow(para={}, output=None):
     return rag_prep_workflow
 
 class DbtLineage:
-    def __init__(self, dbt_directory=''):
+    def __init__(self, dbt_directory='', name=None):
         self.conn = duckdb.connect(':memory:')
         self.dbt_directory = dbt_directory
+        
+        if name:
+            self.name = name
+        elif dbt_directory:
+            self.name = os.path.basename(os.path.normpath(dbt_directory))
+        else:
+            self.name = ""
+        
         self._create_tables()
 
         self.tables = {}
                 
         self.table_object = {}
 
+    def get_name(self):
+        return self.name
+    
     def _create_tables(self):
         self.conn.execute("""
             CREATE TABLE model (
@@ -34751,7 +34782,12 @@ class DbtLineage:
             return os.path.join(self.dbt_directory, query[0])
         else:
             return None
-        
+    
+    def generate_html_summary(self, item_ids=None):
+        if item_ids is not None:
+            return self.get_model_lineage_html_by_indices(model_indices=item_ids)
+        return self.display_model_lineage_html()
+
     def display_model_lineage_html(self, numbered=True, model_name=None, max_forward_depth=None, max_backward_depth=None):
         all_models_query = self.get_ordered_models()
         global_model_to_idx = {name: idx for name, idx in all_models_query}
@@ -34889,6 +34925,24 @@ class DbtLineage:
 
         return properties
     
+    def generate_item_text_summary(self, item_id):
+        model_summary_dict = self.generate_model_summary_text_dict(model_id=item_id)
+        model_summary_text = "\n".join([f"{key}\n{model_summary_dict[key]}" for key in model_summary_dict])
+        return model_summary_text
+
+    def get_item_name_by_id(self, item_id):
+        model_name_query = self.conn.execute("""
+            SELECT model_name
+            FROM ordered_models
+            WHERE new_rowid = ?
+        """, (item_id,)).fetchone()
+        
+        if model_name_query is None:
+            return ""
+        
+        model_name = model_name_query[0]
+        return model_name
+    
     def generate_model_summary_text_dict(self, model_name=None, model_id=None):
         if model_name is None and model_id is None:
             raise ValueError("Either model_name or model_id must be provided")
@@ -34965,6 +35019,18 @@ class DbtLineage:
         
         return summaries
 
+    def generate_items_summary(self, item_ids=None, full=True):
+        if item_ids is None:
+            all_indices_query = self.conn.execute("""
+                SELECT new_rowid
+                FROM ordered_models
+                ORDER BY new_rowid
+            """).fetchall()
+            item_ids = [row[0] for row in all_indices_query]
+            return self.generate_multiple_model_summaries(model_indices=item_ids, include_model_lineage=True, full=full)
+        else:
+            return self.generate_multiple_model_summaries(model_indices=item_ids, full=full)
+
     def generate_multiple_model_summaries(self, model_indices, full=True, include_model_lineage=False):
         if model_indices is None:
             section_name = "model_summary_all"
@@ -35033,7 +35099,7 @@ class DbtLineage:
         model_index = self.get_index_by_model_name(model_name)
         model_number = f"{model_index}. "
 
-        combined_html = f'<h5 class="mb-3">{model_number}{model_name}</h5>' + combined_html
+        combined_html = f'<b>{model_number}{model_name}</b><br><small class="text-muted mb-3">Model catalog prepared by Cocoon</small><br><br>' + combined_html
             
         if not full:
             return combined_html
@@ -35110,6 +35176,12 @@ class DbtLineage:
         dropdown, html_widget = self.create_lineage_widgets(width=width, height=height)
         display(dropdown, html_widget)
         
+    def generate_text_summary(self, idx=None):
+        name = self.get_name()
+        intro = f"# This is a data pipeline\n"
+        intro += "# Below are models (higher index are downstream):\n"
+        return intro + self.generate_text_lineage()
+
     def generate_text_lineage(self, model_name=None, max_forward_depth=None, max_backward_depth=None):
         all_models_query = self.get_ordered_models()
         global_model_to_idx = {name: idx for name, idx in all_models_query}
@@ -39569,7 +39641,8 @@ Your action:"""
                         
                         break
                 except:
-                    
+                    if cocoon_main_setting['DEBUG_MODE']:
+                        raise
                     
                     if attempt == 4:
                         decision = {
@@ -40152,17 +40225,629 @@ class ProcessUserQuestionCatalog(Node):
 
         serve_user_question(question)
 
-
-def create_cocoon_catalog_explore_workflow(con=None, output=None, para={}, viewer=False):
     
-    main_workflow = Workflow("DBT Catalog Explore Workflow", 
+
+
+
+def create_cocoon_mul_catalog_explore_workflow(con=None, output=None, para={}, viewer=False):
+    
+    main_workflow = Workflow("Multi-Catalog Explore Workflow", 
                         item = {},
                         description="A workflow to explore a DBT catalog",
                         output=output,
                         para=para)
 
-    main_workflow.add_to_leaf(DBTCatalogConfig(output=output))
-    main_workflow.add_to_leaf(DBTCatalogBuilder(output=output))
-    main_workflow.add_to_leaf(ProcessUserQuestionCatalog(output=output)) 
+    main_workflow.add_to_leaf(MultipleCatalogConfig(output=output))
+    main_workflow.add_to_leaf(MultipleCatalogBuilder(output=output))
+    main_workflow.add_to_leaf(ProcessUserQuestionMultipleCatalogs(output=output)) 
 
     return main_workflow
+
+class DataCatalogLLMAgent:
+    def __init__(self, data_catalog, debug=True, chat_ui=None):
+        self.data_catalog = data_catalog
+        self.conversation_history = []
+        self.step_count = 0
+        self.debug = debug
+        self.chat_ui = chat_ui
+        self.explored_item_ids = set()
+
+    def get_name(self):
+        return "DataCatalogLLMAgent"
+
+    def generate_initial_prompt(self, user_question):
+        catalog_context = self.data_catalog.generate_text_summary()
+        prompt = f"""{catalog_context}
+
+## General Principles
+1. Prioritize answers based on existing catalog items.
+2. Be evidence-based, referencing `item_name` and ```sql codes``` frequently.
+3. Explore related items for context.
+4. Keep responses concise.
+5. Persist in exploration if information seems insufficient.
+
+## Syntax Guidelines
+- Reference items: `item_name`
+- SQL code blocks:
+  ```sql
+  SELECT ...
+  ```
+- New table creation:
+  ```sql
+  -- table_name: 'item_name'
+  SELECT ...
+  ```
+
+## Your actions (one at a time):
+1. Explore the catalog to answer the user's question. 
+```yml
+reason: >-
+    The most relevant items are ...
+action: explore
+item_ids: [<list of up to 10 item ids to explore; preferably include related items for better context>]
+```
+2. Answer the question based on the current context.
+```yml
+reason: >-
+    I'm going to answer the user's question. I have explored all the relevant items / I still need to explore ...[action becomes explore]
+action: conclude
+answer: |
+    <reference `item_name` and ```sql codes```>
+```
+
+Now answer the question: "{user_question}"
+Your action:"""
+        self.print_message("user", prompt)
+        return prompt
+    
+    def generate_follow_up(self, user_question):
+        return f'User follow-up question: "{user_question}"\nYour action:'
+
+    def process_user_question(self, user_question):
+        if not self.conversation_history:
+            initial_prompt = self.generate_initial_prompt(user_question)
+            self.conversation_history = [{"role": "user", "content": initial_prompt}]
+            
+            if self.chat_ui:
+                self.chat_ui.add_message(f"{escape_html(user_question)}", 1)
+                self.chat_ui.add_message("<b>Here is the data catalog summary. Let me know which items you want to explore.</b><br><br>" + self.data_catalog.generate_html_summary(), 2, "Cocoon RAG", icon=cocoon_icon_64)
+        else:
+            follow_up_prompt = self.generate_follow_up(user_question)
+            self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+            if self.chat_ui:
+                self.chat_ui.add_message(f"{escape_html(user_question)}", 1)
+        
+        max_rounds = 10
+        for _ in range(max_rounds):
+            for attempt in range(5):
+                try:
+                    response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
+                    llm_message = response['choices'][0]['message']
+                    yaml_content = extract_yml_code(llm_message["content"])
+                    
+                    decision = yaml.safe_load(yaml_content)
+                    if decision['action'] in ['explore', 'conclude']:
+                        self.conversation_history.append(llm_message)
+                        self.print_message(llm_message["role"], llm_message["content"])
+                        
+                        if decision['action'] == 'explore':
+                            self.explore_items(decision.get('reason', 'No reason provided'), decision.get('item_ids', []))
+                        else:
+                            self.conclude(decision)
+                            return decision
+                        
+                        break
+                except:
+                    if attempt == 4:
+                        decision = {
+                            "action": "conclude",
+                            "answer": "There seems to be some issue processing your request. Could you please rephrase your question or provide more details?"
+                        }
+                        self.conclude(decision)
+                        return decision
+                    
+                    time.sleep(5*attempt)
+                    continue
+        
+        return {"action": "conclude", "answer": "Max rounds reached without a conclusion. Please try rephrasing your question."}
+
+    def explore_items(self, reason, item_ids):
+        exploration_results = []
+        newly_explored_items = []
+        for item_id in item_ids:
+            if item_id in self.explored_item_ids:
+                exploration_results.append(f"Item ID {item_id}:\nAlready explored before")
+            else:
+                item_summary_text = self.data_catalog.generate_item_text_summary(item_id=item_id)
+                exploration_results.append(f"Item ID {item_id}:\n{item_summary_text}")
+                self.explored_item_ids.add(item_id)
+                newly_explored_items.append(item_id)
+
+        combined_results = "\n\n".join(exploration_results)
+        follow_up_prompt = f"""Exploration results:
+{combined_results}
+
+Your next action (Explore or Conclude):"""
+        self.print_message("user", follow_up_prompt)
+        self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+
+        if self.chat_ui:
+            self.chat_ui.add_message(f"<b>Thinking:</b> {reason}.<br><b>Exploring:</b> I want to explore these items in detail:<br><br>{self.data_catalog.generate_html_summary(item_ids=item_ids)}", 2, "LLM Agent", icon=claude_icon_64)
+            self.chat_ui.add_message(f"<b>Here are the details for the specific items:</b><br><br>{wrap_in_iframe(self.data_catalog.generate_items_summary(item_ids=item_ids), width='100%')}", 2, "Cocoon RAG", icon=cocoon_icon_64)
+    
+    def conclude(self, decision):
+        if self.chat_ui:
+            content = decision.get('answer', '')
+            self.chat_ui.add_message(replace_sql_with_highlighted(content), 2, "LLM Agent", icon=claude_icon_64)
+
+    def print_message(self, role, content):
+        if self.debug:
+            self.step_count += 1
+            print(f"\n--- Step {self.step_count}: {role.capitalize()} Message ---\n")
+            print(content)
+            print("\n--- End of Message ---\n")
+            
+            
+class MultiDataCatalogLLMAgent:
+    def __init__(self, data_catalogs, debug=True, chat_ui=None):
+        self.data_catalogs = data_catalogs
+        self.conversation_history = []
+        self.step_count = 0
+        self.debug = debug
+        self.chat_ui = chat_ui
+        self.explored_item_ids = set()
+
+    def get_name(self):
+        return "DataCatalogLLMAgent"
+
+    def generate_initial_prompt(self, user_question):
+        catalog_contexts = []
+        for idx, catalog in enumerate(self.data_catalogs, 1):
+            catalog_context = catalog.generate_text_summary(idx=idx)
+            catalog_contexts.append(f"Catalog {idx}: '{catalog.get_name()}'\n{catalog_context}")
+        
+        all_catalog_contexts = "\n\n".join(catalog_contexts)
+        
+        prompt = f"""{all_catalog_contexts}
+
+## General Principles
+1. Prioritize SQL-based answers using existing items in the catalogs.
+2. Be evidence-based, referencing `item_name` and ```sql codes``` frequently.
+3. Explore related items for context.
+4. Keep responses concise.
+5. Persist in exploration if information seems insufficient.
+
+## Syntax Guidelines
+- Reference items: `item_name`
+- SQL code blocks:
+  ```sql
+  SELECT ...
+  ```
+
+## Editing Existing Pipeline Models
+- Highlight changes only:
+  ```sql
+  -- model_name: 'existing_model_name'
+  -- ... existing code ...
+  {{ edit_1 }}
+  -- ... existing code ...
+  {{ edit_2 }}
+  -- ... existing code ...
+  ```
+- Skip unchanged parts (start/end of file).
+- Rewrite entire file only if explicitly requested.
+- Consider downstream effects when editing.
+- Propose edits for affected downstream models.
+
+## Your actions (one at a time):
+1. Explore the catalogs to answer the user's question. 
+```yml
+reason: >-
+    The most relevant items are ...
+action: explore
+items:
+  - catalog_id: 1
+    item_ids: [<list of up to 10 item ids to explore; preferably include related items for better context>]
+  - catalog_id: 2
+    item_ids: [<list of up to 10 item ids to explore; preferably include related items for better context>]
+```
+2. Answer the question based on the current context.
+```yml
+reason: >-
+    I'm going to answer the user's question. I have explored all the relevant items / I still need to explore ...[action becomes explore]
+action: conclude
+answer: |
+    <reference `item_name` and ```sql codes```>
+```
+
+Now answer the question: "{user_question}"
+Your action:"""
+        self.print_message("user", prompt)
+        return prompt
+    
+    def generate_follow_up(self, user_question):
+        return f'User follow-up question: "{user_question}"\nYour action:'
+
+    def process_user_question(self, user_question):
+        if not self.conversation_history:
+            initial_prompt = self.generate_initial_prompt(user_question)
+            self.conversation_history = [{"role": "user", "content": initial_prompt}]
+            
+            if self.chat_ui:
+                self.chat_ui.add_message(f"{escape_html(user_question)}", 1)
+                summaries = []
+                for idx, catalog in enumerate(self.data_catalogs, 1):
+                    summaries.append(f"<b>Catalog {idx}: {catalog.get_name()}</b><br><br>{catalog.generate_html_summary()}")
+                all_summaries = "<br>".join(summaries)
+                self.chat_ui.add_message(f"Here are the data catalog summaries. Let me know which items you want to explore.<br><br>{all_summaries}", 2, "Cocoon RAG", icon=cocoon_icon_64)
+        else:
+            follow_up_prompt = self.generate_follow_up(user_question)
+            self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+            if self.chat_ui:
+                self.chat_ui.add_message(f"{escape_html(user_question)}", 1)
+        
+        max_rounds = 10
+        for _ in range(max_rounds):
+            for attempt in range(5):
+                try:
+                    response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
+                    llm_message = response['choices'][0]['message']
+                    yaml_content = extract_yml_code(llm_message["content"])
+                    
+                    decision = yaml.safe_load(yaml_content)
+                    if decision['action'] in ['explore', 'conclude']:
+                        self.conversation_history.append(llm_message)
+                        self.print_message(llm_message["role"], llm_message["content"])
+                        
+                        if decision['action'] == 'explore':
+                            self.explore_items(decision.get('reason', 'No reason provided'), decision.get('items', []))
+                        else:
+                            self.conclude(decision)
+                            return decision
+                        
+                        break
+                except:
+                    if cocoon_main_setting['DEBUG_MODE']:
+                        raise
+                    if attempt == 4:
+                        decision = {
+                            "action": "conclude",
+                            "answer": "There seems to be some issue processing your request. Could you please rephrase your question or provide more details?"
+                        }
+                        self.conclude(decision)
+                        return decision
+                    
+                    time.sleep(5*attempt)
+                    continue
+        
+        return {"action": "conclude", "answer": "Max rounds reached without a conclusion. Please try rephrasing your question."}
+
+    def explore_items(self, reason, items):
+        exploration_results = []
+        newly_explored_items = []
+        for item in items:
+            catalog_id = item['catalog_id']
+            catalog = self.data_catalogs[catalog_id - 1]
+            catalog_results = []
+            for item_id in item['item_ids']:
+                item_name = catalog.get_item_name_by_id(item_id)
+                full_item_id = f"{catalog_id}.{item_id}"
+                if full_item_id in self.explored_item_ids:
+                    catalog_results.append(f"{item_id}. {item_name}:\nAlready explored before")
+                else:
+                    item_summary_text = catalog.generate_item_text_summary(item_id=item_id)
+                    catalog_results.append(f"{item_id}. {item_name}\n{item_summary_text}")
+                    self.explored_item_ids.add(full_item_id)
+                    newly_explored_items.append(full_item_id)
+            
+            if catalog_results:
+                catalog_name = catalog.get_name()
+                catalog_results_text = "\n\n".join(catalog_results)
+                exploration_results.append(f"# Catalog {catalog_id}: {catalog_name}\n\n{catalog_results_text}")
+
+        combined_results = "\n\n".join(exploration_results)
+        follow_up_prompt = f"""Exploration results:
+{combined_results}
+
+Your next action (Explore or Conclude):"""
+        self.print_message("user", follow_up_prompt)
+        self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+
+        if self.chat_ui:
+            explored_items_html = []
+            for item in items:
+                catalog_id = item['catalog_id']
+                catalog = self.data_catalogs[catalog_id - 1]
+                explored_items_html.append(f"<b>Catalog {catalog_id}: {catalog.get_name()}</b><br><br>{catalog.generate_html_summary(item_ids=item['item_ids'])}")
+            
+            all_explored_items_html = "<br>".join(explored_items_html)
+            self.chat_ui.add_message(f"{reason} Therefore, I want to explore these in detail:<br><br>{all_explored_items_html}", 2, "LLM Agent", icon=claude_icon_64)
+            
+            details_html = []
+            for item in items:
+                catalog_id = item['catalog_id']
+                catalog = self.data_catalogs[catalog_id - 1]
+                details_html.append(f"<b>Catalog {catalog_id}: {catalog.get_name()}</b><br><br>{wrap_in_iframe(catalog.generate_items_summary(item_ids=item['item_ids']), width='100%')}<br>")
+            
+            all_details_html = "<br>".join(details_html)
+            self.chat_ui.add_message(f"Here are the details for the specific items:<br><br>{all_details_html}", 2, "Cocoon RAG", icon=cocoon_icon_64)
+
+    def conclude(self, decision):
+        if self.chat_ui:
+            content = decision.get('answer', '')
+            self.chat_ui.add_message(replace_sql_with_highlighted(content), 2, "LLM Agent", icon=claude_icon_64)
+
+    def print_message(self, role, content):
+        if self.debug:
+            self.step_count += 1
+            print(f"\n--- Step {self.step_count}: {role.capitalize()} Message ---\n")
+            print(content)
+            print("\n--- End of Message ---\n")
+
+
+class MultipleCatalogConfig(Node):
+    default_name = 'Multiple Catalog Configuration'
+    default_description = 'This step allows you to configure multiple catalogs for exploration.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+
+        self.catalogs = {}
+        self.submit = widgets.Output()
+        self.html_widget = widgets.HTML()
+
+        self.input_box = widgets.Text(placeholder="Enter your catalog directory", layout=widgets.Layout(width='70%'))
+        self.add_button = widgets.Button(icon="plus", button_style="success", 
+                                         layout=widgets.Layout(width="40px"), tooltip="Add")
+        
+        self.catalog_box = widgets.VBox()
+        
+        self.add_button.on_click(self.add_catalog)
+
+        def on_send(b):
+            with self.output_context():
+                if not self.catalogs:
+                    self.html_widget.value = "<div style='color: red;'>No catalogs have been added; please add a catalog by clicking the '+' button.</div>"
+                    return
+                
+                callback(list(self.catalogs.values()))
+                return
+            
+        self.submit_button = widgets.Button(description="Submit", button_style='success', icon='check', layout=widgets.Layout(width='10%'))
+        self.submit_button.on_click(on_send)
+
+        html_box = widgets.VBox([self.html_widget])
+        
+        input_container = widgets.VBox([
+            widgets.HBox([self.input_box, self.add_button]),
+            self.catalog_box,
+            self.submit_button,
+            self.submit
+        ])
+
+        display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"><h3>📚 Provide your Catalog Directories</h3><em>Catalogs can be (1) either dbt projects built by Cocoon, or (2) existing compiled dbt projects (make sure <code>target/manifest.json</code> available). <br>Please provide project folder (not target/model folder). Prefer full paths over relative paths.</em>'''))
+        display(html_box)
+        display(input_container)
+
+    def add_catalog(self, _):
+        catalog = self.input_box.value.strip()
+        if catalog:
+            if os.path.exists(catalog):
+                if catalog not in self.catalogs:
+                    self.html_widget.value = f"{running_spinner_html} Reading the catalog..."
+                    obj = self.validate_catalog_and_generate_object(catalog)
+                    if obj:
+                        self.catalogs[catalog] = obj
+                        self.update_catalog_box()
+                        self.input_box.value = ""
+                        self.html_widget.value = ""
+                        self.print_catalog(catalog)
+                    else:
+                        self.html_widget.value = "<div style='color: red;'>Failed to process the catalog</div>"
+                else:
+                    self.html_widget.value = "<div style='color: orange;'>This catalog is already in the list</div>"
+            else:
+                self.html_widget.value = "<div style='color: red;'>Directory not found</div>"
+        else:
+            self.html_widget.value = "<div style='color: red;'>Please enter a directory path</div>"
+
+    def update_catalog_box(self):
+        self.catalog_box.children = [
+            widgets.HBox([
+                widgets.HTML(value=self.get_catalog_display_html(i+1, catalog, obj),
+                             layout=widgets.Layout(width='70%')),
+                widgets.Button(icon="eye", layout=widgets.Layout(width="40px"), 
+                               button_style="info", tooltip="Print"),
+                widgets.Button(icon="times", layout=widgets.Layout(width="40px"), 
+                               button_style="danger", tooltip="Remove")
+            ])
+            for i, (catalog, obj) in enumerate(self.catalogs.items())
+        ]
+        for i, (catalog, _) in enumerate(self.catalogs.items()):
+            self.catalog_box.children[i].children[1].on_click(lambda _, cat=catalog: self.print_catalog(cat))
+            self.catalog_box.children[i].children[2].on_click(lambda _, cat=catalog: self.remove_catalog(cat))
+
+    def get_catalog_display_html(self, number, catalog_path, catalog_obj):
+        try:
+            name = catalog_obj.get_name()
+        except AttributeError:
+            name = os.path.basename(catalog_path)
+        
+        return f"{number}. <b>{name}</b>: {catalog_path}"
+
+    def remove_catalog(self, catalog):
+        del self.catalogs[catalog]
+        self.update_catalog_box()
+        if self.catalogs:
+            self.print_catalog(list(self.catalogs.keys())[-1])
+        else:
+            self.html_widget.value = ""
+
+    def print_catalog(self, catalog):
+        obj = self.catalogs[catalog]
+        self.html_widget.value = obj.generate_html_summary()
+
+    def validate_catalog_and_generate_object(self, catalog):
+        manifest_path = os.path.join(catalog, 'target', 'manifest.json')
+        
+        if os.path.exists(manifest_path):
+            try:
+                dbt_lineage = DbtLineage(dbt_directory=catalog)
+                with open(manifest_path, 'r') as f:
+                    manifest_dict = json.load(f)
+                dbt_lineage.populate_from_manifest(manifest_dict)
+                return dbt_lineage
+            except Exception as e:
+                print(f"Error processing DBT manifest for {catalog}: {str(e)}")
+                return None
+        else:
+            try:
+                data_project = read_data_project_from_dir(catalog)
+                return data_project
+            except Exception as e:
+                print(f"Error processing Data Project for {catalog}: {str(e)}")
+                return None
+
+class MultipleCatalogBuilder(Node):
+    default_name = 'Multiple Catalog Builder'
+    default_description = 'This step reads the DBT catalog and builds the data project.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+
+        clear_output(wait=True)
+
+        display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"><h2>🎉 You have successfully loaded your catalogs!</h2><em>You can now chat with your data.</em>'''))
+
+        catalogs = self.get_sibling_document("Multiple Catalog Configuration")
+
+        name_to_catalog = {catalog.get_name(): catalog for catalog in catalogs}
+        options = ["Choose a catalog to explore"] + list(name_to_catalog.keys())
+        
+        self.dropdown = widgets.Dropdown(
+            options=options,
+            value="Choose a catalog to explore",
+            disabled=False,
+            layout=widgets.Layout(width='50%')
+        )
+
+        self.html_widget = widgets.HTML(
+            value='',
+            placeholder='',
+            description='',
+        )
+
+        def update_html(change):
+            if change['new'] != "Choose a catalog to explore":
+                selected_catalog = name_to_catalog[change['new']]
+                try:
+                    self.html_widget.value = f"{running_spinner_html} Loading the catalog..."
+                    html_summary = selected_catalog.generate_items_summary()
+                    self.html_widget.value = wrap_in_iframe(html_summary, width='100%', height='600px')
+                except Exception as e:
+                    self.html_widget.value = f"<p>Error processing Data Project for {selected_catalog.get_name()}: {str(e)}</p>"
+
+        self.dropdown.observe(update_html, names='value')
+
+        text_input = widgets.Text(
+            placeholder='Ask any question about the DBT project...',
+            layout=widgets.Layout(width='70%')
+        )
+
+        send_button = widgets.Button(
+            description='Send',
+            button_style='primary',
+            layout=widgets.Layout(width='10%')
+        )
+
+        def on_send(b):
+            with self.output_context():
+                message = text_input.value
+                callback({"question": message})
+                return
+
+        send_button.on_click(on_send)
+
+        chat_input = widgets.HBox([text_input, send_button], layout=widgets.Layout(width='100%', margin='10px 0px'))
+
+        display(self.dropdown)
+        display(self.html_widget)
+        display(chat_input)
+
+
+class ProcessUserQuestionMultipleCatalogs(Node):
+    default_name = 'Process User Question Multiple Catalogs'
+    default_description = 'This step processes the user question across multiple catalogs.'
+
+    def postprocess(self, run_output, callback, viewer=False, extract_output=None):
+        clear_output(wait=True)
+        display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> '''))
+
+        question = self.get_sibling_document('Multiple Catalog Builder').get("question", "No question found")
+        catalogs = self.get_sibling_document("Multiple Catalog Configuration")
+
+        chat = ChatHTMLGenerator()
+        chat.display()
+
+        agent = MultiDataCatalogLLMAgent(data_catalogs=catalogs, chat_ui=chat, debug=False)
+
+        def serve_user_question(question):
+            agent.process_user_question(question)
+
+        follow_up_button = widgets.Button(
+            description='Follow Up',
+            icon='arrow-right',
+            button_style='primary',
+            layout=widgets.Layout(width='15%'),
+            tooltip='Ask a follow-up question'
+        )
+
+        new_question_input = widgets.Text(
+            placeholder='Enter your question here...',
+            layout=widgets.Layout(width='70%')
+        )
+
+        new_button = widgets.Button(
+            description='New',
+            icon='plus',
+            button_style='warning',
+            layout=widgets.Layout(width='15%'),
+            tooltip='Start a new conversation'
+        )
+
+        warning_widget = widgets.HTML(
+            value='',
+            layout=widgets.Layout(width='100%', margin='10px 0px')
+        )
+
+        def on_follow_up(b):
+            new_question = new_question_input.value
+            if new_question:
+                serve_user_question(new_question)
+                new_question_input.value = ''
+            update_warning()
+
+        def on_new(b):
+            chat.clear_all_messages()
+            nonlocal agent
+            agent = MultiDataCatalogLLMAgent(data_catalogs=catalogs, chat_ui=chat, debug=False)
+            warning_widget.value = ''
+            new_question = new_question_input.value
+            if new_question:
+                serve_user_question(new_question)
+                new_question_input.value = ''
+
+        follow_up_button.on_click(on_follow_up)
+        new_button.on_click(on_new)
+
+        def update_warning():
+            if len(agent.conversation_history) > 10:
+                warning_widget.value = '<div style="color: red">Warning: Conversation is getting long. Consider starting a new conversation for better performance.</div>'
+            else:
+                warning_widget.value = ''
+
+        new_question_box = widgets.HBox([new_question_input, follow_up_button, new_button], 
+                                        layout=widgets.Layout(width='100%', margin='20px 0px'))
+
+        display(widgets.VBox([new_question_box, warning_widget]))
+
+        serve_user_question(question)
