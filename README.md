@@ -4,9 +4,8 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-Cocoon thoroughly prepares your data for RAG. Specifically, Cocoon helps document, connect, and optimize your data pipelines offline. The result can be used for online RAG in use cases like pipeline copilots and data transformation. Check out the YouTube demo 👇:
+Building a chatbot for your data and pipelines is challenging because they are often too large (e.g., 1,000+ tables) to fit within the LLM context window. Cocoon addresses this by creating a RAG layer for your data and pipelines. With Cocoon's RAG, we offer a cursor-style chatbot for your data tasks.
 
-- 📚 [*Learn more about features*](https://cocoon-data-transformation.github.io/page/)
 
 -  [*Live Demo for Data Pipeline RAG (Enter your question and we will generate response live)*](https://cocoon-data-transformation.github.io/page/pipeline)
   <br>
@@ -27,7 +26,7 @@ Cocoon thoroughly prepares your data for RAG. Specifically, Cocoon helps documen
   <br>
   
 
-
+- [*Learn more about all the features*](https://cocoon-data-transformation.github.io/page/)
 
 
 
