@@ -36,6 +36,7 @@ import warnings
 import copy
 from pathlib import Path
 from ruamel.yaml import YAML
+import streamlit as st
 
 from .database import *
 from .llm import *
@@ -16330,6 +16331,11 @@ class DataProject:
     def generate_html_summary(self, item_ids=None):
         return self.generate_html_graph_static(selected_nodes=item_ids)
 
+    def display_model_overview_st(self, item_ids=None):
+        graph_html = self.generate_html_summary(item_ids=item_ids)
+    
+        st.markdown(graph_html, unsafe_allow_html=True)
+
     def generate_html_graph_static(self, selected_nodes=None, highlight_nodes=None):
         
         nodes, edges = self.generate_nodes_edges(selected_nodes=selected_nodes)
@@ -23122,10 +23128,10 @@ class CocoonBranchStep(Node):
         display(HTML(header_html))
         
         html_labels = [
-        "🤖 <b>Chatbot:</b> Give us catalogs and dbt projects, we'll create a cursor-style chatbot.<br><i>🛡️ Access Control: <u>read-only</u> to dbt project </u></i>",
-        "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🧩 <b>Data Warehouse Catalog:</b> Give us tables, we'll clean, integrate and catalog them for future RAG.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
-        "🔧 <b>Transform:</b> Give us the catalogs of source + target database, we transform.<br> <i>🛡️ Access Control: read, and <u>write only under specified schema </u></i>",
+        "🤖 <b>Chatbot:</b> Give us catalogs and dbt projects, we'll create a cursor-style chatbot.<br><i>🛡️ Access Control (just codes): <u>read-only</u> to dbt project </u></i>",
+        "✨ <b>Clean:</b> Give us a table, we'll clean and document it.<br> <i>🛡️ Access Control (database): read, and <u>write only under specified schema </u></i>",
+        "🧩 <b>Table Catalog:</b> Give us tables, we'll clean, integrate and catalog them for future RAG.<br> <i>🛡️ Access Control (database): read, and <u>write only under specified schema </u></i>",
+        "🔧 <b>Transform:</b> Give us the catalogs of source + target database, we transform.<br> <i>🛡️ Access Control (database): read, and <u>write only under specified schema </u></i>",
         "🔗 <b>(Preview) Standardization:</b> Give us a vocabulary, we will standardize tables. <br>",
         ]
         coming_labels = [
@@ -34430,6 +34436,9 @@ class DbtLineage:
                 
         self.table_object = {}
 
+    def get_directory(self):
+        return self.dbt_directory
+    
     def get_name(self):
         return self.name
     
@@ -34788,6 +34797,13 @@ class DbtLineage:
             return self.get_model_lineage_html_by_indices(model_indices=item_ids)
         return self.display_model_lineage_html()
 
+    def generate_html_summary_st(self, item_ids=None):
+        html_summary = self.generate_html_summary(item_ids=item_ids)
+        
+        import streamlit.components.v1 as components
+
+        components.html(html_summary, height=550, scrolling=True)
+
     def display_model_lineage_html(self, numbered=True, model_name=None, max_forward_depth=None, max_backward_depth=None):
         all_models_query = self.get_ordered_models()
         global_model_to_idx = {name: idx for name, idx in all_models_query}
@@ -34914,17 +34930,92 @@ class DbtLineage:
             model_number = f"{model_index}. "
 
         properties = {
-            "Model Description": ((model_info.get('description') or '') + ' ' + (model_info.get('cocoon_description') or '')).strip() or "⚠️ Model description is missing from the provided dbt project. <br> 🚀 Run Cocoon Deep RAG to automatically generate it for better RAG.",
+            "Model Description": ((model_info.get('description') or '') + ' ' + (model_info.get('cocoon_description') or '')).strip() or None,
             "Tags": "<ul>" + "".join(["<li>" + generate_tag_html(tag, description) + "</li>" for tag, description in tags.items()]) + "</ul>" if tags else None,
             "SQL": highlight_sql_only(model_info.get('raw_code')) if model_info.get('raw_code') else None,
-            "Column Description": columns_df.to_html(index=False) if not columns_df.empty else "⚠️ Column description is missing from the provided dbt project. <br> 🚀 Run Cocoon Deep RAG to automatically generate it for better RAG.",
-            "Column Lineage": "⚠️ Column lineage is missing from the provided dbt project. <br> 🚀 Run Cocoon Deep RAG to automatically generate it for better RAG.",
+            "Column Description": columns_df.to_html(index=False) if not columns_df.empty else None,
         }
 
         properties = {k: v for k, v in properties.items() if v is not None}
 
         return properties
     
+    def create_dbt_lineage_selectbox(self, model_ids=None):
+        all_models = self.get_ordered_models()
+        
+        if model_ids is not None:
+            filtered_models = [(model_name, model_id) for model_name, model_id in all_models if model_id in model_ids]
+        else:
+            filtered_models = all_models
+        
+        options = ["Model Lineage"] + [f"{model_id}. {model_name}" for model_name, model_id in filtered_models]
+        
+        selected_option = st.selectbox("Select a model or view lineage", options=options)
+        
+        if selected_option == "Model Lineage":
+            if model_ids is not None:
+                lineage_html = self.get_model_lineage_html_by_indices(model_indices=model_ids)
+                st.components.v1.html(lineage_html, height=300, scrolling=True)
+            else:
+                self.generate_html_summary_st()
+        else:
+            item_id = int(selected_option.split('.')[0])
+            self.display_item_summary_st(item_id)
+
+    def display_item_summary_st(self, item_id, numbered=True):
+        model_name_query = self.conn.execute("""
+            SELECT model_name
+            FROM ordered_models
+            WHERE new_rowid = ?
+        """, (item_id,)).fetchone()
+        
+        if model_name_query is None:
+            st.error(f"No model found for item ID: {item_id}")
+            return
+        
+        model_name = model_name_query[0]
+        
+        model_info = self.conn.execute("""
+            SELECT description, cocoon_description, raw_code
+            FROM model
+            WHERE model_name = ?
+        """, (model_name,)).fetchone()
+        
+        if model_info is None:
+            st.error(f"No information found for model: {model_name}")
+            return
+        
+        description, cocoon_description, raw_sql = model_info
+        
+        
+        full_description = ((description or '') + ' ' + (cocoon_description or '')).strip()
+        if full_description:
+            st.markdown("**Model Description**")
+            st.write(full_description)
+            
+        st.markdown("**SQL**")
+        st.code(raw_sql, language='sql')
+        
+        columns_df = pd.read_sql("""
+            SELECT column_name, description, cocoon_description
+            FROM model_column
+            WHERE model_name = ?
+            ORDER BY column_name
+        """, self.conn, params=(model_name,))
+        
+        if not columns_df.empty:
+            st.markdown("**Column Descriptions**")
+
+            columns_df['full_description'] = columns_df['description'].fillna('') + ' ' + columns_df['cocoon_description'].fillna('')
+            columns_df['full_description'] = columns_df['full_description'].apply(lambda x: x.strip() if x.strip() else "No description available.")
+            
+            display_df = columns_df[['column_name', 'full_description']].rename(columns={
+                'column_name': 'Column Name',
+                'full_description': 'Description'
+            })
+            
+            st.dataframe(display_df, use_container_width=True)
+
     def generate_item_text_summary(self, item_id):
         model_summary_dict = self.generate_model_summary_text_dict(model_id=item_id)
         model_summary_text = "\n".join([f"{key}\n{model_summary_dict[key]}" for key in model_summary_dict])
@@ -40509,10 +40600,11 @@ Your action:"""
                 except:
                     if cocoon_main_setting['DEBUG_MODE']:
                         raise
+                    
                     if attempt == 4:
                         decision = {
                             "action": "conclude",
-                            "answer": "There seems to be some issue processing your request. Could you please rephrase your question or provide more details?"
+                            "answer": "There seems to be some issue processing your request. Could you make sure the cocoon_llm_setting is set up correctly (prefer claude sonnet 3.5), or rephrase your question?"
                         }
                         self.conclude(decision)
                         return decision
@@ -40593,10 +40685,13 @@ class MultipleCatalogConfig(Node):
         clear_output(wait=True)
 
         self.catalogs = {}
-        self.submit = widgets.Output()
         self.html_widget = widgets.HTML()
 
-        self.input_box = widgets.Text(placeholder="Enter your catalog directory", layout=widgets.Layout(width='70%'))
+        self.input_box = widgets.Text(
+            value=self.para.get("dbt_directory", ""),
+            placeholder="Enter your catalog directory",
+            layout=widgets.Layout(width='70%')
+        )
         self.add_button = widgets.Button(icon="plus", button_style="success", 
                                          layout=widgets.Layout(width="40px"), tooltip="Add")
         
@@ -40606,14 +40701,17 @@ class MultipleCatalogConfig(Node):
 
         def on_send(b):
             with self.output_context():
+                if not self.catalogs and self.input_box.value.strip():
+                    self.add_catalog(None)
+                
                 if not self.catalogs:
-                    self.html_widget.value = "<div style='color: red;'>No catalogs have been added; please add a catalog by clicking the '+' button.</div>"
+                    self.html_widget.value = "<div style='color: red;'>No catalogs have been added; please add a catalog by clicking the '+' button or entering a valid catalog path.</div>"
                     return
                 
                 callback(list(self.catalogs.values()))
                 return
             
-        self.submit_button = widgets.Button(description="Submit", button_style='success', icon='check', layout=widgets.Layout(width='10%'))
+        self.submit_button = widgets.Button(description="Submit", button_style='success', icon='check')
         self.submit_button.on_click(on_send)
 
         html_box = widgets.VBox([self.html_widget])
@@ -40621,11 +40719,23 @@ class MultipleCatalogConfig(Node):
         input_container = widgets.VBox([
             widgets.HBox([self.input_box, self.add_button]),
             self.catalog_box,
-            self.submit_button,
-            self.submit
+            self.submit_button
         ])
 
-        display(HTML('''<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"><h3>📚 Provide your Catalog Directories</h3><em>Catalogs can be (1) either dbt projects built by Cocoon, or (2) existing compiled dbt projects (make sure <code>target/manifest.json</code> available). <br>Please provide project folder (not target/model folder). Prefer full paths over relative paths.</em>'''))
+        display(HTML('''
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<div style="font-family: Arial, sans-serif; ">
+    <h3>📚 Provide your Catalog Directories</h3>
+    <p>
+        Catalogs can be:
+        <ol style="margin-top: 10px; margin-bottom: 10px;">
+            <li>dbt projects as table catlogs built by Cocoon, or</li>
+            <li>existing compiled dbt projects (make sure <code style="background-color: #e9ecef; padding: 2px 4px; border-radius: 4px;">target/manifest.json</code> is available).</li>
+        </ol>
+        Please provide the project folder (not target/model folder). Prefer full paths over relative paths.
+    </p>
+</div>
+'''))
         display(html_box)
         display(input_container)
 
@@ -40635,7 +40745,7 @@ class MultipleCatalogConfig(Node):
             if os.path.exists(catalog):
                 if catalog not in self.catalogs:
                     self.html_widget.value = f"{running_spinner_html} Reading the catalog..."
-                    obj = self.validate_catalog_and_generate_object(catalog)
+                    obj = validate_catalog_and_generate_object(catalog)
                     if obj:
                         self.catalogs[catalog] = obj
                         self.update_catalog_box()
@@ -40687,26 +40797,26 @@ class MultipleCatalogConfig(Node):
         obj = self.catalogs[catalog]
         self.html_widget.value = obj.generate_html_summary()
 
-    def validate_catalog_and_generate_object(self, catalog):
-        manifest_path = os.path.join(catalog, 'target', 'manifest.json')
-        
-        if os.path.exists(manifest_path):
-            try:
-                dbt_lineage = DbtLineage(dbt_directory=catalog)
-                with open(manifest_path, 'r') as f:
-                    manifest_dict = json.load(f)
-                dbt_lineage.populate_from_manifest(manifest_dict)
-                return dbt_lineage
-            except Exception as e:
-                print(f"Error processing DBT manifest for {catalog}: {str(e)}")
-                return None
-        else:
-            try:
-                data_project = read_data_project_from_dir(catalog)
-                return data_project
-            except Exception as e:
-                print(f"Error processing Data Project for {catalog}: {str(e)}")
-                return None
+def validate_catalog_and_generate_object(catalog):
+    manifest_path = os.path.join(catalog, 'target', 'manifest.json')
+    
+    if os.path.exists(manifest_path):
+        try:
+            dbt_lineage = DbtLineage(dbt_directory=catalog)
+            with open(manifest_path, 'r') as f:
+                manifest_dict = json.load(f)
+            dbt_lineage.populate_from_manifest(manifest_dict)
+            return dbt_lineage
+        except Exception as e:
+            print(f"Error processing DBT manifest for {catalog}: {str(e)}")
+            return None
+    else:
+        try:
+            data_project = read_data_project_from_dir(catalog)
+            return data_project
+        except Exception as e:
+            print(f"Error processing Data Project for {catalog}: {str(e)}")
+            return None
 
 class MultipleCatalogBuilder(Node):
     default_name = 'Multiple Catalog Builder'
@@ -40762,8 +40872,11 @@ class MultipleCatalogBuilder(Node):
         def on_send(b):
             with self.output_context():
                 message = text_input.value
-                callback({"question": message})
-                return
+                if message:
+                    callback({"question": message})
+                    return
+                else:
+                    display(HTML("<p style='color: red;'>Please enter a question before sending.</p>"))
 
         send_button.on_click(on_send)
 
@@ -40851,3 +40964,184 @@ class ProcessUserQuestionMultipleCatalogs(Node):
         display(widgets.VBox([new_question_box, warning_widget]))
 
         serve_user_question(question)
+
+
+class DBTLLMAgentStreamlit:
+    def __init__(self, dbt_lineage, debug=False):
+        self.dbt_lineage = dbt_lineage
+        self.conversation_history = []
+        self.internal_chat = []
+        self.step_count = 0
+        self.debug = debug
+        self.explored_model_ids = set()
+        
+    def generate_initial_prompt(self, user_question):
+        model_context = self.dbt_lineage.generate_text_lineage()
+        prompt = f"""# DBT Project models (higher index models are downstream):
+{model_context}
+
+## General Principles
+1. Prioritize SQL-based answers using existing models.
+2. Be evidence-based, referencing `model_name` and ```sql codes``` frequently
+3. Explore upstream models for data sufficiency, prefer downstream models for final answers.
+4. Keep responses concise.
+5. Persist in exploration if data seems insufficient.
+
+## Syntax Guidelines
+- Reference models: `model_name`
+- SQL code blocks:
+  ```sql
+  SELECT ...
+  ```
+- New model creation:
+  ```sql
+  -- model_name: 'new_model_name'
+  SELECT ...
+  ```
+
+## Editing Existing Models
+- Highlight changes only:
+  ```sql
+  -- model_name: 'existing_model_name'
+  -- ... existing code ...
+  {{ edit_1 }}
+  -- ... existing code ...
+  {{ edit_2 }}
+  -- ... existing code ...
+  ```
+- Skip unchanged parts (start/end of file).
+- Rewrite entire file only if explicitly requested.
+- Consider downstream effects when editing.
+- Propose edits for affected downstream models.
+
+## Your actions (one at a time):
+1. Explore the dbt model to answer the user's question. 
+```yml
+reason: >-
+    The most relavant models are ...
+action: explore
+model_ids: [<list of up to 10 model ids to explore; preferably include their upstream models for better context>]
+```
+2. Answer the question based on the current context.
+```yml
+reason: >-
+    I'm going to build new model/edit existing models and their downstream models. I have explored all the relavant models/ I still need to explore ...[action becomes explore]
+action: conclude
+answer: |
+    <reference `model_name` and ```sql codes```>
+```
+
+Now answer the question: "{user_question}"
+Your action:"""
+        self.print_message("user", prompt)
+        return prompt
+    
+    def generate_follow_up(self, user_question):
+        return f'User follow-up question: "{user_question}"\nYour action:'
+
+    def process_user_question(self, user_question):
+        if not self.conversation_history:
+            initial_prompt = self.generate_initial_prompt(user_question)
+            self.conversation_history = [{"role": "user", "content": initial_prompt}]
+        else:
+            follow_up_prompt = self.generate_follow_up(user_question)
+            self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+        
+        self.internal_chat.append(("user", [("markdown", user_question)]))
+
+        max_rounds = 10
+        for _ in range(max_rounds):
+            for attempt in range(5): 
+                
+                try:
+                    response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
+                    llm_message = response['choices'][0]['message']
+                    yaml_content = extract_yml_code(llm_message["content"])
+                    
+                    decision = yaml.safe_load(yaml_content)
+                    if decision['action'] in ['explore', 'conclude']:
+                        self.conversation_history.append(llm_message)
+                        self.print_message(llm_message["role"], llm_message["content"])
+                        
+                        if decision['action'] == 'explore':
+                            self.explore_dbt_models(decision.get('reason', 'No reason provided'), decision.get('model_ids', []))
+                        else:
+                            self.conclude(decision)
+                            return decision
+                        
+                        break
+                except:
+                    if cocoon_main_setting['DEBUG_MODE']:
+                        raise
+                    
+                    if attempt == 4:
+                        decision = {
+                            "action": "conclude",
+                            "answer": "There seems to be some issue processing your request. Could you please rephrase your question or provide more details?"
+                        }
+                        self.conclude(decision)
+                        return decision
+                    
+                    time.sleep(5*attempt)
+
+                    continue
+        
+        return {"action": "conclude", "answer": "Max rounds reached without a conclusion. Please try rephrasing your question."}
+
+    def explore_dbt_models(self, reason, model_ids):
+        exploration_results = []
+        newly_explored_models = []
+        for model_id in model_ids:
+            if model_id in self.explored_model_ids:
+                exploration_results.append(f"Model ID {model_id}:\nAlready explored before")
+            else:
+                model_summary_dict = self.dbt_lineage.generate_model_summary_text_dict(model_id=model_id)
+                model_summary_text = "\n".join([f"{key}\n{model_summary_dict[key]}" for key in model_summary_dict])
+                exploration_results.append(f"Model ID {model_id}:\n{model_summary_text}")
+                self.explored_model_ids.add(model_id)
+                newly_explored_models.append(model_id)
+        
+        if self.debug:
+            self.dbt_lineage.display_model_lineage_by_indices(newly_explored_models)
+
+        combined_results = "\n\n".join(exploration_results)
+        follow_up_prompt = f"""Exploration results:
+{combined_results}
+
+Your next action (Explore or Conclude):"""
+        self.print_message("user", follow_up_prompt)
+        self.conversation_history.append({"role": "user", "content": follow_up_prompt})
+
+        self.internal_chat.append(("Cocoon", [
+            ("markdown", f"**RAG Data Pipeline...**\n\n{reason}"),
+            ("cocoon", model_ids)
+        ]))
+
+    def conclude(self, decision):
+        content = decision.get('answer', '')
+        self.internal_chat.append(("assistant", [("markdown", content)]))
+
+    def print_message(self, role, content):
+        if self.debug:
+            self.step_count += 1
+            print(f"\n--- Step {self.step_count}: {role.capitalize()} Message ---\n")
+            print(content)
+            print("\n--- End of Message ---\n")
+
+
+    def display_chat_history(self):
+        for role, content_list in self.internal_chat:
+            with st.chat_message(role):
+                for content_type, content in content_list:
+                    if content_type == 'markdown':
+                        st.markdown(content, unsafe_allow_html=True)
+                    elif content_type == 'html':
+                        st.components.v1.html(content, height=300, scrolling=True)
+                    elif content_type == 'sql':
+                        st.code(content, language='sql')
+                    elif content_type == 'yml':
+                        st.code(content, language='yaml')
+                    elif content_type == 'cocoon':
+                        self.dbt_lineage.create_dbt_lineage_selectbox(model_ids=content)
+                    else:
+                        st.text(content)

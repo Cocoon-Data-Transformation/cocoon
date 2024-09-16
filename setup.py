@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cocoon_data",
-    version="0.1.167",
+    version="0.1.171",
     packages=find_packages(),
     install_requires=open("requirements.txt").read().splitlines(),
     extras_require={
@@ -12,4 +12,9 @@ setup(
     author_email="zh2408@columbia.edu",
     description="Cocoon is an open-source project that aims to free analysts from tedious data transformations with LLM.",
     url="https://github.com/Cocoon-Data-Transformation/cocoon/",
+    entry_points={
+        'console_scripts': [
+            'cocoon_data=cocoon_data.cli:main',
+        ],
+    },
 )
