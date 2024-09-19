@@ -34948,11 +34948,13 @@ class DbtLineage:
         else:
             filtered_models = all_models
         
-        options = ["Model Lineage"] + [f"{model_id}. {model_name}" for model_name, model_id in filtered_models]
+        options = ["Select an option", "Model Lineage"] + [f"{model_id}. {model_name}" for model_name, model_id in filtered_models]
         
         selected_option = st.selectbox("Select a model or view lineage", options=options)
         
-        if selected_option == "Model Lineage":
+        if selected_option == "Select an option":
+            pass
+        elif selected_option == "Model Lineage":
             if model_ids is not None:
                 lineage_html = self.get_model_lineage_html_by_indices(model_indices=model_ids)
                 st.components.v1.html(lineage_html, height=300, scrolling=True)
@@ -40967,13 +40969,15 @@ class ProcessUserQuestionMultipleCatalogs(Node):
 
 
 class DBTLLMAgentStreamlit:
-    def __init__(self, dbt_lineage, debug=False):
+    def __init__(self, dbt_lineage, debug=False, track_cost=False):
         self.dbt_lineage = dbt_lineage
         self.conversation_history = []
         self.internal_chat = []
         self.step_count = 0
         self.debug = debug
         self.explored_model_ids = set()
+        self.track_cost = track_cost
+        self.session_cost = 0 if track_cost else None
         
     def generate_initial_prompt(self, user_question):
         model_context = self.dbt_lineage.generate_text_lineage()
@@ -41052,9 +41056,13 @@ Your action:"""
         max_rounds = 10
         for _ in range(max_rounds):
             for attempt in range(5): 
-                
                 try:
-                    response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
+                    if self.track_cost:
+                        response, cost = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1, return_cost=True)
+                        self.session_cost += cost
+                    else:
+                        response = call_llm_chat(self.conversation_history, temperature=0.1, top_p=0.1)
+                    
                     llm_message = response['choices'][0]['message']
                     yaml_content = extract_yml_code(llm_message["content"])
                     
@@ -41083,7 +41091,6 @@ Your action:"""
                         return decision
                     
                     time.sleep(5*attempt)
-
                     continue
         
         return {"action": "conclude", "answer": "Max rounds reached without a conclusion. Please try rephrasing your question."}
@@ -41128,6 +41135,11 @@ Your next action (Explore or Conclude):"""
             print(content)
             print("\n--- End of Message ---\n")
 
+    def get_session_cost(self):
+        if self.track_cost:
+            return f"${self.session_cost:.4f}"
+        else:
+            return "not enabled"
 
     def display_chat_history(self):
         for role, content_list in self.internal_chat:
@@ -41145,3 +41157,6 @@ Your next action (Explore or Conclude):"""
                         self.dbt_lineage.create_dbt_lineage_selectbox(model_ids=content)
                     else:
                         st.text(content)
+        
+        if self.track_cost:
+            st.markdown(f"<small>Cost estimation (based on Claude 3.5 Sonnet): {self.get_session_cost()}</small>", unsafe_allow_html=True)

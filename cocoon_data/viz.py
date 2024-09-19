@@ -6,6 +6,7 @@ import seaborn as sns
 import base64
 from graphviz import Digraph, Graph
 from matplotlib.ticker import EngFormatter
+import matplotlib.patches as mpatches
 import networkx as nx
 from IPython.display import HTML
 import io
@@ -13,6 +14,7 @@ from pygments import highlight
 from pygments.lexers import PythonLexer, SqlLexer, YamlLexer
 from pygments.formatters import Terminal256Formatter, HtmlFormatter
 import html
+from .config import *
 
 _cocoon_global_values = {
     'IMAGE_MODE': "graphviz"
@@ -24,7 +26,7 @@ def get_image_mode():
 def set_image_mode(value):
     _cocoon_global_values['IMAGE_MODE'] = value
 
-def wrap_in_iframe(html_code, width=800, height=400):
+def wrap_in_iframe(html_code, width='100%', height=400):
 
     escaped_html = html_code.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#039;")
 
@@ -701,12 +703,12 @@ def generate_seaborn_palette(n_colors):
 
 
 
-def generate_workflow_image(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, 
-                            node_shape=None, directional=True, format='svg', layout_direction='TB'):
+def create_workflow_dot(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, 
+                        node_shape=None, directional=True, layout_direction='TB'):
     if directional:
-        dot = Digraph(format=format)
+        dot = Digraph()
     else:
-        dot = Graph(format=format)
+        dot = Graph()
         
     dot.attr(rankdir=layout_direction)
 
@@ -768,7 +770,15 @@ def generate_workflow_image(nodes, edges, edge_labels=None, highlight_nodes_indi
             else:
                 dot.edge(nodes[tail] + f"_{tail}", nodes[head] + f"_{head}", label=label, dir='none', **edge_style)
 
+    return dot
 
+def generate_workflow_image(nodes, edges, edge_labels=None, highlight_nodes_indices=None, highlight_edges_indices=None, 
+                            node_shape=None, directional=True, format='svg', layout_direction='TB'):
+    dot = create_workflow_dot(nodes, edges, edge_labels, highlight_nodes_indices, highlight_edges_indices, 
+                              node_shape, directional, layout_direction)
+    
+    dot.format = format
+    
     image = dot.pipe()
     return image
 
@@ -776,12 +786,29 @@ def wrap_image_in_html(image_data, height=None, format='svg'):
     height_str = f'max-height: {height}px; ' if height else ''
     if format == 'svg':
         svg_content = image_data.decode('utf-8')
+        
+        svg_base64 = base64.b64encode(svg_content.encode('utf-8')).decode('utf-8')
+        
         scrollable_html = f"""
-        <div style="{height_str}overflow: auto; border: 1px solid #e0e0e0; border-radius: 12px; background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 100%;">
-            <div style="min-width: min-content; display: inline-block; padding: 16px;">
+        <div id="svgContainer" style="{height_str}overflow: auto; border: 1px solid #e0e0e0; border-radius: 12px; background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 100%; text-align: center; cursor: pointer;" onclick="downloadSVG()">
+            <div style="display: inline-block; padding: 16px;">
                 {svg_content}
             </div>
         </div>
+        <script>
+        function downloadSVG() {{
+            var svgData = atob('{svg_base64}');
+            var blob = new Blob([svgData], {{type: 'image/svg+xml'}});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'image.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }}
+        </script>
         """
     else:
         encoded_image = base64.b64encode(image_data).decode()
@@ -1390,7 +1417,10 @@ def generate_schema_graph_graphviz(nodes, edges, height=None, format="svg", high
         image_data = create_schema_graph(nodes, edges, highlighted_node=highlighted_node, highlighted_edge_indices=highlighted_edge_indices)
         return wrap_image_in_html(image_data, height=height, format=format)
 
-    except:
+    except Exception as e:
+        if cocoon_main_setting['DEBUG_MODE']:
+            raise e
+            
         return """
 <div style="font-family: sans-serif; padding: 10px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; color: #721c24;">
     <p style="margin: 0 0 10px 0; line-height: 1.4;">⚠️ <strong>Error:</strong> Cocoon needs graphviz installed to generate visualizations.</p>

@@ -226,7 +226,7 @@ def chat_with_catalog_page(catalog_obj, input_question=""):
     if 'agents' not in st.session_state:
         st.session_state.agents = {}
     if catalog_key not in st.session_state.agents:
-        st.session_state.agents[catalog_key] = DBTLLMAgentStreamlit(catalog_obj)
+        st.session_state.agents[catalog_key] = DBTLLMAgentStreamlit(catalog_obj, track_cost=st.session_state.track_cost)
 
     agent = st.session_state.agents[catalog_key]
 
@@ -273,6 +273,10 @@ def catalog_details_page(catalog_obj):
         if user_input.strip():
             st.session_state.chat_input = user_input
             catalog_name = catalog_obj.get_name()
+            
+            if 'agents' in st.session_state and catalog_name in st.session_state.agents:
+                st.session_state.agents[catalog_name] = DBTLLMAgentStreamlit(catalog_obj, track_cost=st.session_state.track_cost)
+            
             st.session_state.page = f'chat_{catalog_name}'
             st.rerun()
         else:
@@ -323,6 +327,7 @@ def main():
         if st.sidebar.button("Select LLM"):
             select_llm()
         display_llm_status()
+        st.session_state.track_cost = st.sidebar.checkbox("Track chat cost", value=st.session_state.get('track_cost', False))
         
         st.sidebar.markdown("---")
         st.header("Data Pipeline Catalogs")

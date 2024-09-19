@@ -27,6 +27,28 @@ try:
 except:
     pass
 
+import tiktoken
+
+def calculate_claude_cost(messages, response):
+    encoder = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    
+    INPUT_PRICE_PER_1M_TOKENS = 3.0
+    OUTPUT_PRICE_PER_1M_TOKENS = 15.0
+    
+    input_tokens = 0
+    output_tokens = 0
+    
+    for message in messages:
+        tokens = encoder.encode(message['content'])
+        input_tokens += len(tokens)
+    
+    output_tokens = len(encoder.encode(response['choices'][0]['message']['content']))
+    
+    input_cost = (input_tokens / 1_000_000) * INPUT_PRICE_PER_1M_TOKENS
+    output_cost = (output_tokens / 1_000_000) * OUTPUT_PRICE_PER_1M_TOKENS
+    total_cost = input_cost + output_cost
+    
+    return total_cost
 
 def call_embed(input_string):
 
@@ -89,15 +111,18 @@ lru_cache = LRUCache(20000)
 if os.path.exists("./cached_messages.json"):
     lru_cache.load_from_disk("./cached_messages.json")
 
-def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True, api_type=None):
+def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True, api_type=None, return_cost=False):
     global openai
     message_hash = hash_messages(messages)
 
     if use_cache:
-        response = lru_cache.get(message_hash)
-        if response is not None:
+        cached_response = lru_cache.get(message_hash)
+        if cached_response is not None:
             lru_cache.save_to_disk()
-            return response
+            if return_cost:
+                return cached_response, 0
+            else:
+                return cached_response
         
     if api_type is None:
         api_type = cocoon_llm_setting.get('api_type', openai.api_type)
@@ -281,6 +306,11 @@ def call_llm_chat(messages, temperature=0.1, top_p=0.1, use_cache=True, api_type
 
     lru_cache.put(message_hash, response)
     lru_cache.save_to_disk()
+    
+    if return_cost:
+        cost = calculate_claude_cost(messages, response)
+        return response, cost
+    
     return response
 
 
