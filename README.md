@@ -35,10 +35,10 @@ Building a chatbot for your data and pipelines is challenging because they are o
 - 👉 [Try this Google Collab Notebook for Data Warehouse RAG](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_Stage_Demo.ipynb)
 - 👉 [Try this Google Collab Notebook for Data Pipeline RAG](https://colab.research.google.com/github/Cocoon-Data-Transformation/cocoon/blob/main/demo/Cocoon_RAG_pipeline.ipynb)
 
-Cocoon is available on PyPI:
+Cocoon is available on PyPI. Create a virtual env and then:
 
 ```bash
-pip install cocoon_data
+pip install cocoon_data -U
 ```
 
 To get started, you need to connect to
@@ -66,4 +66,17 @@ cocoon_workflow.start()
 🎉 You shall see the following on a notebook:
 <div align="center">
 <kbd><img src="./images/notebook.png" alt=""></kbd>
+</div>
+
+
+We also offer a browser UI, only for the chat over RAG feature. Simply:
+
+```bash
+pip install cocoon_data -U
+cocoon_data
+```
+
+You shall see
+<div align="center">
+<kbd><img src="./images/browser.png" alt=""></kbd>
 </div>
