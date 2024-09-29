@@ -6,8 +6,10 @@
 
 Building a chatbot for your data and pipelines is challenging because they are often too large (e.g., 1,000+ tables) to fit within the LLM context window. Cocoon addresses this by creating a RAG layer for your data and pipelines. With Cocoon's RAG, we offer a cursor-style chatbot for your data tasks.
 
+- [*live demo on RAG Hubspot + Salesforce Data*](https://cocoon-rag-851564657364.us-east1.run.app/)
+  
 
--  [*Live Demo for Data Pipeline RAG (Enter your question and we will generate response live)*](https://cocoon-data-transformation.github.io/page/pipeline)
+- [*Learn more about all the features*](https://cocoon-data-transformation.github.io/page/)
   <br>
   <div align="center">
   <a href="https://youtu.be/kv5mwTkpfY0" target="_blank">
@@ -15,19 +17,6 @@ Building a chatbot for your data and pipelines is challenging because they are o
   </a>
   </div>
   <br>
-  
--  [*Live Demo for Data Warehouse RAG (Enter your question and we will generate response live)*](https://cocoon-data-transformation.github.io/page/database)
-  <br>
-  <div align="center">
-  <a href="https://youtu.be/xdmRXs0UnfE" target="_blank">
-    <img src="./images/Thumbnail.png" width="600" alt="IMAGE ALT TEXT" style="cursor: pointer;">
-  </a>
-  </div>
-  <br>
-  
-
-- [*Learn more about all the features*](https://cocoon-data-transformation.github.io/page/)
-
 
 
 ## Get Started
